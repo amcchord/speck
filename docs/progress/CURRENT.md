@@ -105,3 +105,11 @@ actions after reload. Build, 28 web checks and 22 focused Chrome/Safari browser
 checks pass; served hashes, backend process/environment and identities match.
 Static rollback: `/var/lib/speck-rollback/20260922T233949Z-app-name-release-sync-8ba0f74/web`.
 Private evidence: `worktrees/app-name-release-sync/output/app-name-release-sync/`.
+
+Release validation now prefers local checks at the user's request:
+`./scripts/check-local.sh core` (112s: 113 backend, agent race tests/builds, 28 web
+units, 84 browser cases) and `./scripts/check-local.sh ios` (36s: 25 iPhone units
+and the iPad portrait/landscape sign-in test), both passed on this combined source.
+Hosted CI remains enabled as a secondary check. Its iPad simulator launch timeout
+occurred before assertions; local Xcode 27/iOS 27 passed the same test target.
+No required GitHub branch check was bypassed. See [local checks](../deployment.md#local-release-checks).

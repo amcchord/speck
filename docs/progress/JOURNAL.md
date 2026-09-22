@@ -445,3 +445,20 @@ Fleet visibly reports Molar Office Manager, ByteWing Imaging and Server Manager,
 while Linux retains web-shell actions. Build, 28 web checks and 22 focused browser
 cases pass. No backend restart or endpoint operation was needed. Added release
 coordination rules to AGENTS.md; combined GitHub integration owns the final state.
+
+## 2026-09-22 — Local release checks
+
+The user requested local checks after slow hosted runs. Added the documented
+`scripts/check-local.sh core|ios|all` entry point and local-primary guidance;
+GitHub CI remains enabled and required branch checks still apply. Core runs
+Python lint/tests, Linux agent race tests (Docker on macOS), all agent/web builds,
+web units and Chrome/Safari browser checks. iOS prefers booted simulators, waits
+for boot readiness and runs iPhone units plus iPad sign-in without parallel clones.
+
+Executed both groups on the combined release: core passed in 112s (113 backend,
+agent race checks, all platform builds, 28 web units, 84 browser cases); iOS passed
+in 36s (25 iPhone units and the portrait/landscape sign-in test) on Xcode 27/iOS 27.
+Hosted iPhone units passed; hosted iPad failed before assertions because the runner
+timed out launching Speck. Preserved that separate result in the PR record rather
+than relabeling it success. No required branch checks are configured. Logs and
+xcresults are in ignored `output/local-checks/` in the integration worktree.

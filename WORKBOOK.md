@@ -412,3 +412,13 @@ Rollback: `/var/lib/speck-rollback/20260922T233949Z-app-name-release-sync-8ba0f7
 Private evidence: `worktrees/app-name-release-sync/output/app-name-release-sync/`.
 The integration includes the shell task's rollout documentation `d8e829b` and
 adds explicit current-main, deployed-baseline and single-owner release rules.
+
+At the user's request, release checks now run locally first through
+`scripts/check-local.sh core|ios|all`; GitHub remains secondary. This combined
+release passed the local core suite in 112 seconds (113 backend, Linux agent race
+tests, platform builds, 28 web unit and 84 browser checks). iPhone unit tests (25)
+and iPad portrait/landscape sign-in passed in 36 seconds on Xcode 27 / iOS 27.
+Hosted iPhone tests passed, but hosted iPad execution failed before assertions
+because Xcode timed out launching the app after an 11m34s job. That hosted failure
+is retained as distinct evidence; no required branch checks were configured or
+bypassed. Logs and simulator test results remain in ignored `output/local-checks/`.
