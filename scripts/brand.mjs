@@ -56,6 +56,25 @@ if (fs.existsSync(desktopAssets)) {
     path.join(desktopAssets, "speck-icon-1024.png"),
     new Resvg(tile, { fitTo: { mode: "width", value: 1024 } }).render().asPng(),
   );
+  // NSIS expects BMP artwork. Export our vectors directly, preserving the shared palette.
+  const bitmap = (artwork, width, height) => {
+    const pixels = new Resvg(artwork).render().pixels;
+    const stride = (width * 3 + 3) & ~3;
+    const result = Buffer.alloc(54 + stride * height);
+    result.write("BM"); result.writeUInt32LE(result.length, 2); result.writeUInt32LE(54, 10);
+    result.writeUInt32LE(40, 14); result.writeInt32LE(width, 18); result.writeInt32LE(height, 22);
+    result.writeUInt16LE(1, 26); result.writeUInt16LE(24, 28); result.writeUInt32LE(stride * height, 34);
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const src = (y * width + x) * 4, dst = 54 + (height - 1 - y) * stride + x * 3;
+      result[dst] = pixels[src + 2]; result[dst + 1] = pixels[src + 1]; result[dst + 2] = pixels[src];
+    }
+    return result;
+  };
+  const lockup = (color) => `<g transform="translate(0 8)">${mark(color)}</g><g fill="${color}" transform="translate(84 0)">${lettering}</g>`;
+  const sidebar = svg(164, 314, `<rect width="164" height="314" fill="${c.forest}"/><g transform="translate(18 24) scale(${128 / (wordWidth + 84)})">${lockup(c.lime)}</g><g fill="none" stroke="${c.fern}" stroke-width=".7"><circle cx="82" cy="200" r="49"/><circle cx="82" cy="200" r="71"/><circle cx="82" cy="200" r="95"/></g><g transform="translate(58 176) scale(.75)">${mark(c.lime)}</g><circle cx="130" cy="145" r="3" fill="${c.lime}"/>`);
+  const header = svg(150, 57, `<rect width="150" height="57" fill="${c.white}"/><g transform="translate(9 13) scale(${132 / (wordWidth + 84)})">${lockup(c.forest)}</g>`);
+  fs.writeFileSync(path.join(desktopAssets, "installer-sidebar.bmp"), bitmap(sidebar, 164, 314));
+  fs.writeFileSync(path.join(desktopAssets, "installer-header.bmp"), bitmap(header, 150, 57));
 }
 const sizes = [16, 24, 32, 48, 64, 128, 256];
 const pngs = sizes.map((size) =>
