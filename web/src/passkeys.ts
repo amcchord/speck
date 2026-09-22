@@ -41,10 +41,19 @@ export async function ceremony(options: any, register = false, signal?: AbortSig
   signal?.addEventListener("abort", abort, { once: true });
   if (signal?.aborted) controller.abort();
   const timeout = setTimeout(abort, 60000);
+  let rejectAbort: () => void = () => {};
+  const canceled = new Promise<never>((_, reject) => {
+    rejectAbort = () => reject(new DOMException("Passkey canceled", "AbortError"));
+    controller.signal.addEventListener("abort", rejectAbort, { once: true });
+  });
   try {
-    const credential = register
-      ? await navigator.credentials.create({ publicKey: creationOptions(options), signal: controller.signal })
-      : await navigator.credentials.get({ publicKey: requestOptions(options), signal: controller.signal });
+    if (controller.signal.aborted) rejectAbort();
+    const pending = register
+      ? navigator.credentials.create({ publicKey: creationOptions(options), signal: controller.signal })
+      : navigator.credentials.get({ publicKey: requestOptions(options), signal: controller.signal });
+    // Some embedded browsers leave their WebAuthn promise pending after abort.
+    // Never let that trap the sign-in form or accept a late credential.
+    const credential = await Promise.race([pending, canceled]);
     if (!credential) throw new Error("No passkey was selected.");
     return serialize(credential as PublicKeyCredential);
   } catch (error) {
@@ -57,5 +66,6 @@ export async function ceremony(options: any, register = false, signal?: AbortSig
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener("abort", abort);
+    controller.signal.removeEventListener("abort", rejectAbort);
   }
 }

@@ -18,3 +18,25 @@ test('assertion serialization preserves authenticator bytes and discoverable use
   assert.equal(r.response.signature, '-__-'); assert.equal(r.response.userHandle, '-__-');
   assert.equal(r.rawId, r.id);
 });
+
+test('an embedded browser that ignores abort cannot trap sign-in or accept a late credential', async () => {
+  const { ceremony } = await import('../src/passkeys.ts');
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  globalThis.window = { isSecureContext: true };
+  globalThis.PublicKeyCredential = class {};
+  let resolve;
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {
+    credentials: { get: () => new Promise(done => resolve = done) },
+  } });
+  try {
+    const controller = new AbortController();
+    const result = ceremony({ challenge: 'AQID' }, false, controller.signal);
+    controller.abort();
+    await assert.rejects(result, /canceled or timed out/);
+    resolve({ id: 'late-response' }); // The abandoned credential is never serialized or submitted.
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'navigator', original);
+    else delete globalThis.navigator;
+    delete globalThis.window; delete globalThis.PublicKeyCredential;
+  }
+});
