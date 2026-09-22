@@ -1,12 +1,12 @@
 [
   {
     "file": "desktop.png",
-    "sha256": "3de0a1e1044620bb9fce00d168e41ca2142d4c3660a12f5d29f6b89c87a0e555",
+    "sha256": "f014509a833b2c37f7c3f272f3b217704d4fe3c655befcf789b328a9c3279a52",
     "source": "Synthetic Playwright web-shell fixture; unretouched browser capture"
   },
   {
     "file": "mobile.png",
-    "sha256": "2f677573198bdf302c81bf72863ff4edbfa7782001090e2ba2272cd41630842a",
+    "sha256": "47d4644ed3c777d2a38b2e9df85c0bee508970f617b6408cc1545198ac19eff4",
     "source": "Synthetic Playwright web-shell fixture; unretouched browser capture"
   }
 ]
