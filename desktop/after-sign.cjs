@@ -6,6 +6,7 @@ const { spawnSync } = require("node:child_process");
 // Notarization alone accepts the bundle but macOS refuses to launch it.
 module.exports = async function afterSign(context) {
   if (context.electronPlatformName !== "darwin") return;
+  if (process.env.CSC_IDENTITY_AUTO_DISCOVERY === "false") return;
   const app = path.join(context.appOutDir, context.packager.appInfo.productFilename + ".app");
   const signature = spawnSync("/usr/bin/codesign", ["-dv", "--verbose=2", app], { encoding: "utf8" });
   // electron-builder ad-hoc signs arm64 CI bundles even with identity discovery
