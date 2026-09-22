@@ -112,7 +112,7 @@ function login() {
   );
 }
 function shell(title: string, subtitle: string) {
-  app.innerHTML = `<aside><a class="brand" href="#fleet"><span class="spark">✳</span> speck<span class="version">0.1</span></a><span class="eyebrow">WORKSPACE</span><nav>${[
+  app.innerHTML = `<aside><a class="brand" href="#fleet"><span class="spark">✳</span> speck<span class="version">0.1</span></a><nav>${[
     ["fleet", "▦", "Fleet"],
     ["recovery", "↺", "Recovery lab"],
     ["slide", "▱", "Slide"],
@@ -125,7 +125,7 @@ function shell(title: string, subtitle: string) {
     )
     .join(
       "",
-    )}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>↗</button></aside><main class="workspace"><header><div><span class="eyebrow">SPECK / ${esc(page)}</span><h1>${esc(title)}</h1>${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><span class="live"><i></i> LIVE WORKSPACE</span><button id="refresh" class="secondary">↻ Refresh</button></div></header><section id="content"></section></main>`;
+    )}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>↗</button></aside><main class="workspace"><header><div><h1>${esc(title)}</h1>${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><button id="refresh" class="secondary">↻ Refresh</button></div></header><section id="content"></section></main>`;
   document.querySelectorAll<HTMLElement>("[data-page]").forEach(
     (el) =>
       (el.onclick = () => {
