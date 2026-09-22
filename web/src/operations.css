@@ -73,7 +73,7 @@ nav button {
 .fleet-toolbar select {
   min-height: 43px;
   max-width: 155px;
-  background: white;
+  background-color: white;
 }
 .preview-toggle {
   white-space: nowrap;
@@ -766,8 +766,11 @@ input[type="checkbox"] {
 }
 .remote-controls select {
   font-size: 11px;
-  padding: 7px;
-  background: #243d2b;
+  min-height: 34px;
+  width: auto;
+  margin-top: 0;
+  padding: 7px 32px 7px 11px;
+  background-color: #243d2b;
   color: #eef3e6;
   border-color: #4d6452;
 }
