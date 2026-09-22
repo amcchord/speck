@@ -291,3 +291,18 @@ local to the frame, with retry and policy-off behavior retained. TypeScript/Vite
 captures were reviewed; measurements and limits are in the machine-overview
 operations note. No production or live endpoint changes, push or integration.
 Next step: review, then explicitly authorized integration/static deployment.
+
+## 2026-09-22 — Authorized machine overview static deployment
+
+Deployed runtime `37105be` at 20:58 UTC from `codex/machine-overview`. Clean-source
+and previous-release preflights passed; rebuild matched the tested index exactly.
+Retained the preceding web tree and old hashed assets, staged the new assets,
+and atomically replaced the index. HTTPS/index/asset hashes, service identity,
+environment and 18 machine identities/Slide bindings pass. Live Chromium/WebKit
+checks confirmed desktop/mobile BYD-EXAM01 facts, preview geometry and tab
+navigation, with no runtime errors. Verification logins were signed out.
+
+No backend restart, endpoint/preview-policy operation, agent update or recovery
+action occurred. Rollback and private evidence paths are in the machine-overview
+operations record. Source is retained locally; GitHub integration was not part
+of this deployment. The requested production rollout is complete.

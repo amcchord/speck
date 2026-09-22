@@ -290,3 +290,15 @@ synthetic screenshots were visually inspected. At 1440 × 960, CPU/memory move u
 `docs/operations/machine-overview.md` and `docs/screenshots/machine-overview/`.
 No push, integration, deployment or live endpoint action occurred. Review and an
 explicitly authorized static release are the next steps.
+
+## Machine overview rollout — September 22, 2026
+
+At the user's request, runtime `37105be` was deployed as static web assets, with
+a complete prior-web backup and atomic index replacement. Served asset hashes
+and HTTPS health pass. The backend process/environment and all 18 device IDs
+and Slide links remain unchanged. Live Chromium/WebKit desktop/mobile checks
+on BYD-EXAM01 verified status/IP, 16:9 preview and tab navigation. No endpoint
+operation or service restart occurred. See `docs/operations/machine-overview.md`
+for rollback and ignored `output/machine-overview/` for exact private evidence.
+The runtime and release records remain on local `codex/machine-overview`; no
+GitHub push or merge was performed as part of this deployment.

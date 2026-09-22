@@ -1,6 +1,6 @@
 # Speck screenshots
 
-**[Machine overview](machine-overview/README.md)**: compact machine facts, a 16:9 preview and health information above the fold (local implementation).
+**[Machine overview](machine-overview/README.md)**: compact machine facts, a 16:9 preview and health information above the fold.
 
 **[Visual audit](visual-audit/README.md)**: consistent controls, cleaner icons, responsive pages and full-width native sign-in.
 

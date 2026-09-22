@@ -5,11 +5,12 @@ remote-session startup fixes and **passkey sign-in**. Enroll in Settings → Acc
 & access, or Account → Passkeys on iOS. Password/authenticator login remains
 available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
 
-- **Local machine overview**: `codex/machine-overview` brings name/status/IP and
-  report details to the top, puts health beside a 16:9 preview, and compacts
-  system/organization details. Build, 24 web unit tests and 62 browser scenarios
-  pass. Awaiting review/integration and an authorized static release; production
-  is unchanged. [Details](../operations/machine-overview.md),
+- **Machine overview**: runtime `37105be` is live with name/status/IP and report
+  details at the top, health beside a 16:9 preview, and compact system/organization
+  details. Build, 24 web unit tests, 62 browser scenarios and live Chromium/WebKit
+  desktop/mobile checks pass. Backend/environment and 18 device identities are
+  preserved. Source remains on local `codex/machine-overview` pending GitHub
+  integration. [Details](../operations/machine-overview.md),
   [screenshots](../screenshots/machine-overview/README.md).
 - **Shared UI**: `2c22311` is live with uniform controls, distinct navigation icons,
   restrained decoration and responsive layouts. Native 0.1.2 (5) fixes full-width

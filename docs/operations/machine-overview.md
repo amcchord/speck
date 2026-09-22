@@ -1,9 +1,10 @@
 # Compact machine overview
 
 Branch `codex/machine-overview`, based on main `290ed31`, changes the hosted
-console's individual machine pane. Implementation is local and has not been
-pushed, merged or deployed. No server, native package or endpoint-agent change
-is required for this layout.
+console's individual machine pane. Runtime source `37105be` is deployed at
+https://speckrmm.com. No server, native package or endpoint-agent change was
+required for this layout. Source and release records remain on the local branch;
+GitHub main has not yet incorporated this change.
 
 The generic “Machine details” heading is replaced with the machine name and
 explicit Online/Offline state. The compact summary shows copyable IP, operating
@@ -58,4 +59,34 @@ was sent to a live system. Preview policy tests intercept writes locally.
 
 Machine layout lives in `web/src/machine.css`; shared control geometry remains in
 `web/src/ui.css`. Pane entrance/context behavior remains in `web/src/fleet.css`.
-Next action is review and an explicitly authorized integration/static release.
+The static rollout is complete. GitHub source integration remains separate from
+the deployed runtime.
+
+## Deployment — September 22, 2026
+
+User-authorized static release `37105be84200e099f34dafa3407d96b5876a1bd2`
+was published at 20:58 UTC. The rebuilt index matched the tested release exactly.
+The preflight verified the preceding shared-UI index, service health and a clean
+source checkout; the index was checked again immediately before publication.
+Assets were staged and copied before atomic index replacement.
+
+- JavaScript: `index-CvaCQ4-a.js`
+- Stylesheet: `index-vOubizgs.css`
+- Index SHA-256: `cbf404f7f71b255179790fbb28c17ed922b11dea786b2fe9306794ea1ff70501`
+- Rollback web tree: `/var/lib/speck-rollback/20260922T205843Z-machine-overview-37105be/web`
+
+The served index and referenced assets match the built bytes. HTTPS health
+passed; backend PID/start timestamp and environment remained unchanged. All 18
+device identities and their Slide links were preserved. Previous hashed assets
+remain available to existing clients. No endpoint command, preview-policy write,
+remote session, agent update or recovery operation was triggered.
+
+Live Chromium and WebKit checks opened BYD-EXAM01, matched its status/IP to
+inventory, verified desktop/mobile 16:9 geometry and no horizontal overflow,
+and navigated Network/Overview with no runtime errors. Both verification logins
+were signed out. Private screenshots and machine-readable evidence are retained
+in `output/machine-overview/`.
+
+For rollback, copy the backup's `index.html` to a temporary file inside
+`/opt/speck/web/`, set mode 644, then rename it over `/opt/speck/web/index.html`.
+Its referenced assets remain installed; no backend restart is needed.
