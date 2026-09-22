@@ -9,6 +9,8 @@ const {
   shell,
 } = require("electron");
 const path = require("node:path");
+const { installPasskeys } = require("./passkeys.cjs");
+let passkeysInstalled = false;
 const { ORIGIN, trusted, destination, remotePage } = require("./policy.cjs");
 let window = null,
   pendingURL = null,
@@ -54,6 +56,13 @@ function validSender(event) {
     window.isFocused()
   );
 }
+ipcMain.handle("speck:passkey-browser", async (event, id) => {
+  if (!window || window.isDestroyed() || event.sender !== window.webContents ||
+      event.senderFrame !== window.webContents.mainFrame || !trusted(event.senderFrame.url) ||
+      !window.isFocused() || typeof id !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(id))
+    throw new Error("Passkey sign-in request rejected");
+  await shell.openExternal(ORIGIN + "/#desktop-signin/" + id);
+});
 ipcMain.handle("speck:clipboard:read", async (event) => {
   if (!validSender(event))
     throw new Error(
@@ -120,6 +129,11 @@ function createWindow() {
       partition: "persist:speck",
     },
   });
+  if (!passkeysInstalled) {
+    installPasskeys({ app, dialog, session: window.webContents.session,
+      getWindow: () => window, platform: process.platform });
+    passkeysInstalled = true;
+  }
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("https://github.com/amcchord/speck/"))
       void shell.openExternal(url);

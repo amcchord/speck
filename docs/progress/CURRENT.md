@@ -1,3 +1,10 @@
+# Active work: passkeys
+
+`codex/passkeys` implements server/web/native sign-in and management. Automated
+checks and responsive UI review pass. Desktop 0.2.2 and iOS 0.1.1 (3) are in
+release qualification; the live site still uses the previous backend until the
+backed-up rollout is recorded. See [passkeys](../passkeys.md).
+
 # Current state
 
 Speck 0.2 remains live at https://speckrmm.com. Desktop 0.2.1 fixes native

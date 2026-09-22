@@ -9,7 +9,7 @@ function runtime(platform = 'darwin') {
   const handlers = new Map(), ipcMain = new EventEmitter(), windows = [];
   ipcMain.handle = (name, handler) => handlers.set(name, handler);
   const app = Object.assign(new EventEmitter(), {
-    setName() {}, requestSingleInstanceLock: () => true,
+    configureWebAuthn() {}, setName() {}, requestSingleInstanceLock: () => true,
     whenReady: () => ({ then: (fn) => fn() }), isReady: () => true,
     setAsDefaultProtocolClient() {}, getVersion: () => '0.2.1', quit() {},
   });
@@ -18,7 +18,7 @@ function runtime(platform = 'darwin') {
       super(); this.focused = true; this.fullscreen = false;
       this.webContents = Object.assign(new EventEmitter(), {
         mainFrame: { url: 'https://speckrmm.com/#remote/' + 'a'.repeat(32) },
-        session: { setPermissionCheckHandler() {}, setPermissionRequestHandler() {} },
+        session: Object.assign(new EventEmitter(), { setPermissionCheckHandler() {}, setPermissionRequestHandler() {} }),
         setWindowOpenHandler() {}, getURL: () => this.webContents.mainFrame.url,
         send: (...args) => this.messages.push(args), copy: () => this.messages.push(['local-copy']),
       });
@@ -40,7 +40,7 @@ function runtime(platform = 'darwin') {
     Menu: { buildFromTemplate: v => v, setApplicationMenu() {} },
     dialog: {}, shell: {} };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../main.cjs'), 'utf8'), {
-    require: name => name === 'electron' ? electron : name === './policy.cjs' ? require('../policy.cjs') : require(name),
+    require: name => name === 'electron' ? electron : name.startsWith('./') ? require(path.join(__dirname, '..', name)) : require(name),
     __dirname: path.join(__dirname, '..'), process: { platform, argv: ['speck'] },
   });
   const win = windows[0];

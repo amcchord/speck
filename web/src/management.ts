@@ -1,3 +1,4 @@
+import { available as passkeysAvailable, ceremony as passkeyCeremony } from "./passkeys";
 import { loadingState } from "./loading";
 import "./management.css";
 type Item = Record<string, any>;
@@ -447,12 +448,46 @@ export function createManagement(ui: Item) {
   async function renderAccount() {
     ui.loading("Loading account & access…");
     const me = await api("/access/me");
+    const keys: Item[] = await api("/access/passkeys");
     const users: Item[] = isAdmin() ? await api("/access/users") : [];
     content(
-      `<div class="settings-grid"><article class="panel"><span class="eyebrow">YOUR ACCOUNT</span><h2>${esc(me.username)}</h2><p>${esc(me.role)} · ${me.sessions} active session${me.sessions === 1 ? "" : "s"}</p><div class="management-button-stack">${button("account-password", "Change password")}${button("account-sessions", "Sign out other sessions")}</div><small>Remote sessions close when password or session access changes.</small></article><article class="panel"><span class="eyebrow">TWO-FACTOR SIGN-IN</span><h2>${me.mfa_enabled ? "Authenticator enabled" : "Add an authenticator"}</h2><p>${me.mfa_enabled ? me.recovery_codes_remaining + " unused recovery codes remain." : "Use an authenticator app to add a second step when you sign in."}</p>${button("account-mfa", me.mfa_enabled ? "Disable two-factor…" : "Set up authenticator", !me.mfa_enabled)}</article></div>${isAdmin() ? `<div class="section-head"><h2>Operators</h2>${button("account-add", "Add account", true)}</div><div class="scroll"><table><thead><tr><th>Account</th><th>Role</th><th>Two-factor</th><th>Status</th><th></th></tr></thead><tbody>${users.map((u: Item, i: number) => `<tr><td><b>${esc(u.username)}</b>${u.username === me.username ? "<small>You</small>" : ""}</td><td>${esc(u.role)}</td><td>${u.mfa_enabled ? badge("Enabled", true) : badge("Not enabled")}</td><td>${badge(u.disabled ? "Disabled" : "Active", !u.disabled)}</td><td>${button("account-edit-" + i, "Manage")}</td></tr>`).join("")}</tbody></table></div><p>Administrators manage accounts and provider credentials. Operators manage machines, recovery and automation. Viewers can read inventory, alerts and audit history.</p>` : ""}`,
+      `<div class="settings-grid"><article class="panel"><span class="eyebrow">YOUR ACCOUNT</span><h2>${esc(me.username)}</h2><p>${esc(me.role)} · ${me.sessions} active session${me.sessions === 1 ? "" : "s"}</p><div class="management-button-stack">${button("account-password", "Change password")}${button("account-sessions", "Sign out other sessions")}</div><small>Remote sessions close when password or session access changes.</small></article><article class="panel"><span class="eyebrow">TWO-FACTOR SIGN-IN</span><h2>${me.mfa_enabled ? "Authenticator enabled" : "Add an authenticator"}</h2><p>${me.mfa_enabled ? me.recovery_codes_remaining + " unused recovery codes remain." : "Use an authenticator app to add a second step when you sign in."}</p>${button("account-mfa", me.mfa_enabled ? "Disable two-factor…" : "Set up authenticator", !me.mfa_enabled)}</article></div><article class="panel passkey-panel"><div class="section-head"><div><span class="eyebrow">PASSKEYS</span><h2>A simpler sign-in</h2></div>${button("passkey-add", "Add passkey", true)}</div><p>Use your fingerprint, face, device PIN, or security key. Your password and authenticator remain available as a fallback.</p>${keys.length ? `<ul class="passkey-list">${keys.map((key, i) => `<li><div><b>${esc(key.name)}</b><small>${key.last_used ? "Last used " + esc(new Date(key.last_used * 1000).toLocaleString()) : "Not used yet"}${key.backed_up ? " · Backed up by your provider" : ""}</small></div><div class="actions">${button("passkey-rename-" + i, "Rename")}${button("passkey-remove-" + i, "Remove")}</div></li>`).join("")}</ul>` : '<p class="muted">No passkeys yet. Add one on a device you trust.</p>'}</article>${isAdmin() ? `<div class="section-head"><h2>Operators</h2>${button("account-add", "Add account", true)}</div><div class="scroll"><table><thead><tr><th>Account</th><th>Role</th><th>Two-factor</th><th>Passkeys</th><th>Status</th><th></th></tr></thead><tbody>${users.map((u: Item, i: number) => `<tr><td><b>${esc(u.username)}</b>${u.username === me.username ? "<small>You</small>" : ""}</td><td>${esc(u.role)}</td><td>${u.mfa_enabled ? badge("Enabled", true) : badge("Not enabled")}</td><td>${u.passkey_count || 0}</td><td>${badge(u.disabled ? "Disabled" : "Active", !u.disabled)}</td><td>${button("account-edit-" + i, "Manage")}</td></tr>`).join("")}</tbody></table></div><p>Administrators manage accounts and provider credentials. Operators manage machines, recovery and automation. Viewers can read inventory, alerts and audit history.</p>` : ""}`,
     );
     const proof = () =>
       `<label>Current password<input type="password" id="account-current" autocomplete="current-password"></label>${me.mfa_enabled ? '<label>Authenticator or recovery code<input id="account-code" autocomplete="one-time-code" maxlength="40"></label>' : ""}`;
+    const addKey = document.getElementById("passkey-add") as HTMLButtonElement;
+    addKey.disabled = !passkeysAvailable();
+    on("passkey-add", () => {
+      const modal = dialog("Add a passkey", `<p>Confirm your account, then follow your device’s prompt.</p><label>Name<input id="passkey-name" maxlength="80" placeholder="e.g. Personal laptop" autocomplete="off"></label>${proof()}${button("passkey-create", "Create passkey", true)}`);
+      const controller = new AbortController();
+      modal.addEventListener("close", () => controller.abort(), { once: true });
+      on("passkey-create", async () => {
+        const name = value("passkey-name").trim();
+        if (!name) throw new Error("Give this passkey a name.");
+        const options = await api("/access/passkeys/options", "POST", { password: value("account-current"), code: value("account-code") });
+        if (!modal.open) return;
+        const credential = await passkeyCeremony(options.publicKey, true, controller.signal);
+        if (!modal.open || !addKey.isConnected) return;
+        await api("/access/passkeys/verify", "POST", { challenge_id: options.challenge_id, name, credential });
+        modal.close(); notify("Passkey added"); await renderAccount();
+      });
+    });
+    keys.forEach((key, i) => {
+      on("passkey-rename-" + i, () => {
+        const modal = dialog("Rename passkey", `<label>Name<input id="passkey-name" maxlength="80" value="${esc(key.name)}"></label>${button("passkey-save", "Save name", true)}`);
+        on("passkey-save", async () => {
+          await api("/access/passkeys/" + key.id, "PATCH", { name: value("passkey-name").trim() });
+          modal.close(); await renderAccount();
+        });
+      });
+      on("passkey-remove-" + i, () => {
+        const modal = dialog("Remove passkey", `<p>Remove <b>${esc(key.name)}</b>? Sessions opened with this passkey will be signed out. Your remote sessions will close.</p>${proof()}${button("passkey-confirm-remove", "Remove passkey", true)}`);
+        on("passkey-confirm-remove", async () => {
+          await api("/access/passkeys/" + key.id + "/remove", "POST", { password: value("account-current"), code: value("account-code") });
+          modal.close(); notify("Passkey removed"); await renderAccount();
+        });
+      });
+    });
     on("account-password", () => {
       const modal = dialog(
         "Change password",
@@ -526,7 +561,7 @@ export function createManagement(ui: Item) {
   function editUser(user?: Item) {
     const modal = dialog(
       user ? "Manage " + user.username : "Add account",
-      `${user ? "" : '<label>Username<input id="user-name" autocomplete="off" maxlength="100"></label>'}<label>Role<select id="user-role"><option value="operator">Operator</option><option value="viewer">Viewer</option><option value="admin">Administrator</option></select></label><p>Operators can execute commands and manage recovery. Administrators also control accounts and provider credentials. Viewers have read-only inventory, alert and audit access.</p><label>${user ? "Reset password (optional)" : "Initial password"}<input type="password" id="user-password" autocomplete="new-password" minlength="16"><small>At least 16 characters. Share it privately; each person can change it in their account.</small></label>${user ? `<label class="check"><input id="user-disabled" type="checkbox" ${user.disabled ? "checked" : ""}> Disable account</label><p>Saving signs this person out of all sessions. Disabling access also pauses their schedules.</p>` : ""}${button("user-save", user ? "Save account" : "Create account", true)}`,
+      `${user ? "" : '<label>Username<input id="user-name" autocomplete="off" maxlength="100"></label>'}<label>Role<select id="user-role"><option value="operator">Operator</option><option value="viewer">Viewer</option><option value="admin">Administrator</option></select></label><p>Operators can execute commands and manage recovery. Administrators also control accounts and provider credentials. Viewers have read-only inventory, alert and audit access.</p><label>${user ? "Reset password (optional)" : "Initial password"}<input type="password" id="user-password" autocomplete="new-password" minlength="16"><small>At least 16 characters. Share it privately; each person can change it in their account.</small></label>${user ? `<label class="check"><input id="user-reset-passkeys" type="checkbox"> Remove all passkeys (${user.passkey_count || 0})</label><label class="check"><input id="user-disabled" type="checkbox" ${user.disabled ? "checked" : ""}> Disable account</label><p>Saving signs this person out of all sessions. Disabling access also pauses their schedules.</p>` : ""}${button("user-save", user ? "Save account" : "Create account", true)}`,
     );
     (document.getElementById("user-role") as HTMLSelectElement).value =
       user?.role || "operator";
@@ -535,6 +570,7 @@ export function createManagement(ui: Item) {
         await api("/access/users/" + user.id, "PATCH", {
           role: value("user-role"),
           disabled: checked("user-disabled"),
+          reset_passkeys: checked("user-reset-passkeys"),
           new_password: value("user-password") || null,
         });
       else

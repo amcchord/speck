@@ -189,3 +189,13 @@ Apple processed build 2 successfully and reports IN_BETA_TESTING for the interna
 Speck testing group. What-to-test notes include physical-device acceptance items.
 All GitHub checks at `5eef9ae` pass, including Xcode 26's 20 native unit tests.
 The temporary local upload key was removed; the scoped key remains in AustinLand.
+
+## 2026-09-22 — Passkey implementation
+
+Branch `codex/passkeys`, based on merged iOS main `8adc266`, adds WebAuthn backend
+verification, account controls, administrator reset and browser-native sign-in.
+Desktop adds its signed Mac authenticator and a cross-platform browser approval
+bound to the initiating client. iOS adds AuthenticationServices and associated
+domains while preserving session-generation guards. No personal credential is
+created as part of development. Automated crypto and native tests pass; release
+qualification, deployment and distribution are in progress under `output/passkeys`.

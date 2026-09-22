@@ -22,6 +22,10 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Send your microphone to a remote machine only when you enable it in a Speck remote session.</string>
+	<key>SpeckPasskeyDomains</key>
+	<array>
+		<string>speckrmm.com</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

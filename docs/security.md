@@ -91,3 +91,10 @@ unavailable targets, and never automatically replay uncertain work.
 Rollback to pre-role code requires its matching database snapshot: old code does
 not enforce these roles. Preserve data, transfers and encryption keys together,
 and account for any jobs/provider changes since the snapshot before restoration.
+
+## Passkey authentication
+
+See [passkeys](passkeys.md) for enrollment, revocation, desktop browser handoff,
+native Apple associations, threat boundaries and coordinated rollback. Verified
+passkeys are an alternative to password/TOTP sign-in, not a way to change roles.
+Existing agent tokens and Slide recovery identities remain independent.

@@ -5,7 +5,7 @@ import time
 from fastapi import Depends, HTTPException, Request, WebSocket
 
 from speck.config import origin
-from speck.db import db
+from speck.db import audit, db
 
 COOKIE = 'speck_session'
 
@@ -34,7 +34,7 @@ def require_user(request: Request):
     if user['role'] == 'viewer':
         reads = {'/api/auth/me', '/api/devices', '/api/alerts', '/api/monitoring', '/api/audit/events', '/api/access/me'}
         personal = {'/api/auth/logout', '/api/access/password', '/api/access/sessions/revoke', '/api/access/totp/setup', '/api/access/totp/confirm', '/api/access/totp/disable'}
-        if not ((request.method == 'GET' and path in reads) or path in personal):
+        if not ((request.method == 'GET' and path in reads) or path in personal or path == '/api/access/passkeys' or path.startswith('/api/access/passkeys/')):
             raise HTTPException(403, 'Viewer accounts can read inventory, alerts and audit history')
     if request.method not in ('GET', 'HEAD', 'OPTIONS') and path in ('/api/slide/connection', '/api/ai/settings') and user['role'] != 'admin':
         raise HTTPException(403, 'Administrator access required')
@@ -79,3 +79,13 @@ def require_agent(request: Request):
     if not device['approved'] and '/transfers/' in request.url.path:
         raise HTTPException(403, 'Approve this device before transferring files')
     return device
+
+
+def issue_session(conn, row, response, passkey_id=None):
+    token, csrf = secrets.token_urlsafe(40), secrets.token_urlsafe(32)
+    conn.execute('DELETE FROM sessions WHERE expires<?', (time.time(),))
+    conn.execute('INSERT INTO sessions(token_hash,user_id,csrf,expires,passkey_id) VALUES(?,?,?,?,?)',
+                 (digest(token), row['id'], csrf, time.time() + 43200, passkey_id))
+    audit(conn, row['username'], 'session.login', detail={'method': 'passkey' if passkey_id else 'password'})
+    response.set_cookie(COOKIE, token, httponly=True, secure=origin().startswith('https://'), samesite='strict', max_age=43200)
+    return {'username': row['username'], 'csrf': csrf, 'role': row['role']}

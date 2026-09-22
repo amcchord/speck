@@ -199,3 +199,18 @@ The shared remote toolbar adds touch text entry and control keys. Static rollout
 preserved the service process and environment, with the previous web tree retained
 for rollback. No backend restart, agent/Slide identity changes or recovery cleanup.
 Private deployment and release evidence: `output/ios/` in `worktrees/ios-testflight`.
+
+## Passkeys — September 22, 2026
+
+`codex/passkeys` adds user-verified WebAuthn, account enrollment/name/removal,
+administrator lost-key reset, a verifier-bound desktop browser handoff and native
+iPhone/iPad AuthenticationServices. Desktop 0.2.2 enables Mac Touch ID/account
+selection and browser fallback across all three desktop platforms. Native build
+0.1.1 (3) adds associated-domain entitlements. See `docs/passkeys.md`.
+
+Protocol tests use real ECDSA signatures; web/desktop and native session-isolation
+checks cover the new flows. Private release evidence: `output/passkeys/`.
+Deployment and new installer/TestFlight publication are being validated; do not
+infer live release state from source version numbers. Existing endpoint service
+credentials, original/restored identities and Slide bindings remain in scope for
+preservation during rollout.

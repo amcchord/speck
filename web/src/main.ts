@@ -1,3 +1,4 @@
+import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
 import Guacamole from "guacamole-common-js";
 import "../../brand/tokens.css";
 import "./style.css";
@@ -100,7 +101,7 @@ async function api(path: string, method = "GET", body?: any): Promise<any> {
   }).catch((err) => { current(); throw err; });
   const value = await r.json().catch(() => ({}));
   current();
-  if (r.status === 401 && path !== "/auth/login") {
+  if (r.status === 401 && !path.startsWith("/auth/")) {
     signedOut();
     throw new Error("Your session ended. Sign in again.");
   }
@@ -156,6 +157,7 @@ function signedOut() {
   disconnect();
   csrf = "";
   username = "";
+  if (location.hash.startsWith("#desktop-signin/")) { void desktopSignIn(); return; }
   if (location.hash !== "#downloads") return login();
   app.innerHTML = `<main class="downloads-public"><header><a href="#signin" aria-label="Speck home">${wordmark()}</a><a class="secondary" href="#signin">Sign in ${icon("arrow")}</a></header><h1>Downloads</h1>${desktopDownloads(false)}</main>`;
 }
@@ -164,10 +166,57 @@ function login() {
   disconnect();
   csrf = "";
   username = "";
-  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><label>Authenticator or recovery code <small>if enabled</small><input id="login-code" autocomplete="one-time-code" maxlength="40"></label><button class="primary" type="submit">Sign in ${icon("arrow")}</button><a class="login-downloads" href="#downloads">${icon("download")}Download Speck Desktop</a></form></main>`;
+  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><button id="passkey-login" class="primary" type="button">Sign in with a passkey</button>${(window as any).speckDesktop?.openPasskeyBrowser ? '<button id="passkey-browser" class="secondary" type="button">Use a passkey from your browser</button><p id="passkey-browser-status" role="status"></p>' : ""}<span class="login-divider">or use your password</span><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><label>Authenticator or recovery code <small>if enabled</small><input id="login-code" autocomplete="one-time-code" maxlength="40"></label><button class="secondary" type="submit">Sign in with password ${icon("arrow")}</button><a class="login-downloads" href="#downloads">${icon("download")}Download Speck Desktop</a></form></main>`;
+  let authBusy = false;
+  const authenticate = (action: () => Promise<void>) => async () => {
+    if (authBusy) return;
+    authBusy = true;
+    const buttons = Array.from(app.querySelectorAll<HTMLButtonElement>("button"));
+    buttons.forEach(button => button.disabled = true);
+    try { await action(); }
+    finally {
+      authBusy = false;
+      buttons.forEach(button => { if (button.isConnected) button.disabled = false; });
+      if (passkeyButton.isConnected) passkeyButton.disabled = !passkeysAvailable();
+    }
+  };
+  const passkeyButton = document.getElementById("passkey-login") as HTMLButtonElement;
+  passkeyButton.disabled = !passkeysAvailable();
+  if (passkeyButton.disabled) passkeyButton.title = "Use an updated browser over HTTPS for passkeys";
+  on("passkey-browser", authenticate(async () => {
+    const current = viewScope.checkpoint();
+    const verifier = encodePasskey(crypto.getRandomValues(new Uint8Array(32)).buffer);
+    const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))))
+      .map(b => b.toString(16).padStart(2, "0")).join("");
+    const started = await api("/auth/desktop/start", "POST", { verifier_hash: hash });
+    const status = document.getElementById("passkey-browser-status")!;
+    status.textContent = "Confirm code " + started.code + " in your browser. Waiting for your passkey…";
+    await (window as any).speckDesktop.openPasskeyBrowser(started.id);
+    const end = Date.now() + 120000;
+    try {
+      while (Date.now() < end) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        current();
+        const result = await api("/auth/desktop/claim", "POST", { id: started.id, verifier });
+        if (result.pending) continue;
+        csrf = result.csrf; username = result.username; role = result.role;
+        await render(); return;
+      }
+      throw new Error("Desktop sign-in timed out. Try again.");
+    } finally { if (status.isConnected) status.textContent = ""; }
+  }));
+  on("passkey-login", authenticate(async () => {
+    const current = viewScope.checkpoint();
+    const options = await api("/auth/passkeys/options", "POST");
+    const credential = await passkeyCeremony(options.publicKey);
+    current();
+    const result = await api("/auth/passkeys/verify", "POST", { challenge_id: options.challenge_id, credential });
+    csrf = result.csrf; username = result.username; role = result.role;
+    await render();
+  }));
   on(
     "login",
-    async () => {
+    authenticate(async () => {
       const r = await api("/auth/login", "POST", {
         username: value("username"),
         password: value("password"),
@@ -177,10 +226,33 @@ function login() {
       username = r.username;
       role = r.role;
       await render();
-    },
+    }),
     "submit",
   );
 }
+async function desktopSignIn() {
+  viewScope.reset(); disconnect();
+  const id = location.hash.slice("#desktop-signin/".length);
+  app.innerHTML = `<main class="downloads-public"><header>${wordmark()}</header><article class="panel" style="max-width:520px;margin:40px auto"><h1>Sign in to Speck Desktop</h1><div id="desktop-approval">${loadingState("Opening sign-in request…")}</div></article></main>`;
+  try {
+    if (!/^[A-Za-z0-9_-]{43}$/.test(id)) throw new Error("Invalid desktop sign-in request.");
+    const options = await api("/auth/desktop/" + id);
+    const target = document.getElementById("desktop-approval")!;
+    target.innerHTML = `<p>Check that this code matches the one in Speck Desktop on your computer.</p><p class="passkey-pair-code">${esc(options.code)}</p><label class="check"><input id="desktop-code-matches" type="checkbox"> I started this sign-in and the codes match</label><button id="desktop-authorize" class="primary">Continue with passkey</button><p>Only approve a request you started yourself. This signs the desktop app in; it does not change your browser account.</p>`;
+    on("desktop-authorize", async () => {
+      if (!(document.getElementById("desktop-code-matches") as HTMLInputElement).checked)
+        throw new Error("Check the code in Speck Desktop before continuing.");
+      const current = viewScope.checkpoint();
+      const credential = await passkeyCeremony(options.publicKey);
+      current();
+      await api("/auth/desktop/authorize", "POST", { challenge_id: id, credential });
+      target.innerHTML = `<h2>You’re ready</h2><p>Return to Speck Desktop. You can close this tab.</p>`;
+    });
+  } catch (error) {
+    if (!(error instanceof StaleViewError)) document.getElementById("desktop-approval")!.innerHTML = loadError(error);
+  }
+}
+
 function shell(title: string, subtitle: string) {
   document.body.dataset.role = role;
   app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<span class="version">0.2</span></a><nav aria-label="Main navigation">${[
@@ -245,6 +317,7 @@ async function render() {
   document
     .querySelectorAll<HTMLDialogElement>("dialog")
     .forEach((d) => d.close());
+  if (location.hash.startsWith("#desktop-signin/")) { await desktopSignIn(); return; }
   page = location.hash.slice(1) || "fleet";
   if (page.startsWith("remote/")) {
     await renderRemotePage(page.slice(7));
