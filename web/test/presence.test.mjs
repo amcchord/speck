@@ -5,7 +5,7 @@ const app={title:'Example chart',process:'example.exe',user:'OFFICE\\Pat',observ
 const now=Date.parse(app.observed_at)/1000;
 test('a disconnected session remains signed in and its app is explicitly historical',()=>{
  const result=machinePresence({online:true,telemetry:{active_app:null,last_active_app:app,desktop:{state:'disconnected',sessions_available:true},logged_in_users:[{user:app.user,state:'disconnected'}]}},now+100);
- assert.equal(result.current,false);assert.equal(result.table,'Last: example.exe');
+ assert.equal(result.current,false);assert.equal(result.table,'Last: Example chart');
  assert.equal(result.userLabel,'OFFICE\\Pat (disconnected)');assert.equal(result.desktop,'Disconnected');
 });
 test('desktop and signed-in users do not depend on a foreground app',()=>{
@@ -15,10 +15,11 @@ test('desktop and signed-in users do not depend on a foreground app',()=>{
 test('offline or expired app observations are never labeled current',()=>{
  for(const [online,clock] of [[false,now],[true,now+80]]) {
   const result=machinePresence({online,telemetry:{active_app:app}},clock);
-  assert.equal(result.current,false);assert.equal(result.table,'Last: example.exe');
+  assert.equal(result.current,false);assert.equal(result.table,'Last: Example chart');
  }
 });
 test('current app and older-agent fallback remain compatible',()=>{
- assert.equal(machinePresence({online:true,telemetry:{active_app:app}},now).table,'example.exe');
+ assert.equal(machinePresence({online:true,telemetry:{active_app:app}},now).table,'Example chart');
  assert.equal(machinePresence({online:true,telemetry:{active_app:{process:'legacy.exe',user:'Pat'}}},now).userLabel,'Pat');
+ assert.equal(machinePresence({online:true,telemetry:{active_app:{process:'legacy.exe',title:'  '}}},now).table,'legacy.exe');
 });

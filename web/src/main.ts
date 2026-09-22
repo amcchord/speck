@@ -575,7 +575,7 @@ function visibleFleet() {
   return fleet
     .filter(
       (d) =>
-        `${d.label} ${d.hostname} ${d.site || ""} ${(d.tags || []).join(" ")} ${d.platform} ${d.telemetry?.active_app?.process || d.telemetry?.last_active_app?.process || ""} ${primaryAddress(d)}`
+        `${d.label} ${d.hostname} ${d.site || ""} ${(d.tags || []).join(" ")} ${d.platform} ${machinePresence(d).app?.title || ""} ${machinePresence(d).app?.process || ""} ${primaryAddress(d)}`
           .toLowerCase()
           .includes(fleetQuery.toLowerCase()) &&
         (fleetPlatform === "all" || d.platform === fleetPlatform) &&
