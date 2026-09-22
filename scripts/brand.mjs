@@ -49,6 +49,14 @@ const tile = svg(
   `<rect width="64" height="64" rx="14" fill="${c.forest}"/><g transform="translate(8 8) scale(.75)">${mark(c.lime)}</g>`,
 );
 write("speck-icon.svg", tile);
+// Desktop application icon needs a full-resolution source for macOS packaging.
+const desktopAssets = path.join(root, "desktop/assets");
+if (fs.existsSync(desktopAssets)) {
+  fs.writeFileSync(
+    path.join(desktopAssets, "speck-icon-1024.png"),
+    new Resvg(tile, { fitTo: { mode: "width", value: 1024 } }).render().asPng(),
+  );
+}
 const sizes = [16, 24, 32, 48, 64, 128, 256];
 const pngs = sizes.map((size) =>
   new Resvg(tile, { fitTo: { mode: "width", value: size } }).render().asPng(),
@@ -101,14 +109,14 @@ for (const [command, description] of [
     RT_VERSION: {
       "#1": {
         "0409": {
-          fixed: { file_version: "0.1.0.0", product_version: "0.1.0.0" },
+          fixed: { file_version: "0.2.0.0", product_version: "0.2.0.0" },
           info: {
             "0409": {
               CompanyName: "Speck contributors",
               FileDescription: description,
               ProductName: "Speck RMM",
-              ProductVersion: "0.1.0",
-              FileVersion: "0.1.0",
+              ProductVersion: "0.2.0",
+              FileVersion: "0.2.0",
               OriginalFilename: command + ".exe",
               InternalName: command,
               Comments: brand.tagline,

@@ -59,6 +59,8 @@ try {
  # Users can traverse the parent and write their own session telemetry, never credentials.
  icacls $Root /grant '*S-1-5-32-545:(RX)' | Out-Null
  icacls "$Root\telemetry" /grant '*S-1-5-32-545:(OI)(CI)M' | Out-Null
+ New-Item -ItemType Directory -Force "$Root\public" | Out-Null
+ icacls "$Root\public" /grant '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
  $Action=New-ScheduledTaskAction -Execute $Desktop
  $Trigger=New-ScheduledTaskTrigger -AtLogOn
  $Principal=New-ScheduledTaskPrincipal -GroupId 'S-1-5-32-545' -RunLevel Limited

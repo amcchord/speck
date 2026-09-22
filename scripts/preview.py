@@ -6,6 +6,9 @@ than the local preview sign-in/enrollment demonstration are rejected.
 """
 
 import json
+import sys
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[1] / "server"))
+from speck.operations import STARTERS
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -50,9 +53,12 @@ def device(key, label, platform, online=True, approved=True, restored=False):
         "last_seen": NOW if online else NOW - 86400,
         "created": NOW - 86400 * 10,
         "remote_protocol": "rdp" if win else "ssh",
+        "remote_configured": True,
+        "preview": {"enabled": False, "available": False},
         "slide_agent_id": "demo-" + key,
         "telemetry": {
-            "version": "0.1.0",
+            "version": "0.2.0",
+            "capabilities": {"managed_operations": True, "screen_preview": True},
             "cpu_percent": 8.4 if win else 3.2,
             "memory": {"usedPercent": 34, "used": 2.7 * GB, "total": 8 * GB},
             "host": {
@@ -184,6 +190,10 @@ class Handler(BaseHTTPRequestHandler):
                 )
             resources = {
                 "/api/devices": DEVICES,
+                "/api/templates": [dict(t, builtin=True, revision=1) for t in STARTERS],
+                "/api/batches": [],
+                "/api/ai/settings": {"configured": True, "model": "gpt-5.4-mini"},
+                "/api/patches": [{"device_id": d['id'], "scanned": NOW, "report": {"manager": "windows" if d['platform']=='windows' else "apt", "reboot_required": False, "total": 2, "updates": [{"id": "demo-update-1", "title": "Security intelligence update" if d['platform']=='windows' else "openssl", "version": "1.0", "severity": "Security"},{"id": "demo-update-2", "title": "Cumulative quality update" if d['platform']=='windows' else "curl", "version": "1.1", "severity": "Recommended"}]}} for d in DEVICES if not d['restored_from']],
                 "/api/recovery/plans": [PLAN],
                 "/api/recovery/runs": [RUN],
                 "/api/slide/connection": {"connected": True, "url": "https://api.slide.tech"},
@@ -200,6 +210,8 @@ class Handler(BaseHTTPRequestHandler):
                     )
                 ],
             }
+            if route.endswith('/preview-status'):
+                return self.send({"enabled": False, "available": False})
             if route in resources:
                 return self.send(resources[route])
             if route == "/api/slide/inventory":

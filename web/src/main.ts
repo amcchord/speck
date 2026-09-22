@@ -1,6 +1,9 @@
 import Guacamole from "guacamole-common-js";
 import "../../brand/tokens.css";
 import "./style.css";
+import "./operations.css";
+import "./orbits.css";
+import { createOperations } from "./operations";
 import { icon, wordmark } from "./icons";
 
 type Item = Record<string, any>;
@@ -13,6 +16,12 @@ let csrf = "",
   tab = "overview",
   fleetQuery = "",
   fleetFilter = "all";
+const fleetSelection = new Set<string>();
+let fleetPlatform = "all",
+  fleetSort = "name",
+  fleetPage = 0,
+  showPreviews = false;
+let remoteCleanup = () => {};
 let remote: any = null,
   keyboard: any = null,
   recorder: any = null,
@@ -117,6 +126,8 @@ function value(id: string) {
   return (document.getElementById(id) as HTMLInputElement)?.value || "";
 }
 function disconnect() {
+  remoteCleanup();
+  remoteCleanup = () => {};
   if (recorder) recorder.sendEnd();
   recorder = null;
   remote?.disconnect();
@@ -144,8 +155,11 @@ function login() {
   );
 }
 function shell(title: string, subtitle: string) {
-  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<span class="version">0.1</span></a><nav aria-label="Main navigation">${[
+  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<span class="version">0.2</span></a><nav aria-label="Main navigation">${[
     ["fleet", "fleet", "Fleet"],
+    ["patches", "patch", "Patches"],
+    ["software", "package", "Software & scripts"],
+    ["assistant", "spark", "AI assistant"],
     ["recovery", "recovery", "Recovery lab"],
     ["slide", "slide", "Slide"],
     ["activity", "activity", "Activity"],
@@ -179,11 +193,32 @@ function content(html: string) {
 }
 async function render() {
   disconnect();
+  document
+    .querySelectorAll<HTMLDialogElement>("dialog")
+    .forEach((d) => d.close());
   page = location.hash.slice(1) || "fleet";
-  if (!["fleet", "recovery", "slide", "activity", "settings"].includes(page))
+  if (page.startsWith("remote/")) {
+    await renderRemotePage(page.slice(7));
+    return;
+  }
+  if (
+    ![
+      "fleet",
+      "patches",
+      "software",
+      "assistant",
+      "recovery",
+      "slide",
+      "activity",
+      "settings",
+    ].includes(page)
+  )
     page = "fleet";
   const titles: Record<string, string[]> = {
     fleet: ["Fleet", ""],
+    patches: ["Patches", ""],
+    software: ["Software & scripts", ""],
+    assistant: ["AI assistant", ""],
     recovery: ["Recovery lab", ""],
     slide: ["Slide", ""],
     activity: ["Activity", ""],
@@ -193,6 +228,9 @@ async function render() {
   try {
     await {
       fleet: renderFleet,
+      patches: ops.renderPatches,
+      software: ops.renderSoftware,
+      assistant: ops.renderAssistant,
       recovery: renderRecovery,
       slide: renderSlide,
       activity: renderActivity,
@@ -204,80 +242,225 @@ async function render() {
     );
   }
 }
+const ops = createOperations({
+  api,
+  esc,
+  badge,
+  date,
+  bytes,
+  icon,
+  on,
+  value,
+  notify,
+  dialog,
+  content,
+  devices: () => api("/devices"),
+  selected: () => [...fleetSelection],
+  openDevice,
+  setScript: (script: string) => {
+    const editor = document.getElementById("script") as HTMLTextAreaElement;
+    if (editor) editor.value = script;
+  },
+});
 async function renderFleet() {
   fleet = await api("/devices");
-  const online = fleet.filter((d) => d.online).length,
-    candidates = fleet.filter((d) => !d.approved).length;
-  content(
-    `<div class="stats"><div><span>All devices</span><strong>${fleet.length}<small>Windows + Linux</small></strong></div><div><span>Online now</span><strong>${online}</strong></div><div><span>Recovery candidates</span><strong>${candidates}<small>${candidates ? "Ready for your review" : "No pending approvals"}</small></strong></div></div><div class="section-head"><div><h2>Managed devices <span class="count">${fleet.length}</span></h2></div><button id="add" class="primary">${icon("plus")} Add a device</button></div><div class="fleet-tools"><input id="fleet-search" aria-label="Search devices" placeholder="Search devices…" value="${esc(fleetQuery)}"><select id="fleet-filter" aria-label="Filter devices"><option value="all">All devices</option><option value="online">Online</option><option value="review">Needs review</option><option value="offline">Offline</option></select></div><div class="fleet-layout"><div class="device-list">${fleet.map((d) => `<button data-device="${d.id}" class="device-card ${selected === d.id ? "chosen" : ""}" aria-pressed="${selected === d.id}"><span class="os-icon">${icon(d.platform === "windows" ? "windows" : "linux")}</span><span><b>${esc(d.label)}</b><small>${esc(d.telemetry?.host?.platform || d.platform)}</small></span><span class="device-state">${badge(d.approved ? (d.online ? "Online" : "Offline") : "Review", d.online && d.approved)}<small>${d.telemetry?.active_app?.process ? esc(d.telemetry.active_app.process) : d.platform === "linux" ? "Linux agent" : "Windows agent"}</small></span></button>`).join("") || '<div class="empty"><h3>No devices enrolled</h3></div>'}</div><div class="detail" id="detail"><div class="empty"><h2>Select a device</h2></div></div></div>`,
-  );
+  fleetSelection.forEach((id) => {
+    if (!fleet.some((d) => d.id === id)) fleetSelection.delete(id);
+  });
+  content(`<div class="fleet-summary"><span><i class="status-dot"></i><b>${fleet.filter((d) => d.online).length}</b> online</span><span><b>${fleet.length}</b> machines</span><span><b>${fleet.filter((d) => !d.approved).length}</b> need review</span><button id="add" class="primary">${icon("plus")} Add a device</button></div>
+  <div class="fleet-toolbar"><div class="search-field">${icon("search")}<input id="fleet-search" aria-label="Search devices" placeholder="Search machines, apps or addresses" value="${esc(fleetQuery)}"></div><select id="fleet-filter" aria-label="Filter status"><option value="all">All statuses</option><option value="online">Online</option><option value="review">Needs review</option><option value="offline">Offline</option></select><select id="fleet-os" aria-label="Filter operating system"><option value="all">All systems</option><option value="windows">Windows</option><option value="linux">Linux</option></select><select id="fleet-sort" aria-label="Sort machines"><option value="name">Name A–Z</option><option value="cpu">CPU high–low</option><option value="memory">Memory high–low</option><option value="seen">Last seen</option></select><label class="check preview-toggle"><input id="fleet-previews" type="checkbox" ${showPreviews ? "checked" : ""}> Live previews</label></div>
+  <div id="bulk-actions" class="bulk-actions"></div><div class="fleet-table-wrap"><table class="fleet-table"><thead><tr><th><input id="select-page" type="checkbox" aria-label="Select machines on this page"></th><th>Machine</th><th>Status</th><th>Active app</th><th>CPU / RAM</th><th>Network</th><th class="preview-column" ${showPreviews ? "" : "hidden"}>Live screen</th><th class="fleet-actions-head">Connect</th></tr></thead><tbody id="fleet-rows"></tbody></table></div><div class="fleet-pagination"><span id="fleet-count"></span><div><button id="fleet-prev" class="secondary">Previous</button><button id="fleet-next" class="secondary">Next</button></div></div>`);
   on("add", enrollmentDialog);
-  const filterSelect = document.getElementById(
-    "fleet-filter",
-  ) as HTMLSelectElement;
-  filterSelect.value = fleetFilter;
-  const filterDevices = () => {
-    fleetQuery = value("fleet-search");
-    fleetFilter = value("fleet-filter");
-    let count = 0;
-    document.querySelectorAll<HTMLElement>("[data-device]").forEach((el) => {
-      const d = fleet.find((item) => item.id === el.dataset.device)!;
-      const matches =
-        `${d.label} ${d.hostname} ${d.platform}`
+  (document.getElementById("fleet-filter") as HTMLSelectElement).value =
+    fleetFilter;
+  (document.getElementById("fleet-os") as HTMLSelectElement).value =
+    fleetPlatform;
+  (document.getElementById("fleet-sort") as HTMLSelectElement).value =
+    fleetSort;
+  for (const id of ["fleet-search", "fleet-filter", "fleet-os", "fleet-sort"])
+    document
+      .getElementById(id)!
+      .addEventListener(id === "fleet-search" ? "input" : "change", () => {
+        fleetQuery = value("fleet-search");
+        fleetFilter = value("fleet-filter");
+        fleetPlatform = value("fleet-os");
+        fleetSort = value("fleet-sort");
+        fleetPage = 0;
+        renderFleetRows();
+      });
+  on(
+    "fleet-previews",
+    () => {
+      showPreviews = (
+        document.getElementById("fleet-previews") as HTMLInputElement
+      ).checked;
+      document
+        .querySelector(".preview-column")!
+        .toggleAttribute("hidden", !showPreviews);
+      renderFleetRows();
+    },
+    "change",
+  );
+  on("fleet-prev", () => {
+    fleetPage--;
+    renderFleetRows();
+  });
+  on("fleet-next", () => {
+    fleetPage++;
+    renderFleetRows();
+  });
+  document.getElementById("select-page")!.addEventListener("change", () => {
+    const checked = (document.getElementById("select-page") as HTMLInputElement)
+      .checked;
+    visibleFleet()
+      .slice(fleetPage * 50, fleetPage * 50 + 50)
+      .filter((d) => d.approved)
+      .forEach((d) =>
+        checked ? fleetSelection.add(d.id) : fleetSelection.delete(d.id),
+      );
+    renderFleetRows();
+  });
+  renderFleetRows();
+}
+function primaryAddress(d: Item) {
+  return (
+    (d.telemetry?.network?.interfaces || [])
+      .flatMap((n: Item) => n.addrs || [])
+      .map((a: Item) => a.address)
+      .find((a: string) => a && !a.startsWith("127.") && !a.includes(":")) ||
+    "—"
+  );
+}
+function visibleFleet() {
+  return fleet
+    .filter(
+      (d) =>
+        `${d.label} ${d.hostname} ${d.platform} ${d.telemetry?.active_app?.process || ""} ${primaryAddress(d)}`
           .toLowerCase()
           .includes(fleetQuery.toLowerCase()) &&
+        (fleetPlatform === "all" || d.platform === fleetPlatform) &&
         (fleetFilter === "all" ||
           (fleetFilter === "online" && d.online && d.approved) ||
           (fleetFilter === "offline" && !d.online) ||
-          (fleetFilter === "review" && !d.approved));
-      el.hidden = !matches;
-      if (matches) count++;
-    });
-    document.getElementById("no-devices")?.remove();
-    if (!count && fleet.length)
-      document
-        .querySelector(".device-list")!
-        .insertAdjacentHTML(
-          "beforeend",
-          '<div id="no-devices" class="empty" role="status"><h3>No matching devices</h3><p>Try another name or filter.</p></div>',
-        );
-  };
-  document
-    .getElementById("fleet-search")!
-    .addEventListener("input", filterDevices);
-  filterSelect.addEventListener("change", filterDevices);
-  filterDevices();
-  document.querySelectorAll<HTMLElement>("[data-device]").forEach(
+          (fleetFilter === "review" && !d.approved)),
+    )
+    .sort((a, b) =>
+      fleetSort === "cpu"
+        ? Number(b.telemetry?.cpu_percent || 0) -
+          Number(a.telemetry?.cpu_percent || 0)
+        : fleetSort === "memory"
+          ? Number(b.telemetry?.memory?.usedPercent || 0) -
+            Number(a.telemetry?.memory?.usedPercent || 0)
+          : fleetSort === "seen"
+            ? b.last_seen - a.last_seen
+            : a.label.localeCompare(b.label),
+    );
+}
+function renderFleetRows() {
+  const rows = visibleFleet();
+  fleetPage = Math.max(0, Math.min(fleetPage, Math.ceil(rows.length / 50) - 1));
+  const shown = rows.slice(fleetPage * 50, fleetPage * 50 + 50);
+  document.getElementById("fleet-rows")!.innerHTML =
+    shown
+      .map(
+        (d) =>
+          `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name">${icon(d.platform === "windows" ? "windows" : "linux")}<span><b>${esc(d.label)}</b><small>${esc(d.telemetry?.host?.platform || d.platform)}</small></span></button></td><td data-label="Status">${badge(!d.approved ? "Review" : d.online ? "Online" : "Offline")}<small>${d.online ? "Reporting now" : date(d.last_seen)}</small></td><td data-label="Active app" class="app-cell"><span title="${esc(d.telemetry?.active_app?.title || "")}">${esc(d.telemetry?.active_app?.process || "No desktop")}</span><small>${esc(d.telemetry?.active_app?.user || "")}</small></td><td data-label="CPU / RAM" class="util-cell"><span>${Number(d.telemetry?.cpu_percent || 0).toFixed(0)}% <small>CPU</small></span><span>${Number(d.telemetry?.memory?.usedPercent || 0).toFixed(0)}% <small>RAM</small></span></td><td data-label="Network" class="network-cell mono">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Live screen of ${esc(d.label)}"><span>${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "Waiting for desktop" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${d.remote_protocol === "ssh" ? "Open SSH" : "Screen control"}">${icon("monitor")}<span>${d.remote_protocol === "ssh" ? "SSH" : "Screen"}</span></button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="Open ${d.platform === "windows" ? "PowerShell" : "shell"}">${icon("terminal")}<span>Prompt</span></button></td></tr>`,
+      )
+      .join("") ||
+    `<tr><td colspan="8"><div class="empty"><h3>No matching machines</h3><p>Try another search or filter.</p></div></td></tr>`;
+  document.getElementById("fleet-count")!.textContent = rows.length
+    ? `${fleetPage * 50 + 1}–${Math.min(rows.length, fleetPage * 50 + 50)} of ${rows.length} machines`
+    : "0 machines";
+  (document.getElementById("fleet-prev") as HTMLButtonElement).disabled =
+    fleetPage === 0;
+  (document.getElementById("fleet-next") as HTMLButtonElement).disabled =
+    (fleetPage + 1) * 50 >= rows.length;
+  const selectable = shown.filter((d) => d.approved);
+  const all = document.getElementById("select-page") as HTMLInputElement;
+  all.checked =
+    selectable.length > 0 && selectable.every((d) => fleetSelection.has(d.id));
+  all.indeterminate =
+    !all.checked && selectable.some((d) => fleetSelection.has(d.id));
+  document.querySelectorAll<HTMLInputElement>("[data-select]").forEach(
     (el) =>
-      (el.onclick = () => {
-        selected = el.dataset.device!;
-        document
-          .querySelectorAll("[data-device]")
-          .forEach((n) =>
-            n.classList.toggle(
-              "chosen",
-              (n as HTMLElement).dataset.device === selected,
-            ),
-          );
-        document
-          .querySelectorAll<HTMLElement>("[data-device]")
-          .forEach((n) =>
-            n.setAttribute(
-              "aria-pressed",
-              String(n.dataset.device === selected),
-            ),
-          );
-        renderDevice();
+      (el.onchange = () => {
+        el.checked
+          ? fleetSelection.add(el.dataset.select!)
+          : fleetSelection.delete(el.dataset.select!);
+        renderFleetRows();
       }),
   );
-  if (selected && fleet.some((d) => d.id === selected)) await renderDevice();
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-device]")
+    .forEach((el) => (el.onclick = () => void openDevice(el.dataset.device!)));
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-terminal]")
+    .forEach(
+      (el) =>
+        (el.onclick = () => void openDevice(el.dataset.terminal!, "terminal")),
+    );
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-screen]")
+    .forEach(
+      (el) =>
+        (el.onclick = () =>
+          launchRemote(fleet.find((d) => d.id === el.dataset.screen)!)),
+    );
+  const bulk = document.getElementById("bulk-actions")!;
+  bulk.hidden = !fleetSelection.size;
+  bulk.innerHTML = `<b>${fleetSelection.size} selected</b><button id="bulk-scan" class="secondary">${icon("patch")} Scan updates</button><button id="bulk-deploy" class="secondary">${icon("package")} Deploy template</button><button id="bulk-clear" class="text-link">Clear</button>`;
+  on("bulk-clear", () => {
+    fleetSelection.clear();
+    renderFleetRows();
+  });
+  on("bulk-scan", () => ops.scan([...fleetSelection]));
+  on("bulk-deploy", () => ops.deployDialog([...fleetSelection]));
+}
+async function openDevice(id: string, initialTab = "overview") {
+  selected = id;
+  tab = initialTab;
+  if (!fleet.some((d) => d.id === id)) fleet = await api("/devices");
+  const old = document.querySelector<HTMLDialogElement>(".device-drawer");
+  old?.close();
+  const panel = dialog("Machine details", '<div id="detail"></div>');
+  panel.classList.add("device-drawer");
+  await renderDevice();
+}
+function launchRemote(d: Item) {
+  if (!d.remote_configured) {
+    configureRemote(d);
+    return;
+  }
+  if (localStorage.getItem("speck-remote-client") === "desktop") {
+    let launched = false;
+    const blur = () => {
+      launched = true;
+    };
+    window.addEventListener("blur", blur, { once: true });
+    location.href = `speck://connect/${encodeURIComponent(d.id)}`;
+    setTimeout(() => {
+      window.removeEventListener("blur", blur);
+      if (!launched) location.hash = "remote/" + d.id;
+    }, 1800);
+    notify(
+      "Opening Speck Desktop. Browser fallback is available from Remote settings.",
+    );
+  } else location.hash = "remote/" + d.id;
 }
 async function renderDevice() {
   disconnect();
   const d = fleet.find((x) => x.id === selected)!;
   if (!d) return;
   const t = d.telemetry || {},
-    names = ["overview", "services", "network", "terminal", "files", "remote"];
+    names = [
+      "overview",
+      "services",
+      "network",
+      "terminal",
+      "files",
+      "patches",
+      "remote",
+    ];
   document.getElementById("detail")!.innerHTML =
     `<div class="detail-head"><div><span class="eyebrow">${esc(d.platform)} / ${esc(d.arch)}</span><h2>${esc(d.label)}</h2><small>Last report ${date(d.last_seen)}</small></div><button id="device-edit" class="secondary">Edit</button></div>${!d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}<div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body"></div>`;
   document.querySelectorAll<HTMLElement>("[data-tab]").forEach(
@@ -288,9 +471,27 @@ async function renderDevice() {
       }),
   );
   on("device-edit", () => editDevice(d));
+  if (d.approved) {
+    document
+      .querySelector(".detail-head")!
+      .insertAdjacentHTML(
+        "afterend",
+        `<div class="drawer-actions"><button id="drawer-screen" class="primary">${icon("monitor")} ${d.remote_protocol === "ssh" ? "Open SSH" : "Screen control"}</button><button id="drawer-terminal" class="secondary">${icon("terminal")} ${d.platform === "windows" ? "PowerShell" : "Shell"}</button><button id="drawer-ai" class="secondary">${icon("spark")} Ask AI</button></div>`,
+      );
+    on("drawer-screen", () => launchRemote(d));
+    on("drawer-terminal", () => {
+      tab = "terminal";
+      return renderDevice();
+    });
+    on("drawer-ai", () => ops.assistDialog(d));
+  }
   const body = document.getElementById("device-body")!;
   if (tab === "overview") {
     body.innerHTML = `<div class="meters"><div><small>Processor</small><strong>${Number(t.cpu_percent || 0).toFixed(1)}<em>%</em></strong><progress aria-label="Processor utilization" max="100" value="${Number(t.cpu_percent || 0)}"></progress></div><div><small>Memory</small><strong>${Number(t.memory?.usedPercent || 0).toFixed(0)}<em>%</em></strong><progress aria-label="Memory utilization" max="100" value="${Number(t.memory?.usedPercent || 0)}"></progress><small>${bytes(t.memory?.used)} / ${bytes(t.memory?.total)}</small></div></div><div class="info-block"><span class="eyebrow">IN THE FOREGROUND</span><h3>${esc(t.active_app?.title || "No interactive desktop reported")}</h3><p>${esc(t.active_app ? `${t.active_app.process || ""} · ${t.active_app.user || ""}` : "Headless servers report services and network activity.")}</p></div><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${bytes(x.used)} / ${bytes(x.total)}</span><progress aria-label="Storage utilization ${esc(x.path)}" value="${Number(x.usedPercent)}" max="100"></progress></div>`).join("")}<div class="mini-grid"><div><small>Operating system</small>${esc(t.host?.platform || d.platform)} ${esc(t.host?.platformVersion)}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion)}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
+
+    await ops.previewPanel(d, body);
+  } else if (tab === "patches") {
+    await ops.devicePatches(d, body);
   } else if (tab === "services") {
     body.innerHTML = `<div class="toolbar"><input id="service-search" aria-label="Filter services" placeholder="Filter services…"><small>${(t.services || []).length} services</small></div><div class="scroll"><table><thead><tr><th>Service</th><th>State</th><th>Control</th></tr></thead><tbody id="services"></tbody></table></div>`;
     const rows = () => {
@@ -346,6 +547,21 @@ async function renderDevice() {
         ),
       ),
     );
+    body.insertAdjacentHTML(
+      "afterbegin",
+      `<div class="terminal-tools"><button id="terminal-ai" class="secondary">${icon("spark")} Help with this script</button><button id="terminal-save" class="secondary">Save as template</button></div>`,
+    );
+    on("terminal-ai", () => ops.assistDialog(d, value("script")));
+    on("terminal-save", () =>
+      ops.templateEditor({
+        name: "New script",
+        platform: d.platform,
+        category: "script",
+        script: value("script"),
+        parameters: [],
+        timeout: 180,
+      }),
+    );
   } else if (tab === "files") {
     body.innerHTML = `<p>Transfers are verified with SHA-256. Maximum file size: 256 MiB.</p><div class="toolbar"><input id="file-path" aria-label="Full file path" placeholder="Full path on this device" value="${d.platform === "windows" ? "C:\\ProgramData" : "/tmp"}"><button id="browse" class="secondary">List</button><button id="download" class="primary">Download</button></div><div class="toolbar"><input id="file-upload" aria-label="Choose file to upload" type="file"><button id="upload" class="secondary">Upload to path</button></div><small>Upload path includes the filename. Existing files are preserved.</small><div id="job-result"></div><div id="transfers"></div>`;
     on("browse", async () =>
@@ -376,7 +592,7 @@ async function renderDevice() {
   } else if (tab === "remote") {
     body.innerHTML = `<div class="remote-intro"><h2>Remote access</h2><p>${d.remote_protocol === "ssh" ? "Open an SSH terminal through the agent." : d.remote_protocol === "vnc" ? "Open a VNC desktop through the agent." : "Open an RDP desktop through the agent, with speaker output and microphone input."}</p><div class="toolbar"><button id="connect" class="primary">Open browser session</button><button id="remote-config" class="secondary">Connection settings</button></div>${d.remote_protocol === "rdp" ? `<a class="text-link" href="/api/devices/${d.id}/remote/native.rdp">Download native RDP fallback ↗</a><small>The native viewer needs a LAN or VPN route to this machine.</small>` : ""}<div class="callout">RDP creates or reconnects a desktop session. Windows client editions may lock the local console. Linux needs an RDP or VNC desktop service; headless machines can use browser SSH.</div></div>`;
     on("remote-config", () => configureRemote(d));
-    on("connect", () => connectRemote(d));
+    on("connect", () => launchRemote(d));
   }
 }
 async function queue(kind: string, payload: Item, timeout = 60) {
@@ -482,17 +698,46 @@ function configureRemote(d: Item) {
     notify("Connection saved");
   });
 }
+async function renderRemotePage(id: string) {
+  app.innerHTML =
+    '<main class="remote-workspace"><div class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a><h1>Opening remote workspace…</h1></div></main>';
+  try {
+    fleet = await api("/devices");
+    const d = fleet.find((d) => d.id === id);
+    if (!d) throw new Error("Machine not found");
+    if (!d.remote_configured)
+      throw new Error(
+        "Configure the machine’s Remote connection in Fleet first.",
+      );
+    await connectRemote(d);
+  } catch (e) {
+    app.innerHTML = `<main class="remote-workspace"><div class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a><h1>Remote workspace</h1></div><div class="empty"><p class="remote-error">${esc((e as Error).message)}</p></div></main>`;
+  }
+}
 async function connectRemote(d: Item) {
-  const modal = dialog(
-    d.label,
-    `<div class="remote-toolbar"><span id="remote-status">Connecting…</span><button id="mic" class="secondary">Enable microphone</button><button id="fullscreen" class="secondary">Full screen</button><button id="cad" class="secondary">Ctrl + Alt + Del</button><button id="type-secret" class="secondary">Type password</button></div><div id="remote-display" tabindex="0"></div><div class="toolbar"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary" title="Copy text, then paste in the remote application">Copy to remote</button></div>`,
-  );
-  modal.classList.add("remote-modal");
+  app.innerHTML = `<main class="remote-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${esc(d.label)}</h1><small id="remote-status">Connecting…</small></div><button id="remote-ai" class="secondary">${icon("spark")} Screen assistant</button><button id="fullscreen" class="secondary">Full screen</button></header><div class="remote-controls"><button id="mic" class="secondary">Enable microphone</button><label>Keys <select id="key-macro"><option value="">Send shortcut…</option value="cad">Ctrl + Alt + Del</option><option value="task">Task manager</option><option value="run">Windows + R</option><option value="alt-tab">Alt + Tab</option><option value="copy">Ctrl + C</option><option value="paste">Ctrl + V</option><option value="escape">Escape</option><option value="tab">Tab</option></select></label><button id="type-secret" class="secondary">Type password</button><button id="fit-screen" class="secondary">View at 100%</button><button id="desktop-launch" class="secondary">Open in desktop app</button><span id="remote-stats"></span></div><section class="remote-stage"><div id="remote-display" tabindex="0" aria-label="Remote screen. Keyboard input is sent to this machine."></div></section><footer class="remote-footer"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary">Copy to remote</button><button id="read-clipboard" class="secondary">Use my clipboard</button><label class="check"><input id="shared-clipboard" type="checkbox"> Shared clipboard</label></footer></main>`;
+  const modal = document.querySelector<HTMLElement>(".remote-workspace")!;
+  remoteCleanup = () => {
+    modal.dispatchEvent(new Event("close"));
+  };
+  const native = (window as any).speckDesktop;
+  if (!native) {
+    document.getElementById("shared-clipboard")!.parentElement!.title =
+      "Automatic shared clipboard is available in Speck Desktop";
+    (document.getElementById("shared-clipboard") as HTMLInputElement).disabled =
+      true;
+  } else {
+    document.getElementById("desktop-launch")!.hidden = true;
+  }
+  on("desktop-launch", () => {
+    localStorage.setItem("speck-remote-client", "desktop");
+    location.href = "speck://connect/" + encodeURIComponent(d.id);
+  });
   if (d.platform === "linux")
     document.getElementById("mic")!.title =
       "Microphone is supported by RDP desktop sessions";
-  const width = Math.min(1920, Math.max(1024, innerWidth - 100)),
-    height = Math.min(1080, Math.max(480, innerHeight - 220));
+  const width = Math.min(1920, Math.max(768, innerWidth - 32)),
+    height = Math.min(1080, Math.max(480, innerHeight - 180));
   const session = await api("/devices/" + d.id + "/remote/sessions", "POST", {
     width,
     height,
@@ -500,7 +745,8 @@ async function connectRemote(d: Item) {
   if (session.protocol !== "rdp") {
     document.getElementById("mic")!.hidden = true;
   }
-  if (session.protocol === "ssh") document.getElementById("cad")!.hidden = true;
+  if (session.protocol === "ssh")
+    document.getElementById("remote-ai")!.hidden = true;
   const tunnel = new Guacamole.WebSocketTunnel(
     `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/remote/sessions/${session.id}/ws`,
   );
@@ -550,20 +796,108 @@ async function connectRemote(d: Item) {
   };
   keyboard.onkeyup = (key: number) => client.sendKeyEvent(0, key);
   display.addEventListener("mousedown", () => display.focus(), true);
-  const resize = () =>
+  let fit = true;
+  const stage = document.querySelector<HTMLElement>(".remote-stage")!;
+  const resize = () => {
+    const w = client.getDisplay().getWidth(),
+      h = client.getDisplay().getHeight();
     client
       .getDisplay()
       .scale(
-        Math.min(
-          1,
-          display.clientWidth / Math.max(1, client.getDisplay().getWidth()),
-          Math.max(360, innerHeight - 260) /
-            Math.max(1, client.getDisplay().getHeight()),
-        ),
+        fit
+          ? Math.min(
+              1,
+              stage.clientWidth / Math.max(1, w),
+              stage.clientHeight / Math.max(1, h),
+            )
+          : 1,
       );
+  };
   const observer = new ResizeObserver(resize);
-  observer.observe(display);
-  modal.addEventListener("close", () => observer.disconnect());
+  observer.observe(stage);
+  client.getDisplay().onresize = resize;
+  const fullscreenChanged = () => {
+    document.getElementById("fullscreen")!.textContent =
+      document.fullscreenElement ? "Exit full screen" : "Full screen";
+    client.sendSize(
+      Math.min(3840, Math.max(768, stage.clientWidth)),
+      Math.min(2160, Math.max(480, stage.clientHeight)),
+    );
+    resize();
+  };
+  document.addEventListener("fullscreenchange", fullscreenChanged);
+  const releaseKeys = () => keyboard?.reset();
+  window.addEventListener("blur", releaseKeys);
+  display.addEventListener("blur", releaseKeys);
+  modal.addEventListener("close", () => {
+    observer.disconnect();
+    document.removeEventListener("fullscreenchange", fullscreenChanged);
+    window.removeEventListener("blur", releaseKeys);
+    if (document.fullscreenElement === modal) void document.exitFullscreen();
+  });
+  on("fit-screen", () => {
+    fit = !fit;
+    document.getElementById("fit-screen")!.textContent = fit
+      ? "View at 100%"
+      : "Fit to window";
+    resize();
+  });
+  const shortcuts: Record<string, number[]> = {
+    cad: [0xffe3, 0xffe9, 0xffff],
+    task: [0xffe3, 0xffe1, 0xff1b],
+    run: [0xffeb, 0x72],
+    "alt-tab": [0xffe9, 0xff09],
+    copy: [0xffe3, 0x63],
+    paste: [0xffe3, 0x76],
+    escape: [0xff1b],
+    tab: [0xff09],
+  };
+  const sendKeys = (keys: number[]) => {
+    keys.forEach((k) => client.sendKeyEvent(1, k));
+    [...keys].reverse().forEach((k) => client.sendKeyEvent(0, k));
+    display.focus();
+  };
+  document.getElementById("key-macro")!.addEventListener("change", () => {
+    const keys = shortcuts[value("key-macro")];
+    if (keys) sendKeys(keys);
+    (document.getElementById("key-macro") as HTMLSelectElement).value = "";
+  });
+  const removeMacro = native?.onMacro((name: string) => {
+    if (shortcuts[name]) sendKeys(shortcuts[name]);
+  });
+  modal.addEventListener("close", () => removeMacro?.());
+  const copyToRemote = (text: string) => {
+    const writer = new Guacamole.StringWriter(
+      client.createClipboardStream("text/plain"),
+    );
+    writer.sendText(text.slice(0, 65536));
+    writer.sendEnd();
+  };
+  let sharedText = "";
+  const sharedEnabled = () =>
+    !!(document.getElementById("shared-clipboard") as HTMLInputElement)
+      ?.checked;
+  const clipboardTimer = setInterval(async () => {
+    if (native && sharedEnabled() && document.hasFocus()) {
+      const text = await native.readClipboard();
+      if (text !== sharedText) {
+        sharedText = text;
+        copyToRemote(text);
+      }
+    }
+  }, 1000);
+  modal.addEventListener("close", () => clearInterval(clipboardTimer));
+  on("read-clipboard", async () => {
+    const text = native
+      ? await native.readClipboard()
+      : await navigator.clipboard.readText();
+    (document.getElementById("clipboard") as HTMLInputElement).value = text;
+    copyToRemote(text);
+    notify(
+      "Clipboard copied to the remote machine. Paste it in the remote app.",
+    );
+  });
+  on("remote-ai", () => remoteAssistant(d, client, sendKeys, copyToRemote));
   client.onclipboard = (stream: any, mimetype: string) => {
     if (mimetype === "text/plain") {
       const reader = new Guacamole.StringReader(stream);
@@ -573,6 +907,10 @@ async function connectRemote(d: Item) {
       };
       reader.onend = () => {
         (document.getElementById("clipboard") as HTMLInputElement).value = text;
+        if (native && sharedEnabled()) {
+          sharedText = text;
+          void native.writeClipboard(text);
+        }
       };
     }
   };
@@ -604,12 +942,10 @@ async function connectRemote(d: Item) {
       display.focus();
     });
   });
-  on("cad", () => {
-    [0xffe3, 0xffe9, 0xffff].forEach((k) => client.sendKeyEvent(1, k));
-    [0xffff, 0xffe9, 0xffe3].forEach((k) => client.sendKeyEvent(0, k));
-    display.focus();
+  on("fullscreen", async () => {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await modal.requestFullscreen();
   });
-  on("fullscreen", () => modal.requestFullscreen());
   on("mic", () => {
     if (recorder) {
       recorder.sendEnd();
@@ -628,7 +964,6 @@ async function connectRemote(d: Item) {
       notify("Microphone permission or remote audio input failed", true);
     document.getElementById("mic")!.textContent = "Mute microphone";
   });
-  modal.addEventListener("close", disconnect);
   client.connect("");
   display.focus();
 }
@@ -867,6 +1202,7 @@ async function renderSettings() {
     await renderSettings();
   });
   on("enrollment", enrollmentDialog);
+  await ops.settingsPanel();
 }
 window.addEventListener("hashchange", () => {
   if (username) render();
@@ -878,13 +1214,15 @@ setInterval(async () => {
     page !== "fleet" ||
     remote ||
     document.querySelector("dialog") ||
-    ["fleet-search", "fleet-filter"].includes(document.activeElement?.id || "")
+    ["fleet-search", "fleet-filter", "fleet-os", "fleet-sort"].includes(
+      document.activeElement?.id || "",
+    )
   )
     return;
   polling = true;
   try {
     fleet = await api("/devices");
-    if (!selected || tab === "overview") await renderFleet();
+    if (document.getElementById("fleet-rows")) renderFleetRows();
   } catch {
   } finally {
     polling = false;
@@ -897,3 +1235,155 @@ api("/auth/me")
     await render();
   })
   .catch(() => login());
+
+async function remoteAssistant(
+  d: Item,
+  client: any,
+  sendKeys: (keys: number[]) => void,
+  copyToRemote: (text: string) => void,
+) {
+  const modal = dialog(
+    "Screen assistant",
+    `<p>Describe what you want to do on this screen. The current remote screen and your request will be sent to OpenAI.</p><label>Task<textarea id="screen-ai-prompt" rows="3" placeholder="Help me navigate to the application’s connection settings"></textarea></label><div class="toolbar"><button id="screen-ai-explain" class="primary">Explain this screen</button><button id="screen-ai-step" class="secondary">Suggest next action</button></div><div id="screen-ai-result"></div>`,
+  );
+  modal.classList.add("remote-ai-dialog");
+  let originalImage = "";
+  const capture = () =>
+    client.getDisplay().flatten().toDataURL("image/jpeg", 0.8);
+  const ask = async (mode: string) => {
+    originalImage = capture();
+    const result = await api("/ai/assist", "POST", {
+      prompt: value("screen-ai-prompt"),
+      platform: d.platform,
+      device_id: d.id,
+      image: originalImage,
+      mode,
+      width: client.getDisplay().getWidth(),
+      height: client.getDisplay().getHeight(),
+    });
+    const el = modal.querySelector("#screen-ai-result")!;
+    const extra =
+      mode === "assist"
+        ? `<p>${esc(result.verification || "")}</p><p>${esc(result.caution || "")}</p>`
+        : result.actions.length
+          ? `<h3>Proposed actions</h3><pre>${pretty(result.actions)}</pre><p>Check the actions before applying them. Nothing has run.</p><button id="apply-screen-step" class="primary">Apply this step</button>`
+          : "<p>Use manual control for this step.</p>";
+    el.innerHTML = `<p>${esc(result.summary)}</p>` + extra;
+
+    if (mode === "computer" && result.actions?.length) {
+      on("apply-screen-step", async () => {
+        if (capture() !== originalImage)
+          throw new Error(
+            "The screen changed. Ask for a fresh step before applying it.",
+          );
+        const keyNames: Record<string, number> = {
+          CTRL: 0xffe3,
+          CONTROL: 0xffe3,
+          ALT: 0xffe9,
+          SHIFT: 0xffe1,
+          META: 0xffeb,
+          SUPER: 0xffeb,
+          WIN: 0xffeb,
+          ENTER: 0xff0d,
+          RETURN: 0xff0d,
+          TAB: 0xff09,
+          ESC: 0xff1b,
+          ESCAPE: 0xff1b,
+          BACKSPACE: 0xff08,
+          DELETE: 0xffff,
+          SPACE: 0x20,
+          ARROWUP: 0xff52,
+          ARROWDOWN: 0xff54,
+          ARROWLEFT: 0xff51,
+          ARROWRIGHT: 0xff53,
+        };
+        // Validate the entire step before sending any input.
+        for (const a of result.actions) {
+          if (a.type === "scroll" && a.scroll_x)
+            throw new Error("Horizontal scrolling needs manual control.");
+          if (
+            a.type === "keypress" &&
+            a.keys.some(
+              (key: string) =>
+                !(key.toUpperCase() in keyNames) && key.length !== 1,
+            )
+          )
+            throw new Error("This key shortcut needs manual control.");
+        }
+        for (const a of result.actions) {
+          if (["click", "double_click", "move"].includes(a.type)) {
+            const state = {
+              x: a.x,
+              y: a.y,
+              left: false,
+              middle: false,
+              right: false,
+              up: false,
+              down: false,
+            };
+            const button = a.button || "left";
+            client.sendMouseState(state);
+            if (a.type !== "move") {
+              for (let i = 0; i < (a.type === "double_click" ? 2 : 1); i++) {
+                client.sendMouseState({ ...state, [button]: true });
+                client.sendMouseState(state);
+              }
+            }
+          }
+          if (a.type === "type") {
+            for (const c of a.text) {
+              const point = c.codePointAt(0)!;
+              sendKeys([point <= 255 ? point : 0x01000000 | point]);
+            }
+          }
+          if (a.type === "keypress")
+            sendKeys(
+              a.keys.map(
+                (k: string) =>
+                  keyNames[k.toUpperCase()] ?? k.toLowerCase().codePointAt(0),
+              ),
+            );
+          if (a.type === "scroll") {
+            const dy = a.scroll_y || 0;
+            for (const [delta, positive, negative] of [[dy, "down", "up"]] as [
+              number,
+              string,
+              string,
+            ][]) {
+              if (!delta) continue;
+              const state = {
+                x: a.x,
+                y: a.y,
+                left: false,
+                middle: false,
+                right: false,
+                up: false,
+                down: false,
+              };
+              for (
+                let i = 0;
+                i < Math.min(20, Math.ceil(Math.abs(delta) / 80));
+                i++
+              ) {
+                client.sendMouseState({
+                  ...state,
+                  [delta > 0 ? positive : negative]: true,
+                });
+                client.sendMouseState(state);
+              }
+            }
+          }
+        }
+        await api("/ai/actions/applied", "POST", {
+          request_id: result.request_id,
+          device_id: d.id,
+          actions: result.actions.map((a: Item) => a.type),
+        });
+        modal.close();
+        notify("Step applied. Inspect the screen before asking for another.");
+      });
+    }
+  };
+  on("screen-ai-explain", () => ask("assist"));
+  on("screen-ai-step", () => ask("computer"));
+}

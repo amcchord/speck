@@ -10,7 +10,12 @@ import (
 )
 
 func main() {
+	tick := 0
 	for {
+		if tick%5 == 0 {
+			agent.WritePreview(filepath.Join(filepath.Dir(agent.DefaultConfig()), "telemetry"))
+		}
+		tick++
 		agent.WriteForeground(filepath.Join(filepath.Dir(agent.DefaultConfig()), "telemetry"))
 		time.Sleep(2 * time.Second)
 	}

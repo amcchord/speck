@@ -21,3 +21,6 @@ scratch/
 
 # Copies generated from canonical brand assets.
 /web/public/assets/brand/
+
+/worktrees/
+/desktop/dist/

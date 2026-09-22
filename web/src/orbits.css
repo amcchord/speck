@@ -1,0 +1,78 @@
+/* Decorative sign-in motion. The Speck mark remains still at the center. */
+.login .orbit {
+  width: 216px;
+  height: 216px;
+  border-color: rgb(220 236 171 / 22%);
+  pointer-events: none;
+}
+
+.login .orbit::before {
+  width: 320px;
+  height: 320px;
+  border-color: rgb(220 236 171 / 13%);
+  opacity: 1;
+}
+
+.login .orbit > i {
+  --orbit-radius: 108px;
+  --orbit-start: -48deg;
+  --orbit-duration: 64s;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: var(--lime);
+  transform: translate(-50%, -50%) rotate(var(--orbit-start))
+    translateX(var(--orbit-radius));
+  animation: speck-orbit var(--orbit-duration) linear infinite;
+  will-change: transform;
+}
+
+.login .orbit > i:nth-child(2) {
+  --orbit-radius: 160px;
+  --orbit-start: 38deg;
+  --orbit-duration: 96s;
+  width: 7px;
+  height: 7px;
+  opacity: 0.68;
+  animation-direction: reverse;
+}
+
+.login .orbit > i:nth-child(3) {
+  --orbit-radius: 160px;
+  --orbit-start: 224deg;
+  --orbit-duration: 128s;
+  width: 4px;
+  height: 4px;
+  opacity: 0.4;
+}
+
+@keyframes speck-orbit {
+  from {
+    transform: translate(-50%, -50%) rotate(var(--orbit-start))
+      translateX(var(--orbit-radius));
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(calc(var(--orbit-start) + 360deg))
+      translateX(var(--orbit-radius));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login .orbit > i {
+    animation: none;
+    will-change: auto;
+  }
+}
+
+/* Keep the existing compact sign-in layout free of decoration. */
+@media (max-width: 700px) {
+  .login .orbit {
+    display: none;
+  }
+
+  .login .orbit > i {
+    animation: none;
+    will-change: auto;
+  }
+}

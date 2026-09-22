@@ -75,9 +75,14 @@ func main() {
 		}
 		fmt.Println(identity.Agent + ": enrolled.")
 	case "foreground":
+		tick := 0
 		dir := filepath.Join(filepath.Dir(config), "telemetry")
 		for {
 			agent.WriteForeground(dir)
+			if tick%5 == 0 {
+				agent.WritePreview(dir)
+			}
+			tick++
 			time.Sleep(2 * time.Second)
 		}
 	case "version", "--version":

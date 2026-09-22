@@ -29,3 +29,11 @@ Windows resources are built with go-winres 0.3.3 (0BSD) and its dependencies.
 SVG exports use @resvg/resvg-js 2.6.2 (MPL-2.0). These are build tools, not agent
 or console runtime dependencies. Original Speck marks and interface icons are
 covered by this repository's MIT license.
+
+## Desktop client and screen previews
+
+Electron (MIT) includes Chromium, Node.js and their upstream notices; packaged
+clients include those notices. electron-builder is MIT licensed. Screen previews
+use kbinani/screenshot (MIT), jezek/xgb (BSD-3-Clause), lxn/win (BSD-3-Clause),
+gen2brain/shm (BSD-2-Clause) and godbus/dbus (BSD-2-Clause). Consult the versions
+in `desktop/package-lock.json` and `agent/go.sum`.

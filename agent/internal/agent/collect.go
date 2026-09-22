@@ -72,7 +72,7 @@ func Collect(foregroundDir string) map[string]any {
 	result["network"] = detail
 	result["services"] = services(ctx)
 	result["active_app"] = latestForeground(foregroundDir)
-	result["capabilities"] = map[string]any{"commands": true, "files": true, "powershell": hasPowerShell(), "active_app": result["active_app"] != nil, "desktop_note": "Browser desktop requires a local RDP/VNC service; headless Linux supports shell commands and files"}
+	result["capabilities"] = map[string]any{"managed_operations": true, "screen_preview": true, "commands": true, "files": true, "powershell": hasPowerShell(), "active_app": result["active_app"] != nil, "desktop_note": "Browser desktop requires a local RDP/VNC service; headless Linux supports shell commands and files"}
 	return result
 }
 func latestForeground(dir string) any {

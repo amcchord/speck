@@ -1,6 +1,6 @@
 [project]
 name = "speck-rmm"
-version = "0.1.0"
+version = "0.2.0"
 description = "A little lightweight RMM for Windows, Linux, and recovery"
 requires-python = ">=3.11"
 dependencies = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1", "httpx>=0.28,<1", "argon2-cffi>=25,<26", "cryptography>=46,<47", "python-multipart>=0.0.20,<1", "websockets>=15,<16"]

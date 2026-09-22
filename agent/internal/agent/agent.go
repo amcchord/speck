@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const Version = "0.1.0"
+const Version = "0.2.0"
 const FileLimit = int64(256 * 1024 * 1024)
 
 type Config struct {
@@ -195,6 +195,7 @@ func Run(ctx context.Context, path string) error {
 			}
 		}
 	}()
+	go c.previewLoop(ctx)
 	slots := make(chan struct{}, 4)
 	for {
 		var response struct {
@@ -235,7 +236,7 @@ func (c *Client) execute(parent context.Context, j Job) {
 		return
 	}
 	duration := number(j.Payload, "timeout", 60)
-	if j.Kind != "tunnel" && duration > 180 {
+	if j.Kind != "tunnel" && j.Kind != "command" && duration > 180 {
 		duration = 180
 	}
 	if duration < 5 {

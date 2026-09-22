@@ -50,6 +50,7 @@ install -m 644 "$tasktmp/speck-icon.svg" /usr/local/share/icons/hicolor/scalable
 # Desktop helper is unprivileged. Headless machines do not launch it.
 chmod 711 /etc/speck
 install -d -m 1777 /etc/speck/telemetry
+install -d -m 755 /etc/speck/public
 install -d -m 755 /etc/xdg/autostart
 cat > /etc/xdg/autostart/speck-foreground.desktop <<'EOF'
 [Desktop Entry]

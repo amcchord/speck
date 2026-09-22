@@ -36,7 +36,7 @@ async def lifespan(app):
         task.cancel()
 
 
-app = FastAPI(title='Speck', version='0.1.0', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title='Speck', version='0.2.0', lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
 
 @app.middleware('http')
@@ -56,7 +56,7 @@ async def headers(request: Request, call_next):
 
 @app.get('/health')
 def health():
-    return {'ok': True, 'service': 'speck', 'version': '0.1.0'}
+    return {'ok': True, 'service': 'speck', 'version': '0.2.0'}
 
 
 class Login(BaseModel):
@@ -191,6 +191,8 @@ def devices(user=Depends(require_user)):
         obj['remote_protocol'] = json.loads(unseal(connection)).get('protocol') if connection else None
         obj['telemetry'] = json.loads(obj['telemetry'])
         obj['online'] = time.time() - obj['last_seen'] < 75
+        from speck.screens import screen_info
+        obj['preview'] = screen_info(obj)
         result.append(obj)
     return result
 
@@ -303,6 +305,8 @@ def job_result(job_id: str, body: JobResult, device=Depends(require_agent)):
         conn.execute('UPDATE jobs SET status=?,result=?,finished=? WHERE id=?',
                      (body.status, encoded, time.time() if body.status != 'running' else None, job_id))
         if body.status != 'running':
+            from speck.operations import record_patch_result
+            record_patch_result(conn, row, body.result)
             audit(conn, 'agent', 'job.' + body.status, device['id'], {'job_id': job_id, 'kind': row['kind']})
     return {'ok': True}
 
@@ -419,6 +423,12 @@ from speck.remote import router as remote_router  # noqa: E402
 from speck.slide import router as slide_router  # noqa: E402
 app.include_router(remote_router)
 app.include_router(slide_router)
+from speck.operations import router as operations_router  # noqa: E402
+from speck.screens import router as screens_router  # noqa: E402
+from speck.assistant import router as assistant_router  # noqa: E402
+app.include_router(operations_router)
+app.include_router(screens_router)
+app.include_router(assistant_router)
 
 downloads = Path(os.environ.get('SPECK_DOWNLOAD_DIR', 'output/downloads'))
 if downloads.exists():

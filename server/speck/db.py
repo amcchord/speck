@@ -64,6 +64,12 @@ def initialize():
         CREATE TABLE IF NOT EXISTS recovery_runs(id TEXT PRIMARY KEY,plan_id TEXT NOT NULL REFERENCES recovery_plans(id),
           status TEXT NOT NULL,phase TEXT NOT NULL,created REAL NOT NULL,updated REAL NOT NULL,state TEXT NOT NULL,report TEXT NOT NULL DEFAULT '{}');
         CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,at REAL NOT NULL,actor TEXT NOT NULL,action TEXT NOT NULL,device_id TEXT,detail TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS device_policies(device_id TEXT PRIMARY KEY REFERENCES devices(id),preview_enabled INTEGER NOT NULL DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS templates(id TEXT PRIMARY KEY,name TEXT NOT NULL,platform TEXT NOT NULL,category TEXT NOT NULL,spec TEXT NOT NULL,revision INTEGER NOT NULL,updated REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS batches(id TEXT PRIMARY KEY,request_id TEXT UNIQUE NOT NULL,fingerprint TEXT NOT NULL,name TEXT NOT NULL,kind TEXT NOT NULL,actor TEXT NOT NULL,created REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS batch_jobs(batch_id TEXT NOT NULL REFERENCES batches(id),job_id TEXT UNIQUE NOT NULL REFERENCES jobs(id),device_id TEXT NOT NULL REFERENCES devices(id));
+        CREATE TABLE IF NOT EXISTS patch_reports(device_id TEXT PRIMARY KEY REFERENCES devices(id),job_id TEXT NOT NULL,scanned REAL NOT NULL,report TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS ai_requests(id TEXT PRIMARY KEY,actor TEXT NOT NULL,created REAL NOT NULL);
         ''')
         if not conn.execute('SELECT 1 FROM users LIMIT 1').fetchone():
             password = os.environ.get('SPECK_BOOTSTRAP_PASSWORD', '')
