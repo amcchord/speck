@@ -61,13 +61,19 @@ def verify_password(user, proof):
     try:
         PasswordHasher().verify(row["password_hash"], proof.password)
     except VerificationError:
-        raise HTTPException(401, "Incorrect current password") from None
+        raise HTTPException(403, "Incorrect current password") from None
     return row
 
 
-def verify_proof(conn, row, proof):
+def same_account(row, verified_hash):
+    if not row or row["disabled"] or row["password_hash"] != verified_hash:
+        raise HTTPException(403, "Account access changed. Sign in again before continuing.")
+
+
+def verify_proof(conn, row, proof, verified_hash):
+    same_account(row, verified_hash)
     if not check_second_factor(conn, row, proof.code):
-        raise HTTPException(401, "Enter a fresh authenticator or recovery code")
+        raise HTTPException(403, "Enter a fresh authenticator or recovery code")
     conn.execute("DELETE FROM login_attempts WHERE ip=?", ("account:" + row["id"],))
 
 
@@ -101,11 +107,11 @@ class PasswordChange(Proof):
 
 @router.post("/password")
 async def change_password(body: PasswordChange, user=Depends(require_user)):
-    verify_password(user, body)
+    verified_hash = verify_password(user, body)["password_hash"]
     hashed = PasswordHasher().hash(body.new_password)
     with db(write=True) as conn:
         row = conn.execute("SELECT * FROM users WHERE id=?", (user["user_id"],)).fetchone()
-        verify_proof(conn, row, body)
+        verify_proof(conn, row, body, verified_hash)
         conn.execute("UPDATE users SET password_hash=? WHERE id=?", (hashed, row["id"]))
         conn.execute("DELETE FROM sessions WHERE user_id=? AND token_hash<>?", (row["id"], user["token_hash"]))
         audit(conn, user["username"], "account.password_changed")
@@ -126,10 +132,11 @@ async def revoke_sessions(user=Depends(require_user)):
 
 @router.post("/totp/setup")
 def setup(body: Proof, user=Depends(require_user)):
-    verify_password(user, body)
+    verified_hash = verify_password(user, body)["password_hash"]
     secret = pyotp.random_base32()
     with db(write=True) as conn:
         row = conn.execute("SELECT * FROM users WHERE id=?", (user["user_id"],)).fetchone()
+        same_account(row, verified_hash)
         if row["totp_secret"]:
             raise HTTPException(409, "Two-factor sign-in is already enabled")
         conn.execute(
@@ -167,10 +174,10 @@ async def confirm(body: Code, user=Depends(require_user)):
 
 @router.post("/totp/disable")
 async def disable(body: Proof, user=Depends(require_user)):
-    verify_password(user, body)
+    verified_hash = verify_password(user, body)["password_hash"]
     with db(write=True) as conn:
         row = conn.execute("SELECT * FROM users WHERE id=?", (user["user_id"],)).fetchone()
-        verify_proof(conn, row, body)
+        verify_proof(conn, row, body, verified_hash)
         conn.execute(
             "UPDATE users SET totp_secret=NULL,totp_pending=NULL,totp_counter=-1,recovery_codes='[]' WHERE id=?",
             (row["id"],),

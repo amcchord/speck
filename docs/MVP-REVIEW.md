@@ -67,12 +67,15 @@ audit tables scroll inside their container. [Screenshots and provenance](screens
 
 This branch closes the main operational gaps for a **single-organization RMM MVP
 candidate**. It is not a production-release certification. No live backend or
-endpoint changes were made by this task. The parent desktop-quality task owns
-native client qualification and integration into main.
+endpoint changes were made by this task. The parent desktop-quality task completed the Desktop 0.2.1 release; its main
+commit `2a4068a` is merged into this branch. Native platform limits remain in
+[desktop qualification](desktop-quality.md).
 
 Before calling the combined release ready:
 
-1. Integrate the parent native fixes and run combined CI.
+1. Complete GitHub CI and review this branch. Local combined validation passed
+   35 Python tests, 7 microphone lifecycle tests, 10 desktop tests, Ruff and the
+   TypeScript/Vite build after integrating `2a4068a`.
 2. Deploy with a consistent database/data/key backup, then validate the management
    flows on disposable Windows and Linux endpoints, including restart behavior.
 3. Complete real Windows selected-patch and MSI installation acceptance; update

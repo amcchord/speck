@@ -13,6 +13,13 @@ Static remote UI changes were deployed without restarting the backend. Original
 agents remain 0.2.0; Slide links, original/clone identities, retained restores and
 backups are preserved. Private QA and release evidence: `output/desktop-quality/`.
 
-The separate MVP review task is implementing alerts, schedules, endpoint lifecycle,
-roles/TOTP and audit improvements in `worktrees/mvp-review` on `codex/mvp-review`.
-It has not deployed a backend update. Coordinate before any shared live restart.
+The MVP review is implemented in `worktrees/mvp-review` on `codex/mvp-review`:
+alerts/policies, scheduled scans/templates, endpoint lifecycle, roles/TOTP and
+filtered audit. Parent main `2a4068a` is integrated. Local combined checks passed
+35 Python, 7 microphone and 10 desktop tests plus Ruff and TypeScript/Vite.
+See [review](../MVP-REVIEW.md), [management guide](../management.md) and the
+[synthetic gallery](../screenshots/mvp-review/README.md).
+
+The management backend is not deployed. Next: review the focused PR and its CI,
+then coordinate a backed-up deployment and disposable Windows/Linux acceptance.
+Original lab agents and Slide resources remain unchanged by this review.

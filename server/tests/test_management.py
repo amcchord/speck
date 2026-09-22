@@ -378,6 +378,14 @@ def test_disabling_schedule_owner_pauses_automation(client):
 
 
 def test_password_change_keeps_current_session_and_revokes_others(client):
+    assert (
+        client.post(
+            "/api/access/password",
+            json={"password": "incorrect-current-password", "new_password": "different-synthetic-passphrase"},
+        ).status_code
+        == 403
+    )
+    assert client.get("/api/auth/me").status_code == 200
     other = TestClient(app, base_url="https://testserver")
     response = other.post(
         "/api/auth/login",
