@@ -1,5 +1,22 @@
 # Project journal
 
+## 2026-09-22 — Slide restore lifecycle cleanup
+
+Runtime `e5d37c6` adds persistent restore identity tracking, conservative provider
+deletion confirmation and reversible retirement of offline restored endpoints.
+The Slide page exposes policy, status and a manual synchronization action.
+Provider listing validation and 20 focused regressions guard original identities,
+stopped VMs, errors, changed scope, role/CSRF boundaries and archive behavior.
+All 77 backend tests, 24 web tests, server Ruff and TypeScript/Vite pass.
+
+Deployed above the previously live machine overview, retaining its interface.
+Database/runtime/configuration rollback was captured before the backend restart.
+Source and served asset hashes plus health pass. A real-provider acceptance run
+confirmed the unattended worker archived five copies after its grace period;
+all originals and shared credentials remained active, with history preserved.
+Slide controls and the cleaned Fleet passed live browser checks. Exact customer
+evidence stays private. Integration is in draft PR #9.
+
 ## 2026-09-22 — Fleet operations and native client preview
 
 Started at `443f17c` on `codex/fleet-operations`. Implemented table/drawer UI,

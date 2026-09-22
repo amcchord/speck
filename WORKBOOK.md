@@ -302,3 +302,29 @@ operation or service restart occurred. See `docs/operations/machine-overview.md`
 for rollback and ignored `output/machine-overview/` for exact private evidence.
 The runtime and release records remain on local `codex/machine-overview`; no
 GitHub push or merge was performed as part of this deployment.
+
+## Slide restore lifecycle — September 22, 2026
+
+The Slide integration now correlates provider restore IDs/MACs with separate
+Speck clone identities, including restores created by external runbooks. A
+background poll archives offline copies only after repeated exact-resource 404
+responses, a five-minute grace period and unchanged source/clone/provider scope.
+Originals, shared enrollment credentials, audit/jobs/recovery history and stopped
+VMs are preserved. The Slide page exposes status, a manual check and an admin
+policy toggle. Provider inventory validation rejects malformed pagination/data.
+
+Twenty focused regressions exercise deletion, stopped/online machines, API
+failures, ambiguous hardware, source changes, token rotation, restart persistence,
+archive/check-in behavior, role/CSRF boundaries and policy disabling. The complete
+backend suite (77 tests) and 24 web checks pass; server Ruff and TypeScript/Vite
+pass. Runtime `e5d37c6` is deployed with the previously live machine overview
+preserved. The backend restart followed a consistent SQLite and runtime/config
+backup at `/var/lib/speck-rollback/20260922T214123Z-restore-cleanup`.
+No endpoint packages or provider credentials changed. The scheduled worker
+retained removed restores through the grace period, then automatically archived
+all five tracked copies at 21:51:36 UTC. Audit actors confirm `slide-sync` performed
+the archives. All five originals remain online and manageable, with identical
+device, installation and protected-agent identities. The live Slide controls and
+five-machine Fleet were checked; a subsequent **Check now** was a no-op.
+Private proof stays outside this public repository. Draft integration PR:
+https://github.com/amcchord/speck/pull/9.
