@@ -1,0 +1,15 @@
+[project]
+name = "speck-rmm"
+version = "0.1.0"
+description = "A little lightweight RMM for Windows, Linux, and recovery"
+requires-python = ">=3.11"
+dependencies = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1", "httpx>=0.28,<1", "argon2-cffi>=25,<26", "cryptography>=46,<47", "python-multipart>=0.0.20,<1", "websockets>=15,<16"]
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1", "requests>=2,<3", "pyotp>=2,<3"]
+[tool.pytest.ini_options]
+pythonpath = ["server"]
+testpaths = ["server/tests"]
+[tool.ruff]
+line-length = 120
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

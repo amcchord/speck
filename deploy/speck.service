@@ -1,0 +1,26 @@
+[Unit]
+Description=Speck RMM control plane
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=speck
+Group=speck
+WorkingDirectory=/opt/speck
+EnvironmentFile=/etc/speck/server.env
+Environment=PYTHONPATH=/opt/speck/server
+ExecStart=/opt/speck/.venv/bin/uvicorn speck.main:app --host 127.0.0.1 --port 8088 --proxy-headers --forwarded-allow-ips 127.0.0.1 --ws-max-size 2097152
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/speck
+RestrictSUIDSGID=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

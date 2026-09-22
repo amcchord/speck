@@ -1,0 +1,16 @@
+speckrmm.com {
+    encode zstd gzip
+    header Strict-Transport-Security "max-age=31536000"
+    @large path /api/devices/*/files/upload /api/agent/transfers/*
+    request_body @large {
+        max_size 260MB
+    }
+    @small not path /api/devices/*/files/upload /api/agent/transfers/*
+    request_body @small {
+        max_size 3MB
+    }
+    reverse_proxy 127.0.0.1:8088
+}
+www.speckrmm.com {
+    redir https://speckrmm.com{uri} permanent
+}
