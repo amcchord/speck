@@ -82,10 +82,11 @@ deployed Guacamole/FreeRDP gateway. **View at 100%** enables scrolling at native
 Ctrl+Alt+Del, Windows+R, Alt+Tab and Task Manager. Touch input maps to the remote
 screen. Clipboard controls remain available in the browser.
 
-[Download Speck Desktop](https://github.com/amcchord/speck/releases) for Windows
+[Download Speck Desktop](https://speckrmm.com/#downloads) for Windows
 x64, macOS Apple silicon/Intel, or Linux x64. Install and open it once, then sign
-in with the same Speck account. Select **Speck Desktop** in Settings → Remote
-client, or use **Open in desktop app** during a session. Future launches use
+in with the same Speck account. Downloads are also available from the sidebar,
+sign-in page, and Settings. Select **Speck Desktop** in Settings → Remote
+workspace, or use **Open in desktop app** during a session. Future launches use
 `speck://connect/<machine-id>`; links contain no passwords or session tokens.
 Browsers cannot reliably detect installed applications, so an explicit browser
 fallback remains available. Each client's authenticated session is independent.

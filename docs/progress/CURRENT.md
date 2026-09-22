@@ -32,3 +32,9 @@ See [review](../MVP-REVIEW.md), [management guide](../management.md),
 
 Next: finish Windows selected-patch/MSI acceptance and the remaining recovery and
 native platform qualification matrix before claiming broader production readiness.
+
+Desktop client downloads are live at https://speckrmm.com/#downloads, available
+from the sidebar, sign-in, Settings and desktop handoff. The page links the
+published 0.2.1 Windows, macOS and Linux packages. See the
+[download gallery](../screenshots/downloads/README.md). This was a static-only
+rollout after the MVP release, preserving its authentication and Safari fixes.

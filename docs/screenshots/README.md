@@ -1,5 +1,7 @@
 # Speck screenshots
 
+**[Desktop downloads](downloads/README.md)**: installers in the console and on the sign-in page.
+
 **[Open the current 0.2 gallery](v0.2/README.md)**: fleet table, device drawer,
 patching, templates, AI, mobile layouts and full-frame remote access.
 
