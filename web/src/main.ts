@@ -166,16 +166,21 @@ function login() {
   disconnect();
   csrf = "";
   username = "";
-  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><button id="passkey-login" class="primary" type="button">Sign in with a passkey</button>${(window as any).speckDesktop?.openPasskeyBrowser ? '<button id="passkey-browser" class="secondary" type="button">Use a passkey from your browser</button><p id="passkey-browser-status" role="status"></p>' : ""}<span class="login-divider">or use your password</span><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><label>Authenticator or recovery code <small>if enabled</small><input id="login-code" autocomplete="one-time-code" maxlength="40"></label><button class="secondary" type="submit">Sign in with password ${icon("arrow")}</button><a class="login-downloads" href="#downloads">${icon("download")}Download Speck Desktop</a></form></main>`;
+  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><button id="passkey-login" class="primary" type="button">Sign in with a passkey</button>${(window as any).speckDesktop?.openPasskeyBrowser ? '<button id="passkey-browser" class="secondary" type="button">Use a passkey from your browser</button><p id="passkey-browser-status" role="status"></p>' : ""}<button id="passkey-cancel" type="button" class="secondary" hidden>Cancel passkey sign-in</button><span class="login-divider">or use your password</span><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><label>Authenticator or recovery code <small>if enabled</small><input id="login-code" autocomplete="one-time-code" maxlength="40"></label><button class="secondary" type="submit">Sign in with password ${icon("arrow")}</button><a class="login-downloads" href="#downloads">${icon("download")}Download Speck Desktop</a></form></main>`;
   let authBusy = false;
-  const authenticate = (action: () => Promise<void>) => async () => {
+  let authController: AbortController | null = null;
+  const cancelButton = document.getElementById("passkey-cancel") as HTMLButtonElement;
+  on("passkey-cancel", () => authController?.abort());
+  const authenticate = (action: (signal: AbortSignal) => Promise<void>, cancellable = true) => async () => {
     if (authBusy) return;
     authBusy = true;
-    const buttons = Array.from(app.querySelectorAll<HTMLButtonElement>("button"));
+    authController = new AbortController();
+    cancelButton.hidden = !cancellable;
+    const buttons = Array.from(app.querySelectorAll<HTMLButtonElement>("button:not(#passkey-cancel)"));
     buttons.forEach(button => button.disabled = true);
-    try { await action(); }
+    try { await action(authController.signal); }
     finally {
-      authBusy = false;
+      authBusy = false; authController = null; cancelButton.hidden = true;
       buttons.forEach(button => { if (button.isConnected) button.disabled = false; });
       if (passkeyButton.isConnected) passkeyButton.disabled = !passkeysAvailable();
     }
@@ -183,7 +188,7 @@ function login() {
   const passkeyButton = document.getElementById("passkey-login") as HTMLButtonElement;
   passkeyButton.disabled = !passkeysAvailable();
   if (passkeyButton.disabled) passkeyButton.title = "Use an updated browser over HTTPS for passkeys";
-  on("passkey-browser", authenticate(async () => {
+  on("passkey-browser", authenticate(async (signal) => {
     const current = viewScope.checkpoint();
     const verifier = encodePasskey(crypto.getRandomValues(new Uint8Array(32)).buffer);
     const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))))
@@ -197,6 +202,7 @@ function login() {
       while (Date.now() < end) {
         await new Promise(resolve => setTimeout(resolve, 2000));
         current();
+        if (signal.aborted) throw new Error("Desktop sign-in canceled.");
         const result = await api("/auth/desktop/claim", "POST", { id: started.id, verifier });
         if (result.pending) continue;
         csrf = result.csrf; username = result.username; role = result.role;
@@ -205,11 +211,12 @@ function login() {
       throw new Error("Desktop sign-in timed out. Try again.");
     } finally { if (status.isConnected) status.textContent = ""; }
   }));
-  on("passkey-login", authenticate(async () => {
+  on("passkey-login", authenticate(async (signal) => {
     const current = viewScope.checkpoint();
     const options = await api("/auth/passkeys/options", "POST");
-    const credential = await passkeyCeremony(options.publicKey);
+    const credential = await passkeyCeremony(options.publicKey, false, signal);
     current();
+    cancelButton.hidden = true;
     const result = await api("/auth/passkeys/verify", "POST", { challenge_id: options.challenge_id, credential });
     csrf = result.csrf; username = result.username; role = result.role;
     await render();
@@ -226,7 +233,7 @@ function login() {
       username = r.username;
       role = r.role;
       await render();
-    }),
+    }, false),
     "submit",
   );
 }

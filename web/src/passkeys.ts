@@ -36,10 +36,15 @@ export function serialize(credential: PublicKeyCredential): object {
 }
 export async function ceremony(options: any, register = false, signal?: AbortSignal): Promise<object> {
   if (!available()) throw new Error("Passkeys need a supported browser over HTTPS. You can still sign in with your password.");
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal?.addEventListener("abort", abort, { once: true });
+  if (signal?.aborted) controller.abort();
+  const timeout = setTimeout(abort, 60000);
   try {
     const credential = register
-      ? await navigator.credentials.create({ publicKey: creationOptions(options), signal })
-      : await navigator.credentials.get({ publicKey: requestOptions(options), signal });
+      ? await navigator.credentials.create({ publicKey: creationOptions(options), signal: controller.signal })
+      : await navigator.credentials.get({ publicKey: requestOptions(options), signal: controller.signal });
     if (!credential) throw new Error("No passkey was selected.");
     return serialize(credential as PublicKeyCredential);
   } catch (error) {
@@ -49,5 +54,8 @@ export async function ceremony(options: any, register = false, signal?: AbortSig
       if (error.name === "InvalidStateError") throw new Error("This passkey is already registered. Use another authenticator.");
     }
     throw error;
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", abort);
   }
 }

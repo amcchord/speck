@@ -103,3 +103,12 @@ test('a deep link reopens a closed macOS window', () => {
   assert.equal(r.windows.length, 2);
   assert.equal(r.windows[1].loaded, 'https://speckrmm.com/#remote/' + 'b'.repeat(32));
 });
+
+test('browser handoff rejects subframes, unfocused windows and arbitrary link payloads', async () => {
+  const r = runtime();
+  const open = r.handlers.get('speck:passkey-browser');
+  await assert.rejects(open(r.event, 'https://evil.test'));
+  await assert.rejects(open({ ...r.event, senderFrame: { url: r.event.senderFrame.url } }, 'a'.repeat(43)));
+  r.win.focused = false;
+  await assert.rejects(open(r.event, 'a'.repeat(43)));
+});

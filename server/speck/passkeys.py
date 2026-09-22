@@ -321,6 +321,8 @@ def register(body: Registration, user=Depends(require_user)):
             raise HTTPException(409, "Remove an unused passkey before adding another")
         key_id = ident()
         transports = body.credential["response"].get("transports", [])
+        if not isinstance(transports, list) or len(transports) > 10:
+            raise HTTPException(400, "Invalid authenticator transports")
         transports = [v for v in transports if v in ("usb", "nfc", "ble", "internal", "hybrid")]
         try:
             conn.execute(
