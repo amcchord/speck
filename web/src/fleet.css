@@ -102,3 +102,25 @@
   .fleet-workspace .fleet-empty-row { display: block !important; }
   .fleet-workspace .fleet-empty-row td { display: block; }
 }
+
+/* Keep the selected machine readable while its non-modal pane is open. */
+.fleet-workspace .fleet-table tr[data-row] { cursor: pointer; }
+.fleet-workspace .fleet-table tr.active-machine,
+.fleet-workspace .fleet-table tr.active-machine:hover { background: #e8efdc; }
+.fleet-workspace .fleet-table tr.active-machine > td:first-child { box-shadow: inset 3px 0 var(--fern); }
+.fleet-workspace .machine-name:focus-visible { outline: 2px solid var(--fern); outline-offset: 3px; border-radius: 3px; }
+.device-drawer { z-index: 30; overscroll-behavior: contain; }
+.device-drawer[open] { animation: machine-pane-in 180ms cubic-bezier(.2,.8,.2,1); }
+.device-drawer::backdrop { background: transparent; backdrop-filter: none; }
+@keyframes machine-pane-in {
+  from { transform: translateX(24px); opacity: .65; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .device-drawer[open] { animation: none; }
+}
+@media (max-width: 700px) {
+  body:has(> .device-drawer[open]) { overflow: hidden; }
+  .fleet-workspace .fleet-table tr.active-machine { box-shadow: inset 3px 0 var(--fern); }
+  .fleet-workspace .fleet-table tr.active-machine > td:first-child { box-shadow: none; }
+}
