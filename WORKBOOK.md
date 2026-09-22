@@ -30,6 +30,10 @@ Branch: `codex/initial-speck`. Independent Windows/Linux RMM repository.
 - Restored Windows startup and static networking were tested. A sample address
   script includes automatic DHCP rollback if its health check fails.
 - Browser mouse and keyboard operated the live Windows imaging application.
+- Restored front-desk browser RDP worked after its pending Windows updates
+  completed. Its softphone registered with the restored PBX; an internal test
+  call rang and was answered through the browser. Softphone audio in this
+  restored session remains unverified.
 - GitHub Actions passed on the public repository after implementation fixes.
 
 Private deployment state, lab identifiers and operator scripts are in ignored
