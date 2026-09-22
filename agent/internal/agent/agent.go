@@ -243,7 +243,7 @@ func (c *Client) execute(parent context.Context, j Job) {
 		return
 	}
 	duration := number(j.Payload, "timeout", 60)
-	if j.Kind != "tunnel" && j.Kind != "command" && duration > 180 {
+	if j.Kind != "tunnel" && j.Kind != "shell" && j.Kind != "command" && duration > 180 {
 		duration = 180
 	}
 	if duration < 5 {
@@ -306,6 +306,8 @@ func (c *Client) handle(ctx context.Context, j Job) (map[string]any, error) {
 		return c.uploadToDevice(ctx, j.Payload)
 	case "files.download":
 		return c.downloadFromDevice(ctx, j.Payload)
+	case "shell":
+		return c.shell(ctx, j.Payload)
 	case "tunnel":
 		return c.tunnel(ctx, j.Payload)
 	}

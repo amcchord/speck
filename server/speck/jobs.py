@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from speck.config import seal, unseal
 from speck.db import audit, db, ident
 
-KINDS = {'command', 'service.control', 'network.check', 'files.list', 'files.upload', 'files.download', 'tunnel'}
+KINDS = {'command', 'service.control', 'network.check', 'files.list', 'files.upload', 'files.download', 'tunnel', 'shell'}
 
 
 def get_device(device_id, approved=False):

@@ -103,3 +103,11 @@ See [passkeys](passkeys.md) for enrollment, revocation, desktop browser handoff,
 native Apple associations, threat boundaries and coordinated rollback. Verified
 passkeys are an alternative to password/TOTP sign-in, not a way to change roles.
 Existing agent tokens and Slide recovery identities remain independent.
+
+## Interactive Linux shell
+
+The [web shell](operations/web-shell.md) runs with the agent service account’s
+privileges. Its outbound TLS relay uses the same operator, device, one-use session,
+revocation and lifetime restrictions as remote desktops. PTY output is bounded in
+memory and is not recorded in job results or audit. Start/end metadata is audited.
+Clipboard operations are explicit; no automatic clipboard synchronization is used.

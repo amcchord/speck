@@ -6,7 +6,9 @@ import ipaddress
 import secrets
 import time
 from dataclasses import dataclass, field
+from typing import Literal
 
+from anyio import BrokenResourceError, ClosedResourceError
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -14,6 +16,7 @@ from pydantic import BaseModel, Field
 from speck.config import unseal
 from speck.db import audit, db, ident
 from speck.jobs import create_job, get_device
+from speck.remote_config import remote_options
 from speck.security import agent_credentials, require_user, websocket_user
 
 router = APIRouter()
@@ -61,6 +64,10 @@ class Session:
     tcp: asyncio.Future | None = None
     listener: asyncio.Server | None = None
     agent: WebSocket | None = None
+    browser: WebSocket | None = None
+    output: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(maxsize=16))
+    job_id: str | None = None
+    actor: str = ''
     browser_claimed: bool = False
     audio_streams: int = 0
     audio_bytes: int = 0
@@ -76,13 +83,23 @@ async def close_session(session_id):
     if not session:
         return
     session.finished.set()
+    if session.config['protocol'] == 'shell':
+        with db(write=True) as conn:
+            if session.job_id:
+                conn.execute("UPDATE jobs SET status='cancelled',finished=? WHERE id=? AND status='queued'", (time.time(), session.job_id))
+            audit(conn, session.actor, 'remote.ended', session.device_id, {'session_id': session.id, 'protocol': 'shell'})
+    if session.browser:
+        try:
+            await session.browser.close()
+        except (RuntimeError, WebSocketDisconnect, BrokenResourceError, ClosedResourceError):
+            pass
     if session.listener:
         session.listener.close()
         await session.listener.wait_closed()
     if session.agent:
         try:
             await session.agent.close()
-        except (RuntimeError, WebSocketDisconnect):
+        except (RuntimeError, WebSocketDisconnect, BrokenResourceError, ClosedResourceError):
             pass
     if session.tcp and session.tcp.done() and not session.tcp.cancelled():
         _, writer = session.tcp.result()
@@ -97,6 +114,9 @@ async def expire_session(session_id):
 
 
 class StartSession(BaseModel):
+    mode: Literal['auto', 'connection', 'shell'] = 'auto'
+    cols: int = Field(default=100, ge=2, le=500)
+    rows: int = Field(default=30, ge=1, le=200)
     width: int = Field(default=1440, ge=640, le=3840)
     height: int = Field(default=900, ge=480, le=2160)
 
@@ -104,14 +124,20 @@ class StartSession(BaseModel):
 @router.post('/api/devices/{device_id}/remote/sessions')
 async def start_session(device_id: str, body: StartSession, user=Depends(require_user)):
     device = get_device(device_id, approved=True)
-    if not device['remote_secret']:
+    config, options = remote_options(device)
+    protocol = options['remote_protocol'] if body.mode == 'auto' else ('shell' if body.mode == 'shell' else (config or {}).get('protocol'))
+    if protocol == 'shell':
+        if not options['remote_shell_available']:
+            raise HTTPException(409, 'Update this Linux agent to enable the web shell')
+        config = {'protocol': 'shell'}
+    elif not config:
         raise HTTPException(409, 'Configure a remote connection first')
     if time.time() - device['last_seen'] > 75:
         raise HTTPException(409, 'Device is offline')
     if sum(s.user_id == user['user_id'] for s in sessions.values()) >= 4:
         raise HTTPException(429, 'Close an existing remote session first')
     session = Session(ident(), device_id, user['user_id'], secrets.token_urlsafe(32),
-                      json.loads(unseal(device['remote_secret'])), body.width, body.height)
+                      config, body.width, body.height, actor=user['username'])
     session.tcp = asyncio.get_running_loop().create_future()
     async def connected(reader, writer):
         if session.tcp.done():
@@ -120,10 +146,13 @@ async def start_session(device_id: str, body: StartSession, user=Depends(require
         session.tcp.set_result((reader, writer))
         await session.finished.wait()
         writer.close()
-    session.listener = await asyncio.start_server(connected, '127.0.0.1', 0)
+    if protocol != 'shell':
+        session.listener = await asyncio.start_server(connected, '127.0.0.1', 0)
     sessions[session.id] = session
     try:
-        create_job(device_id, 'tunnel', {'session_id': session.id, 'secret': session.secret, 'port': session.config['port'], 'timeout': 7200}, user['username'], 7200)
+        payload = {'session_id': session.id, 'secret': session.secret, 'timeout': 7200}
+        payload.update({'cols': body.cols, 'rows': body.rows} if protocol == 'shell' else {'port': session.config['port']})
+        session.job_id = create_job(device_id, 'shell' if protocol == 'shell' else 'tunnel', payload, user['username'], 7200)
     except Exception:
         await close_session(session.id)
         raise
@@ -140,6 +169,7 @@ async def agent_tunnel(socket: WebSocket, session_id: str):
         _, device = agent_credentials(socket.headers)
         if not session or not device or device['id'] != session.device_id or session.agent:
             raise HTTPException(403)
+        get_device(session.device_id, approved=True)
         if not secrets.compare_digest(socket.headers.get('x-speck-tunnel-secret', ''), session.secret):
             raise HTTPException(403)
     except HTTPException:
@@ -147,6 +177,10 @@ async def agent_tunnel(socket: WebSocket, session_id: str):
         return
     await socket.accept()
     session.agent = socket
+    if session.config['protocol'] == 'shell':
+        from speck.shell import agent_shell
+        await agent_shell(socket, session)
+        return
     session.ready.set()
     tasks = []
     try:
@@ -181,6 +215,10 @@ async def browser_tunnel(socket: WebSocket, session_id: str):
         await socket.close(code=1008)
         return
     session.browser_claimed = True
+    if session.config['protocol'] == 'shell':
+        from speck.shell import browser_shell
+        await browser_shell(socket, session, user)
+        return
     await socket.accept(subprotocol='guacamole')
     writer = None
     tasks = []
@@ -235,7 +273,7 @@ async def browser_tunnel(socket: WebSocket, session_id: str):
     except (TimeoutError, ConnectionError, WebSocketDisconnect, asyncio.IncompleteReadError, ValueError):
         try:
             await socket.send_text(instruction('error', 'Remote connection ended or could not be established. Check credentials and the remote service.', 519))
-        except (RuntimeError, WebSocketDisconnect):
+        except (RuntimeError, WebSocketDisconnect, BrokenResourceError, ClosedResourceError):
             pass
     finally:
         for task in tasks:
@@ -248,7 +286,7 @@ async def browser_tunnel(socket: WebSocket, session_id: str):
             audit(conn, user['username'], 'remote.ended', session.device_id, {'session_id': session_id})
         try:
             await socket.close()
-        except (RuntimeError, WebSocketDisconnect):
+        except (RuntimeError, WebSocketDisconnect, BrokenResourceError, ClosedResourceError):
             pass
 
 
@@ -280,3 +318,12 @@ def session_stats(session_id: str, user=Depends(require_user)):
     if not session or session.user_id != user['user_id']:
         raise HTTPException(404, 'Session is not active')
     return {'instructions_sent': session.instructions_sent, 'audio_streams': session.audio_streams, 'audio_bytes': session.audio_bytes}
+
+
+@router.delete('/api/remote/sessions/{session_id}')
+async def end_session(session_id: str, user=Depends(require_user)):
+    session = sessions.get(session_id)
+    if session and session.user_id != user['user_id']:
+        raise HTTPException(404, 'Session is not active')
+    await close_session(session_id)
+    return {'ok': True}

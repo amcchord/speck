@@ -71,3 +71,10 @@ in [MVP review](../MVP-REVIEW.md), [management rollout](../operations/management
 acceptance, remaining native media/platform tests and broader recovery qualification
 are still open. This passkey work did not launch new recoveries, install patches,
 deploy endpoint software or clean up existing recovery resources.
+
+## Ready for review: headless web shell
+
+`codex/headless-webshell` in `worktrees/headless-webshell` adds automatic Linux
+web shell routing and the interactive agent/PTY relay. Rebased onto main `b6dfb32`.
+Locally verified; not pushed, merged or deployed. See [behavior and checks](../operations/web-shell.md).
+Next action: review and authorize the coordinated server/web/Linux-agent release.

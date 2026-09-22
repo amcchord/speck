@@ -352,3 +352,13 @@ Release/rollback details, privacy behavior and synthetic captures:
 worktree's ignored `output/preview-reliability/`. Refresh the console once to load
 the new asset bundle; no operator desktop or iOS package update is required for
 the hosted console changes.
+
+## Headless web shell — September 22, 2026
+
+Implemented in `worktrees/headless-webshell` on `codex/headless-webshell` from
+main `b6dfb32`, preserving the latest machine overview, preview and restore-lifecycle changes. Headless Linux screen actions open an agent PTY in an xterm.js
+workspace without SSH configuration. Includes search, copy/paste, resize, full
+screen and teardown; preserves existing graphical connections and old agents.
+Server, Linux runtime, cross-build, browser and iOS build checks passed.
+No production release or endpoint changes. See [implementation and release order](docs/operations/web-shell.md)
+and [synthetic gallery](docs/screenshots/web-shell/README.md).

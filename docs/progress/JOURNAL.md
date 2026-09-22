@@ -344,3 +344,22 @@ after five minutes and survived loss of live memory. Validation: 82 backend, 28 
 Linux has no graphical capture acceptance. See the preview operations note for
 rollback paths and exact qualification. No provider recovery, patch deployment,
 password change or resource cleanup was performed.
+
+## 2026-09-22 — Headless web shell implementation
+
+Contained branch/worktree `codex/headless-webshell`, from main `290ed31`, adds
+Linux desktop capability detection, a bounded authenticated PTY relay and a
+responsive xterm.js workspace selected by the Fleet screen action. Existing
+connections and credentials are preserved; a saved connection remains available
+from the terminal. Agent startup/disconnect, cross-builds, role/identity/session
+restrictions, browser behavior and native label compilation were verified.
+A Linux runtime test caught and fixed a blocking PTY descriptor on resize/close.
+Screenshots are synthetic, original and include hashes. Full validation and
+rollout instructions: `docs/operations/web-shell.md`. No shared branch push,
+production deployment, live endpoint command or credentials change. The next
+action is review and authorization for the coordinated release.
+
+Before handoff, rebased the feature onto main `b6dfb32` and resolved the
+Fleet/telemetry changes while retaining all recent overview, preview and lifecycle
+behavior. Combined validation: 104 backend, 28 web unit tests, full Windows/Linux
+build script, Linux race tests and all 80 browser checks pass.

@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from speck.config import data_dir, origin, seal, unseal
+from speck.config import data_dir, origin, seal
 from speck.db import audit, db, ident, initialize
 from speck.jobs import create_job, get_device, public_job
 from speck.security import COOKIE, agent_credentials, digest, issue_session, require_agent, require_user
@@ -207,9 +207,10 @@ def devices(include_archived: bool = False, user=Depends(require_user)):
     result = []
     for row in rows:
         obj = dict(row)
-        connection = obj.pop('remote_secret')
-        obj['remote_configured'] = bool(connection)
-        obj['remote_protocol'] = json.loads(unseal(connection)).get('protocol') if connection else None
+        from speck.remote_config import remote_options
+        _, options = remote_options(obj)
+        obj.pop('remote_secret')
+        obj.update(options)
         obj['telemetry'] = json.loads(obj['telemetry'])
         obj['tags'] = json.loads(obj['tags'])
         obj['monitoring_enabled'] = monitoring[obj['id']]

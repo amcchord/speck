@@ -2,6 +2,8 @@
 
 **[Machine overview](machine-overview/README.md)**: compact machine facts, a 16:9 preview and health information above the fold.
 
+**[Headless web shell](web-shell/README.md)**: interactive Linux terminal, scrollback search and responsive controls (not yet deployed).
+
 **[Visual audit](visual-audit/README.md)**: consistent controls, cleaner icons, responsive pages and full-width native sign-in.
 
 **[Fleet row and pane](fleet-row-pane/README.md)**: row-wide activation, persistent context and mobile details.

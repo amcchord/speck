@@ -1,0 +1,12 @@
+[
+  {
+    "file": "desktop.png",
+    "sha256": "3de0a1e1044620bb9fce00d168e41ca2142d4c3660a12f5d29f6b89c87a0e555",
+    "source": "Synthetic Playwright web-shell fixture; unretouched browser capture"
+  },
+  {
+    "file": "mobile.png",
+    "sha256": "2f677573198bdf302c81bf72863ff4edbfa7782001090e2ba2272cd41630842a",
+    "source": "Synthetic Playwright web-shell fixture; unretouched browser capture"
+  }
+]

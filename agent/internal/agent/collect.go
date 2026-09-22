@@ -73,7 +73,10 @@ func Collect(foregroundDir string) map[string]any {
 	result["network"] = detail
 	result["services"] = services(ctx)
 	updateDesktopTelemetry(result, foregroundDir)
-	result["capabilities"] = map[string]any{"managed_operations": true, "screen_preview": true, "commands": true, "files": true, "powershell": hasPowerShell(), "active_app": result["active_app"] != nil, "desktop_note": "Browser desktop requires a local RDP/VNC service; headless Linux supports shell commands and files"}
+	result["capabilities"] = map[string]any{"managed_operations": true, "screen_preview": true, "commands": true, "files": true, "powershell": hasPowerShell(), "active_app": result["active_app"] != nil, "desktop_note": "Browser desktop requires a local RDP/VNC service; headless Linux opens an interactive web shell through the agent"}
+	for key, value := range remoteCapabilities() {
+		result["capabilities"].(map[string]any)[key] = value
+	}
 	return result
 }
 
