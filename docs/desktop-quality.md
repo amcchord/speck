@@ -55,3 +55,22 @@ not physical hardware or subjective speech quality. Test-only Chromium flags
 were used for that launch and are absent from the packaged application.
 
 Original devices, Slide identities and retained recovery resources are preserved.
+
+## Passkeys — Desktop 0.2.2, September 22, 2026
+
+[Release 0.2.2](https://github.com/amcchord/speck/releases/tag/v0.2.2) contains seven
+installers/archives and SHA256SUMS. Both Mac architectures include the Developer ID
+provisioning profile required by the app’s Touch ID keychain entitlement. They are
+signed, notarized and stapled, and Gatekeeper accepts both. An initial notarized
+build without the profile could not launch; it was rejected before publication.
+The signing hook now prevents that release mistake. Explicitly unsigned CI builds
+remain supported.
+
+The final Apple silicon application launches, preserves the prior login, displays
+the new sign-in controls, opens a matching-code Safari passkey handoff and cancels
+cleanly. The handoff never receives the desktop’s verifier or resulting session.
+Fourteen desktop tests pass, including origin/frame validation, account selection,
+and browser-opening IPC; all three platform CI packaging jobs pass. Windows/Linux
+installers are rebuilt, but new passkey runtime ceremonies on those platforms and
+physical Mac Touch ID/provider acceptance remain open. The previous remote-media
+qualification and its limits above still apply. Windows remains unsigned.

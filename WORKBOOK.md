@@ -210,7 +210,16 @@ selection and browser fallback across all three desktop platforms. Native build
 
 Protocol tests use real ECDSA signatures; web/desktop and native session-isolation
 checks cover the new flows. Private release evidence: `output/passkeys/`.
-Deployment and new installer/TestFlight publication are being validated; do not
-infer live release state from source version numbers. Existing endpoint service
-credentials, original/restored identities and Slide bindings remain in scope for
-preservation during rollout.
+The backed-up backend rollout from `8ae506b` and subsequent static updates are live.
+Desktop [0.2.2](https://github.com/amcchord/speck/releases/tag/v0.2.2) publishes all
+seven platform packages plus checksums. Both Mac architectures are profiled, signed,
+notarized and stapled; the Apple silicon app launches and browser handoff/cancellation
+work. iOS **0.1.1 (4)** is VALID and IN_BETA_TESTING in the existing Speck testing
+group; build 3 was withdrawn. Apple’s association CDN serves the correct identity.
+
+57 Python, 24 web, 14 desktop and 25 native unit tests pass, alongside live disposable
+passkey protocol/revocation acceptance. Physical biometric/provider ceremonies and
+Windows/Linux passkey runtime acceptance remain open. Original/restored identities,
+passwords, provider settings, Slide bindings and endpoint credentials were verified
+preserved. Final web updates preserve the running backend process. No new recovery,
+patch or software-deployment action was triggered. See the passkey screenshot gallery.

@@ -199,3 +199,27 @@ bound to the initiating client. iOS adds AuthenticationServices and associated
 domains while preserving session-generation guards. No personal credential is
 created as part of development. Automated crypto and native tests pass; release
 qualification, deployment and distribution are in progress under `output/passkeys`.
+
+## 2026-09-22 — Passkey rollout and app releases
+
+The backed-up server rollout from `8ae506b` is live, with disposable real-signature
+acceptance for enrollment, sign-in, replay, viewer permissions, revocation and the
+one-time desktop verifier. The acceptance account was disabled and its keys reset.
+Original/restore identities, credentials, provider settings and recovery bindings
+were checked before/after. Static follow-ups preserve the service PID; private
+backup/deployment evidence is in `output/passkeys/`.
+
+Desktop 0.2.2 publishes all seven platform packages and SHA256SUMS. Gatekeeper
+accepts both profiled, notarized Mac architectures; Apple silicon launch and
+browser-handoff cancellation pass. Notarization alone did not make an earlier
+profile-less Mac build launchable; that build was never published and a release
+hook now enforces the profile. Windows/Linux CI packages pass; physical passkey
+ceremonies remain device acceptance.
+
+Apple reports native 0.1.1 (4) VALID and IN_BETA_TESTING in the existing internal
+group. Build 3 was withdrawn after final review added explicit selected-server/RP
+matching before any native ceremony. Twenty-five native, 57 backend, 24 web and
+14 desktop tests pass; Xcode 26 CI also passes. UI cancellation, narrow layouts and
+passkey management were reviewed and captured without personal credentials. No
+endpoint credentials, agent packages, Slide recovery identities or retained cloud
+resources were changed. Upload keys were temporary; AustinLand remains the source.

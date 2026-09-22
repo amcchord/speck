@@ -1,5 +1,12 @@
 [
   {
+    "file": "mac-signin.png",
+    "width": 1152,
+    "height": 768,
+    "sha256": "ef3cb348197714eae098277293619859835e2721026c746f3b71c763a49b9fd7",
+    "source": "CUA original screenshot; signed Mac app on public sign-in"
+  },
+  {
     "file": "mobile-enrollment.jpg",
     "width": 375,
     "height": 812,
@@ -25,6 +32,13 @@
     "width": 1265,
     "height": 712,
     "sha256": "2209f119ec582613cfee9f39d94191ed5746763eda2b17cef2e185b5e26ead97",
+    "source": "CUA original screenshot; local synthetic account and actual Speck frontend"
+  },
+  {
+    "file": "web-keys.jpg",
+    "width": 1265,
+    "height": 712,
+    "sha256": "afda12262aa9a9540e91200b96f7dc42e52acef297b1e344471f7803ea862049",
     "source": "CUA original screenshot; local synthetic account and actual Speck frontend"
   },
   {

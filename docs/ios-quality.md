@@ -98,15 +98,18 @@ plans/templates/schedules and recovery clone approval/resource shutdown.
 
 ## Passkeys — 0.1.1 (4), September 22, 2026
 
-Build 4 replaces the briefly distributed build 3 after adding an explicit match
-between a native passkey RP and the selected server hostname. Its release state
-is being verified. Build 3 was VALID and IN_BETA_TESTING in the existing Speck testing group. It adds
-native AuthenticationServices sign-in/enrollment, name/removal controls, and the
-`webcredentials:speckrmm.com` entitlement. Apple’s association CDN returns the
-correct app identity. Archive, distribution export and upload passed; the exported
-profile contains the associated-domain entitlement. Twenty-three native unit tests
-pass, including late-passkey cancellation across sign-out and session-only storage.
-The underlying iOS source also passed GitHub’s Xcode 26 unit job.
+**0.1.1 (4)** is VALID and IN_BETA_TESTING in the existing Speck testing group.
+It replaces the briefly distributed build 3, which has been removed and expired.
+Native AuthenticationServices supports sign-in/enrollment and name/removal controls.
+Both operations bind the requested relying-party ID to the selected HTTPS server;
+alternate ports and mismatched domains are rejected before presenting a credential
+provider. The `webcredentials:speckrmm.com` entitlement and Apple’s association CDN
+identify the official app correctly.
+
+Archive, distribution export and upload passed; the exported profile contains the
+associated-domain entitlement. **25 native unit tests pass**, including late-passkey
+cancellation across sign-out, session-only storage, custom-server domain mismatch,
+and alternate-port rejection. The underlying source passed GitHub’s Xcode 26 job.
 
 Live server protocol acceptance used disposable, software-generated credentials
 for registration, signature verification, role restrictions, revocation and password

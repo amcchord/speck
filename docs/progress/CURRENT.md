@@ -1,64 +1,35 @@
-# Active work: passkeys
+# Current state — September 22, 2026
 
-`codex/passkeys` implements server/web/native sign-in and management. Automated
-checks and responsive UI review pass. Desktop 0.2.2 and iOS 0.1.1 (3) are in
-release qualification; the live site still uses the previous backend until the
-backed-up rollout is recorded. See [passkeys](../passkeys.md).
+Speck is live at https://speckrmm.com with management MVP, native iPhone/iPad,
+remote-session startup fixes and **passkey sign-in**. Enroll in Settings → Account
+& access, or Account → Passkeys on iOS. Password/authenticator login remains
+available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
 
-# Current state
+- **Desktop 0.2.2**: published Mac, Windows and Linux downloads. Mac builds include
+  their required provisioning profile, Developer ID signature, notarization and
+  staples. Apple silicon launch, retained login, browser handoff and cancellation
+  passed. Windows remains unsigned; Linux desktop and Intel Mac runtime checks,
+  and physical passkey provider ceremonies, remain open.
+- **iPhone/iPad 0.1.1 (4)**: VALID and IN_BETA_TESTING for the existing Speck testing
+  group. Twenty-five native unit tests pass. Associated domains and server/RP
+  binding are verified. Physical Face ID/Touch ID/provider sync, audio and older
+  iOS qualification remain device acceptance work. Build 3 is withdrawn/expired.
+- **Server/web**: 57 Python, 24 web and 14 desktop tests pass. Live disposable
+  credential acceptance verified signatures, replay rejection, role restrictions,
+  revocation, one-time desktop handoff and password fallback. Responsive UI was
+  reviewed and the [passkey gallery](../screenshots/passkeys/README.md) records it.
 
-Speck 0.2 remains live at https://speckrmm.com. Desktop 0.2.1 fixes native
-clipboard, shortcuts, fullscreen, browser handoff and microphone lifecycle bugs.
-See [desktop qualification](../desktop-quality.md) for the platform matrix.
+The passkey backend rollout from `8ae506b` retained matching database, environment,
+code and Python-environment backups. Subsequent web releases are static-only and
+preserve the running backend process. Existing login, agents, installation tokens,
+original/restore identities, Slide bindings, provider secrets and recovery records
+were verified preserved. Private evidence and rollback records: `output/passkeys/`.
+Endpoint agents remain 0.2.0 and use unattended service credentials.
 
-macOS Apple silicon and Windows 11 clients were tested interactively. Both Mac
-architectures are Developer ID signed, notarized and stapled. Linux packages pass
-CI, but native Linux desktop/Intel Mac runtime tests and physical microphone
-qualification remain open. Windows packages are still unsigned.
-
-Desktop 0.2.1 static remote UI changes preceded the management rollout. Original
-agents remain 0.2.0; Slide links, original/clone identities, retained restores and
-backups are preserved. Private QA and release evidence: `output/desktop-quality/`.
-
-The management MVP is now deployed from `92831ae` (September 22): alerts/policies,
-scheduled scans/templates, endpoint lifecycle, roles/TOTP and filtered audit.
-Existing login and all original/restored identities and Slide bindings survived.
-Scheduled native scans passed on Windows and Linux; disposable live identities
-verified role/MFA/session, alert/recovery and lifecycle controls. No QA schedule
-is active; QA accounts are disabled and installation credentials revoked.
-
-Safari selects now use consistent control styling with native menus and keyboard
-navigation. Fixed the malformed Ctrl + Alt + Del option. Native Safari fleet and
-connected remote-toolbar visual checks passed. Local checks: 35 Python, 7 microphone,
-10 desktop tests, Ruff and TypeScript/Vite; GitHub checks passed.
-
-See [review](../MVP-REVIEW.md), [management guide](../management.md),
-[rollout](../operations/management-rollout.md) and the
-[synthetic gallery](../screenshots/mvp-review/README.md). Private rollout evidence:
-`output/mvp-review/`. Coordinated desktop-download and iOS tasks continue separately.
-
-Next: finish Windows selected-patch/MSI acceptance and the remaining recovery and
-native platform qualification matrix before claiming broader production readiness.
-
-Desktop client downloads are live at https://speckrmm.com/#downloads, available
-from the sidebar, sign-in, Settings and desktop handoff. The page links the
-published 0.2.1 Windows, macOS and Linux packages. See the
-[download gallery](../screenshots/downloads/README.md). This was a static-only
-rollout after the MVP release, preserving its authentication and Safari fixes.
-
-The September 22 static update from `8b83c7f` is live: shared loading states,
-stale-response protection, Safari/WebKit decoding and first-screen recovery.
-Native Safari Windows 11/Server 2025/restored front-desk connections, reconnect,
-fullscreen and key macros passed; Chromium RDP and Linux SSH still work. Forced
-image-decode failure and delayed/error API checks passed. No backend restart or
-agent/configuration change. See [startup notes](../operations/session-startup.md)
-and [loading screenshots](../screenshots/loading/README.md). Private release and
-rollback evidence: `output/windows-session-start/`.
-
-Native iOS work adds the universal iPhone/iPad operator client and mobile remote
-keyboard. The screenshot-driven UI review and live Windows/Linux acceptance are
-recorded in [iOS qualification](../ios-quality.md), with a
-[28-image native gallery](../screenshots/ios/README.md). **Speck RMM 0.1.0 (2)** is
-available to the internal Speck testing group in TestFlight. Account-transition
-isolation and 20 native unit tests pass; the withdrawn build 1 is expired. Physical
-mobile audio, older iOS versions and long-running background checks remain open.
+Existing management/recovery capabilities and qualification limits are documented
+in [MVP review](../MVP-REVIEW.md), [management rollout](../operations/management-rollout.md),
+[desktop quality](../desktop-quality.md), [iOS quality](../ios-quality.md), and
+[session startup](../operations/session-startup.md). Windows selected-patch/MSI
+acceptance, remaining native media/platform tests and broader recovery qualification
+are still open. This passkey work did not launch new recoveries, install patches,
+deploy endpoint software or clean up existing recovery resources.

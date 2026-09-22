@@ -1,7 +1,14 @@
 # Passkeys
 
-Original, unretouched captures of the real frontend using a synthetic local account.
-No personal passkey or private machine data appears in this gallery.
+Original, unretouched captures of the real frontend with synthetic local accounts,
+and the signed Mac application on the public sign-in screen. No personal passkey,
+credential, or private machine data appears. Dimensions and hashes are recorded in
+[the manifest](manifest.json). These screenshots show UI quality, not a completed
+physical biometric ceremony.
+
+## Mac Signin
+
+![mac-signin.png](mac-signin.png)
 
 ## Mobile Enrollment
 
@@ -18,6 +25,10 @@ No personal passkey or private machine data appears in this gallery.
 ## Web Enrollment
 
 ![web-enrollment.jpg](web-enrollment.jpg)
+
+## Web Keys
+
+![web-keys.jpg](web-keys.jpg)
 
 ## Web Signin
 

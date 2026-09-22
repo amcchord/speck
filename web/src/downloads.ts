@@ -1,7 +1,7 @@
 import { icon } from "./icons";
 
 // Advance this only after all platform artifacts and SHA256SUMS are published.
-const version = "0.2.1";
+const version = "0.2.2";
 const release = `https://github.com/amcchord/speck/releases/tag/v${version}`;
 const assets = `https://github.com/amcchord/speck/releases/download/v${version}`;
 const installer = (file: string, label: string, primary = false) =>

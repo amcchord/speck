@@ -1708,3 +1708,4 @@ td summary {
 .passkey-list b { overflow-wrap: anywhere; }
 @media (max-width: 520px) { .passkey-list li { align-items: flex-start; flex-direction: column; } .passkey-panel .section-head { flex-wrap: wrap; } }
 .passkey-pair-code { font: 600 32px var(--font-mono, monospace); letter-spacing: .2em; color: var(--forest); padding: 16px; border: 1px solid var(--line); border-radius: 10px; text-align: center; }
+.passkey-list .actions { display: flex; gap: 8px; flex-shrink: 0; }
