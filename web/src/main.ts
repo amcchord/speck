@@ -12,6 +12,7 @@ import { startMicrophone } from "./microphone";
 import { loadingState, createViewScope, StaleViewError } from "./loading";
 import { useReliableImageDecoder, hasVisiblePixels, watchRemoteStartup } from "./remote-startup";
 import "./loading.css";
+import { remoteTextKeys } from "./remote-input";
 
 const viewScope = createViewScope();
 
@@ -833,7 +834,7 @@ async function renderRemotePage(id: string, attempt = 0) {
   }
 }
 async function connectRemote(d: Item, attempt = 0) {
-  app.innerHTML = `<main class="remote-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${esc(d.label)}</h1><small id="remote-status">Connecting…</small></div><button id="remote-ai" class="secondary">${icon("spark")} Screen assistant</button><button id="fullscreen" class="secondary">Full screen</button></header><div class="remote-controls"><button id="sound" class="secondary">Enable sound</button><button id="mic" class="secondary">Enable microphone</button><label>Keys <select id="key-macro"><option value="">Send shortcut…</option><option value="cad">Ctrl + Alt + Del</option><option value="task">Task manager</option><option value="run">Windows + R</option><option value="alt-tab">Alt + Tab</option><option value="copy">Ctrl + C</option><option value="paste">Ctrl + V</option><option value="escape">Escape</option><option value="tab">Tab</option></select></label><button id="type-secret" class="secondary">Type password</button><button id="fit-screen" class="secondary">View at 100%</button><button id="remote-reconnect" class="secondary">Reconnect</button><button id="desktop-launch" class="secondary">Open in desktop app</button><span id="remote-stats"></span></div><section class="remote-stage"><div id="remote-display" tabindex="0" aria-label="Remote screen. Keyboard input is sent to this machine."></div><div id="remote-startup" class="remote-startup">${loadingState(attempt ? "Reconnecting the display…" : "Connecting to machine…", "The screen will appear as soon as it is ready.")}</div></section><footer class="remote-footer"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary">Copy to remote</button><button id="read-clipboard" class="secondary">Use my clipboard</button><label class="check"><input id="shared-clipboard" type="checkbox"> Shared clipboard</label></footer></main>`;
+  app.innerHTML = `<main class="remote-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${esc(d.label)}</h1><small id="remote-status">Connecting…</small></div><button id="remote-ai" class="secondary">${icon("spark")} Screen assistant</button><button id="fullscreen" class="secondary">Full screen</button></header><div class="remote-controls"><button id="remote-keyboard" class="secondary">Keyboard</button><button id="sound" class="secondary">Enable sound</button><button id="mic" class="secondary">Enable microphone</button><label>Keys <select id="key-macro"><option value="">Send shortcut…</option><option value="cad">Ctrl + Alt + Del</option><option value="task">Task manager</option><option value="run">Windows + R</option><option value="alt-tab">Alt + Tab</option><option value="copy">Ctrl + C</option><option value="paste">Ctrl + V</option><option value="enter">Return / Enter</option><option value="backspace">Backspace</option><option value="escape">Escape</option><option value="tab">Tab</option></select></label><button id="type-secret" class="secondary">Type password</button><button id="fit-screen" class="secondary">View at 100%</button><button id="remote-reconnect" class="secondary">Reconnect</button><button id="desktop-launch" class="secondary">Open in desktop app</button><span id="remote-stats"></span></div><section class="remote-stage"><div id="remote-display" tabindex="0" aria-label="Remote screen. Keyboard input is sent to this machine."></div><div id="remote-startup" class="remote-startup">${loadingState(attempt ? "Reconnecting the display…" : "Connecting to machine…", "The screen will appear as soon as it is ready.")}</div></section><footer class="remote-footer"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary">Copy to remote</button><button id="read-clipboard" class="secondary">Use my clipboard</button><label class="check"><input id="shared-clipboard" type="checkbox"> Shared clipboard</label></footer></main>`;
   const modal = document.querySelector<HTMLElement>(".remote-workspace")!;
   let closed = false;
   remoteCleanup = () => {
@@ -1069,6 +1070,8 @@ async function connectRemote(d: Item, attempt = 0) {
     selectAll: [0xffe3, 0x61],
     undo: [0xffe3, 0x7a],
     redo: [0xffe3, 0x79],
+    enter: [0xff0d],
+    backspace: [0xff08],
     escape: [0xff1b],
     tab: [0xff09],
   };
@@ -1165,6 +1168,21 @@ async function connectRemote(d: Item, attempt = 0) {
     writer.sendText(value("clipboard"));
     writer.sendEnd();
     display.focus();
+  });
+  on("remote-keyboard", () => {
+    const prompt = dialog(
+      "Remote keyboard",
+      `<label>Text to type<textarea id="remote-text" rows="4" maxlength="8192" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type text or a command…"></textarea></label><p>Text is typed into the focused remote application. New lines press Return.</p><button id="send-text" class="primary">Type text</button><div class="toolbar"><button id="remote-enter" class="secondary">Return</button><button id="remote-tab" class="secondary">Tab</button><button id="remote-escape" class="secondary">Escape</button><button id="remote-backspace" class="secondary">Backspace</button></div>`,
+    );
+    on("send-text", () => {
+      for (const key of remoteTextKeys(value("remote-text"))) sendKeys([key]);
+      (document.getElementById("remote-text") as HTMLTextAreaElement).value = "";
+      prompt.close();
+      display.focus();
+    });
+    for (const name of ["enter", "tab", "escape", "backspace"]) {
+      on(`remote-${name}`, () => { sendKeys(shortcuts[name]); prompt.close(); });
+    }
   });
   on("type-secret", () => {
     const prompt = dialog(
