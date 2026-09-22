@@ -1,0 +1,42 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { encode, decode, creationOptions, requestOptions, serialize } from '../src/passkeys.ts';
+test('base64url transports every byte without padding, including user handles', () => {
+  const input = Uint8Array.from({ length: 256 }, (_, i) => i).buffer;
+  assert.deepEqual(decode(encode(input)), input);
+  assert(!/[+/=]/.test(encode(input)));
+  const options = creationOptions({ challenge: 'AQID', user: { id: 'BAUG', name: 'Alex' }, excludeCredentials: [{ id: 'BwgJ', type: 'public-key' }] });
+  assert.deepEqual([...new Uint8Array(options.challenge)], [1,2,3]);
+  assert.deepEqual([...new Uint8Array(options.user.id)], [4,5,6]);
+  assert.deepEqual([...new Uint8Array(options.excludeCredentials[0].id)], [7,8,9]);
+  assert.equal(requestOptions({ challenge: 'AQID' }).allowCredentials.length, 0);
+});
+test('assertion serialization preserves authenticator bytes and discoverable user handle', () => {
+  const data = new Uint8Array([251,255,254]).buffer;
+  const r = serialize({ id: '-__-', rawId: data, type: 'public-key', getClientExtensionResults: () => ({}),
+    response: { clientDataJSON: data, authenticatorData: data, signature: data, userHandle: data } });
+  assert.equal(r.response.signature, '-__-'); assert.equal(r.response.userHandle, '-__-');
+  assert.equal(r.rawId, r.id);
+});
+
+test('an embedded browser that ignores abort cannot trap sign-in or accept a late credential', async () => {
+  const { ceremony } = await import('../src/passkeys.ts');
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  globalThis.window = { isSecureContext: true };
+  globalThis.PublicKeyCredential = class {};
+  let resolve;
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {
+    credentials: { get: () => new Promise(done => resolve = done) },
+  } });
+  try {
+    const controller = new AbortController();
+    const result = ceremony({ challenge: 'AQID' }, false, controller.signal);
+    controller.abort();
+    await assert.rejects(result, /canceled or timed out/);
+    resolve({ id: 'late-response' }); // The abandoned credential is never serialized or submitted.
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'navigator', original);
+    else delete globalThis.navigator;
+    delete globalThis.window; delete globalThis.PublicKeyCredential;
+  }
+});

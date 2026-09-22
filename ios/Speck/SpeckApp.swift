@@ -76,6 +76,10 @@ struct SignInView: View {
           ).background(Color.forest)
           VStack(alignment: .leading, spacing: 24) {
             Text("Sign in").font(.largeTitle.weight(.semibold))
+            Button(action: passkeySignIn) {
+              Label("Sign in with a passkey", systemImage: "person.badge.key")
+            }.buttonStyle(PrimaryButton()).disabled(busy).accessibilityIdentifier("passkey-sign-in")
+            Text("or use your password").font(.caption).foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 8) {
               Text("Username").font(.subheadline.weight(.medium))
               TextField("Username", text: $username).textContentType(.username)
@@ -114,6 +118,15 @@ struct SignInView: View {
             maxWidth: .infinity)
         }.frame(maxWidth: 780).frame(maxWidth: .infinity)
       }.background(Color.paper).scrollDismissesKeyboard(.interactively)
+    }
+  }
+  private func passkeySignIn() {
+    guard !busy else { return }
+    busy = true; error = nil; field = nil
+    Task {
+      do { try await session.signInWithPasskey(server: server) }
+      catch { self.error = error.localizedDescription }
+      busy = false
     }
   }
   private func signIn() {

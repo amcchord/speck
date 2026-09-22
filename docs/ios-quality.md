@@ -95,3 +95,25 @@ by this iOS qualification. Existing recovery evidence was read; originals, clone
 backups and bindings were preserved. There are no push notifications or offline
 management. Use the web console for enrollment/account administration, editing
 plans/templates/schedules and recovery clone approval/resource shutdown.
+
+## Passkeys — 0.1.1 (4), September 22, 2026
+
+**0.1.1 (4)** is VALID and IN_BETA_TESTING in the existing Speck testing group.
+It replaces the briefly distributed build 3, which has been removed and expired.
+Native AuthenticationServices supports sign-in/enrollment and name/removal controls.
+Both operations bind the requested relying-party ID to the selected HTTPS server;
+alternate ports and mismatched domains are rejected before presenting a credential
+provider. The `webcredentials:speckrmm.com` entitlement and Apple’s association CDN
+identify the official app correctly.
+
+Archive, distribution export and upload passed; the exported profile contains the
+associated-domain entitlement. **25 native unit tests pass**, including late-passkey
+cancellation across sign-out, session-only storage, custom-server domain mismatch,
+and alternate-port rejection. The underlying source passed GitHub’s Xcode 26 job.
+
+Live server protocol acceptance used disposable, software-generated credentials
+for registration, signature verification, role restrictions, revocation and password
+fallback. This does not prove a physical Face ID/Touch ID ceremony. The new native
+passkey sheet and provider sync need acceptance on the operator’s devices through
+TestFlight. No personal passkey was enrolled during development. Previous remote
+media, hardware keyboard and older-OS limits still apply.

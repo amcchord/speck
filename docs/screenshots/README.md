@@ -1,5 +1,7 @@
 # Speck screenshots
 
+**[Passkeys](passkeys/README.md)**: web, mobile enrollment, account controls and native Mac sign-in.
+
 **[iPhone & iPad](ios/README.md)**: native fleet, commands, recovery and adaptive layouts.
 
 **[Loading states](loading/README.md)**: immediate progress on desktop, mobile and machine details.

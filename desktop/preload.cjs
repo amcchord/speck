@@ -14,7 +14,8 @@ window.addEventListener("DOMContentLoaded", () => {
 contextBridge.exposeInMainWorld(
   "speckDesktop",
   Object.freeze({
-    version: "0.2.1",
+    version: "0.2.2",
+    openPasskeyBrowser: (id) => ipcRenderer.invoke("speck:passkey-browser", id),
     readClipboard: () => ipcRenderer.invoke("speck:clipboard:read"),
     writeClipboard: (text) => ipcRenderer.invoke("speck:clipboard:write", text),
     onMacro: (callback) => subscribe("speck:macro", callback),

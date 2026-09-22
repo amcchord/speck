@@ -187,6 +187,47 @@ private enum SessionOperation {
     let (data, response) = try await send(
       origin: origin, path: "/auth/login", method: "POST", body: body, authenticated: false)
     try checkCurrent(expected)
+    try await completeSignIn(origin: origin, data: data, response: response, expected: expected)
+  }
+  func signInWithPasskey(
+    server: String,
+    authorize: @MainActor (JSON) async throws -> JSON = { try await PasskeyAuthorization.authorize($0) }
+  ) async throws {
+    try checkCurrent(generation)
+    let origin = try Self.validatedOrigin(server)
+    clearSession()
+    restoring = false
+    let expected = generation
+    let (optionsData, _) = try await send(origin: origin, path: "/auth/passkeys/options", method: "POST", body: nil, authenticated: false)
+    try checkCurrent(expected)
+    let options = try JSONDecoder().decode(JSON.self, from: optionsData)
+    guard options["publicKey"]["rpId"].string == origin.host, origin.port == nil || origin.port == 443 else {
+      throw SpeckError(message: "The passkey domain does not match this server.")
+    }
+    let credential = try await authorize(options["publicKey"])
+    try checkCurrent(expected)
+    let (data, response) = try await send(origin: origin, path: "/auth/passkeys/verify", method: "POST",
+      body: .object(["challenge_id": options["challenge_id"], "credential": credential]), authenticated: false)
+    try await completeSignIn(origin: origin, data: data, response: response, expected: expected)
+  }
+  func addPasskey(name: String, password: String, code: String) async throws {
+    try await withSession {
+      let expected = generation
+      let expectedOrigin = try Self.validatedOrigin(server)
+      let options = try await request("/access/passkeys/options", method: "POST",
+        body: .object(["password": .string(password), "code": .string(code)]))
+      try checkCurrent(expected)
+      guard options["publicKey"]["rp"]["id"].string == expectedOrigin.host, expectedOrigin.port == nil || expectedOrigin.port == 443 else {
+        throw SpeckError(message: "The passkey domain does not match this server.")
+      }
+      let credential = try await PasskeyAuthorization.authorize(options["publicKey"], register: true)
+      try checkCurrent(expected)
+      _ = try await request("/access/passkeys/verify", method: "POST",
+        body: .object(["challenge_id": options["challenge_id"], "name": .string(name), "credential": credential]))
+    }
+  }
+  private func completeSignIn(origin: URL, data: Data, response: HTTPURLResponse, expected: UUID) async throws {
+    try checkCurrent(expected)
     let value = try JSONDecoder().decode(JSON.self, from: data)
     let headers = response.allHeaderFields.reduce(into: [String: String]()) { result, pair in
       if let k = pair.key as? String, let v = pair.value as? String { result[k] = v }

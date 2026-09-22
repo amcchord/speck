@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from speck.config import data_dir, origin, seal, unseal
 from speck.db import audit, db, ident, initialize
 from speck.jobs import create_job, get_device, public_job
-from speck.security import COOKIE, agent_credentials, digest, require_agent, require_user
+from speck.security import COOKIE, agent_credentials, digest, issue_session, require_agent, require_user
 
 
 @asynccontextmanager
@@ -61,6 +61,14 @@ async def headers(request: Request, call_next):
     return response
 
 
+@app.get('/.well-known/apple-app-site-association')
+def apple_association():
+    # App identifiers are public signing identities, never provider credentials.
+    default = '7PTN7E8EDS.com.speckrmm.ios' if origin() == 'https://speckrmm.com' else ''
+    apps = [value.strip() for value in os.environ.get('SPECK_APPLE_APP_IDS', default).split(',') if value.strip()]
+    return {'webcredentials': {'apps': apps}}
+
+
 @app.get('/health')
 def health():
     return {'ok': True, 'service': 'speck', 'version': '0.2.0'}
@@ -92,18 +100,13 @@ def login(body: Login, request: Request, response: Response):
         PasswordHasher().verify(row['password_hash'], body.password)
     except VerificationError:
         raise HTTPException(401, 'Incorrect username or password') from None
-    token, csrf = secrets.token_urlsafe(40), secrets.token_urlsafe(32)
     with db(write=True) as conn:
         from speck.access import check_second_factor
         current = conn.execute('SELECT * FROM users WHERE id=? AND disabled=0', (row['id'],)).fetchone()
         if not current or current['password_hash'] != row['password_hash'] or not check_second_factor(conn, current, body.code):
             raise HTTPException(401, 'Incorrect credentials or authenticator code')
         conn.execute('DELETE FROM login_attempts WHERE ip IN (?,?)', (ip, account_attempt))
-        conn.execute('DELETE FROM sessions WHERE expires<?', (time.time(),))
-        conn.execute('INSERT INTO sessions VALUES(?,?,?,?)', (digest(token), row['id'], csrf, time.time() + 43200))
-        audit(conn, row['username'], 'session.login')
-    response.set_cookie(COOKIE, token, httponly=True, secure=origin().startswith('https://'), samesite='strict', max_age=43200)
-    return {'username': row['username'], 'csrf': csrf, 'role': current['role']}
+        return issue_session(conn, current, response)
 
 
 @app.get('/api/auth/me')
@@ -458,6 +461,8 @@ app.include_router(screens_router)
 app.include_router(assistant_router)
 from speck.access import router as access_router  # noqa: E402
 app.include_router(access_router)
+from speck.passkeys import router as passkeys_router  # noqa: E402
+app.include_router(passkeys_router)
 from speck.management import router as management_router  # noqa: E402
 from speck.monitoring import router as monitoring_router  # noqa: E402
 app.include_router(management_router)

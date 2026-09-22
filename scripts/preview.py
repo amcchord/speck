@@ -183,12 +183,18 @@ class Handler(BaseHTTPRequestHandler):
         if route.startswith("/api/"):
             if route == "/api/auth/me":
                 return self.send(
-                    {"username": "demo", "csrf": "preview-only"}
+                    {"username": "demo", "csrf": "preview-only", "role": "admin"}
                     if "speck-gallery=1" in self.headers.get("Cookie", "")
                     else {"detail": "Sign in to preview"},
                     200 if "speck-gallery=1" in self.headers.get("Cookie", "") else 401,
                 )
             resources = {
+                "/api/access/me": {"username": "demo", "role": "admin", "mfa_enabled": False, "sessions": 1, "recovery_codes_remaining": 0},
+                "/api/access/users": [{"id": "preview-operator", "username": "demo", "role": "admin", "disabled": False, "mfa_enabled": False, "passkey_count": 2}],
+                "/api/access/passkeys": [
+                    {"id": "preview-laptop", "name": "Office laptop", "created": NOW - 86400, "last_used": NOW, "backed_up": True},
+                    {"id": "preview-phone", "name": "Phone", "created": NOW - 3600, "last_used": None, "backed_up": True},
+                ],
                 "/api/devices": DEVICES,
                 "/api/templates": [dict(t, builtin=True, revision=1) for t in STARTERS],
                 "/api/batches": [],
@@ -264,7 +270,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/api/auth/login":
             return self.send(
-                {"username": "demo", "csrf": "preview-only"}, cookie="speck-gallery=1; Path=/; SameSite=Strict"
+                {"username": "demo", "csrf": "preview-only", "role": "admin"}, cookie="speck-gallery=1; Path=/; SameSite=Strict"
             )
         if self.path == "/api/auth/logout":
             return self.send({"ok": True}, cookie="speck-gallery=; Path=/; Max-Age=0; SameSite=Strict")

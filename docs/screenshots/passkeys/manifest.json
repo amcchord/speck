@@ -1,0 +1,51 @@
+[
+  {
+    "file": "mac-signin.png",
+    "width": 1152,
+    "height": 768,
+    "sha256": "ef3cb348197714eae098277293619859835e2721026c746f3b71c763a49b9fd7",
+    "source": "CUA original screenshot; signed Mac app on public sign-in"
+  },
+  {
+    "file": "mobile-enrollment.jpg",
+    "width": 375,
+    "height": 812,
+    "sha256": "6f833b9f11f0cf05d7145e2cdee199c0ebf5f95e7eca1edd6f498df61e936cb3",
+    "source": "CUA original screenshot; local synthetic account and actual Speck frontend"
+  },
+  {
+    "file": "mobile-signin.jpg",
+    "width": 305,
+    "height": 705,
+    "sha256": "85c8ec4d1dda2ba3f753d813da3ba7dba87fa18b70c72c943d201548358145b7",
+    "source": "CUA original screenshot; local synthetic account and actual Speck frontend"
+  },
+  {
+    "file": "web-account.jpg",
+    "width": 1265,
+    "height": 712,
+    "sha256": "0076b51fcb81205b0e1e7cc3b3f57ff3a5558b2e86cc34385de65c8259228655",
+    "source": "CUA original screenshot; local synthetic account and actual Speck frontend"
+  },
+  {
+    "file": "web-enrollment.jpg",
+    "width": 1265,
+    "height": 712,
+    "sha256": "2209f119ec582613cfee9f39d94191ed5746763eda2b17cef2e185b5e26ead97",
+    "source": "CUA original screenshot; local synthetic account and actual Speck frontend"
+  },
+  {
+    "file": "web-keys.jpg",
+    "width": 1265,
+    "height": 712,
+    "sha256": "afda12262aa9a9540e91200b96f7dc42e52acef297b1e344471f7803ea862049",
+    "source": "CUA original screenshot; local synthetic account and actual Speck frontend"
+  },
+  {
+    "file": "web-signin.jpg",
+    "width": 1280,
+    "height": 720,
+    "sha256": "9815c57f8df0ecff80ec776f6682f645dc6cf8102d04d049b40c7656dffa119d",
+    "source": "CUA original screenshot; local synthetic account and actual Speck frontend"
+  }
+]

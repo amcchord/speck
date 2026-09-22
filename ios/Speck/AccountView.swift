@@ -22,6 +22,7 @@ struct AccountView: View {
         LabeledContent("Server", value: session.server).font(.subheadline).textSelection(.enabled)
       }
       Section {
+        NavigationLink { PasskeysView() } label: { Label("Passkeys", systemImage: "person.badge.key") }
         LabeledContent(
           "Two-factor authentication",
           value: details.isNull

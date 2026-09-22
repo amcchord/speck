@@ -194,7 +194,7 @@ def users(user=Depends(require_admin)):
         return [
             dict(r)
             for r in conn.execute(
-                "SELECT id,username,role,disabled,totp_secret IS NOT NULL AS mfa_enabled FROM users ORDER BY username"
+                "SELECT id,username,role,disabled,totp_secret IS NOT NULL AS mfa_enabled, (SELECT count(*) FROM passkeys WHERE user_id=users.id) AS passkey_count FROM users ORDER BY username"
             )
         ]
 
@@ -221,6 +221,7 @@ def add_user(body: NewUser, user=Depends(require_admin)):
 
 
 class UserUpdate(BaseModel):
+    reset_passkeys: bool = False
     role: Literal["admin", "operator", "viewer"]
     disabled: bool
     new_password: str | None = Field(default=None, min_length=16, max_length=256)
@@ -241,6 +242,10 @@ async def update_user(user_id: str, body: UserUpdate, user=Depends(require_admin
             (body.role, body.disabled, hashed, user_id),
         )
         conn.execute("DELETE FROM sessions WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM passkey_challenges WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM desktop_signins WHERE user_id=?", (user_id,))
+        if body.reset_passkeys:
+            conn.execute("DELETE FROM passkeys WHERE user_id=?", (user_id,))
         if body.disabled or body.role == "viewer":
             conn.execute("UPDATE schedules SET enabled=0 WHERE owner_id=?", (user_id,))
         audit(
@@ -252,6 +257,7 @@ async def update_user(user_id: str, body: UserUpdate, user=Depends(require_admin
                 "role": body.role,
                 "disabled": body.disabled,
                 "password_reset": bool(hashed),
+                "passkeys_reset": body.reset_passkeys,
             },
         )
     await close_user_remotes(user_id)

@@ -199,3 +199,27 @@ The shared remote toolbar adds touch text entry and control keys. Static rollout
 preserved the service process and environment, with the previous web tree retained
 for rollback. No backend restart, agent/Slide identity changes or recovery cleanup.
 Private deployment and release evidence: `output/ios/` in `worktrees/ios-testflight`.
+
+## Passkeys — September 22, 2026
+
+`codex/passkeys` adds user-verified WebAuthn, account enrollment/name/removal,
+administrator lost-key reset, a verifier-bound desktop browser handoff and native
+iPhone/iPad AuthenticationServices. Desktop 0.2.2 enables Mac Touch ID/account
+selection and browser fallback across all three desktop platforms. Native build
+0.1.1 (4) adds associated-domain entitlements. See `docs/passkeys.md`.
+
+Protocol tests use real ECDSA signatures; web/desktop and native session-isolation
+checks cover the new flows. Private release evidence: `output/passkeys/`.
+The backed-up backend rollout from `8ae506b` and subsequent static updates are live.
+Desktop [0.2.2](https://github.com/amcchord/speck/releases/tag/v0.2.2) publishes all
+seven platform packages plus checksums. Both Mac architectures are profiled, signed,
+notarized and stapled; the Apple silicon app launches and browser handoff/cancellation
+work. iOS **0.1.1 (4)** is VALID and IN_BETA_TESTING in the existing Speck testing
+group; build 3 was withdrawn. Apple’s association CDN serves the correct identity.
+
+57 Python, 24 web, 14 desktop and 25 native unit tests pass, alongside live disposable
+passkey protocol/revocation acceptance. Physical biometric/provider ceremonies and
+Windows/Linux passkey runtime acceptance remain open. Original/restored identities,
+passwords, provider settings, Slide bindings and endpoint credentials were verified
+preserved. Final web updates preserve the running backend process. No new recovery,
+patch or software-deployment action was triggered. See the passkey screenshot gallery.

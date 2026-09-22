@@ -73,6 +73,8 @@ def initialize():
         ''')
         from speck.management_schema import migrate
         migrate(conn)
+        from speck.passkeys import migrate as migrate_passkeys
+        migrate_passkeys(conn)
         if not conn.execute('SELECT 1 FROM users LIMIT 1').fetchone():
             password = os.environ.get('SPECK_BOOTSTRAP_PASSWORD', '')
             if len(password) < 16:

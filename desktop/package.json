@@ -1,8 +1,8 @@
 {
   "name": "speck-desktop",
   "productName": "Speck Desktop",
-  "version": "0.2.1",
-  "description": "A little lightweight RMM — desktop remote workspace",
+  "version": "0.2.2",
+  "description": "A little lightweight RMM \u2014 desktop remote workspace",
   "author": {
     "name": "Speck contributors",
     "email": "austin@mcchord.net"
@@ -29,7 +29,8 @@
       "package.json",
       "assets/*",
       "LICENSE",
-      "THIRD_PARTY_NOTICES.md"
+      "THIRD_PARTY_NOTICES.md",
+      "passkeys.cjs"
     ],
     "directories": {
       "output": "dist"
@@ -63,7 +64,8 @@
       "icon": "assets/speck-icon-1024.png",
       "extendInfo": {
         "NSMicrophoneUsageDescription": "Send your microphone to the remote machine when you enable it in a Speck session."
-      }
+      },
+      "entitlements": "entitlements.mac.plist"
     },
     "win": {
       "target": [
@@ -93,7 +95,8 @@
       },
       "syncDesktopName": true
     },
-    "artifactName": "Speck-Desktop-${version}-${os}-${arch}.${ext}"
+    "artifactName": "Speck-Desktop-${version}-${os}-${arch}.${ext}",
+    "afterSign": "after-sign.cjs"
   },
   "homepage": "https://speckrmm.com",
   "desktopName": "speck-desktop.desktop"

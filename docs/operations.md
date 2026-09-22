@@ -104,6 +104,11 @@ and physical microphone round trips remain unverified; see the
 without a native download. This client targets `https://speckrmm.com`; self-hosters
 can rebuild with their own exact origin in `desktop/policy.cjs`.
 
+Passkey sign-in and account management are available across the web and native
+clients. Desktop can use a browser/provider passkey through an expiring approval
+with a matching code. See [passkeys](passkeys.md) for setup and the Mac provisioning
+profile required for signed releases.
+
 ## Build the desktop application
 
 ```sh

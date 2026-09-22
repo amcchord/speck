@@ -262,3 +262,91 @@ private actor DelayedServer {
     XCTAssertTrue(session.devices.isEmpty)
   }
 }
+
+@MainActor final class PasskeySessionTests: XCTestCase {
+  func testBase64URLRoundTrip() {
+    let bytes = Data((0...255).map(UInt8.init))
+    XCTAssertEqual(Data(base64URL: bytes.base64URL), bytes)
+    XCTAssertFalse(bytes.base64URL.contains("="))
+  }
+  func testCustomServerCannotRequestTheOfficialDomainsPasskey() async throws {
+    let session = SpeckSession(
+      persistence: SessionPersistence(load: { nil }, save: { _ in XCTFail("No session may be stored") }, clear: {}),
+      dataLoader: { request in
+        XCTAssertEqual(request.url?.host, "custom.example.com")
+        return (Data("{\"challenge_id\":\"fixture\",\"publicKey\":{\"rpId\":\"speckrmm.com\"}}".utf8),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: [:])!)
+      })
+    do {
+      try await session.signInWithPasskey(server: "https://custom.example.com") { _ in
+        XCTFail("An unrelated server must never invoke the official domain's credential provider")
+        return .null
+      }
+      XCTFail("Mismatched RP must fail")
+    } catch { XCTAssertTrue(error.localizedDescription.contains("domain does not match")) }
+  }
+  func testAlternatePortCannotRequestTheOfficialDomainsPasskey() async throws {
+    let session = SpeckSession(
+      persistence: SessionPersistence(load: { nil }, save: { _ in XCTFail("No session may be stored") }, clear: {}),
+      dataLoader: { request in
+        return (Data("{\"challenge_id\":\"fixture\",\"publicKey\":{\"rpId\":\"speckrmm.com\"}}".utf8),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: [:])!)
+      })
+    do {
+      try await session.signInWithPasskey(server: "https://speckrmm.com:8443") { _ in
+        XCTFail("An alternate origin must not invoke the official provider")
+        return .null
+      }
+      XCTFail("Alternate origin must fail")
+    } catch { XCTAssertTrue(error.localizedDescription.contains("domain does not match")) }
+  }
+  func testNativeCeremonyCannotFinishAfterSigningOut() async throws {
+    var finish: CheckedContinuation<JSON, Error>?
+    let arrived = expectation(description: "native passkey sheet")
+    let session = SpeckSession(
+      persistence: SessionPersistence(load: { nil }, save: { _ in XCTFail("No stale login may be saved") }, clear: {}),
+      dataLoader: { request in
+        XCTAssertEqual(request.url?.path, "/api/auth/passkeys/options")
+        XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
+        return (Data("{\"challenge_id\":\"fixture\",\"publicKey\":{\"rpId\":\"speckrmm.com\"}}".utf8),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: [:])!)
+      })
+    let login = Task {
+      try await session.signInWithPasskey(server: "https://speckrmm.com") { _ in
+        try await withCheckedThrowingContinuation { continuation in finish = continuation; arrived.fulfill() }
+      }
+    }
+    await fulfillment(of: [arrived], timeout: 3)
+    await session.signOut()
+    finish?.resume(returning: .object([:]))
+    do { try await login.value; XCTFail("Late passkey response must be canceled") }
+    catch { XCTAssertTrue(error is CancellationError) }
+    XCTAssertFalse(session.signedIn)
+  }
+  func testNativePasskeyLoginStoresOnlyServerSession() async throws {
+    var saved: SessionRecord?
+    let session = SpeckSession(
+      persistence: SessionPersistence(load: { nil }, save: { saved = $0 }, clear: { saved = nil }),
+      dataLoader: { request in
+        let path = request.url!.path
+        var body = "{}"
+        var headers = [String: String]()
+        if path == "/api/auth/passkeys/options" { body = "{\"challenge_id\":\"fixture\",\"publicKey\":{\"rpId\":\"speckrmm.com\"}}" }
+        if path == "/api/auth/passkeys/verify" {
+          let sent = try JSONDecoder().decode(JSON.self, from: request.httpBody!)
+          XCTAssertEqual(sent["challenge_id"].string, "fixture")
+          XCTAssertEqual(sent["credential"]["id"].string, "synthetic")
+          XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
+          body = "{\"username\":\"Alex\",\"csrf\":\"synthetic-csrf\",\"role\":\"viewer\"}"
+          headers["Set-Cookie"] = "speck_session=synthetic-session; Path=/; Secure; HttpOnly"
+        }
+        if path == "/api/devices" { body = "[]" }
+        if path == "/api/alerts" { body = "{\"items\":[]}" }
+        return (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: headers)!)
+      })
+    try await session.signInWithPasskey(server: "https://speckrmm.com") { _ in .object(["id": .string("synthetic")]) }
+    XCTAssertEqual(saved?.username, "Alex")
+    XCTAssertEqual(saved?.cookie, "synthetic-session")
+    XCTAssertEqual(session.role, "viewer")
+  }
+}
