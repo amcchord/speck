@@ -87,3 +87,22 @@ QA schedules inactive. Tests: 35 Python, 7 microphone, 10 desktop, Ruff and web 
 GitHub checks passed. See `docs/operations/management-rollout.md` for exact backup
 and rollback, verification limits, and private evidence location. Coordinate the
 separate Downloads and iOS tasks after this main merge.
+
+## 2026-09-22 — Desktop downloads
+
+Added a branded Downloads page with direct Windows x64, Mac Apple silicon/Intel,
+and Linux x64 installers, ZIP alternatives, release notes and checksums. Links
+are available in the sidebar, sign-in, Settings and desktop handoff. Public
+access needs no account; managed-machine actions retain their authentication.
+
+Integrated after MVP main a812248, preserving MFA, viewer navigation, Safari
+select styling and remote shortcut markup. Fixed sign-out routing and checked
+320/390-pixel mobile layouts, desktop layout and the native-client external-link
+policy. All seven artifacts and checksums respond as HTTP 200 attachments.
+TypeScript/Vite pass. Live public access, sign-in, Downloads, Settings round trip,
+MVP navigation, matching asset bundle and HTTPS health were verified.
+
+Deployed static assets only, with the preceding MVP web tree retained for rollback.
+No backend restart, agent changes or recovery actions. Private deployment evidence
+is under `output/desktop-downloads/`; original screenshot bytes and digests are
+in `docs/screenshots/downloads/`.

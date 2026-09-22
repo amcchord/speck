@@ -138,3 +138,22 @@ code/data/config/dependency backups remain private on the server. See
 `docs/operations/management-rollout.md`, `docs/progress/CURRENT.md` and the public
 synthetic management/Safari screenshots. Windows patch/MSI installation, cloud
 recovery and remaining native runtime checks retain their documented limits.
+
+## Desktop downloads — September 22, 2026
+
+Added a branded Downloads page with direct Windows x64, Mac Apple silicon/Intel,
+and Linux x64 installers, ZIP alternatives, release notes and checksums. Links
+are available in the sidebar, sign-in, Settings and desktop handoff. Public
+access needs no account; managed-machine actions retain their authentication.
+
+Integrated after MVP main a812248, preserving MFA, viewer navigation, Safari
+select styling and remote shortcut markup. Fixed sign-out routing and checked
+320/390-pixel mobile layouts, desktop layout and the native-client external-link
+policy. All seven artifacts and checksums respond as HTTP 200 attachments.
+TypeScript/Vite pass. Live public access, sign-in, Downloads, Settings round trip,
+MVP navigation, matching asset bundle and HTTPS health were verified.
+
+Deployed static assets only, with the preceding MVP web tree retained for rollback.
+No backend restart, agent changes or recovery actions. Private deployment evidence
+is under `output/desktop-downloads/`; original screenshot bytes and digests are
+in `docs/screenshots/downloads/`.

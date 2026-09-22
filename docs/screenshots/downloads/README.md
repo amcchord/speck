@@ -18,9 +18,10 @@ Original-byte digests and image dimensions are in [manifest.json](manifest.json)
 | --- | --- | --- |
 | [![Mobile downloads](mobile.jpg)](mobile.jpg) | [![Mobile installer choices](mobile-installers.jpg)](mobile-installers.jpg) | [![Sign-in download link](mobile-sign-in.jpg)](mobile-sign-in.jpg) |
 
-Verified the desktop and 390-pixel mobile layouts, 46-pixel primary download
+Verified the desktop and 320/390-pixel mobile layouts, 46-pixel primary download
 buttons, alternate Mac ZIP links, Settings round trip, sign-out/download routing,
-and public deep link. All seven installers and SHA256SUMS return HTTP 200 with
+and public deep link. Rechecked after integrating the MVP release, preserving
+MFA sign-in, role-aware navigation and Safari select styling. All seven installers and SHA256SUMS return HTTP 200 with
 attachment headers. TypeScript and the production Vite build pass.
 
 The platform catalog is kept in `web/src/downloads.ts`. Advance its version only

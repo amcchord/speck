@@ -201,8 +201,8 @@ aside > nav {
   }
 }
 @media (max-width: 700px) {
-  aside > nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  aside > nav[aria-label="Main navigation"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     overflow: visible;
   }
   .downloads-public {
@@ -232,5 +232,10 @@ aside > nav {
   }
   .download-resources a {
     min-height: 44px;
+  }
+}
+@media (max-width: 360px) {
+  aside > nav[aria-label="Main navigation"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

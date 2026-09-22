@@ -1,7 +1,7 @@
 [
   {
     "file": "desktop.jpg",
-    "sha256": "ea4b583fa41a34f78099c7f5e0358a5983394c011c285aab7a1d4b501a992bfc",
+    "sha256": "ab7bad6158cded977a338e231ad93e0e72c46fec43b28c7352dfbd3a1f3faa84",
     "width": 1265,
     "height": 712,
     "capture": "CUA original capture bytes; built frontend with synthetic preview account",
@@ -17,7 +17,7 @@
   },
   {
     "file": "mobile-sign-in.jpg",
-    "sha256": "7ed31e9e6b5f29bdcf31049f41e1759d1026bc9cd2820ac3ee4cf88afef61b5b",
+    "sha256": "5224e84d8df8611194cb957bf7161be26020a040e873d8340f784a79975c31ad",
     "width": 390,
     "height": 844,
     "capture": "CUA original capture bytes; built frontend with synthetic preview account",
@@ -25,7 +25,7 @@
   },
   {
     "file": "mobile.jpg",
-    "sha256": "4e525283b09cc35082856d85c20471782ecd0f10c70c382a20ce678f133dcbf2",
+    "sha256": "c5552814cd44152041e0b0fce2f965941e790b87decfc514f3e1b2d041472d15",
     "width": 375,
     "height": 812,
     "capture": "CUA original capture bytes; built frontend with synthetic preview account",
