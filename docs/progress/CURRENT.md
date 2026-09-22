@@ -51,6 +51,7 @@ rollback evidence: `output/windows-session-start/`.
 Native iOS work adds the universal iPhone/iPad operator client and mobile remote
 keyboard. The screenshot-driven UI review and live Windows/Linux acceptance are
 recorded in [iOS qualification](../ios-quality.md), with a
-[28-image native gallery](../screenshots/ios/README.md). App Store Connect is set up;
-consult that report for the current TestFlight build/distribution state. Physical
+[28-image native gallery](../screenshots/ios/README.md). **Speck RMM 0.1.0 (2)** is
+available to the internal Speck testing group in TestFlight. Account-transition
+isolation and 20 native unit tests pass; the withdrawn build 1 is expired. Physical
 mobile audio, older iOS versions and long-running background checks remain open.

@@ -185,7 +185,9 @@ bounded recovery rather than claiming every black-screen cause is eliminated.
 `ios/` contains the universal SwiftUI operator app, sharing the existing server's
 permissions and APIs. See `ios/README.md`, `docs/ios-quality.md` and the 28-image
 synthetic gallery. App Store Connect and the internal Speck testing group are set
-up. Credentials/signing material remain in AustinLand and ignored local output.
+up. **0.1.0 (2)** is in internal TestFlight testing after UI review, live acceptance
+and the session-isolation fix. Credentials remain in AustinLand; the temporary
+upload-key file was removed after distribution.
 
 Native UI checks cover both simulator form factors, dark/light, landscape, large
 text, centered actions, search and literal code entry. Native login, Windows/Linux
