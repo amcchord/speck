@@ -1,9 +1,24 @@
-# Speck
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/assets/speck-wordmark-lime.svg">
+  <img src="brand/assets/speck-wordmark-forest.svg" alt="Speck" width="200">
+</picture>
 
 **A LITTLE LIGHTWEIGHT RMM**
 
 An open source RMM for Windows and Linux, with browser remote access and Slide
 backup and recovery workflows. Speck is an early, single-administrator release.
+
+[Website](https://speckrmm.com) · [Screenshot gallery](docs/screenshots/README.md) ·
+[Brand identity](brand/README.md) · [UI review](docs/ui-review.md)
+
+[![Speck sign-in](docs/screenshots/01-sign-in.jpg)](docs/screenshots/README.md)
+
+| Fleet | Recovery lab |
+| --- | --- |
+| [![Windows and Linux fleet](docs/screenshots/02-fleet.jpg)](docs/screenshots/02-fleet.jpg) | [![Recovery evidence](docs/screenshots/08-recovery.jpg)](docs/screenshots/08-recovery.jpg) |
+
+Gallery data is synthetic. See the [capture notes](docs/screenshots/README.md)
+for provenance and the local preview workflow.
 
 - Services, CPU, memory, disks, active application, and host inventory.
 - Network interfaces, IPs, routes, DNS, traffic counters, sockets, process IDs,
@@ -94,7 +109,8 @@ web/         TypeScript console
 installers/  Windows and Linux enrollment installers
 scripts/     Build and optional AustinLand deployment helpers
 deploy/      systemd, Caddy and dedicated-host firewall configuration
-docs/        Deployment, security and recovery operation
+brand/       Identity guide, shared tokens, SVG/PNG/ICO assets and licensed font
+docs/        Deployment, security, recovery and screenshot gallery
 ```
 
 Speck code is MIT licensed. Apache Guacamole is Apache-2.0 licensed and is used

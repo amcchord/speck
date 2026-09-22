@@ -15,3 +15,9 @@ scratch/
 *.pem
 *.key
 .DS_Store
+
+# Generated Windows object resources (built from brand/windows).
+*.syso
+
+# Copies generated from canonical brand assets.
+/web/public/assets/brand/

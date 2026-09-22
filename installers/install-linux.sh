@@ -1,6 +1,13 @@
 #!/bin/sh
 set -eu
 server=${SPECK_SERVER:-https://speckrmm.com}
+printf '\n  speck\n  A LITTLE LIGHTWEIGHT RMM\n\n  Linux agent installer\n\n'
+case "${1:-}" in
+ --about|--help|-h)
+  printf '  Run as root to install or update Speck Agent.\n  Set SPECK_SERVER for a self-hosted server.\n  An enrollment token is requested only for a new device.\n\n  https://speckrmm.com\n\n'
+  exit 0;;
+ "") ;; *) echo 'Speck: unknown option. Use --help.' >&2; exit 1;;
+esac
 [ "$(id -u)" = 0 ] || { echo 'Run as root.' >&2; exit 1; }
 case "$server" in https://*) ;; *) echo 'An HTTPS server is required.' >&2; exit 1;; esac
 case "$(uname -m)" in x86_64) arch=amd64;; aarch64) arch=arm64;; *) echo 'Unsupported CPU architecture' >&2; exit 1;; esac
@@ -8,10 +15,17 @@ command -v curl >/dev/null || { echo 'Install curl first.' >&2; exit 1; }
 install -d -m 700 /etc/speck
 binary="speck-agent-linux-$arch"
 tasktmp=$(mktemp -d)
-trap 'rm -rf "$tasktmp"' EXIT INT TERM
+cleanup() { [ ! -t 0 ] || stty echo; rm -rf "$tasktmp"; }
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+printf '  [1/3] Download and verify\n'
 curl --fail --silent --show-error "$server/downloads/$binary" -o "$tasktmp/$binary"
 curl --fail --silent --show-error "$server/downloads/SHA256SUMS" -o "$tasktmp/SHA256SUMS"
 (cd "$tasktmp" && awk -v b="$binary" '$2==b' SHA256SUMS > selected && test -s selected && sha256sum -c selected)
+curl --fail --silent --show-error "$server/downloads/speck-icon.svg" -o "$tasktmp/speck-icon.svg"
+(cd "$tasktmp" && awk '$2=="speck-icon.svg"' SHA256SUMS > icon-check && test -s icon-check && sha256sum -c icon-check)
+printf '\n  [2/3] Install and enroll\n'
 if systemctl is-active --quiet SpeckAgent; then systemctl stop SpeckAgent; fi
 install -m 755 "$tasktmp/$binary" /usr/local/bin/speck-agent
 if [ ! -f /etc/speck/agent.json ]; then
@@ -25,6 +39,14 @@ if [ ! -f /etc/speck/agent.json ]; then
  unset SPECK_ENROLLMENT_TOKEN
 fi
 if [ ! -f /etc/systemd/system/SpeckAgent.service ]; then /usr/local/bin/speck-agent install; fi
+# Refresh only our display metadata; keep service identity and configuration.
+install -d -m 755 /etc/systemd/system/SpeckAgent.service.d
+cat > /etc/systemd/system/SpeckAgent.service.d/brand.conf <<'EOF'
+[Unit]
+Description=Speck Agent - A little lightweight RMM
+EOF
+install -d -m 755 /usr/local/share/icons/hicolor/scalable/apps
+install -m 644 "$tasktmp/speck-icon.svg" /usr/local/share/icons/hicolor/scalable/apps/speck.svg
 # Desktop helper is unprivileged. Headless machines do not launch it.
 chmod 711 /etc/speck
 install -d -m 1777 /etc/speck/telemetry
@@ -32,10 +54,13 @@ install -d -m 755 /etc/xdg/autostart
 cat > /etc/xdg/autostart/speck-foreground.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
-Name=Speck active application reporter
+Name=Speck Desktop Helper
+Comment=A little lightweight RMM. Reports the active application.
+Icon=speck
 Exec=/usr/local/bin/speck-agent foreground
 Terminal=false
 EOF
+printf '\n  [3/3] Start Speck Agent\n'
 systemctl daemon-reload
 systemctl enable --now SpeckAgent
-echo 'Speck installed. Active-app reporting requires an X11 desktop sign-in and xprop.'
+printf '\n  Ready. Speck Agent is running.\n  Active application: sign in to an X11 desktop with xprop installed.\n\n'

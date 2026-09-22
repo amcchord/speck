@@ -1,3 +1,10 @@
+@font-face {
+  font-family: "Inter";
+  src: url("/assets/brand/InterVariable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
 :root {
   font-family:
     Inter,
@@ -5,15 +12,14 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  color: #25372d;
-  background: #f4f5f0;
+  color: var(--ink);
+  background: var(--paper);
   font-synthesis: none;
-  --ink: #172e23;
-  --green: #385d44;
-  --lime: #dcecab;
-  --line: #dfe4db;
-  --muted: #738075;
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+  line-height: 1.5;
 }
+
 * {
   box-sizing: border-box;
 }
@@ -80,7 +86,7 @@ small {
 }
 .eyebrow {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.8px;
   color: var(--muted);
@@ -99,10 +105,10 @@ small {
 aside {
   position: fixed;
   inset: 0 auto 0 0;
-  width: 220px;
-  background: #192c22;
+  width: 216px;
+  background: var(--forest);
   color: #e3ebdf;
-  padding: 35px 21px;
+  padding: 30px 20px 24px;
   display: flex;
   flex-direction: column;
 }
@@ -114,10 +120,10 @@ aside {
   align-items: center;
   gap: 9px;
   color: #f1f5e8;
-  margin-bottom: 65px;
+  margin-bottom: 48px;
 }
 .version {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0;
   color: #a5b599;
   border: 1px solid #4c5d4b;
@@ -142,12 +148,13 @@ nav button {
   margin-bottom: 7px;
   border-radius: 8px;
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
 }
 nav button span {
-  display: inline-block;
-  width: 29px;
-  font-size: 20px;
-  vertical-align: middle;
+  font-size: inherit;
 }
 nav button.active {
   color: #e6f2bc;
@@ -164,7 +171,7 @@ nav button:hover {
 }
 .side-note small {
   display: block;
-  color: #728b78;
+  color: #a9bca8;
   line-height: 1.9;
   margin: 12px 15px;
 }
@@ -200,11 +207,11 @@ nav button:hover {
 .account small {
   display: block;
   margin-top: 4px;
-  color: #7e9881;
+  color: #a9bca8;
 }
 .workspace {
-  margin-left: 220px;
-  padding: 44px 42px 20px;
+  margin-left: 216px;
+  padding: 36px 36px 28px;
   max-width: 1920px;
 }
 header {
@@ -224,7 +231,7 @@ header p {
   gap: 25px;
 }
 .live {
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 1.4px;
   font-weight: 700;
   white-space: nowrap;
@@ -243,10 +250,11 @@ header p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 11px 17px;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 16px;
   border-radius: 7px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -322,7 +330,7 @@ header p {
 }
 .fleet-layout {
   display: grid;
-  grid-template-columns: minmax(290px, 36%) minmax(0, 1fr);
+  grid-template-columns: minmax(290px, 34%) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
@@ -335,12 +343,12 @@ header p {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 13px;
+  gap: 11px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fff;
   text-align: left;
-  padding: 20px 15px;
+  padding: 17px 14px;
   color: var(--ink);
 }
 .device-card.chosen {
@@ -361,7 +369,7 @@ header p {
 }
 .device-card small {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 7px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -371,20 +379,23 @@ header p {
   background: #edf1e7;
   color: #627b51;
   border-radius: 9px;
-  font-size: 24px;
-  padding: 8px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
 }
 .device-state {
   text-align: right;
-  max-width: 105px;
+  max-width: 88px;
 }
 .badge {
   display: inline-block;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.25;
   border: 1px solid #dddccf;
   background: #f4f1e6;
-  color: #887b53;
+  color: var(--warning);
   padding: 4px 7px;
   border-radius: 20px;
   white-space: nowrap;
@@ -392,7 +403,7 @@ header p {
 .badge.good {
   background: #eff6e7;
   border-color: #d8e8c9;
-  color: #5a813d;
+  color: var(--success);
 }
 .detail {
   background: white;
@@ -408,7 +419,7 @@ header p {
   justify-content: space-between;
 }
 .detail-head .eyebrow {
-  font-size: 9px;
+  font-size: 11px;
   margin-bottom: 8px;
 }
 .detail-head h2 {
@@ -427,7 +438,7 @@ header p {
   border-bottom: 2px solid transparent;
   background: none;
   padding: 15px 5px;
-  color: #85917c;
+  color: var(--muted);
   font-size: 11px;
 }
 .tabs button.active {
@@ -468,7 +479,7 @@ header p {
 .meters em {
   font-size: 16px;
   font-style: normal;
-  color: #82916e;
+  color: var(--muted);
   margin-left: 4px;
 }
 progress {
@@ -496,7 +507,7 @@ progress::-webkit-progress-value {
   margin: 18px 0 22px;
 }
 .info-block .eyebrow {
-  font-size: 9px;
+  font-size: 11px;
   margin-bottom: 9px;
 }
 .info-block h3 {
@@ -531,7 +542,7 @@ progress::-webkit-progress-value {
 }
 .mini-grid small {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   margin-bottom: 5px;
 }
 .toolbar {
@@ -551,7 +562,7 @@ progress::-webkit-progress-value {
 input,
 textarea,
 select {
-  border: 1px solid #d7ded1;
+  border: 1px solid #83947e;
   background: #fcfdf9;
   border-radius: 6px;
   padding: 10px 11px;
@@ -562,7 +573,7 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  outline: 2px solid #afca90;
+  outline: 2px solid var(--fern);
   outline-offset: 1px;
 }
 label {
@@ -604,14 +615,14 @@ pre,
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 12px;
   text-align: left;
 }
 th {
-  font-size: 9px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #84927c;
+  color: var(--muted);
   font-weight: 600;
   padding: 13px 9px;
   border-bottom: 1px solid var(--line);
@@ -620,6 +631,7 @@ td {
   padding: 12px 9px;
   border-bottom: 1px solid #edf0e8;
   max-width: 320px;
+  vertical-align: top;
   overflow-wrap: anywhere;
 }
 td b {
@@ -627,11 +639,11 @@ td b {
 }
 td small {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 4px;
 }
 td select {
-  font-size: 10px;
+  font-size: 11px;
   padding: 7px;
 }
 pre {
@@ -644,6 +656,7 @@ pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   max-height: 440px;
+  tab-size: 2;
   overflow: auto;
 }
 details {
@@ -694,12 +707,12 @@ details pre {
 .transfer small {
   display: block;
   margin-top: 6px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .callout {
   padding: 14px 17px;
   background: #f8f4e8;
-  color: #8c7844;
+  color: var(--warning);
   border: 1px solid #ebe2c7;
   border-radius: 7px;
   font-size: 11px;
@@ -722,7 +735,7 @@ details pre {
 }
 .remote-intro > small {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 10px;
 }
 .text-link {
@@ -748,7 +761,7 @@ details pre {
   font-size: 13px;
 }
 .recovery-banner .eyebrow {
-  font-size: 9px;
+  font-size: 11px;
 }
 .plan-grid {
   display: grid;
@@ -781,11 +794,11 @@ details pre {
   font-size: 13px;
 }
 .provider summary small {
-  font-size: 10px;
+  font-size: 11px;
 }
 .run-phase {
   text-transform: capitalize;
-  color: #7b8d6b;
+  color: var(--muted);
   font-size: 12px;
   margin: 15px 0;
 }
@@ -807,13 +820,15 @@ footer {
   display: flex;
   justify-content: space-between;
   padding: 35px 0 0;
-  font-size: 10px;
-  color: #9da895;
+  font-size: 11px;
+  color: var(--muted);
 }
 dialog {
   border: 1px solid #d6decf;
   border-radius: 13px;
   padding: 28px;
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
   max-width: 520px;
   width: calc(100% - 40px);
   color: var(--ink);
@@ -839,8 +854,9 @@ dialog.wide {
   border: 0;
   background: #edf1e6;
   border-radius: 50%;
-  width: 29px;
-  height: 29px;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
   color: #6a805e;
   font-size: 20px;
 }
@@ -912,9 +928,12 @@ dialog p {
   min-height: 100vh;
 }
 .login-brand {
-  background: #192f23;
+  background: var(--forest);
   color: #edf3df;
-  padding: 65px 12%;
+  padding: 64px 12%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   font-size: 47px;
   letter-spacing: -2px;
   position: relative;
@@ -925,8 +944,8 @@ dialog p {
 }
 .login-brand > .eyebrow {
   margin-top: 15px;
-  color: #99b383;
-  font-size: 9px;
+  color: var(--lime);
+  font-size: 11px;
   letter-spacing: 2px;
 }
 .login-brand h1 {
@@ -949,7 +968,7 @@ dialog p {
   max-width: 80%;
   padding: 30px 0;
 }
-.login-card h2 {
+.login-card h1 {
   font-size: 34px;
   font-weight: 500;
   margin-top: 22px;
@@ -967,14 +986,14 @@ dialog p {
   margin: 4px 0 23px;
 }
 .login-card small {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.8;
   display: block;
 }
 .orbit {
   height: 220px;
-  width: 220px;
-  margin: 40px 0;
+  width: 216px;
+  margin: auto;
   position: relative;
   border: 1px solid #426043;
   border-radius: 50%;
@@ -1043,7 +1062,7 @@ dialog p {
     font-size: 28px;
   }
   .stats small {
-    font-size: 10px;
+    font-size: 11px;
   }
   .login-brand h1 {
     font-size: 47px;
@@ -1072,7 +1091,7 @@ dialog p {
   nav button {
     padding: 8px 5px;
     text-align: center;
-    font-size: 10px;
+    font-size: 11px;
     margin: 0;
   }
   nav button span {
@@ -1100,7 +1119,7 @@ dialog p {
   }
   .stats strong small {
     display: block;
-    font-size: 9px;
+    font-size: 11px;
     margin-top: 8px;
   }
   .device-list {
@@ -1131,7 +1150,7 @@ dialog p {
     margin: auto;
   }
   .tabs button {
-    font-size: 10px;
+    font-size: 11px;
   }
   .remote-toolbar {
     flex-wrap: wrap;
@@ -1159,4 +1178,490 @@ dialog p {
 }
 .plan-member > div {
   margin-top: 20px;
+}
+
+/* Shared identity and interaction rules. */
+.icon {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.wordmark {
+  display: block;
+  width: 137px;
+  height: auto;
+}
+.brand {
+  gap: 8px;
+}
+.brand .version {
+  margin-top: 9px;
+  font-size: 10px;
+  padding: 1px 4px;
+}
+.login-brand > .wordmark {
+  width: 210px;
+}
+.login-brand > .eyebrow {
+  line-height: 1.7;
+  margin-top: 20px;
+  font-size: 10px;
+}
+.orbit img {
+  width: 88px;
+  height: 88px;
+}
+.side-note {
+  padding: 24px 8px;
+}
+.side-note .eyebrow {
+  color: #b8cba7;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  line-height: 1.8;
+  margin: 0;
+}
+.recovery-icon {
+  display: grid;
+  place-items: center;
+  color: var(--fern);
+}
+.recovery-icon .icon {
+  width: 40px;
+  height: 40px;
+}
+.badge {
+  font-weight: 550;
+  font-size: 11px;
+}
+.badge.bad {
+  color: var(--danger);
+  background: #fcf0ed;
+  border-color: #ebcfc8;
+}
+.badge.neutral {
+  color: var(--muted);
+  background: var(--paper);
+  border-color: var(--line);
+}
+.tabs {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.tabs button {
+  font-size: 12px;
+  min-width: 65px;
+  min-height: 46px;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+.table-wrap table {
+  min-width: 540px;
+}
+.plan-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+}
+.settings-grid > *,
+.form-grid > *,
+.fleet-layout > *,
+.meters > * {
+  min-width: 0;
+}
+.detail-head {
+  gap: 16px;
+  align-items: flex-start;
+}
+.detail-head > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.device-card b {
+  line-height: 1.4;
+}
+.device-card:hover {
+  border-color: #9eb093;
+}
+.device-list {
+  max-height: calc(100vh - 330px);
+  overflow-y: auto;
+  padding: 2px;
+  scrollbar-width: thin;
+}
+.fleet-tools {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 18px;
+}
+.fleet-tools input {
+  flex: 1;
+  max-width: 400px;
+}
+.fleet-tools select {
+  min-width: 145px;
+}
+.skip-link {
+  position: fixed;
+  top: -80px;
+  left: 16px;
+  background: var(--lime);
+  color: var(--forest);
+  padding: 12px 20px;
+  z-index: 3000;
+  border-radius: 6px;
+}
+.skip-link:focus {
+  top: 16px;
+}
+:focus-visible {
+  outline: 2px solid var(--fern);
+  outline-offset: 3px;
+}
+aside :focus-visible {
+  outline-color: var(--lime);
+}
+input,
+select,
+textarea {
+  font-size: 13px;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #6f7c6f;
+  opacity: 1;
+}
+.login-card label {
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+.login-card input {
+  min-height: 48px;
+  background: var(--white);
+}
+.login-card h1 {
+  margin-bottom: 32px;
+  letter-spacing: -1.2px;
+}
+.login-card .primary {
+  min-height: 48px;
+}
+#content:focus {
+  outline: none;
+}
+#login .toast {
+  position: static;
+}
+@media (min-width: 1600px) {
+  .workspace {
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+}
+@media (max-width: 1100px) {
+  .device-list {
+    max-height: 280px;
+  }
+  .wordmark {
+    width: 118px;
+  }
+  .version {
+    display: none;
+  }
+  .stats strong {
+    gap: 12px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@media (max-width: 700px) {
+  aside {
+    position: relative;
+    padding: 18px 16px 12px;
+  }
+  .brand {
+    width: 130px;
+  }
+  aside .wordmark {
+    width: 126px;
+  }
+  aside .account {
+    display: flex;
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    border: 0;
+    padding: 4px;
+    gap: 8px;
+    min-height: 36px;
+  }
+  .account b {
+    display: none;
+  }
+  .account span {
+    font-size: 11px;
+  }
+  .account small {
+    margin: 0;
+    font-size: 10px;
+  }
+  nav {
+    gap: 4px;
+    margin-top: 18px;
+  }
+  nav button {
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 2px;
+    font-size: 11px;
+    min-height: 58px;
+  }
+  nav button span {
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  nav .icon {
+    width: 19px;
+    height: 19px;
+  }
+  .workspace {
+    padding: 24px 16px;
+  }
+  header {
+    margin-bottom: 24px;
+    gap: 12px;
+    align-items: center;
+  }
+  .header-actions {
+    display: flex;
+  }
+  .header-actions .secondary {
+    padding: 10px;
+  }
+  .header-actions .secondary span {
+    display: none;
+  }
+  h1 {
+    font-size: 28px;
+    margin: 0;
+  }
+  h2 {
+    font-size: 20px;
+  }
+  .stats {
+    margin-bottom: 24px;
+  }
+  .stats > div {
+    padding: 16px 12px;
+  }
+  .stats span {
+    font-size: 11px;
+    min-height: 34px;
+    margin-bottom: 8px;
+  }
+  .stats strong {
+    font-size: 28px;
+  }
+  .stats strong small {
+    font-size: 10px;
+    line-height: 1.5;
+    letter-spacing: 0;
+  }
+  .section-head {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .section-head h2 {
+    margin: 0;
+  }
+  .fleet-tools {
+    gap: 8px;
+  }
+  .fleet-tools input {
+    min-width: 0;
+    width: 100%;
+  }
+  .fleet-tools select {
+    min-width: 110px;
+    max-width: 125px;
+  }
+  .device-list {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    max-height: none;
+    padding: 2px 2px 12px;
+    scroll-snap-type: x proximity;
+  }
+  .device-card {
+    min-width: 280px;
+    max-width: 280px;
+    scroll-snap-align: start;
+  }
+  .detail-head {
+    padding: 20px 16px;
+  }
+  .detail-head h2 {
+    font-size: 21px;
+  }
+  #device-body {
+    padding: 18px 16px;
+  }
+  .meters {
+    gap: 10px;
+  }
+  .meters > div {
+    padding: 14px;
+  }
+  .tabs {
+    padding: 0 8px;
+  }
+  .tabs button {
+    font-size: 11px;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .recovery-banner {
+    padding: 22px;
+    gap: 12px;
+  }
+  .recovery-banner .recovery-icon {
+    display: none;
+  }
+  .recovery-banner > div {
+    flex-basis: 100%;
+  }
+  .recovery-banner h2 {
+    font-size: 22px;
+  }
+  .plan,
+  .panel {
+    padding: 22px;
+  }
+  .provider {
+    padding: 12px 16px;
+  }
+  .provider > summary {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .provider summary > b {
+    flex-basis: 65%;
+  }
+  .provider summary small {
+    flex-basis: 100%;
+  }
+  .login-brand {
+    padding: 34px 28px;
+    min-height: 220px;
+    justify-content: center;
+  }
+  .login-brand > .wordmark {
+    width: 178px;
+  }
+  .login-card {
+    max-width: calc(100% - 56px);
+    padding: 24px 0 40px;
+  }
+  .login-card h1 {
+    font-size: 28px;
+    margin: 18px 0 28px;
+  }
+  dialog {
+    width: calc(100% - 24px);
+    padding: 20px;
+  }
+  .dialog-head {
+    gap: 16px;
+  }
+  .remote-modal {
+    width: calc(100vw - 16px);
+    padding: 12px;
+  }
+  .remote-toolbar {
+    gap: 8px;
+  }
+  .remote-toolbar > span {
+    flex-basis: 100%;
+  }
+  #remote-display {
+    min-height: 200px;
+    max-width: 100%;
+  }
+  pre {
+    font-size: 11px;
+    padding: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.section-head h2 {
+  margin-bottom: 0;
+}
+.stats > div {
+  padding: 20px 24px;
+}
+.stats span {
+  margin-bottom: 10px;
+}
+
+.scroll table {
+  min-width: 460px;
+}
+@media (max-width: 700px) {
+  .stats > div {
+    padding: 16px 12px;
+  }
+  .section-head h2 {
+    font-size: 18px;
+  }
+  .section-head .primary {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .device-state small {
+    display: none;
+  }
+  .account {
+    min-height: 44px;
+  }
+  .probe-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 90px;
+    grid-template-areas: "kind port" "target test";
+  }
+  #probe-kind {
+    grid-area: kind;
+  }
+  #probe-target {
+    grid-area: target;
+    min-width: 0;
+    width: 100%;
+  }
+  #probe-port {
+    grid-area: port;
+    width: 100% !important;
+  }
+  #probe {
+    grid-area: test;
+  }
+}
+
+td details {
+  margin: 0;
+}
+td summary {
+  padding: 2px 0;
+}
+#content > h2:not(:first-child) {
+  margin-top: 28px;
 }

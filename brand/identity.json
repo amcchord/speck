@@ -1,0 +1,19 @@
+{
+  "name": "Speck",
+  "wordmark": "speck",
+  "tagline": "A LITTLE LIGHTWEIGHT RMM",
+  "site": "https://speckrmm.com",
+  "colors": {
+    "forest": "#192e24",
+    "fern": "#385d44",
+    "lime": "#dcecab",
+    "paper": "#f4f5f0",
+    "white": "#ffffff",
+    "ink": "#24382c",
+    "muted": "#5e6f61",
+    "line": "#dce3d8",
+    "success": "#35613f",
+    "warning": "#795916",
+    "danger": "#993e32"
+  }
+}

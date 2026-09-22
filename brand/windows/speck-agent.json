@@ -1,0 +1,30 @@
+{
+  "RT_GROUP_ICON": {
+    "APP": {
+      "0000": "../assets/speck.ico"
+    }
+  },
+  "RT_VERSION": {
+    "#1": {
+      "0409": {
+        "fixed": {
+          "file_version": "0.1.0.0",
+          "product_version": "0.1.0.0"
+        },
+        "info": {
+          "0409": {
+            "CompanyName": "Speck contributors",
+            "FileDescription": "Speck Agent",
+            "ProductName": "Speck RMM",
+            "ProductVersion": "0.1.0",
+            "FileVersion": "0.1.0",
+            "OriginalFilename": "speck-agent.exe",
+            "InternalName": "speck-agent",
+            "Comments": "A LITTLE LIGHTWEIGHT RMM",
+            "LegalCopyright": "Copyright Speck contributors. MIT licensed."
+          }
+        }
+      }
+    }
+  }
+}

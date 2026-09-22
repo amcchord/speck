@@ -1,5 +1,7 @@
 import Guacamole from "guacamole-common-js";
+import "../../brand/tokens.css";
 import "./style.css";
+import { icon, wordmark } from "./icons";
 
 type Item = Record<string, any>;
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -8,7 +10,9 @@ let csrf = "",
   page = "fleet",
   fleet: Item[] = [],
   selected = "",
-  tab = "overview";
+  tab = "overview",
+  fleetQuery = "",
+  fleetFilter = "all";
 let remote: any = null,
   keyboard: any = null,
   recorder: any = null,
@@ -26,12 +30,39 @@ const bytes = (n: number) =>
     ? "0 B"
     : n >= 1073741824
       ? (n / 1073741824).toFixed(1) + " GB"
-      : (n / 1048576).toFixed(1) + " MB";
+      : n >= 1048576
+        ? (n / 1048576).toFixed(1) + " MB"
+        : n >= 1024
+          ? (n / 1024).toFixed(1) + " KB"
+          : n + " B";
 const date = (n: number | string) =>
   n ? new Date(typeof n === "number" ? n * 1000 : n).toLocaleString() : "—";
 const pretty = (v: any) => esc(JSON.stringify(v, null, 2));
-const badge = (s: string, good = false) =>
-  `<span class="badge ${good ? "good" : ""}">${esc(s)}</span>`;
+const badge = (s: string, good = false) => {
+  const status = s.toLowerCase();
+  const positive =
+    good ||
+    [
+      "healthy",
+      "online",
+      "active",
+      "running",
+      "complete",
+      "passed",
+      "succeeded",
+      "matched",
+      "verified",
+    ].includes(status);
+  const tone = positive
+    ? "good"
+    : ["failed", "error", "expired"].includes(status)
+      ? "bad"
+      : ["review", "pending", "needs_attention", "unknown"].includes(status)
+        ? ""
+        : "neutral";
+  return `<span class="badge ${tone}">${esc(s)}</span>`;
+};
+
 async function api(path: string, method = "GET", body?: any): Promise<any> {
   const headers: Record<string, string> = { "X-CSRF-Token": csrf };
   if (body !== undefined && !(body instanceof FormData))
@@ -63,6 +94,7 @@ function notify(message: string, error = false) {
   const n = document.createElement("div");
   n.className = "toast" + (error ? " error" : "");
   n.textContent = message;
+  n.setAttribute("role", error ? "alert" : "status");
   document.body.append(n);
   setTimeout(() => n.remove(), 7000);
 }
@@ -96,7 +128,7 @@ function login() {
   disconnect();
   csrf = "";
   username = "";
-  app.innerHTML = `<main class="login"><div class="login-brand"><span class="spark">✳</span> speck<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit"><i></i><i></i><i></i><b>✳</b></div></div><form id="login" class="login-card"><h2>Sign in</h2><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button class="primary" type="submit">Sign in <span>→</span></button></form></main>`;
+  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button class="primary" type="submit">Sign in ${icon("arrow")}</button></form></main>`;
   on(
     "login",
     async () => {
@@ -112,26 +144,30 @@ function login() {
   );
 }
 function shell(title: string, subtitle: string) {
-  app.innerHTML = `<aside><a class="brand" href="#fleet"><span class="spark">✳</span> speck<span class="version">0.1</span></a><nav>${[
-    ["fleet", "▦", "Fleet"],
-    ["recovery", "↺", "Recovery lab"],
-    ["slide", "▱", "Slide"],
-    ["activity", "≋", "Activity"],
-    ["settings", "⚙", "Settings"],
+  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<span class="version">0.1</span></a><nav aria-label="Main navigation">${[
+    ["fleet", "fleet", "Fleet"],
+    ["recovery", "recovery", "Recovery lab"],
+    ["slide", "slide", "Slide"],
+    ["activity", "activity", "Activity"],
+    ["settings", "settings", "Settings"],
   ]
     .map(
-      ([id, icon, label]) =>
-        `<button data-page="${id}" class="${page === id ? "active" : ""}"><span>${icon}</span>${label}</button>`,
+      ([id, symbol, label]) =>
+        `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol)}<span>${label}</span></button>`,
     )
     .join(
       "",
-    )}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>↗</button></aside><main class="workspace"><header><div><h1>${esc(title)}</h1>${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><button id="refresh" class="secondary">↻ Refresh</button></div></header><section id="content"></section></main>`;
+    )}</nav><div class="side-note"><span class="eyebrow">A LITTLE<br>LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace"><header><div><h1>${esc(title)}</h1>${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><button id="refresh" class="secondary" aria-label="Refresh">${icon("refresh")}<span>Refresh</span></button></div></header><section id="content" tabindex="-1"></section></main>`;
   document.querySelectorAll<HTMLElement>("[data-page]").forEach(
     (el) =>
       (el.onclick = () => {
         location.hash = el.dataset.page!;
       }),
   );
+  document.querySelector<HTMLAnchorElement>(".skip-link")!.onclick = (e) => {
+    e.preventDefault();
+    document.getElementById("content")!.focus();
+  };
   on("logout", async () => {
     await api("/auth/logout", "POST");
     login();
@@ -173,9 +209,44 @@ async function renderFleet() {
   const online = fleet.filter((d) => d.online).length,
     candidates = fleet.filter((d) => !d.approved).length;
   content(
-    `<div class="stats"><div><span>All devices</span><strong>${fleet.length}<small>Windows + Linux</small></strong></div><div><span>Online now</span><strong>${online}</strong></div><div><span>Recovery candidates</span><strong>${candidates}<small>${candidates ? "Ready for your review" : "No pending approvals"}</small></strong></div></div><div class="section-head"><div><h2>Managed devices <span class="count">${fleet.length}</span></h2></div><button id="add" class="primary">+ Add a device</button></div><div class="fleet-layout"><div class="device-list">${fleet.map((d) => `<button data-device="${d.id}" class="device-card ${selected === d.id ? "chosen" : ""}"><span class="os-icon">${d.platform === "windows" ? "⊞" : "⌘"}</span><span><b>${esc(d.label)}</b><small>${esc(d.telemetry?.host?.platform || d.platform)} · ${esc(d.hostname)}</small></span><span class="device-state">${badge(d.approved ? (d.online ? "Online" : "Offline") : "Review", d.online && d.approved)}<small>${d.telemetry?.active_app?.process ? esc(d.telemetry.active_app.process) : d.platform === "linux" ? "Linux agent" : "Windows agent"}</small></span></button>`).join("") || '<div class="empty"><h3>No devices enrolled</h3></div>'}</div><div class="detail" id="detail"><div class="empty"><h2>Select a device</h2></div></div></div>`,
+    `<div class="stats"><div><span>All devices</span><strong>${fleet.length}<small>Windows + Linux</small></strong></div><div><span>Online now</span><strong>${online}</strong></div><div><span>Recovery candidates</span><strong>${candidates}<small>${candidates ? "Ready for your review" : "No pending approvals"}</small></strong></div></div><div class="section-head"><div><h2>Managed devices <span class="count">${fleet.length}</span></h2></div><button id="add" class="primary">${icon("plus")} Add a device</button></div><div class="fleet-tools"><input id="fleet-search" aria-label="Search devices" placeholder="Search devices…" value="${esc(fleetQuery)}"><select id="fleet-filter" aria-label="Filter devices"><option value="all">All devices</option><option value="online">Online</option><option value="review">Needs review</option><option value="offline">Offline</option></select></div><div class="fleet-layout"><div class="device-list">${fleet.map((d) => `<button data-device="${d.id}" class="device-card ${selected === d.id ? "chosen" : ""}" aria-pressed="${selected === d.id}"><span class="os-icon">${icon(d.platform === "windows" ? "windows" : "linux")}</span><span><b>${esc(d.label)}</b><small>${esc(d.telemetry?.host?.platform || d.platform)}</small></span><span class="device-state">${badge(d.approved ? (d.online ? "Online" : "Offline") : "Review", d.online && d.approved)}<small>${d.telemetry?.active_app?.process ? esc(d.telemetry.active_app.process) : d.platform === "linux" ? "Linux agent" : "Windows agent"}</small></span></button>`).join("") || '<div class="empty"><h3>No devices enrolled</h3></div>'}</div><div class="detail" id="detail"><div class="empty"><h2>Select a device</h2></div></div></div>`,
   );
   on("add", enrollmentDialog);
+  const filterSelect = document.getElementById(
+    "fleet-filter",
+  ) as HTMLSelectElement;
+  filterSelect.value = fleetFilter;
+  const filterDevices = () => {
+    fleetQuery = value("fleet-search");
+    fleetFilter = value("fleet-filter");
+    let count = 0;
+    document.querySelectorAll<HTMLElement>("[data-device]").forEach((el) => {
+      const d = fleet.find((item) => item.id === el.dataset.device)!;
+      const matches =
+        `${d.label} ${d.hostname} ${d.platform}`
+          .toLowerCase()
+          .includes(fleetQuery.toLowerCase()) &&
+        (fleetFilter === "all" ||
+          (fleetFilter === "online" && d.online && d.approved) ||
+          (fleetFilter === "offline" && !d.online) ||
+          (fleetFilter === "review" && !d.approved));
+      el.hidden = !matches;
+      if (matches) count++;
+    });
+    document.getElementById("no-devices")?.remove();
+    if (!count && fleet.length)
+      document
+        .querySelector(".device-list")!
+        .insertAdjacentHTML(
+          "beforeend",
+          '<div id="no-devices" class="empty" role="status"><h3>No matching devices</h3><p>Try another name or filter.</p></div>',
+        );
+  };
+  document
+    .getElementById("fleet-search")!
+    .addEventListener("input", filterDevices);
+  filterSelect.addEventListener("change", filterDevices);
+  filterDevices();
   document.querySelectorAll<HTMLElement>("[data-device]").forEach(
     (el) =>
       (el.onclick = () => {
@@ -186,6 +257,14 @@ async function renderFleet() {
             n.classList.toggle(
               "chosen",
               (n as HTMLElement).dataset.device === selected,
+            ),
+          );
+        document
+          .querySelectorAll<HTMLElement>("[data-device]")
+          .forEach((n) =>
+            n.setAttribute(
+              "aria-pressed",
+              String(n.dataset.device === selected),
             ),
           );
         renderDevice();
@@ -200,7 +279,7 @@ async function renderDevice() {
   const t = d.telemetry || {},
     names = ["overview", "services", "network", "terminal", "files", "remote"];
   document.getElementById("detail")!.innerHTML =
-    `<div class="detail-head"><div><span class="eyebrow">${esc(d.platform)} / ${esc(d.arch)}</span><h2>${esc(d.label)}</h2><small>Last report ${date(d.last_seen)}</small></div><button id="device-edit" class="secondary">Edit</button></div>${!d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}<div class="tabs">${names.map((n) => `<button data-tab="${n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body"></div>`;
+    `<div class="detail-head"><div><span class="eyebrow">${esc(d.platform)} / ${esc(d.arch)}</span><h2>${esc(d.label)}</h2><small>Last report ${date(d.last_seen)}</small></div><button id="device-edit" class="secondary">Edit</button></div>${!d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}<div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body"></div>`;
   document.querySelectorAll<HTMLElement>("[data-tab]").forEach(
     (el) =>
       (el.onclick = () => {
@@ -211,9 +290,9 @@ async function renderDevice() {
   on("device-edit", () => editDevice(d));
   const body = document.getElementById("device-body")!;
   if (tab === "overview") {
-    body.innerHTML = `<div class="meters"><div><small>Processor</small><strong>${Number(t.cpu_percent || 0).toFixed(1)}<em>%</em></strong><progress max="100" value="${Number(t.cpu_percent || 0)}"></progress></div><div><small>Memory</small><strong>${Number(t.memory?.usedPercent || 0).toFixed(0)}<em>%</em></strong><progress max="100" value="${Number(t.memory?.usedPercent || 0)}"></progress><small>${bytes(t.memory?.used)} / ${bytes(t.memory?.total)}</small></div></div><div class="info-block"><span class="eyebrow">IN THE FOREGROUND</span><h3>${esc(t.active_app?.title || "No interactive desktop reported")}</h3><p>${esc(t.active_app ? `${t.active_app.process || ""} · ${t.active_app.user || ""}` : "Headless servers report services and network activity.")}</p></div><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${bytes(x.used)} / ${bytes(x.total)}</span><progress value="${Number(x.usedPercent)}" max="100"></progress></div>`).join("")}<div class="mini-grid"><div><small>Operating system</small>${esc(t.host?.platform || d.platform)} ${esc(t.host?.platformVersion)}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion)}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
+    body.innerHTML = `<div class="meters"><div><small>Processor</small><strong>${Number(t.cpu_percent || 0).toFixed(1)}<em>%</em></strong><progress aria-label="Processor utilization" max="100" value="${Number(t.cpu_percent || 0)}"></progress></div><div><small>Memory</small><strong>${Number(t.memory?.usedPercent || 0).toFixed(0)}<em>%</em></strong><progress aria-label="Memory utilization" max="100" value="${Number(t.memory?.usedPercent || 0)}"></progress><small>${bytes(t.memory?.used)} / ${bytes(t.memory?.total)}</small></div></div><div class="info-block"><span class="eyebrow">IN THE FOREGROUND</span><h3>${esc(t.active_app?.title || "No interactive desktop reported")}</h3><p>${esc(t.active_app ? `${t.active_app.process || ""} · ${t.active_app.user || ""}` : "Headless servers report services and network activity.")}</p></div><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${bytes(x.used)} / ${bytes(x.total)}</span><progress aria-label="Storage utilization ${esc(x.path)}" value="${Number(x.usedPercent)}" max="100"></progress></div>`).join("")}<div class="mini-grid"><div><small>Operating system</small>${esc(t.host?.platform || d.platform)} ${esc(t.host?.platformVersion)}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion)}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
   } else if (tab === "services") {
-    body.innerHTML = `<div class="toolbar"><input id="service-search" placeholder="Filter services…"><small>${(t.services || []).length} services</small></div><div class="scroll"><table><thead><tr><th>Service</th><th>State</th><th>Control</th></tr></thead><tbody id="services"></tbody></table></div>`;
+    body.innerHTML = `<div class="toolbar"><input id="service-search" aria-label="Filter services" placeholder="Filter services…"><small>${(t.services || []).length} services</small></div><div class="scroll"><table><thead><tr><th>Service</th><th>State</th><th>Control</th></tr></thead><tbody id="services"></tbody></table></div>`;
     const rows = () => {
       document.getElementById("services")!.innerHTML = (t.services || [])
         .filter((s: Item) =>
@@ -246,7 +325,7 @@ async function renderDevice() {
     document.getElementById("service-search")!.addEventListener("input", rows);
   } else if (tab === "network") {
     const n = t.network || {};
-    body.innerHTML = `<div class="toolbar"><select id="probe-kind"><option value="ping">Ping</option><option value="dns">DNS lookup</option><option value="tcp">TCP connect</option><option value="trace">Trace route</option></select><input id="probe-target" placeholder="Host or IP"><input id="probe-port" type="number" value="443" style="width:85px"><button id="probe" class="primary">Test</button></div><div id="job-result"></div>${(n.interfaces || []).map((x: Item) => `<div class="nic"><b>${esc(x.name)}</b><span>${esc((x.addrs || []).map((a: Item) => a.address).join(" · "))}</span><small>MAC ${esc(x.mac || "—")} · MTU ${esc(x.mtu)} · ${esc((x.flags || []).join(", "))}</small></div>`).join("")}<details><summary>Routes and DNS</summary><pre>${pretty({ routes: n.routes, dns: n.dns || n.dns_servers, resolver: n.resolver_details })}</pre></details><details><summary>Traffic counters</summary><pre>${pretty(n.counters)}</pre></details><details open><summary>Connections ${n.connections_truncated ? "(first 350)" : ""}</summary><div class="scroll"><table><thead><tr><th>Process</th><th>Local → Remote</th><th>State</th></tr></thead><tbody>${(n.connections || []).map((c: Item) => `<tr><td>${esc(c.process)}<small>PID ${c.pid}</small></td><td class="mono">${esc(c.local?.ip)}:${c.local?.port}<small>→ ${esc(c.remote?.ip)}:${c.remote?.port}</small></td><td>${esc(c.status || (c.type === 2 ? "UDP" : ""))}</td></tr>`).join("")}</tbody></table></div></details>`;
+    body.innerHTML = `<div class="toolbar probe-toolbar"><select id="probe-kind" aria-label="Network test"><option value="ping">Ping</option><option value="dns">DNS lookup</option><option value="tcp">TCP connect</option><option value="trace">Trace route</option></select><input id="probe-target" aria-label="Host or IP" placeholder="Host or IP"><input id="probe-port" aria-label="Port" type="number" value="443" style="width:85px"><button id="probe" class="primary">Test</button></div><div id="job-result"></div>${(n.interfaces || []).map((x: Item) => `<div class="nic"><b>${esc(x.name)}</b><span>${esc((x.addrs || []).map((a: Item) => a.address).join(" · "))}</span><small>MAC ${esc(x.mac || "—")} · MTU ${esc(x.mtu)} · ${esc((x.flags || []).join(", "))}</small></div>`).join("")}<details><summary>Routes and DNS</summary><pre>${pretty({ routes: n.routes, dns: n.dns || n.dns_servers, resolver: n.resolver_details })}</pre></details><details><summary>Traffic counters</summary><pre>${pretty(n.counters)}</pre></details><details open><summary>Connections ${n.connections_truncated ? "(first 350)" : ""}</summary><div class="scroll"><table><thead><tr><th>Process</th><th>Local → Remote</th><th>State</th></tr></thead><tbody>${(n.connections || []).map((c: Item) => `<tr><td>${esc(c.process)}<small>PID ${c.pid}</small></td><td class="mono">${esc(c.local?.ip)}:${c.local?.port}<small>→ ${esc(c.remote?.ip)}:${c.remote?.port}</small></td><td>${esc(c.status || (c.type === 2 ? "UDP" : ""))}</td></tr>`).join("")}</tbody></table></div></details>`;
     on("probe", async () =>
       showJob(
         await queue("network.check", {
@@ -257,7 +336,7 @@ async function renderDevice() {
       ),
     );
   } else if (tab === "terminal") {
-    body.innerHTML = `<p>Run as ${d.platform === "windows" ? "Local System using PowerShell" : "the agent service account using /bin/sh"}. Output is captured and audited.</p><textarea id="script" class="code" spellcheck="false" rows="7" placeholder="${d.platform === "windows" ? "Get-Service | Select-Object -First 10" : "systemctl --failed"}"></textarea><div class="toolbar"><select id="shell"><option value="auto">${d.platform === "windows" ? "PowerShell" : "Shell (/bin/sh)"}</option>${d.platform === "linux" ? '<option value="powershell">PowerShell (pwsh required)</option>' : ""}</select><button id="execute" class="primary">Run command →</button></div><div id="job-result"></div>`;
+    body.innerHTML = `<p>Run as ${d.platform === "windows" ? "Local System using PowerShell" : "the agent service account using /bin/sh"}. Output is captured and audited.</p><textarea id="script" aria-label="Command" class="code" spellcheck="false" rows="7" placeholder="${d.platform === "windows" ? "Get-Service | Select-Object -First 10" : "systemctl --failed"}"></textarea><div class="toolbar"><select id="shell" aria-label="Command shell"><option value="auto">${d.platform === "windows" ? "PowerShell" : "Shell (/bin/sh)"}</option>${d.platform === "linux" ? '<option value="powershell">PowerShell (pwsh required)</option>' : ""}</select><button id="execute" class="primary">Run command →</button></div><div id="job-result"></div>`;
     on("execute", async () =>
       showJob(
         await queue(
@@ -268,7 +347,7 @@ async function renderDevice() {
       ),
     );
   } else if (tab === "files") {
-    body.innerHTML = `<p>Transfers are verified with SHA-256. Maximum file size: 256 MiB.</p><div class="toolbar"><input id="file-path" placeholder="Full path on this device" value="${d.platform === "windows" ? "C:\\ProgramData" : "/tmp"}"><button id="browse" class="secondary">List</button><button id="download" class="primary">Download</button></div><div class="toolbar"><input id="file-upload" type="file"><button id="upload" class="secondary">Upload to path</button></div><small>Upload path includes the filename. Existing files are preserved.</small><div id="job-result"></div><div id="transfers"></div>`;
+    body.innerHTML = `<p>Transfers are verified with SHA-256. Maximum file size: 256 MiB.</p><div class="toolbar"><input id="file-path" aria-label="Full file path" placeholder="Full path on this device" value="${d.platform === "windows" ? "C:\\ProgramData" : "/tmp"}"><button id="browse" class="secondary">List</button><button id="download" class="primary">Download</button></div><div class="toolbar"><input id="file-upload" aria-label="Choose file to upload" type="file"><button id="upload" class="secondary">Upload to path</button></div><small>Upload path includes the filename. Existing files are preserved.</small><div id="job-result"></div><div id="transfers"></div>`;
     on("browse", async () =>
       showJob(await queue("files.list", { path: value("file-path") })),
     );
@@ -328,6 +407,7 @@ async function transfers(id: string) {
 }
 function dialog(title: string, html: string) {
   const d = document.createElement("dialog");
+  d.setAttribute("aria-label", title);
   d.innerHTML = `<div class="dialog-head"><h2>${esc(title)}</h2><button class="close" aria-label="Close">×</button></div>${html}`;
   document.body.append(d);
   d.showModal();
@@ -405,14 +485,14 @@ function configureRemote(d: Item) {
 async function connectRemote(d: Item) {
   const modal = dialog(
     d.label,
-    `<div class="remote-toolbar"><span id="remote-status">Connecting…</span><button id="mic" class="secondary">Enable microphone</button><button id="fullscreen" class="secondary">Full screen</button><button id="cad" class="secondary">Ctrl + Alt + Del</button><button id="type-secret" class="secondary">Type password</button></div><div id="remote-display" tabindex="0"></div><div class="toolbar"><input id="clipboard" placeholder="Text to paste into the remote session"><button id="paste" class="secondary">Paste</button></div>`,
+    `<div class="remote-toolbar"><span id="remote-status">Connecting…</span><button id="mic" class="secondary">Enable microphone</button><button id="fullscreen" class="secondary">Full screen</button><button id="cad" class="secondary">Ctrl + Alt + Del</button><button id="type-secret" class="secondary">Type password</button></div><div id="remote-display" tabindex="0"></div><div class="toolbar"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary" title="Copy text, then paste in the remote application">Copy to remote</button></div>`,
   );
   modal.classList.add("remote-modal");
   if (d.platform === "linux")
     document.getElementById("mic")!.title =
       "Microphone is supported by RDP desktop sessions";
   const width = Math.min(1920, Math.max(1024, innerWidth - 100)),
-    height = Math.min(1080, Math.max(700, innerHeight - 220));
+    height = Math.min(1080, Math.max(480, innerHeight - 220));
   const session = await api("/devices/" + d.id + "/remote/sessions", "POST", {
     width,
     height,
@@ -561,7 +641,7 @@ async function renderSlide() {
     return;
   }
   content(
-    `<div class="section-head"><div><h2>Slide inventory</h2><p>${esc(cfg.url)}</p></div><select id="slide-resource"><option value="agent">Protected systems</option><option value="device">Slide appliances</option><option value="snapshot">Snapshots + verification</option><option value="backup">Backup jobs</option><option value="network">Recovery networks</option><option value="restore/virt">Restored virtual machines</option><option value="restore/file">File restores</option><option value="restore/image">Image exports</option></select></div><div id="slide-data"></div>`,
+    `<div class="section-head"><div><h2>Slide inventory</h2><p>${esc(cfg.url)}</p></div><select id="slide-resource" aria-label="Slide resource type"><option value="agent">Protected systems</option><option value="device">Slide appliances</option><option value="snapshot">Snapshots + verification</option><option value="backup">Backup jobs</option><option value="network">Recovery networks</option><option value="restore/virt">Restored virtual machines</option><option value="restore/file">File restores</option><option value="restore/image">Image exports</option></select></div><div id="slide-data"></div>`,
   );
   const load = async () => {
     const resource = value("slide-resource");
@@ -624,7 +704,7 @@ async function renderRecovery() {
   ]);
   fleet = devices;
   content(
-    `<div class="recovery-banner"><span class="big-spark">↺</span><div><h2>Recovery tests</h2><p>Capture proof → back up → restore together → compare.</p></div><button id="new-plan" class="primary">+ New recovery plan</button></div><div class="section-head"><div><h2>Your recovery plans</h2><p>Each run creates a shared, isolated network for its restored machines.</p></div></div><div class="plan-grid">${plans.map((p: Item) => `<article class="plan"><span class="eyebrow">RECOVERY PLAN</span><h2>${esc(p.name)}</h2><p>${p.spec.members.length} systems · ${esc(p.spec.router_prefix)}</p><button data-run="${p.id}" class="primary">Run recovery test →</button><details><summary>View plan</summary><pre>${pretty(p.spec)}</pre></details></article>`).join("") || '<div class="empty"><h3>No recovery plans</h3><p>Link devices to their Slide agent IDs, then define application checks.</p></div>'}</div><div class="section-head"><h2>Runs & evidence</h2><button id="refresh-runs" class="secondary">Refresh</button></div>${runs.map((r: Item) => `<details class="provider" ${r.status === "stopped" ? "" : "open"}><summary><b>${esc(r.state.name)}</b>${badge(r.status, r.status === "passed")}<small>${date(r.created)}</small></summary><div class="run-phase">${esc(r.phase.replaceAll("_", " "))}</div>${r.state.error ? `<div class="callout">${esc(r.state.error)}</div>` : ""}${recoveryEvidence(r)}<div class="toolbar">${r.status === "awaiting_clones" ? `<button data-verify="${r.id}" class="primary">Verify restored machines</button>` : ""}${r.status !== "running" && r.status !== "stopped" ? `<button data-stop="${r.id}" class="secondary">Stop restored VMs</button>` : ""}</div></details>`).join("")}`,
+    `<div class="recovery-banner"><span class="recovery-icon">${icon("recovery")}</span><div><h2>Recovery tests</h2><p>Capture proof → back up → restore together → compare.</p></div><button id="new-plan" class="primary">${icon("plus")} New recovery plan</button></div><div class="section-head"><div><h2>Your recovery plans</h2><p>Each run creates a shared, isolated network for its restored machines.</p></div></div><div class="plan-grid">${plans.map((p: Item) => `<article class="plan"><span class="eyebrow">RECOVERY PLAN</span><h2>${esc(p.name)}</h2><p>${p.spec.members.length} systems · ${esc(p.spec.router_prefix)}</p><button data-run="${p.id}" class="primary">Run recovery test →</button><details><summary>View plan</summary><pre>${pretty(p.spec)}</pre></details></article>`).join("") || '<div class="empty"><h3>No recovery plans</h3><p>Link devices to their Slide agent IDs, then define application checks.</p></div>'}</div><div class="section-head"><h2>Runs & evidence</h2><button id="refresh-runs" class="secondary">Refresh</button></div>${runs.map((r: Item) => `<details class="provider" ${r.status === "stopped" ? "" : "open"}><summary><b>${esc(r.state.name)}</b>${badge(r.status, r.status === "passed")}<small>${date(r.created)}</small></summary><div class="run-phase">${esc(r.phase.replaceAll("_", " "))}</div>${r.state.error ? `<div class="callout">${esc(r.state.error)}</div>` : ""}${recoveryEvidence(r)}<div class="toolbar">${r.status === "awaiting_clones" ? `<button data-verify="${r.id}" class="primary">Verify restored machines</button>` : ""}${r.status !== "running" && r.status !== "stopped" ? `<button data-stop="${r.id}" class="secondary">Stop restored VMs</button>` : ""}</div></details>`).join("")}`,
   );
   on("refresh-runs", renderRecovery);
   on("new-plan", newPlan);
@@ -764,9 +844,13 @@ async function newPlan() {
   });
 }
 async function renderActivity() {
-  const [audit, jobs] = await Promise.all([api("/audit"), api("/jobs")]);
+  const [audit, jobs, devices] = await Promise.all([
+    api("/audit"),
+    api("/jobs"),
+    api("/devices"),
+  ]);
   content(
-    `<h2>Recent jobs</h2><div class="scroll"><table><thead><tr><th>Job</th><th>Device</th><th>Status</th><th>When</th></tr></thead><tbody>${jobs.map((j: Item) => `<tr><td><details><summary>${esc(j.kind)}</summary><pre>${pretty(j.result)}</pre></details></td><td class="mono">${esc(j.device_id.slice(0, 10))}</td><td>${badge(j.status, j.status === "complete")}</td><td>${date(j.created)}</td></tr>`).join("")}</tbody></table></div><h2>Audit trail</h2><table><thead><tr><th>Action</th><th>Actor</th><th>When</th></tr></thead><tbody>${audit.map((a: Item) => `<tr><td><details><summary>${esc(a.action)}</summary><pre>${pretty(a.detail)}</pre></details></td><td>${esc(a.actor)}</td><td>${date(a.at)}</td></tr>`).join("")}</tbody></table>`,
+    `<h2>Recent jobs</h2><div class="scroll"><table><thead><tr><th>Job</th><th>Device</th><th>Status</th><th>When</th></tr></thead><tbody>${jobs.map((j: Item) => `<tr><td><details><summary>${esc(j.kind)}</summary><pre>${pretty(j.result)}</pre></details></td><td class="mono">${esc(devices.find((d: Item) => d.id === j.device_id)?.label || j.device_id.slice(0, 10))}</td><td>${badge(j.status, j.status === "complete")}</td><td>${date(j.created)}</td></tr>`).join("")}</tbody></table></div><h2>Audit trail</h2><table><thead><tr><th>Action</th><th>Actor</th><th>When</th></tr></thead><tbody>${audit.map((a: Item) => `<tr><td><details><summary>${esc(a.action)}</summary><pre>${pretty(a.detail)}</pre></details></td><td>${esc(a.actor)}</td><td>${date(a.at)}</td></tr>`).join("")}</tbody></table>`,
   );
 }
 async function renderSettings() {
@@ -793,7 +877,8 @@ setInterval(async () => {
     polling ||
     page !== "fleet" ||
     remote ||
-    document.querySelector("dialog")
+    document.querySelector("dialog") ||
+    ["fleet-search", "fleet-filter"].includes(document.activeElement?.id || "")
   )
     return;
   polling = true;

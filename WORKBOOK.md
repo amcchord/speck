@@ -1,6 +1,6 @@
 # Speck working record
 
-Branch: `codex/initial-speck`. Independent Windows/Linux RMM repository.
+Branch: `codex/brand-identity`. Independent Windows/Linux RMM repository.
 
 ## Implemented
 
@@ -52,3 +52,26 @@ and Linux graphical desktop/audio remain unverified. Windows RDP speaker audio
 transport and Linux browser SSH were exercised. External phone routing was not
 switched from the original PBX. This is an early single-administrator release;
 see the capability and security limits in README.md and docs/security.md.
+
+## Brand identity — September 22, 2026
+
+The shared identity is recorded in `brand/README.md`: vector mark/wordmark, Inter,
+forest/fern/lime/paper tokens, native icons, naming and concise product voice.
+The same assets build the web console and Windows executable resources. Both
+installers, service descriptions and agent help use the shared identity.
+
+`docs/screenshots/README.md` is the public gallery; `scripts/preview.py` serves
+read-only synthetic fixtures against the actual frontend. `docs/ui-review.md`
+records the visual review, responsive and contrast fixes, and verification limits.
+The README links the guide and gallery. Public captures contain no credentials.
+
+Static site/downloads were deployed without restarting the control plane. All
+five original dental endpoints were upgraded and reported online. Their previous
+binaries and the prior static release remain available in private rollback paths.
+Details and checks are under `output/brand-review/`; no additional recovery run
+was started. Future UI changes should follow the brand guide and refresh the
+gallery when their visible behavior changes.
+
+The final gallery contains 19 unretouched captures with dimensions, digests and
+provenance in `docs/screenshots/manifest.json`. Linux SSH and Windows RDP captures
+show the real installed agent help; console screenshots use synthetic fixtures.

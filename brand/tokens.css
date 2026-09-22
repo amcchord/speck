@@ -1,0 +1,17 @@
+/* Generated from brand/identity.json by scripts/brand.mjs. */
+:root {
+  --forest: #192e24;
+  --fern: #385d44;
+  --lime: #dcecab;
+  --paper: #f4f5f0;
+  --white: #ffffff;
+  --ink: #24382c;
+  --muted: #5e6f61;
+  --line: #dce3d8;
+  --success: #35613f;
+  --warning: #795916;
+  --danger: #993e32;
+  --green: var(--fern);
+  --radius: 10px;
+  --space: 4px;
+}

@@ -15,3 +15,17 @@ Speck's original code is MIT licensed. Dependencies retain their own licenses.
 Consult the pinned dependency lockfiles and installed package license files for
 complete dependency details. No Slide software or private application source is
 included in this repository. Speck calls the separately operated Slide API.
+
+## Inter
+
+Inter 4.1 by Rasmus Andersson, SIL Open Font License 1.1. The self-hosted variable
+font and license are in `brand/fonts/`. Speck's outlined wordmark derives from
+Inter at weight 650 / optical size 32; its SVGs contain paths and need no font.
+Source: https://github.com/rsms/inter/tree/v4.1
+
+## Build tooling
+
+Windows resources are built with go-winres 0.3.3 (0BSD) and its dependencies.
+SVG exports use @resvg/resvg-js 2.6.2 (MPL-2.0). These are build tools, not agent
+or console runtime dependencies. Original Speck marks and interface icons are
+covered by this repository's MIT license.

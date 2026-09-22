@@ -1,6 +1,16 @@
 #Requires -RunAsAdministrator
-param([string]$Server='https://speckrmm.com')
+param([string]$Server='https://speckrmm.com', [switch]$About)
 $ErrorActionPreference='Stop'
+Write-Host "`n  speck" -ForegroundColor Green
+Write-Host '  A LITTLE LIGHTWEIGHT RMM'
+Write-Host "`n  Windows agent installer`n"
+if ($About) {
+ Write-Host '  Installs or updates Speck Agent and its desktop helper.'
+ Write-Host '  Use -Server for a self-hosted server.'
+ Write-Host '  An enrollment token is requested only for a new device.'
+ Write-Host "`n  https://speckrmm.com`n"
+ return
+}
 if (-not $Server.StartsWith('https://')) {throw 'An HTTPS server is required'}
 $Root='C:\ProgramData\Speck'
 $Bin='C:\Program Files\Speck'
@@ -10,6 +20,7 @@ icacls $Root /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(C
 $Binary="$Bin\speck-agent.exe"
 $Temp=Join-Path $env:TEMP ('speck-'+[Guid]::NewGuid().ToString()+'.exe')
 try {
+ Write-Host "  [1/3] Download and verify"
  Invoke-WebRequest "$Server/downloads/speck-agent-windows-amd64.exe" -OutFile $Temp -UseBasicParsing
  $Manifest=(Invoke-WebRequest "$Server/downloads/SHA256SUMS" -UseBasicParsing).Content
  if ($Manifest -is [byte[]]) {$Manifest=[Text.Encoding]::UTF8.GetString($Manifest)}
@@ -17,6 +28,7 @@ try {
  if (-not $Line) {throw 'Agent checksum is missing from the manifest'}
  $Expected=$Line.Split(' ')[0]
  if (-not $Expected -or (Get-FileHash $Temp -Algorithm SHA256).Hash -ne $Expected) {throw 'Agent checksum mismatch'}
+ Write-Host "`n  [2/3] Install and enroll"
  $Old=Get-Service SpeckAgent -ErrorAction SilentlyContinue
  if ($Old) {Stop-Service SpeckAgent -Force}
  Get-Process speck-agent,speck-desktop -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -34,6 +46,10 @@ try {
    if ($LASTEXITCODE -ne 0) {throw 'Enrollment failed'}
  }
  if (-not $Old) {& $Binary install; if ($LASTEXITCODE -ne 0) {throw 'Service installation failed'}}
+ & sc.exe config SpeckAgent DisplayName= 'Speck Agent' | Out-Null
+ if ($LASTEXITCODE -ne 0) {throw 'Service display name configuration failed'}
+ & sc.exe description SpeckAgent 'A LITTLE LIGHTWEIGHT RMM. Windows and Linux monitoring, remote access and recovery.' | Out-Null
+ if ($LASTEXITCODE -ne 0) {throw 'Service description configuration failed'}
  # Also repair recovery/start settings when upgrading an existing service.
  & sc.exe config SpeckAgent start= delayed-auto | Out-Null
  if ($LASTEXITCODE -ne 0) {throw 'Service start configuration failed'}
@@ -47,7 +63,9 @@ try {
  $Trigger=New-ScheduledTaskTrigger -AtLogOn
  $Principal=New-ScheduledTaskPrincipal -GroupId 'S-1-5-32-545' -RunLevel Limited
  $Settings=New-ScheduledTaskSettingsSet -MultipleInstances Parallel -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
- Register-ScheduledTask -TaskName 'Speck Foreground' -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force | Out-Null
+ Register-ScheduledTask -Description 'Speck Desktop Helper. A little lightweight RMM.' -TaskName 'Speck Foreground' -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force | Out-Null
+ Write-Host "`n  [3/3] Start Speck Agent"
  Start-Service SpeckAgent
- Write-Host 'Speck installed. Active-app reporting starts at the next interactive sign-in.'
+ Write-Host "`n  Ready. Speck Agent is running." -ForegroundColor Green
+ Write-Host "  Active application: starts at the next desktop sign-in.`n"
 } finally {Remove-Item $Temp -ErrorAction SilentlyContinue}

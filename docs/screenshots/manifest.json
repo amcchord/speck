@@ -1,0 +1,181 @@
+{
+  "description": "Unretouched browser screenshots in their original JPEG encoding. Console data is synthetic; recovery reports are fixtures, not new recovery-test evidence. Agent and installer captures use actual isolated lab endpoints.",
+  "source_branch": "codex/brand-identity",
+  "frontend_assets": [
+    "index-CB-8DfKb.js",
+    "index-DDuEQp9S.css"
+  ],
+  "captures": [
+    {
+      "file": "00-brand.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 51968,
+      "sha256": "5e407daf7f53fa2949cc85b33a869b812223abce0a4ea0ec4b46279a27ac4e3d",
+      "captured_at_utc": "2026-09-22T04:50:49+00:00",
+      "provenance": "Local brand specimen rendered in the browser"
+    },
+    {
+      "file": "01-sign-in.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 25537,
+      "sha256": "8472245fe76c105984447c89e551b691d1d77f8928dea63d37c51161d061227b",
+      "captured_at_utc": "2026-09-22T04:47:09+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "02-fleet.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 101880,
+      "sha256": "8cdf8ac859fec036adcfdedf6db4cebf567733ba2dc109f080d3fc6481b2dbb6",
+      "captured_at_utc": "2026-09-22T05:08:40+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "03-services.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 105235,
+      "sha256": "3a0a993ce7ffe5da2d176a00203353d89311f9e0252033441ced8d3b008a22b7",
+      "captured_at_utc": "2026-09-22T05:08:42+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "04-network.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 109911,
+      "sha256": "6f4a16822c21249890cf1258e6dfcfa06d9d5b4d323342ebf4e9ab623ccd7ad8",
+      "captured_at_utc": "2026-09-22T04:49:46+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "05-terminal.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 83641,
+      "sha256": "f44c63f4189c63fb612a2488a429c975c79028334b1c959c33ccd1b19cd66ed4",
+      "captured_at_utc": "2026-09-22T04:49:47+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "06-files.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 87435,
+      "sha256": "26b449575d83337280fec4283aa82d4ac6479fec810f47051474e9ea75c589c0",
+      "captured_at_utc": "2026-09-22T04:49:49+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "07-remote.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 93733,
+      "sha256": "130614b83834eda78192fac68d98cd7c322fdbc657e27087d1e69ca886643be4",
+      "captured_at_utc": "2026-09-22T04:49:50+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "08-recovery.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 74338,
+      "sha256": "b5153d29767a89c3c8eb83bc42ceca34f1e861242b7992c1be4e7edba4685142",
+      "captured_at_utc": "2026-09-22T04:47:20+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "09-slide.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 32436,
+      "sha256": "ff96e717fdd6bd22fc12e6c97c32e3a5cb8ee143468f436e74b3686cada8488f",
+      "captured_at_utc": "2026-09-22T04:59:43+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "10-activity.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 52310,
+      "sha256": "0d490f7b629efe894ebe76bad882c4e829a71674ae2a5dac9fbcc72c66691996",
+      "captured_at_utc": "2026-09-22T04:59:43+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "11-enrollment.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 32231,
+      "sha256": "3799d9898506f7b76063c50c86410199a4ce29d07200da75e588f008e102b50b",
+      "captured_at_utc": "2026-09-22T04:47:50+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "12-mobile-sign-in.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 15258,
+      "sha256": "bcf096dfeb4871acb7432107a3a09cbb233eb4bcc81aeabebd8ee55ecd5fb7eb",
+      "captured_at_utc": "2026-09-22T04:47:00+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "13-mobile-fleet.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 51740,
+      "sha256": "5bb69fe16bd0f0b182bc06516b287772bee940283b66b10713b45f8a8060413e",
+      "captured_at_utc": "2026-09-22T04:46:04+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "14-mobile-recovery.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 49267,
+      "sha256": "63478081307d1aef06dafe561daae1c6f2f6711063ae7c5da563121d16ae3d71",
+      "captured_at_utc": "2026-09-22T04:46:59+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "15-settings.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 55498,
+      "sha256": "d7dcdd955905abcb7eef1c99603950205a13f0427b32001ea8af593de60e35c1",
+      "captured_at_utc": "2026-09-22T04:50:43+00:00",
+      "provenance": "Production frontend with synthetic fixtures from scripts/preview.py"
+    },
+    {
+      "file": "16-linux-agent.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 66501,
+      "sha256": "ab135288fe2f0ff55c58e972d8ae984bda6f073bbffaaea8f04720fd13771ddd",
+      "captured_at_utc": "2026-09-22T05:08:09+00:00",
+      "provenance": "Live isolated demo endpoint through Speck browser SSH"
+    },
+    {
+      "file": "17-linux-installer.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 53605,
+      "sha256": "15f96d79b616ad4483bf1c8eb526b6c4c194e6149414517bc7e0ee39acbce487",
+      "captured_at_utc": "2026-09-22T05:08:14+00:00",
+      "provenance": "Live isolated demo endpoint through Speck browser SSH"
+    },
+    {
+      "file": "18-windows-agent.jpg",
+      "width": 1,
+      "height": 1,
+      "bytes": 69542,
+      "sha256": "f2a3374715666aaeeadc2d52733326113f298846816b07cb7d15370fb26a4500",
+      "captured_at_utc": "2026-09-22T05:01:29+00:00",
+      "provenance": "Live isolated demo endpoint through Speck browser RDP"
+    }
+  ]
+}

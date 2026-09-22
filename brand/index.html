@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>Speck · Brand identity</title
+  ><link rel="icon" href="assets/speck-icon.svg" /><style>
+    @font-face {
+      font-family: Inter;
+      src: url(fonts/InterVariable.woff2);
+      font-weight: 100 900;
+      font-display: swap;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #f4f5f0;
+      color: #192e24;
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.5;
+    }
+    .sheet {
+      max-width: 1280px;
+      padding: 48px;
+      margin: auto;
+    }
+    .kicker {
+      font-size: 11px;
+      letter-spacing: 2px;
+      font-weight: 650;
+      text-transform: uppercase;
+      color: #5e6f61;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    .top img {
+      width: 148px;
+    }
+    .hero {
+      border-radius: 16px;
+      background: #192e24;
+      padding: 52px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+      color: #dcecab;
+    }
+    .hero img {
+      width: 250px;
+      max-width: 100%;
+    }
+    .hero p {
+      font-size: 10px;
+      letter-spacing: 2px;
+      margin: 18px 0 0;
+      font-weight: 650;
+    }
+    .hero .mark {
+      width: 112px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .card {
+      padding: 28px;
+      border: 1px solid #dce3d8;
+      background: white;
+      border-radius: 12px;
+      min-width: 0;
+    }
+    h1 {
+      font-size: 28px;
+      letter-spacing: -1px;
+      font-weight: 550;
+      margin: 0;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 550;
+      margin: 0 0 20px;
+    }
+    h3 {
+      font-size: 36px;
+      letter-spacing: -1.5px;
+      font-weight: 550;
+      margin: 0 0 8px;
+    }
+    .muted {
+      color: #5e6f61;
+      font-size: 13px;
+    }
+    .palette {
+      display: flex;
+      gap: 10px;
+    }
+    .swatch {
+      flex: 1;
+      min-width: 0;
+    }
+    .swatch i {
+      display: block;
+      height: 62px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      border: 1px solid #192e2415;
+    }
+    .swatch b {
+      font-size: 11px;
+      display: block;
+    }
+    .swatch span {
+      font-family: monospace;
+      font-size: 10px;
+      color: #5e6f61;
+    }
+    .sample {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    button {
+      font:
+        600 12px Inter,
+        sans-serif;
+      min-height: 40px;
+      padding: 0 17px;
+      border-radius: 7px;
+      border: 1px solid #385d44;
+      background: #385d44;
+      color: white;
+    }
+    button.secondary {
+      background: #f4f5f0;
+      color: #385d44;
+      border-color: #dce3d8;
+    }
+    .badge {
+      font-size: 11px;
+      border-radius: 24px;
+      background: #eff6e7;
+      color: #35613f;
+      padding: 5px 9px;
+      border: 1px solid #d8e8c9;
+    }
+    .icons {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      height: 64px;
+    }
+    .icons img {
+      height: 48px;
+    }
+    .icons img:last-child {
+      height: 24px;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 24px;
+      font-size: 11px;
+      color: #5e6f61;
+    }
+    @media (max-width: 700px) {
+      .sheet {
+        padding: 24px;
+      }
+      .hero {
+        padding: 32px;
+      }
+      .hero .mark {
+        display: none;
+      }
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .hero img {
+        width: 200px;
+      }
+      .palette {
+        gap: 6px;
+      }
+      .top h1 {
+        font-size: 22px;
+      }
+    }
+  </style>
+  <main class="sheet">
+    <div class="top">
+      <h1>Brand identity</h1>
+      <span class="kicker">Speck / 01</span>
+    </div>
+    <section class="hero">
+      <div>
+        <img src="assets/speck-wordmark-lime.svg" alt="speck" />
+        <p>A LITTLE LIGHTWEIGHT RMM</p>
+      </div>
+      <img class="mark" src="assets/speck-mark-lime.svg" alt="Speck mark" />
+    </section>
+    <div class="grid">
+      <section class="card">
+        <h2>Color</h2>
+        <div class="palette">
+          <div class="swatch">
+            <i style="background: #192e24"></i><b>Forest</b><span>#192E24</span>
+          </div>
+          <div class="swatch">
+            <i style="background: #385d44"></i><b>Fern</b><span>#385D44</span>
+          </div>
+          <div class="swatch">
+            <i style="background: #dcecab"></i><b>Lime</b><span>#DCECAB</span>
+          </div>
+          <div class="swatch">
+            <i style="background: #f4f5f0"></i><b>Paper</b><span>#F4F5F0</span>
+          </div>
+          <div class="swatch">
+            <i style="background: #ffffff"></i><b>White</b><span>#FFFFFF</span>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Type</h2>
+        <h3>Recovery lab</h3>
+        <div class="muted">Inter · Regular 400 / Medium 550 / Semibold 650</div>
+        <div class="muted" style="margin-top: 12px">
+          Clear labels. Useful detail. Room to breathe.
+        </div>
+      </section>
+      <section class="card">
+        <h2>Product</h2>
+        <div class="muted">One clear action. Status in words and color.</div>
+        <div class="sample">
+          <button>Open browser session</button
+          ><button class="secondary">Settings</button
+          ><span class="badge">Online</span>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Small, everywhere</h2>
+        <div class="icons">
+          <img src="assets/speck-icon.svg" alt="Application icon" /><img
+            src="assets/speck-mark-forest.svg"
+            alt="Forest mark"
+          /><img src="assets/speck-mark-black.svg" alt="Monochrome mark" /><img
+            src="assets/speck-icon-24.png"
+            alt="24 pixel icon"
+          />
+        </div>
+      </section>
+    </div>
+    <div class="footer">
+      <span>Windows · Linux · Web</span><span>speckrmm.com</span>
+    </div>
+  </main>
+</html>

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/amcchord/speck/agent/internal/agent"
+	"github.com/amcchord/speck/agent/internal/identity"
 	"github.com/kardianos/service"
 )
 
@@ -48,6 +49,19 @@ func main() {
 		mode = args[0]
 	}
 	switch mode {
+	case "help", "--help", "-h":
+		fmt.Printf("%s %s\n%s\n\n", identity.Agent, agent.Version, identity.Tagline)
+		fmt.Println("Usage: speck-agent [--config path] <command>")
+		fmt.Println("\n  run          Run the agent service")
+		fmt.Println("  enroll       Enroll from JSON on standard input")
+		fmt.Println("  install      Register the system service")
+		fmt.Println("  start        Start the service")
+		fmt.Println("  stop         Stop the service")
+		fmt.Println("  restart      Restart the service")
+		fmt.Println("  uninstall    Remove the service registration")
+		fmt.Println("  foreground   Report the active desktop application")
+		fmt.Println("  version      Show version and platform")
+		fmt.Println("\nhttps://speckrmm.com")
 	case "enroll":
 		var input struct {
 			Server string `json:"server"`
@@ -59,18 +73,18 @@ func main() {
 		if err := agent.Enroll(config, input.Server, input.Token); err != nil {
 			fatal(err)
 		}
-		fmt.Println("Speck enrollment complete")
+		fmt.Println(identity.Agent + ": enrolled.")
 	case "foreground":
 		dir := filepath.Join(filepath.Dir(config), "telemetry")
 		for {
 			agent.WriteForeground(dir)
 			time.Sleep(2 * time.Second)
 		}
-	case "version":
-		fmt.Println(agent.Version, runtime.GOOS, runtime.GOARCH)
+	case "version", "--version":
+		fmt.Printf("%s %s (%s/%s)\n", identity.Agent, agent.Version, runtime.GOOS, runtime.GOARCH)
 	default:
 		p := &program{config: config}
-		svc, err := service.New(p, &service.Config{Name: "SpeckAgent", DisplayName: "Speck Agent", Description: "Speck remote monitoring and recovery management", Arguments: []string{"--config", config, "run"}, Option: service.KeyValue{"Restart": "on-failure", "RestartSec": 5, "StartType": "automatic", "DelayedAutoStart": true, "OnFailure": "restart", "OnFailureDelayDuration": "10s", "OnFailureResetPeriod": 86400}})
+		svc, err := service.New(p, &service.Config{Name: "SpeckAgent", DisplayName: identity.Agent, Description: identity.Tagline + ". " + identity.Description, Arguments: []string{"--config", config, "run"}, Option: service.KeyValue{"Restart": "on-failure", "RestartSec": 5, "StartType": "automatic", "DelayedAutoStart": true, "OnFailure": "restart", "OnFailureDelayDuration": "10s", "OnFailureResetPeriod": 86400}})
 		if err != nil {
 			fatal(err)
 		}
@@ -85,4 +99,4 @@ func main() {
 		}
 	}
 }
-func fatal(err error) { fmt.Fprintln(os.Stderr, err); os.Exit(1) }
+func fatal(err error) { fmt.Fprintln(os.Stderr, identity.Agent+":", err); os.Exit(1) }
