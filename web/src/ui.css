@@ -1,0 +1,257 @@
+/* Shared UI contract. Page styles own layout; this file owns the shell,
+   sign-in and control geometry. Keep feature-specific button sizes out of pages. */
+:root {
+  --control-height: 36px;
+  --control-small: 32px;
+  --control-radius: 6px;
+  --panel-radius: 10px;
+  --sidebar-width: 204px;
+  --control-border: #b5c1b0;
+  --surface-hover: #edf1e7;
+}
+button:disabled { cursor: not-allowed; }
+.primary, .secondary, .quick-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--control-height);
+  padding: 7px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+.primary { color: var(--white); background: var(--fern); border-color: var(--fern); }
+.primary:hover:not(:disabled) { background: var(--forest); border-color: var(--forest); }
+.secondary, .quick-action { color: var(--ink); background: var(--white); }
+.secondary:hover:not(:disabled), .quick-action:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--fern); }
+.primary .icon, .secondary .icon, .quick-action .icon { width: 16px; height: 16px; }
+.quick-action, .fleet-pagination button, td .secondary {
+  min-height: var(--control-small);
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.quick-action { margin-left: 4px; }
+.close {
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--control-radius);
+  background: transparent;
+  color: var(--muted);
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  flex-shrink: 0;
+  font-size: 22px;
+  line-height: 1;
+}
+.close:hover { background: var(--surface-hover); color: var(--ink); }
+.text-link {
+  border: 0;
+  background: transparent;
+  color: var(--fern);
+  font-size: 13px;
+  padding: 6px 0;
+  text-underline-offset: 3px;
+}
+.text-link:hover { text-decoration: underline; }
+input:where(:not([type="checkbox"]):not([type="radio"]):not([type="file"])), select, textarea {
+  min-height: var(--control-height);
+  padding: 7px 12px;
+  border-color: var(--control-border);
+  border-radius: var(--control-radius);
+  background-color: var(--white);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+select { padding-right: 32px; }
+input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; margin: 0; padding: 0; flex-shrink: 0; }
+input[type="file"] { min-height: var(--control-height); padding: 0; background: var(--white); border: 1px solid var(--control-border); border-radius: var(--control-radius); font-size: 13px; }
+input[type="file"]::file-selector-button { min-height: calc(var(--control-height) - 2px); padding: 7px 12px; margin-right: 8px; border: 0; border-right: 1px solid var(--control-border); background: var(--paper); color: var(--ink); font: inherit; cursor: pointer; }
+label { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+label input, label select, label textarea { margin-top: 6px; }
+.check { min-height: var(--control-height); }
+.search-field input:not([type]) { padding-left: 36px; min-height: var(--control-height); }
+.search-field > .icon { left: 12px; width: 16px; height: 16px; }
+.fleet-toolbar select { min-height: var(--control-height); }
+.wordmark { display: block; width: 132px; height: auto; }
+aside {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-width);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 12px 16px;
+  background: var(--forest);
+  color: var(--lime);
+}
+aside .brand { display: flex; align-items: center; gap: 8px; margin: 0 8px 24px; flex-shrink: 0; }
+.version { color: #b8c8ad; border: 1px solid #4c5d4b; border-radius: 4px; font-size: 10px; padding: 1px 4px; }
+aside > nav { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--fern) var(--forest); }
+nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-height: 40px;
+  width: 100%;
+  padding: 8px 12px;
+  margin: 0;
+  border: 0;
+  border-radius: var(--control-radius);
+  background: transparent;
+  color: #b5c5ba;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: left;
+}
+nav button > span { font-size: inherit; }
+nav button:hover { background: #293e31; color: var(--lime); }
+nav button.active { color: var(--lime); background: #304537; }
+nav .icon { width: 18px; height: 18px; }
+nav .alert-count { position: static; margin-left: auto; padding: 0 6px; border-radius: 10px; min-width: 20px; font-size: 11px; line-height: 20px; text-align: center; color: var(--forest); background: var(--lime); }
+.side-note { margin-top: auto; padding: 24px 12px 16px; }
+.side-note .eyebrow { font-size: 9px; letter-spacing: 1.2px; color: #b8c8ad; margin: 0; line-height: 1.8; }
+.account { display: flex; align-items: center; gap: 10px; flex-shrink: 0; border: 0; border-top: 1px solid #35473a; padding: 16px 8px 0; margin-top: 12px; background: transparent; color: #c3d0c6; text-align: left; font-size: 13px; }
+.account b { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--lime); color: var(--forest); }
+.account span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.account small { display: block; color: #b5c5ba; font-size: 12px; margin: 2px 0 0; }
+.workspace { margin-left: var(--sidebar-width); padding: 28px 32px; min-width: 0; }
+.workspace > header { margin-bottom: 24px; }
+h1 { font-size: 32px; letter-spacing: -1px; line-height: 1.2; }
+h2, .page-intro h2 { font-size: 20px; letter-spacing: -0.4px; }
+.page-intro { margin-bottom: 20px; }
+.page-intro p { font-size: 13px; }
+.panel, .plan, .template-card, .download-card { padding: 20px; border-radius: var(--panel-radius); }
+.settings-grid { gap: 16px; margin-bottom: 16px; }
+.settings-grid .panel { display: flex; flex-direction: column; align-items: flex-start; }
+.settings-grid .panel > label { width: 100%; }
+.settings-grid .panel > hr { width: 100%; }
+.settings-grid .panel > .primary:last-child, .settings-grid .panel > .secondary:last-child { margin-top: auto; }
+.settings-grid .eyebrow { margin-bottom: 8px; }
+.fleet-summary { margin: 0 0 20px; gap: 20px; }
+.fleet-table td { padding: 12px; }
+.fleet-table th { padding: 12px; font-size: 11px; letter-spacing: 0.7px; }
+.fleet-table small, .util-cell small, .template-meta, .template-card-top > small { font-size: 11px; }
+.machine-name { min-width: 160px; }
+.machine-name b { font-size: 13px; }
+.machine-name small { max-width: 220px; margin-top: 3px; }
+.metric-strip > div { padding: 16px 20px; }
+.metric-strip b, .management-summary strong { font-size: 32px; letter-spacing: -1px; }
+.metric-strip span { font-size: 12px; }
+.management-summary { padding-bottom: 20px; }
+.template-card-top { margin-bottom: 16px; }
+.template-kind { color: var(--muted); font-size: 12px; }
+.template-card p { min-height: 0; margin-bottom: 20px; }
+.template-meta { margin-top: auto; padding-top: 12px; }
+.template-card { display: flex; flex-direction: column; }
+.template-card .toolbar { margin-bottom: 0; }
+.recovery-banner { padding: 20px; gap: 20px; background: var(--white); border-color: var(--line); }
+.recovery-banner h2 { font-size: 20px; }
+.assistant-home h2 { font-size: 28px; }
+.assistant-composer { padding: 20px; }
+.assistant-prompts .secondary { font-weight: 500; }
+.empty { padding: 40px 20px; font-size: 13px; color: var(--muted); }
+.empty h2 { color: var(--ink); margin: 0 0 8px; }
+.dialog-head { align-items: center; gap: 16px; }
+.dialog-head h2 { overflow-wrap: anywhere; }
+.dialog-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.provider > summary { flex-wrap: wrap; gap: 8px 16px; }
+.provider > summary > b { min-width: 140px; }
+.download-title h2 { font-size: 24px; }
+.download-card h3 { font-size: 20px; }
+.download-buttons a { min-height: var(--control-height); }
+.download-architecture { margin-bottom: 20px; }
+.download-note { font-size: 12px; }
+.remote-header .secondary, .remote-controls .secondary, .remote-footer .secondary {
+  min-height: var(--control-small); padding: 5px 10px; font-size: 12px;
+}
+.remote-controls select { min-height: var(--control-small); padding: 5px 32px 5px 10px; font-size: 12px; }
+.remote-controls label, .remote-footer .check { font-size: 12px; }
+.remote-controls .secondary { white-space: nowrap; }
+.remote-workspace :focus-visible { outline-color: var(--lime); }
+.bulk-actions :focus-visible { outline-color: var(--lime); }
+
+.login { display: grid; grid-template-columns: 1fr 1fr; min-height: 100dvh; }
+.login-brand { position: relative; display: flex; flex-direction: column; align-items: flex-start; overflow: hidden; padding: 48px 12%; color: var(--lime); background: var(--forest); }
+.login-brand > .wordmark { width: 196px; }
+.login-brand > .eyebrow { color: var(--lime); margin: 20px 0 0; font-size: 10px; letter-spacing: 2px; line-height: 1.8; }
+.login-card { align-self: center; justify-self: center; width: min(380px, calc(100% - 48px)); max-width: none; padding: 40px 0; }
+.login-card h1 { margin: 0 0 28px; font-size: 32px; }
+.login-card button { width: 100%; justify-content: center; margin: 0; min-height: 44px; }
+.login-card label { margin-bottom: 20px; }
+.login-card input:where(:not([type="checkbox"]):not([type="radio"]):not([type="file"])) { min-height: 44px; }
+.login-card small { display: inline; font-size: 12px; }
+.login-card p { font-size: 13px; }
+.login-card > button + button { margin-top: 8px; }
+.login-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; margin: 24px 0; }
+.login-divider::before, .login-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+.login-downloads { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; min-height: 44px; margin-top: 16px; }
+@media (max-height: 820px) and (min-width: 761px) {
+  .side-note { display: none; }
+  .account { margin-top: auto; }
+  aside > nav { margin-bottom: 16px; }
+}
+@media (max-width: 1100px) {
+  .workspace { padding: 24px; }
+  .download-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 1000px) {
+  .login { display: block; }
+  .login-brand { padding: 28px max(24px, calc((100vw - 640px) / 2)); }
+  .login-brand > .wordmark { width: 172px; }
+  .login-brand > .eyebrow { margin-top: 16px; }
+  .login-brand .orbit { display: none; }
+  .login-card { margin: 0 auto; padding: 32px 0; }
+}
+@media (max-width: 760px) {
+  aside { position: relative; inset: auto; width: 100%; height: auto; padding: 16px 16px 8px; }
+  aside .brand { margin: 0; height: 40px; }
+  aside .wordmark { width: 120px; }
+  .version, .side-note, .account b { display: none; }
+  .account { position: absolute; top: 14px; right: 16px; padding: 0; margin: 0; min-height: 44px; max-width: calc(100% - 172px); border: 0; gap: 8px; }
+  .account span { font-size: 12px; }
+  aside > nav[aria-label="Main navigation"] { flex-direction: row; gap: 4px; overflow-x: auto; overflow-y: hidden; margin: 12px -4px 0; padding: 0 4px 4px; }
+  nav button { width: auto; min-height: 44px; padding: 10px 12px; white-space: nowrap; font-size: 13px; }
+  nav button span { margin: 0; line-height: 20px; }
+  nav .icon { display: none; }
+  nav .alert-count { margin-left: 0; }
+  .workspace { margin: 0; padding: 24px 16px; }
+  .workspace > header { gap: 12px; }
+  h1 { font-size: 28px; }
+  .header-actions .secondary { min-width: 44px; }
+  .header-actions .secondary span { display: none; }
+  .primary, .secondary, .quick-action, .close { --control-height: 44px; --control-small: 44px; }
+  .primary, .secondary, .quick-action { padding: 11px 12px; }
+  .fleet-table td { padding: 0; }
+  .fleet-table .connect-cell { padding-top: 12px; }
+  .fleet-table .connect-cell button { padding: 11px 12px; min-height: 44px; font-size: 12px; }
+  .fleet-table .machine-name { padding-right: 28px; }
+  .fleet-table small, .fleet-table td::before, .util-cell small { font-size: 11px; }
+  .fleet-summary { gap: 12px; font-size: 12px; }
+  .fleet-summary > .primary { margin: 4px 0 0; }
+  .drawer-actions { gap: 8px; }
+  .drawer-actions button { font-size: 12px; }
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .metric-strip > div { padding: 12px; }
+  .metric-strip b { font-size: 28px; }
+  .metric-strip span { font-size: 12px; }
+  .recovery-banner > button { width: 100%; }
+  .assistant-home h2 { font-size: 24px; }
+  .remote-header .secondary, .remote-controls .secondary, .remote-footer .secondary { min-height: 44px; padding: 11px 12px; }
+  .remote-controls select { min-height: 44px; }
+  .remote-footer input:not([type="checkbox"]) { min-height: 44px; }
+}
+@media (pointer: coarse) {
+  :root { --control-height: 44px; --control-small: 44px; }
+  input:where(:not([type="checkbox"]):not([type="radio"]):not([type="file"])), select, textarea { font-size: 16px; }
+}

@@ -32,7 +32,7 @@ struct JobsView: View {
               HStack {
                 Text(titleCase(job.kind)).font(.headline)
                 Spacer()
-                StatusPill(text: job.status, tone: job.status == "failed" ? .red : .speckTint)
+                StatusPill(text: job.status, tone: job.status == "failed" ? .speckDanger : .speckTint)
               }
               Text(session.devices.first(where: { $0.id == job.deviceID })?.name ?? job.deviceID)
                 .font(.subheadline).foregroundStyle(.secondary)
@@ -71,7 +71,7 @@ struct JobDetailView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 20) {
         HStack {
-          StatusPill(text: job.status, tone: job.status == "failed" ? .red : .speckTint)
+          StatusPill(text: job.status, tone: job.status == "failed" ? .speckDanger : .speckTint)
           Spacer()
           if !job.finished { ProgressView() }
         }
@@ -89,7 +89,7 @@ struct JobDetailView: View {
         if job.result["truncated"].bool {
           Label("Output was truncated by the agent.", systemImage: "text.badge.minus").font(
             .footnote
-          ).foregroundStyle(.orange)
+          ).foregroundStyle(Color.speckWarning)
         }
       }.padding(20).frame(maxWidth: 1000, alignment: .leading).frame(maxWidth: .infinity)
     }.background(Color.paper).navigationTitle(titleCase(job.kind)).navigationBarTitleDisplayMode(
@@ -164,7 +164,7 @@ struct CommandView: View {
           dismissKeyboard()
           confirm = true
         } label: {
-          ActionLabel(title: "Review & run", symbol: "play.fill")
+          ActionLabel(title: "Review & run")
         }
         .buttonStyle(PrimaryButton())
         .disabled(

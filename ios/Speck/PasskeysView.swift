@@ -17,7 +17,7 @@ struct PasskeysView: View {
       Section {
         ForEach(Array(keys.enumerated()), id: \.offset) { _, key in
           VStack(alignment: .leading, spacing: 8) {
-            Label(key["name"].string, systemImage: "person.badge.key").font(.headline)
+            Text(key["name"].string).font(.headline)
             if key["last_used"].number > 0 {
               Text("Last used \(Date(timeIntervalSince1970: key["last_used"].number).formatted())")
                 .font(.caption).foregroundStyle(.secondary)
@@ -53,7 +53,7 @@ struct PasskeysView: View {
             Button(busy ? "Working…" : operation == "remove" ? "Remove passkey" : operation == "rename" ? "Save name" : "Create passkey") {
               save()
             }.disabled(busy || (operation != "remove" && name.trimmingCharacters(in: .whitespaces).isEmpty) || (operation != "rename" && password.isEmpty))
-          }.navigationTitle(operation == "add" ? "Add passkey" : operation == "rename" ? "Rename passkey" : "Remove passkey")
+          }.scrollContentBackground(.hidden).background(Color.paper).navigationTitle(operation == "add" ? "Add passkey" : operation == "rename" ? "Rename passkey" : "Remove passkey")
             .navigationBarTitleDisplayMode(.inline).toolbar {
               ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showingSheet = false }.disabled(busy) }
             }

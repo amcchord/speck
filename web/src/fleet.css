@@ -6,14 +6,14 @@
 .fleet-workspace .fleet-summary { margin: 0; gap: 16px; font-size: 11px; }
 .fleet-workspace .fleet-summary > span { gap: 5px; white-space: nowrap; }
 .fleet-workspace .header-actions { gap: 8px; flex-shrink: 0; }
-.fleet-workspace .header-actions button { min-height: 36px; padding: 8px 11px; font-size: 12px; }
-.fleet-workspace #refresh { width: 36px; padding: 8px; }
+.fleet-workspace .header-actions button { min-height: var(--control-height); padding: 7px 12px; font-size: 13px; }
+.fleet-workspace #refresh { width: var(--control-height); padding: 7px; }
 .fleet-workspace #refresh[aria-busy="true"] .icon { animation: fleet-refresh 1.2s linear infinite; }
 .fleet-workspace .fleet-stale { color: var(--warning); }
 @keyframes fleet-refresh { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .fleet-workspace #refresh[aria-busy="true"] .icon { animation: none; } }
 .fleet-workspace .fleet-toolbar { gap: 8px; margin-bottom: 12px; }
-.fleet-workspace .search-field input, .fleet-workspace .fleet-toolbar select { min-height: 36px; height: 36px; padding-top: 6px; padding-bottom: 6px; font-size: 12px; }
+.fleet-workspace .search-field input, .fleet-workspace .fleet-toolbar select { min-height: var(--control-height); height: var(--control-height); font-size: 13px; }
 .fleet-workspace .fleet-toolbar select { max-width: 140px; }
 .fleet-workspace .search-field { min-width: 200px; }
 .fleet-workspace .search-field > .icon { width: 16px; height: 16px; left: 10px; }
@@ -21,7 +21,7 @@
 .fleet-workspace .preview-toggle { font-size: 11px; }
 .fleet-workspace .fleet-table-wrap { border-radius: 9px; }
 .fleet-workspace .fleet-table { table-layout: fixed; min-width: 820px; }
-.fleet-workspace .fleet-table th { padding: 10px; height: 36px; letter-spacing: .7px; font-size: 10px; }
+.fleet-workspace .fleet-table th { padding: 10px; height: 36px; letter-spacing: .7px; font-size: 11px; }
 .fleet-workspace .fleet-table td { height: 46px; padding: 6px 10px; max-width: none; line-height: 1.25; font-size: 12px; }
 .fleet-workspace .fleet-table th:first-child { width: 34px; }
 .fleet-workspace .select-cell { width: 34px; }
@@ -35,7 +35,7 @@
 .fleet-workspace .machine-name b { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; font-weight: 600; }
 .fleet-workspace .platform-icon { display: inline-flex; flex: 0 0 18px; color: var(--fern); }
 .fleet-workspace .platform-icon .icon { width: 18px; height: 18px; }
-.fleet-workspace .status-cell .badge { font-size: 10px; padding: 4px 7px; line-height: 1.2; }
+.fleet-workspace .status-cell .badge { font-size: 11px; padding: 4px 7px; line-height: 1.2; }
 .fleet-workspace .app-cell span { max-width: none; color: var(--muted); }
 .fleet-workspace .util-cell { min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .fleet-workspace .network-cell { overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
@@ -48,10 +48,10 @@
 .fleet-workspace .with-previews { min-width: 980px; }
 .fleet-workspace .with-previews td { height: 66px; }
 .fleet-workspace .preview-thumb { width: 108px; height: 54px; }
-.fleet-workspace .preview-empty { padding: 5px; font-size: 10px; }
+.fleet-workspace .preview-empty { padding: 5px; font-size: 11px; }
 .fleet-workspace .fleet-pagination { margin: 12px 0; font-size: 11px; }
 .fleet-workspace .bulk-actions { padding: 8px 12px; margin-bottom: 10px; }
-@media (max-width: 1100px) and (min-width: 701px) {
+@media (max-width: 1100px) and (min-width: 761px) {
   .fleet-workspace { padding: 20px; }
   .fleet-workspace .page-heading { gap: 5px 16px; }
   .fleet-workspace .fleet-summary { gap: 10px; }
@@ -60,27 +60,27 @@
   .fleet-workspace .app-head, .fleet-workspace .app-cell { display: none; }
   .fleet-workspace .with-previews { min-width: 820px; }
 }
-@media (max-width: 700px) {
+@media (max-width: 760px) {
   .fleet-workspace { padding: 16px; }
   .fleet-workspace > header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; margin-bottom: 12px; }
   .fleet-workspace .page-heading { display: contents; }
   .fleet-workspace h1 { grid-column: 1; grid-row: 1; font-size: 26px; }
-  .fleet-workspace .fleet-summary { grid-column: 1/-1; grid-row: 2; gap: 5px 12px; font-size: 10px; }
+  .fleet-workspace .fleet-summary { grid-column: 1/-1; grid-row: 2; gap: 5px 12px; font-size: 11px; }
   .fleet-workspace .header-actions { grid-column: 2; grid-row: 1; }
   .fleet-workspace .header-actions { gap: 4px; }
-  .fleet-workspace .header-actions button { min-height: 40px; padding: 8px; }
-  .fleet-workspace #refresh { width: 36px; }
+  .fleet-workspace .header-actions button { min-height: 44px; padding: 8px; }
+  .fleet-workspace #refresh { width: 44px; }
   .fleet-workspace .header-actions #add { white-space: nowrap; font-size: 11px; gap: 5px; }
   .fleet-workspace .search-field { min-width: 0; }
-  .fleet-workspace .fleet-toolbar select { max-width: none; min-height: 40px; height: 40px; }
-  .fleet-workspace .search-field input { height: 40px; min-height: 40px; }
+  .fleet-workspace .fleet-toolbar select { max-width: none; min-height: 44px; height: 44px; }
+  .fleet-workspace .search-field input { height: 44px; min-height: 44px; }
   .fleet-workspace .preview-toggle { font-size: 11px; padding: 0; }
   .fleet-workspace .fleet-table-wrap { border-radius: 0; }
   .fleet-workspace .fleet-table, .fleet-workspace .with-previews { min-width: 0; }
   .fleet-workspace .fleet-table tbody { gap: 8px; }
   .fleet-workspace .fleet-table tr { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 12px; gap: 10px; border-radius: 9px; }
   .fleet-workspace .fleet-table td { height: auto; padding: 0; font-size: 12px; }
-  .fleet-workspace .fleet-table td[data-label]::before { font-size: 9px; margin-bottom: 4px; }
+  .fleet-workspace .fleet-table td[data-label]::before { font-size: 11px; margin-bottom: 4px; }
   .fleet-workspace .fleet-table .select-cell { width: 24px; top: 10px; right: 8px; }
   .fleet-workspace .select-cell input { width: 18px; height: 18px; }
   .fleet-workspace .machine-cell { grid-column: 1/-1; grid-row: 1; padding-right: 22px !important; }

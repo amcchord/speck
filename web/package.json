@@ -7,12 +7,14 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "prebuild": "node ../scripts/brand.mjs",
-    "predev": "node ../scripts/brand.mjs"
+    "predev": "node ../scripts/brand.mjs",
+    "test:ui": "playwright test"
   },
   "dependencies": {
     "guacamole-common-js": "1.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@resvg/resvg-js": "2.6.2",
     "prettier": "3.6.2",
     "typescript": "^5.9.0",

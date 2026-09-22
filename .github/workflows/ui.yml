@@ -1,0 +1,30 @@
+name: UI layout
+on:
+  pull_request:
+    paths: ['web/**', 'brand/**', 'scripts/preview.py', '.github/workflows/ui.yml']
+  push:
+    branches: [main]
+    paths: ['web/**', 'brand/**', 'scripts/preview.py', '.github/workflows/ui.yml']
+permissions:
+  contents: read
+jobs:
+  browsers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: uv sync --locked
+      - run: npm ci
+        working-directory: web
+      - run: npx playwright install --with-deps chromium webkit
+        working-directory: web
+      - run: npm run build && npm run test:ui
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ui-failure-traces
+          path: output/visual-audit/browser-results

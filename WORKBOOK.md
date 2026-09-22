@@ -254,3 +254,24 @@ activation were checked. Static files match the build; backend PID/start time,
 environment and HTTPS health are preserved. Prior web assets remain available
 for rollback. No new agent package, endpoint operation or recovery action was
 needed. The visual-audit task will integrate this change before its next rollout.
+
+## 2026-09-22 — Shared web and native visual audit
+
+Frontend `2c22311` is live, integrating the compact Fleet and non-modal pane.
+Shared controls replace repeated CSS overrides; distinct navigation icons and
+text-first cards/metrics reduce visual repetition. Native sign-in spans the full
+iPad and landscape iPhone width. Native 0.1.2 (5) is VALID and IN_BETA_TESTING in
+the existing Speck testing group.
+
+Forty Chromium/WebKit scenarios cover 13 pages, seven machine tabs, eight dialogs
+and remote/empty/error states at 320–1440px. Native 25-unit/eight-iPad-UI checks
+and corrected iPhone sign-in/dark checks pass, alongside 57 backend, 24 web and
+14 desktop tests. The installed Mac app was relaunched and its live Fleet/Settings
+checked. New UI CI and documented theme ownership guard against drift.
+
+Deployment verified served hashes, health, service PID/start time and 18 preserved
+device identities. No endpoint/recovery action or backend restart. Rollback is
+`/var/lib/speck-rollback/20260922T202255Z-visual-audit-2c22311/web`. See
+`docs/operations/visual-audit.md`; private evidence is in audit-worktree
+`output/visual-audit/`. Physical devices and Windows/Linux runtime qualification
+remain as documented in the platform matrices.

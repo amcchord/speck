@@ -189,6 +189,13 @@ class Handler(BaseHTTPRequestHandler):
                     200 if "speck-gallery=1" in self.headers.get("Cookie", "") else 401,
                 )
             resources = {
+                "/api/monitoring": {"healthy": True, "default": {"enabled": True, "offline_seconds": 180, "hold_seconds": 120, "cpu_percent": 90, "memory_percent": 90, "disk_percent": 90, "services": []}, "overrides": {}},
+                "/api/alerts": {"counts": {"active": 2, "unacknowledged": 1}, "next_cursor": None, "items": [
+                    {"id": "demo-alert-1", "device_id": "caller", "label": "BYD-CALLER", "title": "Machine stopped reporting", "severity": "warning", "key": "offline", "opened": NOW - 3600, "acknowledged": None, "resolved": None},
+                    {"id": "demo-alert-2", "device_id": "server", "label": "BYD-SERVER", "title": "Disk usage exceeds monitoring policy", "severity": "critical", "key": "disk", "opened": NOW - 1800, "acknowledged": NOW - 600, "ack_actor": "demo", "resolved": None},
+                ]},
+                "/api/schedules": [{"id": "demo-schedule", "name": "Daily update inventory", "enabled": True, "owner": "demo", "interval_seconds": 86400, "next_run": NOW + 86400, "operation": {"kind": "patch.scan", "device_ids": ["frontdesk", "server", "pbx"]}, "runs": [{"status": "complete", "due": NOW, "reason": "All three machines reported their available updates."}]}],
+                "/api/audit/events": {"next_cursor": None, "items": [{"id": i + 1, "action": action, "actor": "demo", "label": "BYD-SERVER", "at": NOW - i * 180, "detail": {"device": "BYD-SERVER"}} for i, action in enumerate(["recovery.verify", "remote.open", "files.download", "device.approve"])]},
                 "/api/access/me": {"username": "demo", "role": "admin", "mfa_enabled": False, "sessions": 1, "recovery_codes_remaining": 0},
                 "/api/access/users": [{"id": "preview-operator", "username": "demo", "role": "admin", "disabled": False, "mfa_enabled": False, "passkey_count": 2}],
                 "/api/access/passkeys": [
@@ -284,7 +291,12 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--port", type=int, default=8741)
+    args = parser.parse_args()
     if not (ROOT / "web/dist/index.html").exists():
         raise SystemExit("Build first: ./scripts/build.sh")
-    print("Speck screenshot preview: http://127.0.0.1:8741 (synthetic data; loopback only)", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", 8741), Handler).serve_forever()
+    print(f"Speck screenshot preview: http://127.0.0.1:{args.port} (synthetic data; loopback only)", flush=True)
+    ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()

@@ -142,3 +142,47 @@ Mobile cards retain 44-pixel controls. Returning to Fleet keeps cached inventory
 filters, selection and scroll while refreshing; errors retain the previous table.
 See [validation](operations/compact-fleet.md) and the
 [unretouched gallery](screenshots/compact-fleet/README.md).
+
+## Shared UI and native audit — September 22, 2026
+
+The [current gallery](screenshots/visual-audit/README.md) shows the full interface
+audit. Shared controls and shell styles now have one owner (`web/src/ui.css`),
+replacing repeated overrides in feature stylesheets. The compact Fleet and its
+non-modal row/pane interaction are retained.
+
+| Finding | Correction |
+| --- | --- |
+| Alerts, Schedules and Activity reused an unrelated waveform | Distinct bell, calendar and history icons; unknown icon names fail type checking |
+| Repeated category, metric and action icons added visual noise | Text-only template/download metadata, recovery introduction and most form actions; retain useful navigation/platform/remote symbols |
+| Button padding, corners and heights drifted by page | Shared 36px desktop, 32px dense, 44px touch controls; centered labels and consistent outlined secondary actions |
+| Tablet/native sign-in masthead inherited the form's maximum width | Full-width green masthead with bounded inner content; iPhone landscape safe areas no longer narrow the header |
+| Mobile navigation occupied a large grid; some layouts changed at inconsistent widths | One labeled scrolling navigation row and a shared 760px layout breakpoint |
+| Settings actions and fields crowded together | Separate aligned configuration panels, regular spacing and shared input geometry |
+| Forms, cards and status colors differed across native destinations | Shared adaptive surfaces, semantic status colors, compact metrics and consistent action styles |
+| Dialog errors could appear behind the modal; AI errors retained “Working” | Notifications attach to the active dialog; failed AI requests clear pending feedback |
+
+Coverage uses the production frontend with read-only synthetic fixtures: all 13
+main routes, public downloads, seven machine tabs, eight dialogs, selection,
+empty/error states, and remote workspace/keyboard. Forty Chromium/WebKit scenarios
+pass at 1440, 834, 760, 390 and 320px. Checks cover page/dialog overflow, clipped
+controls, search padding, masthead bounds, and JavaScript errors. Screenshots were
+reviewed alongside assertions. The suite runs in GitHub Actions for UI changes.
+
+Native review covers Fleet, machine details, commands, services, network, files,
+updates, job history, alerts, jobs, software/scripts, schedules, recovery, account,
+passkeys, privacy, search, sign-in, large text and landscape. Twenty-five native
+unit tests and eight UI scenarios pass on iPad. iPhone checks found and then
+verified the landscape masthead correction; an additional dark-appearance pass
+checks fleet and machine screens. iPad sign-in in both orientations is now a CI
+gate. The signed universal native release is 0.1.2 (5).
+
+The backend's 57 tests, 24 web behavior tests and 14 desktop tests also pass.
+Speck Desktop uses the hosted console and receives these shared styles without a
+new wrapper package. The native archive and simulator checks do not replace
+physical iPad/iPhone or Windows/Linux desktop acceptance. The synthetic remote
+and files views verify layout/error handling, not live control/transfer behavior;
+existing functional qualification remains in the platform quality documents.
+
+The [brand guide](../brand/README.md#shared-controls-and-restrained-icons) records
+control dimensions, icon criteria, stylesheet ownership and native equivalents so
+future features share the same rules.

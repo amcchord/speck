@@ -16,7 +16,7 @@ struct DeviceDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
           HStack {
             StatusPill(text: device.status, tone: device.online ? .speckTint : .secondary)
-            if device.restored { StatusPill(text: "Restored", tone: .orange) }
+            if device.restored { StatusPill(text: "Restored", tone: .speckWarning) }
             Spacer()
           }
           Text(device.os).font(.subheadline).foregroundStyle(.secondary)
@@ -41,8 +41,8 @@ struct DeviceDetailView: View {
       }
       Section {
         MetricPair {
-          MetricTile(title: "CPU", value: "\(Int(device.cpu))%", symbol: "cpu")
-          MetricTile(title: "Memory", value: "\(Int(device.memory))%", symbol: "memorychip")
+          MetricTile(title: "CPU", value: "\(Int(device.cpu))%")
+          MetricTile(title: "Memory", value: "\(Int(device.memory))%")
         }.listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
       }
       if session.canManage && device.approved {
@@ -94,7 +94,7 @@ struct DeviceDetailView: View {
           Label(
             "Maintenance until \(Date(timeIntervalSince1970: device.raw["maintenance_until"].number).formatted(date: .omitted, time: .shortened))",
             systemImage: "wrench.adjustable"
-          ).foregroundStyle(.orange)
+          ).foregroundStyle(Color.speckWarning)
         }
       }
       if !device.telemetry["active_app"].isNull {

@@ -29,7 +29,7 @@ struct RecoveryView: View {
               selectedPlan = plan
               confirm = true
             } label: {
-              ActionLabel(title: "Start recovery test", symbol: "play.circle")
+              ActionLabel(title: "Start recovery test")
             }.buttonStyle(PrimaryButton(secondary: true)).disabled(busy)
           }.padding(.vertical, 6)
         }
@@ -48,7 +48,7 @@ struct RecoveryView: View {
                 Spacer()
                 StatusPill(
                   text: run["status"].string,
-                  tone: run["status"].string == "failed" ? .red : .speckTint)
+                  tone: run["status"].string == "failed" ? .speckDanger : .speckTint)
               }
               Text(titleCase(run["phase"].string)).font(.subheadline).foregroundStyle(.secondary)
               Text(Date(timeIntervalSince1970: run["created"].number), style: .relative).font(
@@ -131,7 +131,7 @@ struct RecoveryRunView: View {
         Section("Verification evidence") { CodeBlock(text: run["report"].pretty) }
       }
       if !run["state"]["error"].string.isEmpty {
-        Section("Run details") { Text(run["state"]["error"].string).foregroundStyle(.red) }
+        Section("Run details") { Text(run["state"]["error"].string).foregroundStyle(Color.speckDanger) }
       }
     }.navigationTitle(run["state"]["name"].string).navigationBarTitleDisplayMode(.inline)
       .sessionTask(session) {

@@ -58,7 +58,7 @@ Native terminal installers inherit the user's terminal font and color preference
 
 | Element | Size |
 | --- | --- |
-| Page heading | 36px desktop / 28px compact |
+| Page heading | 32px desktop / 28px compact |
 | Section heading | 20–23px |
 | Field and action text | 13px |
 | Supporting text / table body | 12px |
@@ -67,12 +67,39 @@ Native terminal installers inherit the user's terminal font and color preference
 
 Use a 4px spacing rhythm with 16–28px panel padding. Cards use 10–12px corners;
 controls 6–7px. Use borders for grouping and shadows only for overlays.
-Navigation has consistent 19px stroke icons, not unrelated symbol glyphs.
+Navigation has consistent 18px stroke icons with distinct meanings.
 Keep the working area light, with one persistent dark navigation surface.
 
-At narrow widths, navigation stays labeled, sign-out remains available, device
-cards scroll horizontally, tabs scroll independently, and forms become one column.
+At narrow widths, navigation scrolls as one labeled row, sign-out remains available,
+device rows stack, tabs scroll independently, and forms become one column.
 Tables may scroll inside their own region; the page itself must not overflow.
+
+## Shared controls and restrained icons
+
+`web/src/ui.css` owns navigation, sign-in and shared control geometry. Page CSS
+owns page layout; `fleet.css` owns the compact Fleet table and machine drawer.
+Do not add another page-specific primary/secondary button size or duplicate the
+shell in a feature stylesheet. Use the palette tokens, including semantic status
+colors, instead of introducing a parallel theme.
+
+- Standard desktop controls are 36px tall; dense table and remote controls are
+  32px. All touch controls and sign-in actions are at least 44px. Labels are
+  centered with an 8px icon gap, 12px horizontal padding and 6px corners.
+- Use primary for the main action, outlined white secondary for alternatives,
+  and plain text for low-emphasis links. Let long labels wrap without clipping.
+- Icons identify a destination, platform, or otherwise ambiguous action. Alerts
+  uses a bell, Schedules a calendar, Activity a history list. Do not reuse a
+  generic icon as filler. Repeated metrics, categories and labeled form actions
+  usually need only text. Icon-only controls need accessible names.
+- Native iPhone/iPad controls use the same hierarchy with 44-point touch targets,
+  8-point corners, semantic light/dark surfaces and system type. The sign-in
+  masthead spans the full available width; only its content and form are bounded.
+
+Run `npm run build --prefix web` and `npm run test:ui --prefix web` after shared
+style changes. The synthetic browser suite covers every page and machine panel,
+dialogs, empty/error states and remote controls in Chromium/WebKit from 320px
+through 1440px. Review the screenshots as well as the geometry assertions. Native
+sign-in tests assert edge-to-edge mastheads in both orientations on iPhone/iPad.
 
 ## Voice
 

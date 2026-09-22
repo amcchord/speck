@@ -108,6 +108,6 @@ struct PrivacyView: View {
           "AI drafting sends the prompt you submit to your server’s configured OpenAI account. Remote microphone access asks for permission and starts only when you enable it. Speck includes no advertising or tracking SDKs."
         )
       }
-    }.navigationTitle("Privacy").navigationBarTitleDisplayMode(.inline)
+    }.scrollContentBackground(.hidden).background(Color.paper).navigationTitle("Privacy").navigationBarTitleDisplayMode(.inline)
   }
 }

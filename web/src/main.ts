@@ -13,6 +13,7 @@ import { startMicrophone } from "./microphone";
 import { loadingState, createViewScope, StaleViewError } from "./loading";
 import { useReliableImageDecoder, hasVisiblePixels, watchRemoteStartup } from "./remote-startup";
 import "./loading.css";
+import "./ui.css";
 import "./fleet.css";
 import { remoteTextKeys } from "./remote-input";
 
@@ -134,7 +135,10 @@ function notify(message: string, error = false) {
   n.className = "toast" + (error ? " error" : "");
   n.textContent = message;
   n.setAttribute("role", error ? "alert" : "status");
-  document.body.append(n);
+  // Native dialogs occupy the top layer, above any body-level z-index.
+  // Keep feedback for a dialog visible and available to assistive technology.
+  const host = Array.from(document.querySelectorAll("dialog[open]")).at(-1) || document.body;
+  host.append(n);
   setTimeout(() => n.remove(), 7000);
 }
 function on(id: string, handler: (e: Event) => any, event = "click") {
@@ -184,7 +188,7 @@ function login() {
   disconnect();
   csrf = "";
   username = "";
-  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><button id="passkey-login" class="primary" type="button">Sign in with a passkey</button>${(window as any).speckDesktop?.openPasskeyBrowser ? '<button id="passkey-browser" class="secondary" type="button">Use a passkey from your browser</button><p id="passkey-browser-status" role="status"></p>' : ""}<button id="passkey-cancel" type="button" class="secondary" hidden>Cancel passkey sign-in</button><span class="login-divider">or use your password</span><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><label>Authenticator or recovery code <small>if enabled</small><input id="login-code" autocomplete="one-time-code" maxlength="40"></label><button class="secondary" type="submit">Sign in with password ${icon("arrow")}</button><a class="login-downloads" href="#downloads">${icon("download")}Download Speck Desktop</a></form></main>`;
+  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><button id="passkey-login" class="primary" type="button">Sign in with a passkey</button>${(window as any).speckDesktop?.openPasskeyBrowser ? '<button id="passkey-browser" class="secondary" type="button">Use a passkey from your browser</button><p id="passkey-browser-status" role="status"></p>' : ""}<button id="passkey-cancel" type="button" class="secondary" hidden>Cancel passkey sign-in</button><span class="login-divider">or use your password</span><label>Username<input id="username" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><label>Authenticator or recovery code <small>if enabled</small><input id="login-code" autocomplete="one-time-code" maxlength="40"></label><button class="secondary" type="submit">Sign in with password</button><a class="login-downloads" href="#downloads">${icon("download")}Download Speck Desktop</a></form></main>`;
   let authBusy = false;
   let authController: AbortController | null = null;
   const cancelButton = document.getElementById("passkey-cancel") as HTMLButtonElement;
@@ -282,14 +286,14 @@ function shell(title: string, subtitle: string) {
   document.body.dataset.role = role;
   app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<span class="version">0.2</span></a><nav aria-label="Main navigation">${[
     ["fleet", "fleet", "Fleet"],
-    ["alerts", "activity", "Alerts"],
-    ["schedules", "activity", "Schedules"],
+    ["alerts", "alerts", "Alerts"],
+    ["schedules", "calendar", "Schedules"],
     ["patches", "patch", "Patches"],
     ["software", "package", "Software & scripts"],
     ["assistant", "spark", "AI assistant"],
     ["recovery", "recovery", "Recovery lab"],
     ["slide", "slide", "Slide"],
-    ["activity", "activity", "Activity"],
+    ["activity", "history", "Activity"],
     ["downloads", "download", "Downloads"],
     ["settings", "settings", "Settings"],
   ]
@@ -300,11 +304,11 @@ function shell(title: string, subtitle: string) {
     )
     .map(
       ([id, symbol, label]) =>
-        `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol)}<span>${label}</span></button>`,
+        `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol as Parameters<typeof icon>[0])}<span>${label}</span></button>`,
     )
     .join(
       "",
-    )}</nav><div class="side-note"><span class="eyebrow">A LITTLE<br>LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : ""}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><button id="refresh" class="secondary" aria-label="Refresh" title="Refresh">${icon("refresh")}${page === "fleet" ? "" : "<span>Refresh</span>"}</button>${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div></header><section id="content" tabindex="-1"></section></main>`;
+    )}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : ""}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><button id="refresh" class="secondary" aria-label="Refresh" title="Refresh">${icon("refresh")}${page === "fleet" ? "" : "<span>Refresh</span>"}</button>${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div></header><section id="content" tabindex="-1"></section></main>`;
   document.querySelectorAll<HTMLElement>("[data-page]").forEach(
     (el) =>
       (el.onclick = () => {
@@ -315,6 +319,10 @@ function shell(title: string, subtitle: string) {
     e.preventDefault();
     document.getElementById("content")!.focus();
   };
+  const navigation = app.querySelector<HTMLElement>("aside > nav")!;
+  const active = navigation.querySelector<HTMLElement>(".active");
+  if (active && matchMedia("(max-width: 760px)").matches)
+    navigation.scrollLeft = active.offsetLeft - navigation.clientWidth / 2 + active.clientWidth / 2;
   on("logout", async () => {
     await api("/auth/logout", "POST");
     history.replaceState(null, "", "#signin");
@@ -638,7 +646,7 @@ function renderFleetRows() {
   highlightActiveMachine();
   const bulk = document.getElementById("bulk-actions")!;
   bulk.hidden = !fleetSelection.size;
-  bulk.innerHTML = `<b>${fleetSelection.size} selected</b><button id="bulk-scan" class="secondary">${icon("patch")} Scan updates</button><button id="bulk-deploy" class="secondary">${icon("package")} Deploy template</button><button id="bulk-clear" class="text-link">Clear</button>`;
+  bulk.innerHTML = `<b>${fleetSelection.size} selected</b><button id="bulk-scan" class="secondary">Scan updates</button><button id="bulk-deploy" class="secondary">Deploy template</button><button id="bulk-clear" class="text-link">Clear</button>`;
   on("bulk-clear", () => {
     fleetSelection.clear();
     renderFleetRows();
@@ -846,7 +854,7 @@ async function renderDeviceContent() {
     );
     body.insertAdjacentHTML(
       "afterbegin",
-      `<div class="terminal-tools"><button id="terminal-ai" class="secondary">${icon("spark")} Help with this script</button><button id="terminal-save" class="secondary">Save as template</button></div>`,
+      `<div class="terminal-tools"><button id="terminal-ai" class="secondary">Help with this script</button><button id="terminal-save" class="secondary">Save as template</button></div>`,
     );
     on("terminal-ai", () => ops.assistDialog(d, value("script")));
     on("terminal-save", () =>
@@ -1018,7 +1026,7 @@ async function renderRemotePage(id: string, attempt = 0) {
   }
 }
 async function connectRemote(d: Item, attempt = 0) {
-  app.innerHTML = `<main class="remote-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${esc(d.label)}</h1><small id="remote-status">Connecting…</small></div><button id="remote-ai" class="secondary">${icon("spark")} Screen assistant</button><button id="fullscreen" class="secondary">Full screen</button></header><div class="remote-controls"><button id="remote-keyboard" class="secondary">Keyboard</button><button id="sound" class="secondary">Enable sound</button><button id="mic" class="secondary">Enable microphone</button><label>Keys <select id="key-macro"><option value="">Send shortcut…</option><option value="cad">Ctrl + Alt + Del</option><option value="task">Task manager</option><option value="run">Windows + R</option><option value="alt-tab">Alt + Tab</option><option value="copy">Ctrl + C</option><option value="paste">Ctrl + V</option><option value="enter">Return / Enter</option><option value="backspace">Backspace</option><option value="escape">Escape</option><option value="tab">Tab</option></select></label><button id="type-secret" class="secondary">Type password</button><button id="fit-screen" class="secondary">View at 100%</button><button id="remote-reconnect" class="secondary">Reconnect</button><button id="desktop-launch" class="secondary">Open in desktop app</button><span id="remote-stats"></span></div><section class="remote-stage"><div id="remote-display" tabindex="0" aria-label="Remote screen. Keyboard input is sent to this machine."></div><div id="remote-startup" class="remote-startup">${loadingState(attempt ? "Reconnecting the display…" : "Connecting to machine…", "The screen will appear as soon as it is ready.")}</div></section><footer class="remote-footer"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary">Copy to remote</button><button id="read-clipboard" class="secondary">Use my clipboard</button><label class="check"><input id="shared-clipboard" type="checkbox"> Shared clipboard</label></footer></main>`;
+  app.innerHTML = `<main class="remote-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${esc(d.label)}</h1><small id="remote-status">Connecting…</small></div><button id="remote-ai" class="secondary">Screen assistant</button><button id="fullscreen" class="secondary">Full screen</button></header><div class="remote-controls"><button id="remote-keyboard" class="secondary">Keyboard</button><button id="sound" class="secondary">Enable sound</button><button id="mic" class="secondary">Enable microphone</button><label>Keys <select id="key-macro"><option value="">Send shortcut…</option><option value="cad">Ctrl + Alt + Del</option><option value="task">Task manager</option><option value="run">Windows + R</option><option value="alt-tab">Alt + Tab</option><option value="copy">Ctrl + C</option><option value="paste">Ctrl + V</option><option value="enter">Return / Enter</option><option value="backspace">Backspace</option><option value="escape">Escape</option><option value="tab">Tab</option></select></label><button id="type-secret" class="secondary">Type password</button><button id="fit-screen" class="secondary">View at 100%</button><button id="remote-reconnect" class="secondary">Reconnect</button><button id="desktop-launch" class="secondary">Open in desktop app</button><span id="remote-stats"></span></div><section class="remote-stage"><div id="remote-display" tabindex="0" aria-label="Remote screen. Keyboard input is sent to this machine."></div><div id="remote-startup" class="remote-startup">${loadingState(attempt ? "Reconnecting the display…" : "Connecting to machine…", "The screen will appear as soon as it is ready.")}</div></section><footer class="remote-footer"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary">Copy to remote</button><button id="read-clipboard" class="secondary">Use my clipboard</button><label class="check"><input id="shared-clipboard" type="checkbox"> Shared clipboard</label></footer></main>`;
   const modal = document.querySelector<HTMLElement>(".remote-workspace")!;
   let closed = false;
   remoteCleanup = () => {
@@ -1512,7 +1520,7 @@ async function renderRecovery() {
   ]);
   fleet = devices;
   content(
-    `<div class="recovery-banner"><span class="recovery-icon">${icon("recovery")}</span><div><h2>Recovery tests</h2><p>Capture proof → back up → restore together → compare.</p></div><button id="new-plan" class="primary">${icon("plus")} New recovery plan</button></div><div class="section-head"><div><h2>Your recovery plans</h2><p>Each run creates a shared, isolated network for its restored machines.</p></div></div><div class="plan-grid">${plans.map((p: Item) => `<article class="plan"><span class="eyebrow">RECOVERY PLAN</span><h2>${esc(p.name)}</h2><p>${p.spec.members.length} systems · ${esc(p.spec.router_prefix)}</p><button data-run="${p.id}" class="primary">Run recovery test →</button><details><summary>View plan</summary><pre>${pretty(p.spec)}</pre></details></article>`).join("") || '<div class="empty"><h3>No recovery plans</h3><p>Link devices to their Slide agent IDs, then define application checks.</p></div>'}</div><div class="section-head"><h2>Runs & evidence</h2><button id="refresh-runs" class="secondary">Refresh</button></div>${runs.map((r: Item) => `<details class="provider" ${r.status === "stopped" ? "" : "open"}><summary><b>${esc(r.state.name)}</b>${badge(r.status, r.status === "passed")}<small>${date(r.created)}</small></summary><div class="run-phase">${esc(r.phase.replaceAll("_", " "))}</div>${r.state.error ? `<div class="callout">${esc(r.state.error)}</div>` : ""}${recoveryEvidence(r)}<div class="toolbar">${r.status === "awaiting_clones" ? `<button data-verify="${r.id}" class="primary">Verify restored machines</button>` : ""}${r.status !== "running" && r.status !== "stopped" ? `<button data-stop="${r.id}" class="secondary">Stop restored VMs</button>` : ""}</div></details>`).join("")}`,
+    `<div class="recovery-banner"><div><h2>Recovery tests</h2><p>Capture proof → back up → restore together → compare.</p></div><button id="new-plan" class="primary">${icon("plus")} New recovery plan</button></div><div class="section-head"><div><h2>Your recovery plans</h2><p>Each run creates a shared, isolated network for its restored machines.</p></div></div><div class="plan-grid">${plans.map((p: Item) => `<article class="plan"><span class="eyebrow">RECOVERY PLAN</span><h2>${esc(p.name)}</h2><p>${p.spec.members.length} systems · ${esc(p.spec.router_prefix)}</p><button data-run="${p.id}" class="primary">Run recovery test →</button><details><summary>View plan</summary><pre>${pretty(p.spec)}</pre></details></article>`).join("") || '<div class="empty"><h3>No recovery plans</h3><p>Link devices to their Slide agent IDs, then define application checks.</p></div>'}</div><div class="section-head"><h2>Runs & evidence</h2><button id="refresh-runs" class="secondary">Refresh</button></div>${runs.map((r: Item) => `<details class="provider" ${r.status === "stopped" ? "" : "open"}><summary><b>${esc(r.state.name)}</b>${badge(r.status, r.status === "passed")}<small>${date(r.created)}</small></summary><div class="run-phase">${esc(r.phase.replaceAll("_", " "))}</div>${r.state.error ? `<div class="callout">${esc(r.state.error)}</div>` : ""}${recoveryEvidence(r)}<div class="toolbar">${r.status === "awaiting_clones" ? `<button data-verify="${r.id}" class="primary">Verify restored machines</button>` : ""}${r.status !== "running" && r.status !== "stopped" ? `<button data-stop="${r.id}" class="secondary">Stop restored VMs</button>` : ""}</div></details>`).join("")}`,
   );
   on("refresh-runs", renderRecovery);
   on("new-plan", newPlan);
