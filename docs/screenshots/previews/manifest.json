@@ -1,0 +1,12 @@
+[
+  {
+    "file": "desktop.png",
+    "sha256": "cdb1cdf9761f256203197ee54c0e2b68f88a8a7265a1e32bf267dcecc51373b5",
+    "source": "Unmodified Chromium screenshot; local Speck frontend with synthetic device and screen fixtures."
+  },
+  {
+    "file": "mobile.png",
+    "sha256": "7336270fcd0f13578291c175d874c2b458bed68e8de47a5ae58f38ba2b23fb6c",
+    "source": "Unmodified Chromium screenshot; local Speck frontend with synthetic device and screen fixtures."
+  }
+]

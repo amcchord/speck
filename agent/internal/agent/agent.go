@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const Version = "0.2.0"
+const Version = "0.2.2"
 const FileLimit = int64(256 * 1024 * 1024)
 
 type Config struct {
@@ -182,9 +182,16 @@ func Run(ctx context.Context, path string) error {
 	go func() {
 		for {
 			telemetryMu.RLock()
-			current := telemetry
+			var current map[string]any
+			if telemetry != nil {
+				current = make(map[string]any, len(telemetry))
+				for key, value := range telemetry {
+					current[key] = value
+				}
+			}
 			telemetryMu.RUnlock()
 			if current != nil {
+				updateDesktopTelemetry(current, filepath.Join(filepath.Dir(path), "telemetry"))
 				hostname, _ := os.Hostname()
 				_ = c.api(ctx, "POST", "/api/agent/check-in", map[string]any{"hostname": hostname, "platform": runtime.GOOS, "arch": runtime.GOARCH, "telemetry": current}, nil)
 			}

@@ -1,5 +1,22 @@
 # Project journal
 
+## 2026-09-22 — Slide restore lifecycle cleanup
+
+Runtime `e5d37c6` adds persistent restore identity tracking, conservative provider
+deletion confirmation and reversible retirement of offline restored endpoints.
+The Slide page exposes policy, status and a manual synchronization action.
+Provider listing validation and 20 focused regressions guard original identities,
+stopped VMs, errors, changed scope, role/CSRF boundaries and archive behavior.
+All 77 backend tests, 24 web tests, server Ruff and TypeScript/Vite pass.
+
+Deployed above the previously live machine overview, retaining its interface.
+Database/runtime/configuration rollback was captured before the backend restart.
+Source and served asset hashes plus health pass. A real-provider acceptance run
+confirmed the unattended worker archived five copies after its grace period;
+all originals and shared credentials remained active, with history preserved.
+Slide controls and the cleaned Fleet passed live browser checks. Exact customer
+evidence stays private. Integration is in draft PR #9.
+
 ## 2026-09-22 — Fleet operations and native client preview
 
 Started at `443f17c` on `codex/fleet-operations`. Implemented table/drawer UI,
@@ -276,3 +293,54 @@ device identities. No endpoint/recovery action or backend restart. Rollback is
 `docs/operations/visual-audit.md`; private evidence is in audit-worktree
 `output/visual-audit/`. Physical devices and Windows/Linux runtime qualification
 remain as documented in the platform matrices.
+
+## 2026-09-22 — Compact individual machine overview
+
+Worktree `worktrees/machine-overview`, branch `codex/machine-overview`, based on
+main `290ed31`. The pane begins with name/connectivity and IP/OS/uptime/report
+facts. CPU, memory, storage and foreground app/user share space with a contained
+16:9 preview. Narrow screens prioritize health. System and organization sections
+use less vertical space; missing values and stale offline reports stay explicit.
+
+Machine-specific CSS now owns the pane/preview layout. Preview failures remain
+local to the frame, with retry and policy-off behavior retained. TypeScript/Vite,
+24 web tests and 62 Chromium/WebKit scenarios pass. Four original synthetic
+captures were reviewed; measurements and limits are in the machine-overview
+operations note. No production or live endpoint changes, push or integration.
+Next step: review, then explicitly authorized integration/static deployment.
+
+## 2026-09-22 — Authorized machine overview static deployment
+
+Deployed runtime `37105be` at 20:58 UTC from `codex/machine-overview`. Clean-source
+and previous-release preflights passed; rebuild matched the tested index exactly.
+Retained the preceding web tree and old hashed assets, staged the new assets,
+and atomically replaced the index. HTTPS/index/asset hashes, service identity,
+environment and 18 machine identities/Slide bindings pass. Live Chromium/WebKit
+checks confirmed desktop/mobile BYD-EXAM01 facts, preview geometry and tab
+navigation, with no runtime errors. Verification logins were signed out.
+
+No backend restart, endpoint/preview-policy operation, agent update or recovery
+action occurred. Rollback and private evidence paths are in the machine-overview
+operations record. Source is retained locally; GitHub integration was not part
+of this deployment. The requested production rollout is complete.
+
+## 2026-09-22 — Preview persistence, capture recovery and desktop presence
+
+`codex/preview-reliability` / PR #10 fixes indefinitely loading previews, isolates
+native capture behind an eight-second process limit, and retains a single encrypted
+checkpoint every five minutes. Opt-out/archive/revoke delete the live and saved
+image; clone identities remain separate. Browser requests are bounded and recover
+without mistaking the loading logo for a screen. The open machine pane previously
+stopped Fleet polling: it now updates health/user/desktop/app in place. Agent 0.2.2
+reports Windows sessions and Linux logind users independently of the foreground
+window, with explicit historical app timestamps after disconnect.
+
+Deployed backed-up backend `adc694d`, static/agent `4089388`, and Linux discovery
+`c175646`. All five originals are online with unchanged enrollment identities,
+accounts, provider settings and recovery associations. All three Windows originals
+passed live current/disconnected presence checks; exam preview checkpoints advanced
+after five minutes and survived loss of live memory. Validation: 82 backend, 28 web,
+72 browser, seven Linux and four Windows tests plus builds/GitHub checks. Headless
+Linux has no graphical capture acceptance. See the preview operations note for
+rollback paths and exact qualification. No provider recovery, patch deployment,
+password change or resource cleanup was performed.

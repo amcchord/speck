@@ -1,4 +1,5 @@
 import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
+import { machinePresence } from "./presence";
 import Guacamole from "guacamole-common-js";
 import "../../brand/tokens.css";
 import "./style.css";
@@ -15,6 +16,7 @@ import { useReliableImageDecoder, hasVisiblePixels, watchRemoteStartup } from ".
 import "./loading.css";
 import "./ui.css";
 import "./fleet.css";
+import "./machine.css";
 import { remoteTextKeys } from "./remote-input";
 
 const viewScope = createViewScope();
@@ -101,7 +103,7 @@ const badge = (s: string, good = false) => {
   return `<span class="badge ${tone}">${esc(s)}</span>`;
 };
 
-async function api(path: string, method = "GET", body?: any): Promise<any> {
+async function api(path: string, method = "GET", body?: any, signal?: AbortSignal): Promise<any> {
   const current = viewScope.checkpoint();
   const headers: Record<string, string> = { "X-CSRF-Token": csrf };
   if (body !== undefined && !(body instanceof FormData))
@@ -109,6 +111,7 @@ async function api(path: string, method = "GET", body?: any): Promise<any> {
   const r = await fetch("/api" + path, {
     method,
     headers,
+    signal,
     body:
       body instanceof FormData
         ? body
@@ -483,8 +486,8 @@ async function renderFleet() {
   }
 }
 function drawFleet() {
-  content(`<div class="fleet-toolbar"><div class="search-field">${icon("search")}<input id="fleet-search" aria-label="Search devices" placeholder="Search machines, sites, tags or apps" value="${esc(fleetQuery)}"></div><select id="fleet-filter" aria-label="Filter status"><option value="all">All statuses</option><option value="online">Online</option><option value="review">Needs review</option><option value="offline">Offline</option></select><select id="fleet-os" aria-label="Filter operating system"><option value="all">All systems</option><option value="windows">Windows</option><option value="linux">Linux</option></select><select id="fleet-sort" aria-label="Sort machines"><option value="name">Name A–Z</option><option value="cpu">CPU high–low</option><option value="memory">Memory high–low</option><option value="seen">Last seen</option></select><label class="check preview-toggle"><input id="fleet-previews" type="checkbox" ${showPreviews ? "checked" : ""}> Live previews</label></div>
-  <div id="bulk-actions" class="bulk-actions"></div><div class="fleet-table-wrap"><table class="fleet-table"><thead><tr><th><input id="select-page" type="checkbox" aria-label="Select machines on this page"></th><th class="machine-head" scope="col">Machine</th><th class="status-head" scope="col">Status</th><th class="app-head" scope="col">Active app</th><th class="util-head" scope="col">CPU</th><th class="util-head" scope="col">RAM</th><th class="network-head" scope="col">IP address</th><th class="preview-column" ${showPreviews ? "" : "hidden"}>Live screen</th><th class="fleet-actions-head">Connect</th></tr></thead><tbody id="fleet-rows"></tbody></table></div><div class="fleet-pagination"><span id="fleet-count"></span><div><button id="fleet-prev" class="secondary">Previous</button><button id="fleet-next" class="secondary">Next</button></div></div>`);
+  content(`<div class="fleet-toolbar"><div class="search-field">${icon("search")}<input id="fleet-search" aria-label="Search devices" placeholder="Search machines, sites, tags or apps" value="${esc(fleetQuery)}"></div><select id="fleet-filter" aria-label="Filter status"><option value="all">All statuses</option><option value="online">Online</option><option value="review">Needs review</option><option value="offline">Offline</option></select><select id="fleet-os" aria-label="Filter operating system"><option value="all">All systems</option><option value="windows">Windows</option><option value="linux">Linux</option></select><select id="fleet-sort" aria-label="Sort machines"><option value="name">Name A–Z</option><option value="cpu">CPU high–low</option><option value="memory">Memory high–low</option><option value="seen">Last seen</option></select><label class="check preview-toggle"><input id="fleet-previews" type="checkbox" ${showPreviews ? "checked" : ""}> Previews</label></div>
+  <div id="bulk-actions" class="bulk-actions"></div><div class="fleet-table-wrap"><table class="fleet-table"><thead><tr><th><input id="select-page" type="checkbox" aria-label="Select machines on this page"></th><th class="machine-head" scope="col">Machine</th><th class="status-head" scope="col">Status</th><th class="app-head" scope="col">Active app</th><th class="util-head" scope="col">CPU</th><th class="util-head" scope="col">RAM</th><th class="network-head" scope="col">IP address</th><th class="preview-column" ${showPreviews ? "" : "hidden"}>Screen preview</th><th class="fleet-actions-head">Connect</th></tr></thead><tbody id="fleet-rows"></tbody></table></div><div class="fleet-pagination"><span id="fleet-count"></span><div><button id="fleet-prev" class="secondary">Previous</button><button id="fleet-next" class="secondary">Next</button></div></div>`);
   (document.getElementById("fleet-filter") as HTMLSelectElement).value =
     fleetFilter;
   (document.getElementById("fleet-os") as HTMLSelectElement).value =
@@ -549,19 +552,30 @@ function drawFleet() {
   requestAnimationFrame(() => { if (table.isConnected) window.scrollTo(fleetScroll.x, fleetScroll.y); });
 }
 function primaryAddress(d: Item) {
-  return (
-    (d.telemetry?.network?.interfaces || [])
-      .flatMap((n: Item) => n.addrs || [])
-      .map((a: Item) => a.address)
-      .find((a: string) => a && !a.startsWith("127.") && !a.includes(":")) ||
-    "—"
-  );
+  const interfaces = d.telemetry?.network?.interfaces || [];
+  const addresses = [...interfaces]
+    .sort((a: Item, b: Item) => Number(!!b.flags?.includes("up")) - Number(!!a.flags?.includes("up")))
+    .flatMap((n: Item) => n.addrs || [])
+    .map((a: Item) => String(a.address || ""))
+    .filter((a: string) => {
+      const ip = a.split("/")[0].toLowerCase();
+      return ip && !ip.startsWith("127.") && ip !== "::1" && ip !== "::" && ip !== "0.0.0.0";
+    });
+  return addresses.find((a: string) => !a.includes(":") && !a.startsWith("169.254.")) ||
+    addresses.find((a: string) => a.includes(":") && !a.toLowerCase().startsWith("fe80:")) ||
+    addresses[0] || "—";
 }
+function uptime(seconds: unknown) {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) return "Not reported";
+  const minutes = Math.floor(seconds / 60), hours = Math.floor(minutes / 60), days = Math.floor(hours / 24);
+  return days ? `${days}d ${hours % 24}h` : hours ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
+}
+
 function visibleFleet() {
   return fleet
     .filter(
       (d) =>
-        `${d.label} ${d.hostname} ${d.site || ""} ${(d.tags || []).join(" ")} ${d.platform} ${d.telemetry?.active_app?.process || ""} ${primaryAddress(d)}`
+        `${d.label} ${d.hostname} ${d.site || ""} ${(d.tags || []).join(" ")} ${d.platform} ${d.telemetry?.active_app?.process || d.telemetry?.last_active_app?.process || ""} ${primaryAddress(d)}`
           .toLowerCase()
           .includes(fleetQuery.toLowerCase()) &&
         (fleetPlatform === "all" || d.platform === fleetPlatform) &&
@@ -597,11 +611,12 @@ function renderFleetRows() {
       .map((d) => {
         const os = d.telemetry?.host?.platform || d.platform;
         const status = !d.approved ? "Review" : d.online ? "Online" : "Offline";
-        const active = d.telemetry?.active_app;
+        const presence = machinePresence(d);
+        const active = presence.app;
         const screenAction = `${d.remote_protocol === "ssh" ? "Open SSH session" : "Screen control"} · ${d.label}`;
         const shellAction = `Run ${d.platform === "windows" ? "PowerShell" : "shell command"} · ${d.label}`;
         const usage = (value: any) => value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(0) + "%" : "—";
-        return `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon" title="${esc(os)}">${icon(d.platform === "windows" ? "windows" : "linux")}</span><b>${esc(d.label)}</b></button></td><td data-label="Status" class="status-cell" title="Last report: ${date(d.last_seen)}">${badge(status)}</td><td data-label="App" class="app-cell"><span title="${esc(active ? [active.title, active.process, active.user].filter(Boolean).join(" · ") : "No interactive desktop reported")}">${esc(active?.process || "—")}</span></td><td data-label="CPU" class="util-cell cpu-cell">${usage(d.telemetry?.cpu_percent)}</td><td data-label="RAM" class="util-cell ram-cell">${usage(d.telemetry?.memory?.usedPercent)}</td><td data-label="IP address" class="network-cell mono" title="${esc(primaryAddress(d))}">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Live screen of ${esc(d.label)}"><span>${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "Waiting for desktop" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")}</button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button></td></tr>`;
+        return `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon" title="${esc(os)}">${icon(d.platform === "windows" ? "windows" : "linux")}</span><b>${esc(d.label)}</b></button></td><td data-label="Status" class="status-cell" title="Last report: ${date(d.last_seen)}">${badge(status)}</td><td data-label="App" class="app-cell"><span title="${esc(active ? [active.title, active.process, active.user].filter(Boolean).join(" · ") : presence.desktop)}">${esc(presence.table)}</span></td><td data-label="CPU" class="util-cell cpu-cell">${usage(d.telemetry?.cpu_percent)}</td><td data-label="RAM" class="util-cell ram-cell">${usage(d.telemetry?.memory?.usedPercent)}</td><td data-label="IP address" class="network-cell mono" title="${esc(primaryAddress(d))}">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Screen preview of ${esc(d.label)}"><span>${d.preview.source === "live" ? "Live" : "Saved"} · ${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "No preview yet" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")}</button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button></td></tr>`;
       })
       .join("") ||
     `<tr class="fleet-empty-row"><td colspan="${showPreviews ? 9 : 8}"><div class="empty"><h3>No matching machines</h3><p>Try another search or filter.</p></div></td></tr>`;
@@ -739,6 +754,38 @@ function launchRemote(d: Item) {
   } else location.hash = "remote/" + d.id;
 }
 let detailVersion = 0;
+function machineHealth(d: Item) {
+  const t = d.telemetry || {}, presence = machinePresence(d);
+  const percent = (n: unknown) => typeof n === "number" && Number.isFinite(n) ? n : null;
+  const cpu = percent(t.cpu_percent), memory = percent(t.memory?.usedPercent);
+  return `
+          <div class="meters">
+            <div><small>Processor</small><strong>${cpu === null ? "—" : cpu.toFixed(1) + "<em>%</em>"}</strong>${cpu === null ? '<small>Not reported</small>' : `<progress aria-label="Processor utilization" max="100" value="${cpu}"></progress>`}</div>
+            <div><small>Memory</small><strong>${memory === null ? "—" : memory.toFixed(0) + "<em>%</em>"}</strong>${memory === null ? '<small>Not reported</small>' : `<progress aria-label="Memory utilization" max="100" value="${memory}"></progress>`}${t.memory?.total != null ? `<small>${t.memory.used == null ? "—" : bytes(t.memory.used)} / ${bytes(t.memory.total)}</small>` : ""}</div>
+          </div>
+          <section class="machine-storage"><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${x.used == null ? "—" : bytes(x.used)} / ${x.total == null ? "—" : bytes(x.total)}</span>${percent(x.usedPercent) === null ? "" : `<progress aria-label="Storage utilization ${esc(x.path)}" value="${x.usedPercent}" max="100"></progress>`}</div>`).join("") || '<small>No storage reported</small>'}</section>
+          <div class="machine-foreground"><div><small>${presence.appLabel}</small><h3>${esc(presence.title)}</h3>${presence.app?.process ? `<small>${esc(presence.app.process)}</small>` : ""}${!presence.current && presence.app?.observed_at ? `<small>Last observed ${esc(date(Date.parse(presence.app.observed_at) / 1000))}</small>` : ""}</div><div class="machine-user"><small>${presence.userHeading}</small><b>${esc(presence.userLabel)}</b></div><div class="machine-desktop"><small>Interactive desktop</small><b>${esc(presence.desktop)}</b></div></div>`;
+}
+function refreshOpenMachine() {
+  if (!activeDevicePanel?.open || tab !== "overview") return;
+  const d = fleet.find(d => d.id === selected);
+  if (!d) { activeDevicePanel.close(); return; }
+  const health = activeDevicePanel.querySelector(".machine-health");
+  if (health) health.innerHTML = machineHealth(d);
+  const report = activeDevicePanel.querySelector(".machine-report");
+  if (report) report.textContent = date(d.last_seen);
+  const up = activeDevicePanel.querySelector(".machine-uptime");
+  if (up) up.textContent = uptime(d.telemetry?.host?.uptime);
+  const heading = activeDevicePanel.querySelector(".dialog-head h2");
+  if (heading) heading.innerHTML = `<span class="machine-title">${esc(d.label)}</span>${badge(d.online ? "Online" : "Offline")}${d.archived ? badge("Archived") : !d.approved ? badge("Review") : ""}`;
+  let note = activeDevicePanel.querySelector(".telemetry-note");
+  if (!d.online && !note) {
+    note = document.createElement("p"); note.className = "telemetry-note";
+    activeDevicePanel.querySelector("#device-body")?.prepend(note);
+  }
+  if (note) { note.textContent = d.online ? "" : "Machine is offline. Values below are from its last report."; }
+}
+
 async function renderDevice() {
   const version = ++detailVersion;
   try { await renderDeviceContent(); }
@@ -765,8 +812,27 @@ async function renderDeviceContent() {
             "patches",
             "remote",
           ];
-  document.getElementById("detail")!.innerHTML =
-    `<div class="detail-head"><div><span class="eyebrow">${esc(d.platform)} / ${esc(d.arch)}</span><h2>${esc(d.label)}</h2><small>Last report ${date(d.last_seen)}</small></div>${role !== "viewer" && !d.archived ? '<button id="device-edit" class="secondary">Edit</button>' : ""}</div>${d.archived ? '<div class="callout">Archived. Management is disabled; retained history and Slide identity remain available.</div>' : !d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}<div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body">${loadingState("Loading " + tab + "…")}</div>`;
+  const address = primaryAddress(d).split("/")[0];
+  const status = d.online ? "Online" : "Offline";
+  const heading = activeDevicePanel?.querySelector(".dialog-head h2");
+  if (heading) heading.innerHTML = `<span class="machine-title">${esc(d.label)}</span>${badge(status)}${d.archived ? badge("Archived") : !d.approved ? badge("Review") : ""}`;
+  activeDevicePanel?.setAttribute("aria-label", `Machine details: ${d.label}`);
+  document.getElementById("detail")!.innerHTML = `
+    <div class="machine-summary">
+      <dl class="machine-facts">
+        <div><dt>IP address</dt><dd class="machine-address"><span class="mono">${esc(address)}</span>${address !== "—" ? '<button id="copy-machine-ip" class="quick-action" title="Copy IP address" aria-label="Copy IP address">' + icon("copy") + '</button>' : ""}</dd></div>
+        <div><dt>Operating system</dt><dd>${esc(t.host?.platform || d.platform || "Not reported")}<small>${esc([t.host?.platformVersion, d.arch].filter(Boolean).join(" · "))}</small></dd></div>
+        <div><dt>Uptime${d.online ? "" : " at last report"}</dt><dd class="machine-uptime">${uptime(t.host?.uptime)}</dd></div>
+        <div><dt>Last report</dt><dd class="machine-report">${esc(date(d.last_seen))}</dd></div>
+      </dl>
+      <div class="drawer-actions">${d.approved && !d.archived && role !== "viewer" ? `<button id="drawer-screen" class="primary" ${d.online ? "" : "disabled"}>${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")} ${d.remote_protocol === "ssh" ? "Open SSH" : "Screen control"}</button><button id="drawer-terminal" class="secondary">${icon("terminal")} ${d.platform === "windows" ? "PowerShell" : "Shell"}</button><button id="drawer-ai" class="secondary">${icon("spark")} Ask AI</button>` : ""}${role !== "viewer" && !d.archived ? '<button id="device-edit" class="secondary">Edit</button>' : ""}</div>
+    </div>
+    ${d.archived ? '<div class="callout">Archived. Management is disabled; retained history and Slide identity remain available.</div>' : !d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}
+    <div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body">${loadingState("Loading " + tab + "…")}</div>`;
+  on("copy-machine-ip", async () => {
+    await navigator.clipboard.writeText(address);
+    notify("IP address copied");
+  });
   document.querySelectorAll<HTMLElement>("[data-tab]").forEach(
     (el) =>
       (el.onclick = () => {
@@ -776,12 +842,6 @@ async function renderDeviceContent() {
   );
   on("device-edit", () => editDevice(d));
   if (d.approved && !d.archived && role !== "viewer") {
-    document
-      .querySelector(".detail-head")!
-      .insertAdjacentHTML(
-        "afterend",
-        `<div class="drawer-actions"><button id="drawer-screen" class="primary">${icon("monitor")} ${d.remote_protocol === "ssh" ? "Open SSH" : "Screen control"}</button><button id="drawer-terminal" class="secondary">${icon("terminal")} ${d.platform === "windows" ? "PowerShell" : "Shell"}</button><button id="drawer-ai" class="secondary">${icon("spark")} Ask AI</button></div>`,
-      );
     on("drawer-screen", () => launchRemote(d));
     on("drawer-terminal", () => {
       tab = "terminal";
@@ -791,10 +851,19 @@ async function renderDeviceContent() {
   }
   const body = document.getElementById("device-body")!;
   if (tab === "overview") {
-    body.innerHTML = `<div class="meters"><div><small>Processor</small><strong>${Number(t.cpu_percent || 0).toFixed(1)}<em>%</em></strong><progress aria-label="Processor utilization" max="100" value="${Number(t.cpu_percent || 0)}"></progress></div><div><small>Memory</small><strong>${Number(t.memory?.usedPercent || 0).toFixed(0)}<em>%</em></strong><progress aria-label="Memory utilization" max="100" value="${Number(t.memory?.usedPercent || 0)}"></progress><small>${bytes(t.memory?.used)} / ${bytes(t.memory?.total)}</small></div></div><div class="info-block"><span class="eyebrow">IN THE FOREGROUND</span><h3>${esc(t.active_app?.title || "No interactive desktop reported")}</h3><p>${esc(t.active_app ? `${t.active_app.process || ""} · ${t.active_app.user || ""}` : "Headless servers report services and network activity.")}</p></div><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${bytes(x.used)} / ${bytes(x.total)}</span><progress aria-label="Storage utilization ${esc(x.path)}" value="${Number(x.usedPercent)}" max="100"></progress></div>`).join("")}<div class="mini-grid"><div><small>Operating system</small>${esc(t.host?.platform || d.platform)} ${esc(t.host?.platformVersion)}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion)}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
+    const canPreview = role !== "viewer" && !d.archived;
+    body.innerHTML = `
+      ${!d.online ? '<p class="telemetry-note">Machine is offline. Values below are from its last report.</p>' : ""}
+      <div class="machine-overview ${canPreview ? "" : "without-preview"}">
+        ${canPreview ? '<div id="machine-preview"></div>' : ""}
+        <div class="machine-health">
+          ${machineHealth(d)}
+        </div>
+      </div>
+      <div class="mini-grid machine-system"><div><small>Hostname</small>${esc(d.hostname || "Not reported")}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion || "Not reported")}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
 
     management.devicePanel(d, body);
-    if (role !== "viewer" && !d.archived) await ops.previewPanel(d, body);
+    if (canPreview) await ops.previewPanel(d, body.querySelector<HTMLElement>("#machine-preview")!);
   } else if (tab === "patches") {
     await ops.devicePatches(d, body);
   } else if (tab === "services") {
@@ -1446,6 +1515,44 @@ async function connectRemote(d: Item, attempt = 0) {
   client.connect("");
   display.focus();
 }
+async function renderRestoreCleanup() {
+  const host = document.getElementById("restore-cleanup");
+  if (!host) return;
+  const state = await api("/slide/restored-devices");
+  if (!host.isConnected) return;
+  const current = state.instances.filter((r: Item) => !r.archived);
+  const retired = state.instances.filter((r: Item) => r.archived);
+  host.innerHTML = `<div class="section-head"><div><h3>Restored machine cleanup</h3><p>Speck tracks Slide restore identities and automatically archives offline copies after Slide confirms deletion twice, at least five minutes apart. Stopped VMs remain in Fleet; original machines and retained history are preserved.</p><small>${current.length} tracked · ${retired.length} archived${state.last_sync?.checked_at ? " · Last checked " + date(state.last_sync.checked_at) : " · Waiting for first check"}</small></div><button id="sync-restores" class="secondary">Check now</button></div>${state.last_sync?.error || state.last_sync?.errors?.length ? '<p class="callout">Slide could not verify every restore. Unconfirmed entries remain in Fleet; the next check will retry.</p>' : ""}${state.last_sync?.pending?.length ? `<p>${state.last_sync.pending.length} removed restore(s) awaiting offline/grace checks.</p>` : ""}${role === "admin" ? `<label class="check"><input id="auto-archive-restores" type="checkbox" ${state.enabled ? "checked" : ""}> Automatically archive removed Slide restores</label>` : `<p>Automatic archiving is ${state.enabled ? "on" : "off"}.</p>`}`;
+  on("sync-restores", async () => {
+    const button = document.getElementById(
+      "sync-restores",
+    ) as HTMLButtonElement;
+    button.disabled = true;
+    try {
+      const result = await api("/slide/restored-devices/sync", "POST");
+      notify(
+        `${result.linked.length} linked; ${result.archived.length} archived; ${result.pending.length} awaiting confirmation.`,
+      );
+      await renderRestoreCleanup();
+    } finally {
+      if (button.isConnected) button.disabled = false;
+    }
+  });
+  if (role === "admin")
+    on("auto-archive-restores", async () => {
+      const input = document.getElementById(
+        "auto-archive-restores",
+      ) as HTMLInputElement;
+      try {
+        await api("/slide/restored-devices/settings", "PUT", {
+          enabled: input.checked,
+        });
+      } catch (e) {
+        input.checked = !input.checked;
+        throw e;
+      }
+    });
+}
 async function renderSlide() {
   loading("Loading Slide…");
   const cfg = await api("/slide/connection");
@@ -1456,8 +1563,9 @@ async function renderSlide() {
     return;
   }
   content(
-    `<div class="section-head"><div><h2>Slide inventory</h2><p>${esc(cfg.url)}</p></div><select id="slide-resource" aria-label="Slide resource type"><option value="agent">Protected systems</option><option value="device">Slide appliances</option><option value="snapshot">Snapshots + verification</option><option value="backup">Backup jobs</option><option value="network">Recovery networks</option><option value="restore/virt">Restored virtual machines</option><option value="restore/file">File restores</option><option value="restore/image">Image exports</option></select></div><div id="slide-data"></div>`,
+    `<div class="section-head"><div><h2>Slide inventory</h2><p>${esc(cfg.url)}</p></div><select id="slide-resource" aria-label="Slide resource type"><option value="agent">Protected systems</option><option value="device">Slide appliances</option><option value="snapshot">Snapshots + verification</option><option value="backup">Backup jobs</option><option value="network">Recovery networks</option><option value="restore/virt">Restored virtual machines</option><option value="restore/file">File restores</option><option value="restore/image">Image exports</option></select></div><article id="restore-cleanup" class="panel"></article><div id="slide-data"></div>`,
   );
+  await renderRestoreCleanup();
   const load = async () => {
     const resource = value("slide-resource");
     const rows = await api(
@@ -1704,7 +1812,7 @@ setInterval(async () => {
     polling ||
     page !== "fleet" ||
     remote ||
-    document.querySelector("dialog") ||
+    document.querySelector("dialog:modal") ||
     ["fleet-search", "fleet-filter", "fleet-os", "fleet-sort"].includes(
       document.activeElement?.id || "",
     )
@@ -1715,6 +1823,7 @@ setInterval(async () => {
     fleet = await api("/devices");
     fleetCache = fleet;
     if (document.getElementById("fleet-rows")) renderFleetRows();
+    refreshOpenMachine();
   } catch {
   } finally {
     polling = false;

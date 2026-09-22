@@ -65,12 +65,16 @@ def initialize():
           status TEXT NOT NULL,phase TEXT NOT NULL,created REAL NOT NULL,updated REAL NOT NULL,state TEXT NOT NULL,report TEXT NOT NULL DEFAULT '{}');
         CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,at REAL NOT NULL,actor TEXT NOT NULL,action TEXT NOT NULL,device_id TEXT,detail TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS device_policies(device_id TEXT PRIMARY KEY REFERENCES devices(id),preview_enabled INTEGER NOT NULL DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS preview_snapshots(device_id TEXT PRIMARY KEY REFERENCES devices(id),
+          captured_at REAL NOT NULL,saved_at REAL NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,jpeg TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS templates(id TEXT PRIMARY KEY,name TEXT NOT NULL,platform TEXT NOT NULL,category TEXT NOT NULL,spec TEXT NOT NULL,revision INTEGER NOT NULL,updated REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS batches(id TEXT PRIMARY KEY,request_id TEXT UNIQUE NOT NULL,fingerprint TEXT NOT NULL,name TEXT NOT NULL,kind TEXT NOT NULL,actor TEXT NOT NULL,created REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS batch_jobs(batch_id TEXT NOT NULL REFERENCES batches(id),job_id TEXT UNIQUE NOT NULL REFERENCES jobs(id),device_id TEXT NOT NULL REFERENCES devices(id));
         CREATE TABLE IF NOT EXISTS patch_reports(device_id TEXT PRIMARY KEY REFERENCES devices(id),job_id TEXT NOT NULL,scanned REAL NOT NULL,report TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS ai_requests(id TEXT PRIMARY KEY,actor TEXT NOT NULL,created REAL NOT NULL);
         ''')
+        from speck.restore_lifecycle import migrate as migrate_restores
+        migrate_restores(conn)
         from speck.management_schema import migrate
         migrate(conn)
         from speck.passkeys import migrate as migrate_passkeys

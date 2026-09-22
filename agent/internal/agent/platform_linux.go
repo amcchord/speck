@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/shirou/gopsutil/v4/host"
 	"os"
 	"os/exec"
 	"strconv"
@@ -101,3 +102,35 @@ func foreground() map[string]any {
 	return map[string]any{"title": strings.TrimSpace(title), "user": os.Getenv("USER"), "session": os.Getenv("XDG_SESSION_ID"), "display": os.Getenv("DISPLAY"), "source": "X11"}
 }
 func foregroundFilename() string { return fmt.Sprintf("session-%s.json", strconv.Itoa(os.Getuid())) }
+
+func previewDesktopState() string {
+	if os.Getenv("XDG_SESSION_TYPE") == "wayland" {
+		return "unsupported"
+	}
+	if os.Getenv("DISPLAY") == "" || foreground() == nil {
+		return "no_desktop"
+	}
+	return ""
+}
+
+func loggedInSessions() ([]DesktopSession, error) {
+	result := []DesktopSession{}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	// Modern systemd installations may omit utmp entirely. Ask logind first;
+	// retain utmp as a fallback on other supported Linux distributions.
+	if out, code, err := command(ctx, "loginctl", "list-sessions", "--no-legend", "--no-pager"); err == nil && code == 0 {
+		for _, line := range strings.Split(out, "\n") {
+			fields := strings.Fields(line)
+			if len(fields) >= 3 {
+				result = append(result, DesktopSession{User: fields[2], Session: fields[0], State: "signed_in"})
+			}
+		}
+		return result, nil
+	}
+	users, err := host.UsersWithContext(ctx)
+	for _, u := range users {
+		result = append(result, DesktopSession{User: u.User, Session: u.Terminal, State: "signed_in"})
+	}
+	return result, err
+}

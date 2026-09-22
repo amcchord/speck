@@ -44,11 +44,12 @@ def organize(device_id: str, body: Organization, user=Depends(require_user)):
 
 async def close_devices(device_ids):
     from speck.remote import close_session, sessions
-    from speck.screens import frames, lock
+    from speck.screens import frames, lock, reports
 
     with lock:
         for device_id in device_ids:
             frames.pop(device_id, None)
+            reports.pop(device_id, None)
     for session_id, session in list(sessions.items()):
         if session.device_id in device_ids:
             await close_session(session_id)
@@ -62,6 +63,7 @@ def stop_management(conn, device_id, actor):
         (time.time(), device_id),
     )
     conn.execute("UPDATE device_policies SET preview_enabled=0 WHERE device_id=?", (device_id,))
+    conn.execute("DELETE FROM preview_snapshots WHERE device_id=?", (device_id,))
     conn.execute("DELETE FROM monitor_states WHERE device_id=?", (device_id,))
     conn.execute(
         "UPDATE alerts SET resolved=?,resolve_actor=? WHERE device_id=? AND resolved IS NULL",

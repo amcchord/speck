@@ -54,8 +54,13 @@ exact request body. Template values are shell quoted, scripts are encrypted, and
 per-device jobs retain the existing lease/journal rules. Failed or uncertain
 operations do not automatically replay. Updates never request a reboot.
 
-Live previews are opt-in per device, require an approved identity, and are kept
-only in server memory for 45 seconds. Disabling a preview purges it immediately.
+Live previews are opt-in per device and require an approved, active identity.
+Live frames stay in memory for 45 seconds; the first frame and then one frame
+about every five minutes replace a single encrypted checkpoint in SQLite.
+That checkpoint survives restarts and offline periods until replaced. Turning
+previews off, archiving a device or revoking its installation deletes both
+live and saved previews. Backups can retain encrypted historical checkpoints;
+apply the same retention/access controls as other backed-up private data.
 Interactive helpers honor a 30-second permission lease and never receive agent
 credentials. User-session telemetry is not cryptographically attested.
 

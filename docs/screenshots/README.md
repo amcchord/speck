@@ -1,5 +1,7 @@
 # Speck screenshots
 
+**[Machine overview](machine-overview/README.md)**: compact machine facts, a 16:9 preview and health information above the fold.
+
 **[Visual audit](visual-audit/README.md)**: consistent controls, cleaner icons, responsive pages and full-width native sign-in.
 
 **[Fleet row and pane](fleet-row-pane/README.md)**: row-wide activation, persistent context and mobile details.
@@ -108,3 +110,5 @@ are rejected. Never deploy it or bind it to a public interface.
 
 The [capture manifest](manifest.json) records dimensions, SHA-256 digests and provenance. Live
 operational evidence and before screenshots stay in ignored `output/`.
+
+[Saved desktop previews](previews/README.md) show the last saved timestamp and desktop recovery guidance on desktop and mobile.

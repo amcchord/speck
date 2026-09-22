@@ -6,16 +6,40 @@ for PowerShell or a shell. Mobile keeps those actions visible in each device row
 
 ## Live screen previews
 
-In a device's Overview, turn on **Allow previews**. The fleet's **Live previews**
+In a device's Overview, turn on **Allow previews**. The fleet's **Previews**
 checkbox displays available thumbnails. Preview permission is separate for each
 machine and defaults off, including restored candidates.
 
 An interactive helper captures the first display at up to 640 pixels about every
-10 seconds. Windows needs an active, signed-in desktop; Linux needs X11 and
-`xprop`. Locked/disconnected sessions and headless/Wayland machines may have no
-frame. Previews expire after 45 seconds, are memory-only on the server, and are
-removed immediately when disabled. The helper's permission lease expires after
-30 seconds without renewal. Preview images are not automatically sent to AI.
+10 seconds. Windows needs a signed-in, unlocked, connected desktop; Linux needs
+X11 and `xprop`. Locked/disconnected sessions and headless/Wayland machines may
+have no frame. The pane explains missing desktops, helper failures and offline
+machines, and automatically retries failed or timed-out requests. Capture runs in
+a disposable process with an eight-second limit so a stalled display driver does
+not stop foreground reporting or future captures.
+
+The server saves the first available frame immediately, then replaces one encrypted
+checkpoint about every five minutes while capture is available, even with no
+console open. After the live frame expires at 45 seconds, the last saved preview
+is shown with its original capture timestamp. It survives server restarts and
+machine outages. This is a single last-known image, not a screenshot history.
+Nothing can be captured before a usable desktop first becomes available.
+
+Turning previews off deletes the live and saved image; archiving or revoking a
+machine does the same. New and restored identities still default off. The helper's
+permission lease expires after 30 seconds without renewal. Preview images are not
+automatically sent to AI. Windows agent installer upgrades restart helpers for
+already signed-in users; the logon task covers subsequent sessions.
+
+## Signed-in users and desktop activity
+
+The machine pane and Fleet refresh every 15 seconds while the pane is open.
+Windows session enumeration reports signed-in users even when disconnected;
+Linux uses logind sessions, with login records as a fallback. Desktop availability and the foreground app are
+separate observations. When a session disconnects or its helper stops reporting,
+the last observed app remains timestamped and is labeled historical. “Last:” in
+the Fleet app column means it is not a current foreground app. Agent 0.2.2 is
+required for the separate session and last-app fields.
 
 ## Updates
 

@@ -275,3 +275,80 @@ device identities. No endpoint/recovery action or backend restart. Rollback is
 `docs/operations/visual-audit.md`; private evidence is in audit-worktree
 `output/visual-audit/`. Physical devices and Windows/Linux runtime qualification
 remain as documented in the platform matrices.
+
+## Compact machine overview — September 22, 2026
+
+Local branch `codex/machine-overview` starts from main `290ed31`. Machine name,
+Online/Offline state, copyable IP, OS/version, uptime and last report lead the pane.
+The 16:9 preview shares a row with CPU, memory, storage and active-app/user details;
+mobile leads with health. Organization controls and system metadata are compact.
+Missing/offline telemetry and preview failures remain explicit.
+
+TypeScript/Vite, 24 web unit tests and 62 Chromium/WebKit UI scenarios pass. Four
+synthetic screenshots were visually inspected. At 1440 × 960, CPU/memory move up
+363 pixels and storage 534 pixels compared with main. See
+`docs/operations/machine-overview.md` and `docs/screenshots/machine-overview/`.
+No push, integration, deployment or live endpoint action occurred. Review and an
+explicitly authorized static release are the next steps.
+
+## Machine overview rollout — September 22, 2026
+
+At the user's request, runtime `37105be` was deployed as static web assets, with
+a complete prior-web backup and atomic index replacement. Served asset hashes
+and HTTPS health pass. The backend process/environment and all 18 device IDs
+and Slide links remain unchanged. Live Chromium/WebKit desktop/mobile checks
+on BYD-EXAM01 verified status/IP, 16:9 preview and tab navigation. No endpoint
+operation or service restart occurred. See `docs/operations/machine-overview.md`
+for rollback and ignored `output/machine-overview/` for exact private evidence.
+The runtime and release records remain on local `codex/machine-overview`; no
+GitHub push or merge was performed as part of this deployment.
+
+## Slide restore lifecycle — September 22, 2026
+
+The Slide integration now correlates provider restore IDs/MACs with separate
+Speck clone identities, including restores created by external runbooks. A
+background poll archives offline copies only after repeated exact-resource 404
+responses, a five-minute grace period and unchanged source/clone/provider scope.
+Originals, shared enrollment credentials, audit/jobs/recovery history and stopped
+VMs are preserved. The Slide page exposes status, a manual check and an admin
+policy toggle. Provider inventory validation rejects malformed pagination/data.
+
+Twenty focused regressions exercise deletion, stopped/online machines, API
+failures, ambiguous hardware, source changes, token rotation, restart persistence,
+archive/check-in behavior, role/CSRF boundaries and policy disabling. The complete
+backend suite (77 tests) and 24 web checks pass; server Ruff and TypeScript/Vite
+pass. Runtime `e5d37c6` is deployed with the previously live machine overview
+preserved. The backend restart followed a consistent SQLite and runtime/config
+backup at `/var/lib/speck-rollback/20260922T214123Z-restore-cleanup`.
+No endpoint packages or provider credentials changed. The scheduled worker
+retained removed restores through the grace period, then automatically archived
+all five tracked copies at 21:51:36 UTC. Audit actors confirm `slide-sync` performed
+the archives. All five originals remain online and manageable, with identical
+device, installation and protected-agent identities. The live Slide controls and
+five-machine Fleet were checked; a subsequent **Check now** was a no-op.
+Private proof stays outside this public repository. Draft integration PR:
+https://github.com/amcchord/speck/pull/9.
+
+## Preview reliability and desktop presence — September 22, 2026
+
+PR #10 combines bounded capture/request recovery, an encrypted five-minute saved
+preview, and corrected user/desktop/app reporting. Server runtime `adc694d`, web
+runtime `4089388` and final Linux discovery `c175646` are deployed. All five
+original agents run 0.2.2 with their existing identities. The machine overview and
+restore-cleanup changes already in production are preserved in this integration.
+
+The open machine pane now continues inventory refreshes every 15 seconds without
+resetting its preview. Windows signed-in users come from session enumeration;
+Linux uses logind with a login-record fallback. Current and historical apps are
+separate, and a disconnected user remains visibly signed in. Live checks on all
+three Windows originals verified current desktop/user/app/preview and subsequent
+in-place disconnected/last-app updates. The exam machine passed a real five-minute
+save interval and saved fallback; all saved images loaded with empty process memory.
+
+82 backend, 28 web, 72 browser scenarios, seven Linux and four Windows agent tests
+pass. Linux graphical capture remains unverified on the headless lab hosts.
+Release/rollback details, privacy behavior and synthetic captures:
+`docs/operations/preview-reliability.md`. Private proof: the preview-reliability
+worktree's ignored `output/preview-reliability/`. Refresh the console once to load
+the new asset bundle; no operator desktop or iOS package update is required for
+the hosted console changes.

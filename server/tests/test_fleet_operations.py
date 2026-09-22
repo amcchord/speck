@@ -155,8 +155,9 @@ def test_live_preview_opt_in_ttl_purge_and_clone_isolation(client):
         client.put("/api/devices/" + discovered["device_id"] + "/preview-policy", json={"enabled": True}).status_code
         == 409
     )
-    frames[d["device_id"]]["received"] = time.time() - 60
-    assert client.get(path + "/preview").status_code == 404
+    frames[d["device_id"]]["captured_at"] = time.time() - 60
+    assert client.get(path + "/preview").status_code == 200
+    assert client.get(path + "/preview-status").json()["source"] == "saved"
     assert client.put("/api/agent/preview", headers=headers, json=body).status_code == 200
     client.put(path + "/preview-policy", json={"enabled": False})
     assert d["device_id"] not in frames

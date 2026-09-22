@@ -5,18 +5,14 @@ package main
 
 import (
 	"github.com/amcchord/speck/agent/internal/agent"
+	"os"
 	"path/filepath"
-	"time"
 )
 
 func main() {
-	tick := 0
-	for {
-		if tick%5 == 0 {
-			agent.WritePreview(filepath.Join(filepath.Dir(agent.DefaultConfig()), "telemetry"))
-		}
-		tick++
-		agent.WriteForeground(filepath.Join(filepath.Dir(agent.DefaultConfig()), "telemetry"))
-		time.Sleep(2 * time.Second)
+	if len(os.Args) == 3 && os.Args[1] == "capture-preview" {
+		agent.WritePreview(os.Args[2])
+		return
 	}
+	agent.RunObserver(filepath.Join(filepath.Dir(agent.DefaultConfig()), "telemetry"))
 }
