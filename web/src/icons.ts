@@ -16,9 +16,10 @@ const paths: Record<string, string> = {
   settings:
     '<path d="M5 3v18M12 3v18M19 3v18"/><rect x="2" y="6" width="6" height="4" rx="1" fill="currentColor"/><rect x="9" y="14" width="6" height="4" rx="1" fill="currentColor"/><rect x="16" y="7" width="6" height="4" rx="1" fill="currentColor"/>',
   windows:
-    '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M3 12h18"/>',
+    '<path fill="currentColor" stroke="none" d="M3 3h8v8H3Zm10 0h8v8h-8ZM3 13h8v8H3Zm10 0h8v8h-8Z"/>',
   linux:
-    '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3m6 0h4"/>',
+    '<path d="M8 9V6a4 4 0 0 1 8 0v3l3 7-3 4H8l-3-4Z" fill="currentColor"/><ellipse cx="12" cy="14" rx="4" ry="5" fill="var(--white)" stroke="none"/><circle cx="10.5" cy="6" r=".7" fill="var(--white)" stroke="none"/><circle cx="13.5" cy="6" r=".7" fill="var(--white)" stroke="none"/><path d="m10 8 2 2 2-2M5 18l-2 3h6l1-2m9-1 2 3h-6l-1-2"/>',
+  code: '<path d="m7 6-5 6 5 6m10-12 5 6-5 6M14 3l-4 18"/>',
   refresh:
     '<path d="M20 7a9 9 0 0 0-15-1L2 9m0-6v6h6m-4 8a9 9 0 0 0 15 1l3-3m0 6v-6h-6"/>',
   arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',

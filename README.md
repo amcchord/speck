@@ -8,7 +8,7 @@
 An open source RMM for Windows and Linux, with browser remote access and Slide
 backup and recovery workflows. Speck is an early release for a single organization.
 
-[Website](https://speckrmm.com) · [Screenshot gallery](docs/screenshots/v0.2/README.md) ·
+[Website](https://speckrmm.com) · [Screenshot gallery](docs/screenshots/README.md) ·
 [Brand identity](brand/README.md) · [UI review](docs/ui-review.md) ·
 [Operations guide](docs/operations.md) · [Management guide](docs/management.md) ·
 [MVP review](docs/MVP-REVIEW.md) · [Desktop downloads](https://speckrmm.com/#downloads) ·
@@ -18,7 +18,7 @@ backup and recovery workflows. Speck is an early release for a single organizati
 
 | Fleet | Recovery lab |
 | --- | --- |
-| [![Windows and Linux fleet](docs/screenshots/v0.2/fleet-desktop.jpg)](docs/screenshots/v0.2/fleet-desktop.jpg) | [![Recovery evidence](docs/screenshots/08-recovery.jpg)](docs/screenshots/08-recovery.jpg) |
+| [![Windows and Linux fleet](docs/screenshots/compact-fleet/desktop.jpg)](docs/screenshots/compact-fleet/desktop.jpg) | [![Recovery evidence](docs/screenshots/08-recovery.jpg)](docs/screenshots/08-recovery.jpg) |
 
 Gallery data is synthetic. See the [capture notes](docs/screenshots/README.md)
 for provenance and the local preview workflow.

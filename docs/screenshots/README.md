@@ -1,5 +1,7 @@
 # Speck screenshots
 
+**[Compact Fleet](compact-fleet/README.md)**: dense desktop rows, OS icons, Safari and mobile.
+
 **[Passkeys](passkeys/README.md)**: web, mobile enrollment, account controls and native Mac sign-in.
 
 **[iPhone & iPad](ios/README.md)**: native fleet, commands, recovery and adaptive layouts.

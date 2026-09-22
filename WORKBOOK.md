@@ -223,3 +223,18 @@ Windows/Linux passkey runtime acceptance remain open. Original/restored identiti
 passwords, provider settings, Slide bindings and endpoint credentials were verified
 preserved. Final web updates preserve the running backend process. No new recovery,
 patch or software-deployment action was triggered. See the passkey screenshot gallery.
+
+## Compact Fleet and navigation cache — September 22, 2026
+
+Static source `ed04607` combines the Fleet header, adds single-line
+46-pixel rows with OS and action icons, and preserves table state while refreshing
+cached inventory in the background. Search, filters, sorting, selection and scroll
+survive navigation. Cold visits retain the orbit loader; sign-out clears the cache.
+Native Safari and responsive Chromium checks passed, including delayed/failed
+refresh and logout isolation. The public gallery contains only synthetic data.
+
+24 web and 14 desktop tests, TypeScript/Vite and GitHub Checks pass. Live filtered
+navigation returned the table before the background response. Only static assets
+were updated; service PID/start time and environment were unchanged. Rollback:
+`/var/lib/speck-rollback/20260922T195747Z-compact-fleet-ed04607/web`.
+See `docs/operations/compact-fleet.md`; private evidence: `output/compact-fleet/`.
