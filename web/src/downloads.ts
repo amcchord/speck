@@ -16,20 +16,17 @@ export function desktopDownloads(signedIn: boolean) {
     </div>
     <div class="download-grid">
       <article class="download-card" aria-labelledby="download-windows">
-        <span class="download-platform">${icon("windows")}</span>
         <h3 id="download-windows">Windows</h3><p class="download-architecture">64-bit · x64</p>
         <div class="download-buttons">${installer("win-x64.exe", "Download for Windows", true)}</div>
         <p class="download-note">EXE installer · unsigned</p>
       </article>
       <article class="download-card" aria-labelledby="download-mac">
-        <span class="download-platform">${icon("laptop")}</span>
         <h3 id="download-mac">macOS</h3><p class="download-architecture">Apple silicon or Intel</p>
         <div class="download-buttons">${installer("mac-arm64.dmg", "Apple silicon", true)}${installer("mac-x64.dmg", "Intel Mac")}</div>
         <p class="download-note">DMG installers · signed &amp; notarized</p>
         <details class="download-alternatives"><summary>ZIP downloads</summary><a target="_blank" rel="noopener" href="${assets}/Speck-Desktop-${version}-mac-arm64.zip">Apple silicon ZIP</a><a target="_blank" rel="noopener" href="${assets}/Speck-Desktop-${version}-mac-x64.zip">Intel Mac ZIP</a></details>
       </article>
       <article class="download-card" aria-labelledby="download-linux">
-        <span class="download-platform">${icon("linux")}</span>
         <h3 id="download-linux">Linux</h3><p class="download-architecture">64-bit · x64</p>
         <div class="download-buttons">${installer("linux-amd64.deb", "Download .deb", true)}${installer("linux-x86_64.AppImage", "Download AppImage")}</div>
         <p class="download-note">Debian / Ubuntu or portable AppImage</p>

@@ -67,19 +67,25 @@ struct SignInView: View {
     GeometryReader { geo in
       ScrollView {
         VStack(spacing: 0) {
-          VStack(alignment: .leading, spacing: 24) {
+          VStack(alignment: .leading, spacing: 20) {
             SpeckWordmark(light: true)
             Text("A LITTLE LIGHTWEIGHT RMM").font(.caption2.weight(.bold)).tracking(2)
               .foregroundStyle(Color.lime)
-          }.frame(maxWidth: .infinity, alignment: .leading).padding(32).frame(
-            minHeight: geo.size.height > 700 ? 220 : 150
-          ).background(Color.forest)
-          VStack(alignment: .leading, spacing: 24) {
+          }.frame(maxWidth: .infinity, alignment: .leading).padding(24)
+            .frame(maxWidth: 520).frame(maxWidth: .infinity)
+            .frame(minHeight: geo.size.height > 700 ? 180 : 140)
+            .background(Color.forest.ignoresSafeArea(edges: .top))
+            .accessibilityElement(children: .contain).accessibilityIdentifier("sign-in-masthead")
+          VStack(alignment: .leading, spacing: 20) {
             Text("Sign in").font(.largeTitle.weight(.semibold))
             Button(action: passkeySignIn) {
-              Label("Sign in with a passkey", systemImage: "person.badge.key")
+              Text("Sign in with a passkey")
             }.buttonStyle(PrimaryButton()).disabled(busy).accessibilityIdentifier("passkey-sign-in")
-            Text("or use your password").font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+              Rectangle().fill(Color.speckLine).frame(height: 1)
+              Text("or use your password").font(.caption).foregroundStyle(.secondary).fixedSize()
+              Rectangle().fill(Color.speckLine).frame(height: 1)
+            }
             VStack(alignment: .leading, spacing: 8) {
               Text("Username").font(.subheadline.weight(.medium))
               TextField("Username", text: $username).textContentType(.username)
@@ -104,19 +110,18 @@ struct SignInView: View {
             if let error { InlineError(text: error) }
             Button(action: signIn) {
               HStack {
-                if busy { ProgressView().tint(.white) }
-                Text(busy ? "Signing in…" : "Sign in")
-                Image(systemName: "arrow.right")
+                if busy { ProgressView().tint(.speckTint) }
+                Text(busy ? "Signing in…" : "Sign in with password")
               }
-            }.buttonStyle(PrimaryButton()).disabled(busy || username.isEmpty || password.isEmpty)
+            }.buttonStyle(PrimaryButton(secondary: true)).disabled(busy || username.isEmpty || password.isEmpty)
               .accessibilityIdentifier("sign-in")
             DisclosureGroup("Server", isExpanded: $advanced) {
               TextField("https://speckrmm.com", text: $server).keyboardType(.URL)
                 .textInputAutocapitalization(.never).autocorrectionDisabled().padding(.top, 12)
             }.font(.subheadline).foregroundStyle(.secondary)
-          }.textFieldStyle(SpeckFieldStyle()).padding(32).frame(maxWidth: 520).frame(
+          }.textFieldStyle(SpeckFieldStyle()).padding(24).frame(maxWidth: 520).frame(
             maxWidth: .infinity)
-        }.frame(maxWidth: 780).frame(maxWidth: .infinity)
+        }.frame(maxWidth: .infinity)
       }.background(Color.paper).scrollDismissesKeyboard(.interactively)
     }
   }
@@ -146,7 +151,8 @@ struct SignInView: View {
 }
 struct SpeckFieldStyle: TextFieldStyle {
   func _body(configuration: TextField<Self._Label>) -> some View {
-    configuration.padding(14).background(.background, in: RoundedRectangle(cornerRadius: 10))
-      .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(.quaternary) }
+    configuration.padding(.horizontal, 12).padding(.vertical, 10).frame(minHeight: 44)
+      .background(Color.speckSurface, in: RoundedRectangle(cornerRadius: 8))
+      .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(Color.speckLine) }
   }
 }

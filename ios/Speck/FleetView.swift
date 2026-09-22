@@ -46,9 +46,8 @@ struct FleetView: View {
       Section {
         MetricPair {
           MetricTile(
-            title: "Online", value: "\(session.devices.filter(\.online).count)",
-            symbol: "checkmark.circle")
-          MetricTile(title: "Need attention", value: "\(session.activeAlerts)", symbol: "bell")
+            title: "Online", value: "\(session.devices.filter(\.online).count)")
+          MetricTile(title: "Need attention", value: "\(session.activeAlerts)")
         }.listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
         ScrollView(.horizontal, showsIndicators: false) {
           HStack(spacing: 8) {
@@ -126,12 +125,8 @@ struct DeviceRow: View {
   @Environment(\.dynamicTypeSize) private var typeSize
   var device: Device
   var body: some View {
-    VStack(alignment: .leading, spacing: 13) {
+    VStack(alignment: .leading, spacing: 8) {
       HStack(alignment: .top, spacing: 12) {
-        Image(systemName: device.windows ? "desktopcomputer" : "server.rack").font(.title3).frame(
-          width: 40, height: 40
-        ).background(Color.speckTint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-          .foregroundStyle(Color.speckTint)
         VStack(alignment: .leading, spacing: 4) {
           Text(device.name).font(.headline).lineLimit(2)
           Text(device.os.isEmpty ? titleCase(device.platform) : device.os).font(.caption)
@@ -156,18 +151,15 @@ struct DeviceRow: View {
         }
       }.font(.caption)
       if !device.site.isEmpty {
-        Label(device.site, systemImage: "building.2").font(.caption).foregroundStyle(.secondary)
+        Text(device.site).font(.caption).foregroundStyle(.secondary)
       }
-    }.padding(.vertical, 8)
+    }.padding(.vertical, 4)
   }
   private var statusLine: some View {
     HStack(spacing: 12) {
       Text(device.status).foregroundStyle(device.online ? Color.speckTint : Color.secondary)
       if device.restored {
-        HStack(spacing: 6) {
-          Image(systemName: "arrow.counterclockwise")
-          Text("Restored")
-        }
+        Text("Restored")
       }
     }.fixedSize(horizontal: false, vertical: true)
   }

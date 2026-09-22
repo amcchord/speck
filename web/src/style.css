@@ -102,79 +102,6 @@ small {
   font-size: 54px;
   color: var(--green);
 }
-aside {
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: 216px;
-  background: var(--forest);
-  color: #e3ebdf;
-  padding: 30px 20px 24px;
-  display: flex;
-  flex-direction: column;
-}
-.brand {
-  font-size: 36px;
-  font-weight: 650;
-  letter-spacing: -2px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: #f1f5e8;
-  margin-bottom: 48px;
-}
-.version {
-  font-size: 11px;
-  letter-spacing: 0;
-  color: #a5b599;
-  border: 1px solid #4c5d4b;
-  border-radius: 5px;
-  padding: 3px;
-  margin-top: 13px;
-}
-.brand .spark {
-  font-size: 41px;
-}
-aside > .eyebrow {
-  padding-left: 15px;
-  color: #7f9687;
-}
-nav button {
-  border: 0;
-  width: 100%;
-  background: transparent;
-  color: #9fb2a5;
-  text-align: left;
-  padding: 13px 15px;
-  margin-bottom: 7px;
-  border-radius: 8px;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-}
-nav button span {
-  font-size: inherit;
-}
-nav button.active {
-  color: #e6f2bc;
-  background: #304537;
-}
-nav button:hover {
-  background: #293e31;
-}
-.side-note {
-  margin-top: auto;
-  padding: 20px 7px;
-  font-size: 12px;
-  color: #b3c4ad;
-}
-.side-note small {
-  display: block;
-  color: #a9bca8;
-  line-height: 1.9;
-  margin: 12px 15px;
-}
 .status-dot {
   display: inline-block;
   width: 6px;
@@ -182,37 +109,6 @@ nav button:hover {
   border-radius: 50%;
   background: #78a851;
   margin-right: 7px;
-}
-.account {
-  border: 0;
-  border-top: 1px solid #35473a;
-  background: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-align: left;
-  color: #bcd0b7;
-  padding: 25px 0 0;
-  font-size: 13px;
-}
-.account b {
-  background: #c8dbaa;
-  color: #264a33;
-  border-radius: 50%;
-  padding: 9px 12px;
-}
-.account span {
-  flex: 1;
-}
-.account small {
-  display: block;
-  margin-top: 4px;
-  color: #a9bca8;
-}
-.workspace {
-  margin-left: 216px;
-  padding: 36px 36px 28px;
-  max-width: 1920px;
 }
 header {
   display: flex;
@@ -244,35 +140,6 @@ header p {
   background: #699d42;
   border-radius: 50%;
   margin-right: 6px;
-}
-.primary,
-.secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  min-height: 42px;
-  padding: 10px 16px;
-  border-radius: 7px;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.primary {
-  background: var(--green);
-  color: white;
-  border: 1px solid var(--green);
-}
-.primary:hover {
-  background: #284b34;
-}
-.secondary {
-  background: #fafcf7;
-  color: #435b45;
-  border: 1px solid #d5ddd0;
-}
-.secondary:hover {
-  background: #eaf0e3;
 }
 .stats {
   display: grid;
@@ -765,9 +632,6 @@ details pre {
   font-size: 11px;
   margin-top: 10px;
 }
-.text-link {
-  font-size: 11px;
-}
 .recovery-banner {
   display: flex;
   align-items: center;
@@ -877,16 +741,6 @@ dialog.wide {
 .dialog-head h2 {
   margin: 0;
 }
-.close {
-  border: 0;
-  background: #edf1e6;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  color: #6a805e;
-  font-size: 20px;
-}
 dialog p {
   font-size: 12px;
 }
@@ -949,74 +803,6 @@ dialog p {
 .remote-modal:fullscreen #remote-display {
   max-height: calc(100vh - 170px);
 }
-.login {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  min-height: 100vh;
-}
-.login-brand {
-  background: var(--forest);
-  color: #edf3df;
-  padding: 64px 12%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  font-size: 47px;
-  letter-spacing: -2px;
-  position: relative;
-  overflow: hidden;
-}
-.login-brand > .spark {
-  font-size: 48px;
-}
-.login-brand > .eyebrow {
-  margin-top: 15px;
-  color: var(--lime);
-  font-size: 11px;
-  letter-spacing: 2px;
-}
-.login-brand h1 {
-  margin-top: 80px;
-  font-size: 58px;
-  line-height: 1.12;
-  letter-spacing: -2.6px;
-  font-weight: 450;
-}
-.login-brand p {
-  color: #9cb08e;
-  font-size: 15px;
-  letter-spacing: 0;
-  line-height: 1.9;
-}
-.login-card {
-  align-self: center;
-  justify-self: center;
-  width: 360px;
-  max-width: 80%;
-  padding: 30px 0;
-}
-.login-card h1 {
-  font-size: 34px;
-  font-weight: 500;
-  margin-top: 22px;
-}
-.login-card p {
-  font-size: 13px;
-  margin-bottom: 37px;
-}
-.login-card input {
-  padding: 13px;
-}
-.login-card button {
-  width: 100%;
-  justify-content: space-between;
-  margin: 4px 0 23px;
-}
-.login-card small {
-  font-size: 11px;
-  line-height: 1.8;
-  display: block;
-}
 .orbit {
   height: 220px;
   width: 216px;
@@ -1064,14 +850,6 @@ dialog p {
   background: #6c8b5c;
 }
 @media (max-width: 1100px) {
-  aside {
-    width: 185px;
-    padding: 30px 16px;
-  }
-  .workspace {
-    margin-left: 185px;
-    padding: 30px 24px;
-  }
   .fleet-layout {
     grid-template-columns: 1fr;
   }
@@ -1091,44 +869,8 @@ dialog p {
   .stats small {
     font-size: 11px;
   }
-  .login-brand h1 {
-    font-size: 47px;
-  }
 }
-@media (max-width: 700px) {
-  aside {
-    position: static;
-    width: 100%;
-    padding: 18px;
-  }
-  .brand {
-    margin: 0;
-    font-size: 29px;
-  }
-  aside > .eyebrow,
-  .side-note,
-  .account {
-    display: none;
-  }
-  nav {
-    display: flex;
-    gap: 3px;
-    margin-top: 15px;
-  }
-  nav button {
-    padding: 8px 5px;
-    text-align: center;
-    font-size: 11px;
-    margin: 0;
-  }
-  nav button span {
-    display: block;
-    margin: auto;
-  }
-  .workspace {
-    margin: 0;
-    padding: 25px 15px;
-  }
+@media (max-width: 760px) {
   header {
     align-items: flex-start;
   }
@@ -1158,23 +900,8 @@ dialog p {
   .toolbar {
     flex-wrap: wrap;
   }
-  .login {
-    display: block;
-  }
-  .login-brand {
-    padding: 25px 35px;
-  }
-  .login-brand h1 {
-    font-size: 34px;
-    margin-top: 30px;
-  }
-  .login-brand p,
   .orbit {
     display: none;
-  }
-  .login-card {
-    padding: 40px 0;
-    margin: auto;
   }
   .tabs button {
     font-size: 11px;
@@ -1214,40 +941,9 @@ dialog p {
   flex-shrink: 0;
   vertical-align: middle;
 }
-.wordmark {
-  display: block;
-  width: 137px;
-  height: auto;
-}
-.brand {
-  gap: 8px;
-}
-.brand .version {
-  margin-top: 9px;
-  font-size: 10px;
-  padding: 1px 4px;
-}
-.login-brand > .wordmark {
-  width: 210px;
-}
-.login-brand > .eyebrow {
-  line-height: 1.7;
-  margin-top: 20px;
-  font-size: 10px;
-}
 .orbit img {
   width: 88px;
   height: 88px;
-}
-.side-note {
-  padding: 24px 8px;
-}
-.side-note .eyebrow {
-  color: #b8cba7;
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  line-height: 1.8;
-  margin: 0;
 }
 .recovery-icon {
   display: grid;
@@ -1345,9 +1041,6 @@ dialog p {
   outline: 2px solid var(--fern);
   outline-offset: 3px;
 }
-aside :focus-visible {
-  outline-color: var(--lime);
-}
 input,
 select,
 textarea {
@@ -1358,42 +1051,15 @@ textarea::placeholder {
   color: #6f7c6f;
   opacity: 1;
 }
-.login-card label {
-  font-size: 13px;
-  margin-bottom: 24px;
-}
-.login-card input {
-  min-height: 48px;
-  background: var(--white);
-}
-.login-card h1 {
-  margin-bottom: 32px;
-  letter-spacing: -1.2px;
-}
-.login-card .primary {
-  min-height: 48px;
-}
 #content:focus {
   outline: none;
 }
 #login .toast {
   position: static;
 }
-@media (min-width: 1600px) {
-  .workspace {
-    padding-left: 48px;
-    padding-right: 48px;
-  }
-}
 @media (max-width: 1100px) {
   .device-list {
     max-height: 280px;
-  }
-  .wordmark {
-    width: 118px;
-  }
-  .version {
-    display: none;
   }
   .stats strong {
     gap: 12px;
@@ -1401,59 +1067,7 @@ textarea::placeholder {
     flex-direction: column;
   }
 }
-@media (max-width: 700px) {
-  aside {
-    position: relative;
-    padding: 18px 16px 12px;
-  }
-  .brand {
-    width: 130px;
-  }
-  aside .wordmark {
-    width: 126px;
-  }
-  aside .account {
-    display: flex;
-    position: absolute;
-    right: 18px;
-    top: 18px;
-    border: 0;
-    padding: 4px;
-    gap: 8px;
-    min-height: 36px;
-  }
-  .account b {
-    display: none;
-  }
-  .account span {
-    font-size: 11px;
-  }
-  .account small {
-    margin: 0;
-    font-size: 10px;
-  }
-  nav {
-    gap: 4px;
-    margin-top: 18px;
-  }
-  nav button {
-    flex-direction: column;
-    gap: 5px;
-    padding: 8px 2px;
-    font-size: 11px;
-    min-height: 58px;
-  }
-  nav button span {
-    font-size: 10px;
-    line-height: 1.4;
-  }
-  nav .icon {
-    width: 19px;
-    height: 19px;
-  }
-  .workspace {
-    padding: 24px 16px;
-  }
+@media (max-width: 760px) {
   header {
     margin-bottom: 24px;
     gap: 12px;
@@ -1461,9 +1075,6 @@ textarea::placeholder {
   }
   .header-actions {
     display: flex;
-  }
-  .header-actions .secondary {
-    padding: 10px;
   }
   .header-actions .secondary span {
     display: none;
@@ -1563,7 +1174,7 @@ textarea::placeholder {
     font-size: 22px;
   }
   .plan,
-  .panel {
+.panel {
     padding: 22px;
   }
   .provider {
@@ -1578,22 +1189,6 @@ textarea::placeholder {
   }
   .provider summary small {
     flex-basis: 100%;
-  }
-  .login-brand {
-    padding: 34px 28px;
-    min-height: 220px;
-    justify-content: center;
-  }
-  .login-brand > .wordmark {
-    width: 178px;
-  }
-  .login-card {
-    max-width: calc(100% - 56px);
-    padding: 24px 0 40px;
-  }
-  .login-card h1 {
-    font-size: 28px;
-    margin: 18px 0 28px;
   }
   dialog {
     width: calc(100% - 24px);
@@ -1623,8 +1218,8 @@ textarea::placeholder {
 }
 @media (prefers-reduced-motion: reduce) {
   *,
-  *::before,
-  *::after {
+*::before,
+*::after {
     scroll-behavior: auto !important;
     animation: none !important;
     transition: none !important;
@@ -1644,22 +1239,15 @@ textarea::placeholder {
 .scroll table {
   min-width: 460px;
 }
-@media (max-width: 700px) {
+@media (max-width: 760px) {
   .stats > div {
     padding: 16px 12px;
   }
   .section-head h2 {
     font-size: 18px;
   }
-  .section-head .primary {
-    padding: 10px 12px;
-    font-size: 12px;
-  }
   .device-state small {
     display: none;
-  }
-  .account {
-    min-height: 44px;
   }
   .probe-toolbar {
     display: grid;
@@ -1695,12 +1283,10 @@ td summary {
 
 /* Keep remote text-entry controls usable with a phone keyboard open. */
 .remote-keyboard-keys { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.remote-keyboard-keys button { min-height: 44px; justify-content: center; }
+.remote-keyboard-keys button { justify-content: center; }
 #send-text { width: 100%; justify-content: center; }
 
 /* Passkeys share the quiet, compact account UI on desktop and touch devices. */
-.login-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
-.login-divider::before, .login-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
 .passkey-panel { margin: 20px 0; }
 .passkey-list { list-style: none; margin: 20px 0 0; padding: 0; }
 .passkey-list li { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 16px 0; border-top: 1px solid var(--line); }

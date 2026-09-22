@@ -29,7 +29,7 @@ struct BatchReviewView: View {
           Button {
             run()
           } label: {
-            ActionLabel(title: busy ? "Submitting…" : "Run on these machines", symbol: "play.fill")
+            ActionLabel(title: busy ? "Submitting…" : "Run on these machines")
           }.buttonStyle(PrimaryButton()).disabled(busy)
         } footer: {
           Text(

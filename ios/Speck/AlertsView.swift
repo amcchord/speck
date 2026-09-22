@@ -20,7 +20,7 @@ struct AlertsView: View {
         VStack(alignment: .leading, spacing: 12) {
           HStack {
             Image(systemName: item.resolved ? "checkmark.circle" : "exclamationmark.circle")
-              .foregroundStyle(item.resolved ? Color.speckTint : Color.orange)
+              .foregroundStyle(item.resolved ? Color.speckTint : Color.speckWarning)
             Text(item.title).font(.headline)
             Spacer()
           }
@@ -31,7 +31,7 @@ struct AlertsView: View {
             StatusPill(
               text: item.resolved
                 ? "Resolved" : item.acknowledged ? "Acknowledged" : "Needs attention",
-              tone: item.resolved ? .speckTint : .orange)
+              tone: item.resolved ? .speckTint : .speckWarning)
             Spacer()
             if !item.acknowledged && !item.resolved && session.canManage {
               Button("Acknowledge") { acknowledge(item) }.font(.subheadline.weight(.semibold))
