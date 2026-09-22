@@ -77,6 +77,16 @@ for (let i = 0; i < sizes.length; i++) {
   offset += pngs[i].length;
 }
 write("speck.ico", Buffer.concat([ico, ...pngs]));
+if (fs.existsSync(desktopAssets)) {
+  fs.copyFileSync(
+    path.join(dir, "speck.ico"),
+    path.join(desktopAssets, "speck.ico"),
+  );
+  fs.copyFileSync(
+    path.join(dir, "speck-icon-256.png"),
+    path.join(desktopAssets, "speck-icon-256.png"),
+  );
+}
 write(
   "speck-apple-touch.png",
   new Resvg(tile, { fitTo: { mode: "width", value: 180 } }).render().asPng(),

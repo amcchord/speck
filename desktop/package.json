@@ -2,7 +2,7 @@
   "name": "speck-desktop",
   "productName": "Speck Desktop",
   "version": "0.2.0",
-  "description": "A little lightweight RMM \u2014 desktop remote workspace",
+  "description": "A little lightweight RMM — desktop remote workspace",
   "author": {
     "name": "Speck contributors",
     "email": "austin@mcchord.net"
@@ -27,7 +27,9 @@
       "preload.cjs",
       "policy.cjs",
       "package.json",
-      "assets/*"
+      "assets/*",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md"
     ],
     "directories": {
       "output": "dist"
