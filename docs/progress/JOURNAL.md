@@ -344,3 +344,18 @@ after five minutes and survived loss of live memory. Validation: 82 backend, 28 
 Linux has no graphical capture acceptance. See the preview operations note for
 rollback paths and exact qualification. No provider recovery, patch deployment,
 password change or resource cleanup was performed.
+
+## 2026-09-22 — Taskbar names in the active app column
+
+`codex/app-display-name` / PR #11 replaces executable-first Fleet labels with the
+already-reported window title, including historical apps. Empty titles fall back
+to the executable. Search matches both, and tooltips retain executable details.
+Static runtime `6420df3` is deployed with atomic index replacement, retained old
+assets and rollback at
+`/var/lib/speck-rollback/20260922T231219Z-app-display-name-6420df3/web`.
+Public hashes, HTTPS health, backend process/environment and five device identities
+passed verification. The TypeScript/Vite build, 28 web unit checks and existing
+Chrome/Safari pane-refresh scenarios passed. Live Chrome/Safari verified window
+titles and title/executable search for all three Windows originals with no browser
+errors. Verification logins signed out; endpoint agents and backend were unchanged.
+Private release and acceptance records: `output/app-display-name/` in the worktree.

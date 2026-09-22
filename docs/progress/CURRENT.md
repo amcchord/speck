@@ -8,7 +8,9 @@ available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
 - **Preview and desktop presence**: previews recover from timeouts and retain one
   encrypted checkpoint every five minutes. All five original agents run 0.2.2.
   The open pane refreshes user/desktop/app details; disconnected users and the last
-  app stay explicit. Live Windows capture, five-minute saving, saved fallback and
+  app stay explicit. Fleet displays taskbar/window titles for current and last apps,
+  with executable fallback, and searches both names (web runtime `6420df3`).
+  Live Windows capture, five-minute saving, saved fallback and
   in-place presence changes passed. [Details](../operations/preview-reliability.md).
 - **Slide restore cleanup**: runtime `e5d37c6` tracks separate restored endpoints
   through Slide VM IDs and interface MACs. Repeated confirmed deletion, an

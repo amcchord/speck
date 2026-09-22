@@ -352,3 +352,18 @@ Release/rollback details, privacy behavior and synthetic captures:
 worktree's ignored `output/preview-reliability/`. Refresh the console once to load
 the new asset bundle; no operator desktop or iOS package update is required for
 the hosted console changes.
+
+## Active app display names — September 22, 2026
+
+Web runtime `6420df3` displays the existing foreground window title in Fleet for
+current and last-observed apps, matching the taskbar label. Blank titles fall back
+to the executable, which remains in the tooltip and searchable alongside the title.
+The static rollout preserved the backend process/environment and all five original
+device identities. Live Chromium/WebKit checks verified titles and both search
+forms on the three Windows machines. Build, 28 web checks and the existing
+Chromium/WebKit pane-refresh checks pass. No agent update was needed.
+
+Rollback index and assets:
+`/var/lib/speck-rollback/20260922T231219Z-app-display-name-6420df3/web`.
+Private deployment/evidence: `worktrees/app-display-name/output/app-display-name/`.
+Integration: https://github.com/amcchord/speck/pull/11.
