@@ -16,10 +16,11 @@ export function machinePresence(device: Item, now = Date.now() / 1000) {
     : current?.user ? [current.user] : [];
   const userLabel = users.length ? [...new Set(users)].join(", ")
     : t.desktop?.sessions_available ? "No users signed in" : "Not reported";
+  const appName = app?.title?.trim() || app?.process || "No app reported";
   return {
     app, current: !!current, appLabel: current ? "Foreground app" : "Last app observed",
-    title: app?.title || app?.process || "No app reported",
-    table: app ? `${current ? "" : "Last: "}${app.process || app.title}` : "—",
+    title: appName,
+    table: app ? `${current ? "" : "Last: "}${appName}` : "—",
     desktop, userLabel, userHeading: device.online ? "Signed-in user" : "Users at last report",
   };
 }

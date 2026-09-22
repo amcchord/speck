@@ -87,6 +87,6 @@ test('open machine refreshes user, desktop and app without resetting its preview
   await expect(page.locator('.machine-user')).toContainText('OFFICE\\Pat',{timeout:20000});
   await expect(page.locator('.machine-desktop')).toContainText('Active');
   await expect(page.locator('.machine-foreground h3')).toHaveText('Newly opened chart');
-  await expect(page.locator('[data-row="frontdesk"] .app-cell')).toHaveText('Chart.exe');
+  await expect(page.locator('[data-row="frontdesk"] .app-cell')).toHaveText('Newly opened chart');
   await expect(page.locator('.live-screen > img')).toHaveAttribute('data-test-keep','yes');
 });
