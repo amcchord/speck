@@ -2,8 +2,11 @@
   "name": "speck-desktop",
   "productName": "Speck Desktop",
   "version": "0.2.0",
-  "description": "A little lightweight RMM — desktop remote workspace",
-  "author": "Speck contributors",
+  "description": "A little lightweight RMM \u2014 desktop remote workspace",
+  "author": {
+    "name": "Speck contributors",
+    "email": "austin@mcchord.net"
+  },
   "license": "MIT",
   "main": "main.cjs",
   "scripts": {
@@ -82,8 +85,11 @@
         "entry": {
           "MimeType": "x-scheme-handler/speck;"
         }
-      }
+      },
+      "syncDesktopName": true
     },
     "artifactName": "Speck-Desktop-${version}-${os}-${arch}.${ext}"
-  }
+  },
+  "homepage": "https://speckrmm.com",
+  "desktopName": "speck-desktop.desktop"
 }

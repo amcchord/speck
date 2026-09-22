@@ -702,6 +702,7 @@ input[type="checkbox"] {
   overflow: hidden;
 }
 .remote-header {
+  margin: 0;
   display: flex;
   gap: 18px;
   align-items: center;
@@ -756,6 +757,9 @@ input[type="checkbox"] {
   flex-shrink: 0;
 }
 .remote-controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 11px;
   color: #cad8bf;
   margin: 0;

@@ -694,9 +694,9 @@ function configureRemote(d: Item) {
         document.getElementById("remote-cert") as HTMLInputElement
       ).checked,
     });
-    modal.close();
     d.remote_configured = true;
     d.remote_protocol = value("protocol");
+    modal.close();
     notify("Connection saved");
   });
 }
