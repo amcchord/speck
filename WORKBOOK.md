@@ -157,3 +157,25 @@ Deployed static assets only, with the preceding MVP web tree retained for rollba
 No backend restart, agent changes or recovery actions. Private deployment evidence
 is under `output/desktop-downloads/`; original screenshot bytes and digests are
 in `docs/screenshots/downloads/`.
+
+## Loading and Safari session startup — September 22, 2026
+
+Static source `8b83c7f` adds the shared accessible orbit loader across asynchronous
+pages and machine panels, discards stale navigation responses, and waits for a
+rendered first screen before declaring remote readiness. Safari/WebKit uses the
+Image decoder to avoid a rejected ImageBitmap blocking the frame queue. Blank
+startup has a single bounded reconnect and manual controls, with cancellation and
+operator-input protection. See `docs/operations/session-startup.md` and the
+[loading gallery](docs/screenshots/loading/README.md).
+
+Native Safari connected to Windows 11, Windows Server 2025 and the restored
+front desk without Ctrl+Alt+Del. Reconnect, fullscreen and Win+R/Escape worked.
+Chromium Windows RDP and Linux SSH also rendered successfully. A forced corrupt
+image regression passed in Safari; three-second API latency, errors, rapid
+navigation and mobile loading were checked locally. 18 web, 10 desktop and 35
+Python tests, Ruff, TypeScript/Vite and GitHub checks passed. No service restart,
+backend/agent/config changes, new recovery run or resource cleanup occurred.
+The previous web tree and exact deployment evidence are in private rollback and
+`output/windows-session-start/`. The original intermittent symptom could not be
+consistently reproduced; this removes a demonstrated decode failure and provides
+bounded recovery rather than claiming every black-screen cause is eliminated.
