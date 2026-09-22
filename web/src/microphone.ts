@@ -8,7 +8,7 @@ type Environment = {
 /** Own every capture resource so cancel, disconnect and late permission replies stop the mic. */
 export function startMicrophone(
   client: any,
-  handlers: { state: (state: "starting" | "active" | "stopped") => void; error: (message: string) => void },
+  handlers: { state: (state: "starting" | "waiting" | "active" | "stopped") => void; error: (message: string) => void },
   env: Environment,
 ) {
   let stopped = false;
@@ -17,11 +17,9 @@ export function startMicrophone(
   let source: MediaStreamAudioSourceNode | null = null;
   let node: AudioWorkletNode | null = null;
   let stream: any = null;
-  let deadline: ReturnType<typeof setTimeout> | undefined;
   const stop = () => {
     if (stopped) return;
     stopped = true;
-    clearTimeout(deadline);
     if (node) { node.port.onmessage = null; node.disconnect(); }
     source?.disconnect();
     media?.getTracks().forEach((track) => track.stop());
@@ -49,12 +47,15 @@ export function startMicrophone(
       stream = client.createAudioStream(`audio/L16;rate=${context.sampleRate},channels=1`);
       const writer = env.createWriter(stream);
       let active = false;
-      deadline = setTimeout(() => fail("The remote machine did not accept microphone audio."), 10000);
+      // RDP acknowledges input only when a remote application opens the
+      // recording device. Waiting for that application is not a timeout error.
+      handlers.state("waiting");
       writer.onack = (status: { code: number }) => {
         if (stopped) return;
+        if (status.code === 0x0206) { stop(); return; } // RESOURCE_CLOSED: recording ended normally.
         if (status.code !== 0) { fail("The remote machine closed microphone input."); return; }
         if (active) return;
-        clearTimeout(deadline); active = true;
+        active = true;
         node!.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
           if (!stopped && event.data.byteLength <= 16384) writer.sendData(event.data);
         };

@@ -1041,7 +1041,11 @@ async function connectRemote(d: Item) {
       state: (state) => {
         if (!modal.isConnected) return;
         micButton.textContent = state === "starting" ? "Cancel microphone"
+          : state === "waiting" ? "Microphone ready"
           : state === "active" ? "Mute microphone" : "Enable microphone";
+        micButton.title = state === "waiting"
+          ? "Waiting for a remote application to record audio. Click to disable."
+          : "";
         if (state === "stopped") recorder = null;
       },
       error: (message) => { if (modal.isConnected) notify(message, true); },

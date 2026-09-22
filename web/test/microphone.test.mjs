@@ -18,7 +18,7 @@ function harness() {
 }
 test('mute stops tracks, nodes, context and upstream exactly once', async()=>{
   const h=harness(), recorder=h.start(); await tick();
-  h.writer.onack({code:0}); assert.deepEqual(h.states,['starting','active']);
+  h.writer.onack({code:0}); assert.deepEqual(h.states,['starting','waiting','active']);
   h.node.port.onmessage({data:new ArrayBuffer(4096)}); assert.equal(h.calls.packets,1);
   recorder.stop(); recorder.stop();
   assert.deepEqual(h.calls,{tracks:1,closed:1,ended:1,source:1,node:1,packets:1});
@@ -41,4 +41,17 @@ test('disconnect while the worklet loads cannot restart capture',async()=>{
   const h=harness();let resolve;h.env.createContext=()=>({audioWorklet:{addModule:()=>new Promise(r=>resolve=r)},close:async()=>h.calls.closed++});
   const recorder=h.start();await tick();recorder.stop();resolve();await tick();
   assert.equal(h.calls.tracks,1);assert.equal(h.calls.closed,1);assert.equal(h.calls.ended,0);
+});
+test('microphone remains ready until the remote application starts recording',async(t)=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const h=harness(), recorder=h.start();await tick();
+  t.mock.timers.tick(60000);
+  assert.equal(h.states.at(-1),'waiting');assert.equal(h.errors.length,0);
+  h.writer.onack({code:0});assert.equal(h.states.at(-1),'active');recorder.stop();
+});
+test('remote application ending recording is a normal close',async()=>{
+  const h=harness();h.start();await tick();h.writer.onack({code:0});
+  h.writer.onack({code:0x0206});
+  assert.equal(h.errors.length,0);assert.equal(h.states.at(-1),'stopped');
+  assert.equal(h.calls.tracks,1);assert.equal(h.calls.closed,1);
 });
