@@ -106,3 +106,40 @@ Deployed static assets only, with the preceding MVP web tree retained for rollba
 No backend restart, agent changes or recovery actions. Private deployment evidence
 is under `output/desktop-downloads/`; original screenshot bytes and digests are
 in `docs/screenshots/downloads/`.
+
+## 2026-09-22 — Loading states and Safari first-screen recovery
+
+- Branch `codex/windows-session-start`, PR #3, runtime source
+  `8b83c7fd6e172d75a488980180d29a38e85c5f4f`, based on Downloads/MVP main `bfe4564`.
+- Added a shared accessible/reduced-motion orbit loader to boot, asynchronous
+  pages/refreshes, machine panels and remote startup. Response generations and
+  detached-panel checks prevent delayed responses from replacing newer views.
+- Safari/WebKit's image streams now use Guacamole's Image decoder, which releases
+  its task on load or failure; rejected ImageBitmap promises in the bundled path
+  otherwise leave the queue blocked. Remote readiness observes actual render
+  statistics and visible pixels, with a single button-free wake, one bounded
+  reconnect, operator-input protection and manual controls. Background time does
+  not consume the reconnect budget; leaving cancels it. Stable RDP size retained.
+- Validation: 18 web tests, 10 desktop tests, 35 Python tests, Ruff, TypeScript/Vite
+  and GitHub checks passed. Native Safari rendered a valid frame after a corrupt
+  frame with ImageBitmap forced to fail. Retained manual regression fixture.
+  Real frontend under three-second API delay verified loading/errors, mobile,
+  page navigation and drawer changes. Public gallery has three original captures
+  with dimensions/digests. Private live captures remain in ignored output.
+- Static deployment at 16:21 UTC retained the prior web tree before copying new
+  assets and atomically replacing index.html. Exact public asset bytes matched
+  `index-g3WzwBIm.js` and `index-BMV8_m27.css`. HTTPS health, unchanged environment
+  fingerprint, service PID and service start time passed. No restart or backend,
+  agent, account, recovery, provider or original/clone identity mutation.
+- Live native Safari: original Windows 11 front desk, Windows Server 2025 and
+  restored front desk displayed without Ctrl+Alt+Del. Manual reconnect,
+  fullscreen, Win+R and Escape passed. Chromium Windows desktop and Linux SSH
+  rendered successfully; browser console had no warnings/errors. Own remote
+  sessions and QA tabs were closed. Exam machine reserved for concurrent iOS QA.
+- Rollback: preceding web tree retained under the private release path recorded
+  in `output/windows-session-start/deployment.json`. Restore its assets before
+  atomically replacing index.html; no database restore or restart is needed.
+- Limitation: original intermittent foreground black screen was not reliably
+  reproduced. The decode failure and recovery behavior are demonstrated; further
+  reports may have distinct Windows/display causes. iOS native qualification
+  continues separately. No broader RMM qualification claims changed.

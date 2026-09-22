@@ -39,6 +39,9 @@ RDP resolution negotiation or server settings are changed.
 - Three-second synthetic API latency: desktop/mobile loaders, failures, refresh,
   page navigation and machine-tab switching checked. Prior delayed responses did
   not replace newer content. [Screenshots](../screenshots/loading/README.md).
+- Live Safari: Windows 11, Windows Server 2025 and restored front desk displayed
+  without Ctrl+Alt+Del. Reconnect, fullscreen and key macros passed. Chromium
+  Windows RDP and Linux SSH displayed successfully; no browser console errors.
 - The user's intermittent live black screen was not reproduced consistently in
   foreground Safari before this change. The decoder failure is independently
   demonstrated; do not treat it as proof of every black-screen cause.

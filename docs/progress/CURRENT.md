@@ -38,3 +38,12 @@ from the sidebar, sign-in, Settings and desktop handoff. The page links the
 published 0.2.1 Windows, macOS and Linux packages. See the
 [download gallery](../screenshots/downloads/README.md). This was a static-only
 rollout after the MVP release, preserving its authentication and Safari fixes.
+
+The September 22 static update from `8b83c7f` is live: shared loading states,
+stale-response protection, Safari/WebKit decoding and first-screen recovery.
+Native Safari Windows 11/Server 2025/restored front-desk connections, reconnect,
+fullscreen and key macros passed; Chromium RDP and Linux SSH still work. Forced
+image-decode failure and delayed/error API checks passed. No backend restart or
+agent/configuration change. See [startup notes](../operations/session-startup.md)
+and [loading screenshots](../screenshots/loading/README.md). Private release and
+rollback evidence: `output/windows-session-start/`.
