@@ -193,11 +193,12 @@ def prepare_batch(conn, body):
             raise HTTPException(409, "Template changed. Review its current revision.")
     prepared = []
     for device_id in body.device_ids:
-        row = conn.execute("SELECT * FROM devices WHERE id=?", (device_id,)).fetchone()
-        if not row or not row["approved"]:
+        row = conn.execute("SELECT d.*,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id WHERE d.id=?", (device_id,)).fetchone()
+        if not row or not row["approved"] or row["archived"] or row["revoked"]:
             raise HTTPException(409, "Every target must be an approved managed device")
         telemetry = json.loads(row["telemetry"])
-        if not telemetry.get("capabilities", {}).get("managed_operations"):
+        capabilities = telemetry.get("capabilities")
+        if not isinstance(capabilities, dict) or not capabilities.get("managed_operations"):
             raise HTTPException(409, f"Update Speck Agent on {row['label']} before using fleet operations")
         if time.time() - row["last_seen"] > 75:
             raise HTTPException(409, f"{row['label']} is offline. Refresh the target selection.")
@@ -255,40 +256,46 @@ def create_batch(body: Batch, user=Depends(require_user)):
                 raise HTTPException(409, "This request ID belongs to a different operation")
             return {"id": existing["id"], "existing": True}
         prepared = prepare_batch(conn, body)
-        batch_id, now = ident(), time.time()
-        conn.execute(
-            "INSERT INTO batches VALUES(?,?,?,?,?,?,?)",
-            (batch_id, body.request_id, fingerprint, body.name, body.kind, user["username"], now),
-        )
-        for d, payload, timeout in prepared:
-            job_id = ident()
-            conn.execute(
-                "INSERT INTO jobs(id,device_id,kind,payload,status,created,deadline,actor) VALUES(?,?,?,?,?,?,?,?)",
-                (
-                    job_id,
-                    d["id"],
-                    "command",
-                    seal(json.dumps(payload)),
-                    "queued",
-                    now,
-                    now + timeout + 120,
-                    user["username"],
-                ),
-            )
-            conn.execute("INSERT INTO batch_jobs VALUES(?,?,?)", (batch_id, job_id, d["id"]))
-        audit(
-            conn,
-            user["username"],
-            "batch.created",
-            detail={
-                "batch_id": batch_id,
-                "kind": body.kind,
-                "targets": body.device_ids,
-                "template_id": body.template_id,
-                "template_revision": body.template_revision,
-            },
-        )
+        batch_id = enqueue_batch(conn, body, prepared, user["username"], time.time())
     return {"id": batch_id, "existing": False}
+
+
+def enqueue_batch(conn, body, prepared, actor, now):
+    fingerprint = hashlib.sha256(body.model_dump_json(exclude={"confirmed"}).encode()).hexdigest()
+    batch_id = ident()
+    conn.execute(
+        "INSERT INTO batches VALUES(?,?,?,?,?,?,?)",
+        (batch_id, body.request_id, fingerprint, body.name, body.kind, actor, now),
+    )
+    for d, payload, timeout in prepared:
+        job_id = ident()
+        conn.execute(
+            "INSERT INTO jobs(id,device_id,kind,payload,status,created,deadline,actor) VALUES(?,?,?,?,?,?,?,?)",
+            (
+                job_id,
+                d["id"],
+                "command",
+                seal(json.dumps(payload)),
+                "queued",
+                now,
+                now + timeout + 120,
+                actor,
+            ),
+        )
+        conn.execute("INSERT INTO batch_jobs VALUES(?,?,?)", (batch_id, job_id, d["id"]))
+    audit(
+        conn,
+        actor,
+        "batch.created",
+        detail={
+            "batch_id": batch_id,
+            "kind": body.kind,
+            "targets": body.device_ids,
+            "template_id": body.template_id,
+            "template_revision": body.template_revision,
+        },
+    )
+    return batch_id
 
 
 @router.get("/batches")
@@ -311,6 +318,16 @@ def list_batches(user=Depends(require_user)):
                 {"id": row["id"], "name": row["name"], "kind": row["kind"], "created": row["created"], "jobs": jobs}
             )
     return result
+
+
+@router.get("/batches/{batch_id}")
+def batch_detail(batch_id: str, user=Depends(require_user)):
+    with db() as conn:
+        row = conn.execute("SELECT * FROM batches WHERE id=?", (batch_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Operation not found")
+        jobs = [public_job(j) for j in conn.execute("SELECT j.*,d.label FROM batch_jobs bj JOIN jobs j ON j.id=bj.job_id JOIN devices d ON d.id=bj.device_id WHERE bj.batch_id=? ORDER BY d.label", (batch_id,))]
+    return {"id": row["id"], "name": row["name"], "kind": row["kind"], "created": row["created"], "jobs": jobs}
 
 
 @router.post("/batches/{batch_id}/cancel")

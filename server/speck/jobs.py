@@ -11,9 +11,11 @@ KINDS = {'command', 'service.control', 'network.check', 'files.list', 'files.upl
 
 def get_device(device_id, approved=False):
     with db() as conn:
-        row = conn.execute('SELECT * FROM devices WHERE id=?', (device_id,)).fetchone()
+        row = conn.execute('SELECT d.*,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id WHERE d.id=?', (device_id,)).fetchone()
     if not row:
         raise HTTPException(404, 'Device not found')
+    if approved and (row['archived'] or row['revoked']):
+        raise HTTPException(409, 'This device is retired or its credential was revoked')
     if approved and not row['approved']:
         raise HTTPException(409, 'Approve this restored instance before managing it')
     return dict(row)
@@ -25,6 +27,9 @@ def create_job(device_id, kind, payload, actor, timeout=60):
         raise HTTPException(400, 'Unsupported job kind')
     job_id = ident()
     with db(write=True) as conn:
+        state = conn.execute('SELECT d.approved,d.archived,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id WHERE d.id=?', (device_id,)).fetchone()
+        if not state or not state['approved'] or state['archived'] or state['revoked']:
+            raise HTTPException(409, 'This device is not manageable')
         conn.execute('INSERT INTO jobs(id,device_id,kind,payload,status,created,deadline,actor) VALUES(?,?,?,?,?,?,?,?)',
                      (job_id, device_id, kind, seal(json.dumps(payload)), 'queued', time.time(), time.time() + timeout + 120, actor))
         audit(conn, actor, 'job.created', device_id, {'job_id': job_id, 'kind': kind})

@@ -4,12 +4,14 @@ import "./style.css";
 import "./operations.css";
 import "./orbits.css";
 import { createOperations } from "./operations";
+import { createManagement } from "./management";
 import { icon, wordmark } from "./icons";
 
 type Item = Record<string, any>;
 const app = document.querySelector<HTMLDivElement>("#app")!;
 let csrf = "",
   username = "",
+  role = "viewer",
   page = "fleet",
   fleet: Item[] = [],
   selected = "",
@@ -139,24 +141,29 @@ function login() {
   disconnect();
   csrf = "";
   username = "";
-  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button class="primary" type="submit">Sign in ${icon("arrow")}</button></form></main>`;
+  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><label>Authenticator or recovery code <small>if enabled</small><input id="login-code" autocomplete="one-time-code" maxlength="40"></label><button class="primary" type="submit">Sign in ${icon("arrow")}</button></form></main>`;
   on(
     "login",
     async () => {
       const r = await api("/auth/login", "POST", {
         username: value("username"),
         password: value("password"),
+        code: value("login-code"),
       });
       csrf = r.csrf;
       username = r.username;
+      role = r.role;
       await render();
     },
     "submit",
   );
 }
 function shell(title: string, subtitle: string) {
+  document.body.dataset.role = role;
   app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<span class="version">0.2</span></a><nav aria-label="Main navigation">${[
     ["fleet", "fleet", "Fleet"],
+    ["alerts", "activity", "Alerts"],
+    ["schedules", "activity", "Schedules"],
     ["patches", "patch", "Patches"],
     ["software", "package", "Software & scripts"],
     ["assistant", "spark", "AI assistant"],
@@ -165,6 +172,11 @@ function shell(title: string, subtitle: string) {
     ["activity", "activity", "Activity"],
     ["settings", "settings", "Settings"],
   ]
+    .filter(
+      ([id]) =>
+        role !== "viewer" ||
+        ["fleet", "alerts", "activity", "settings"].includes(id),
+    )
     .map(
       ([id, symbol, label]) =>
         `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol)}<span>${label}</span></button>`,
@@ -204,6 +216,10 @@ async function render() {
   if (
     ![
       "fleet",
+      "alerts",
+      "schedules",
+      "account",
+      "jobs",
       "patches",
       "software",
       "assistant",
@@ -216,6 +232,10 @@ async function render() {
     page = "fleet";
   const titles: Record<string, string[]> = {
     fleet: ["Fleet", ""],
+    alerts: ["Alerts", ""],
+    schedules: ["Schedules", ""],
+    account: ["Account & access", ""],
+    jobs: ["Job history", ""],
     patches: ["Patches", ""],
     software: ["Software & scripts", ""],
     assistant: ["AI assistant", ""],
@@ -228,14 +248,19 @@ async function render() {
   try {
     await {
       fleet: renderFleet,
+      alerts: management.renderAlerts,
+      schedules: management.renderSchedules,
+      account: management.renderAccount,
+      jobs: renderJobs,
       patches: ops.renderPatches,
       software: ops.renderSoftware,
       assistant: ops.renderAssistant,
       recovery: renderRecovery,
       slide: renderSlide,
-      activity: renderActivity,
+      activity: management.renderAudit,
       settings: renderSettings,
     }[page]!();
+    void management.updateIndicator().catch(() => {});
   } catch (err) {
     content(
       `<div class="empty"><h2>Unable to load</h2><p>${esc((err as Error).message)}</p></div>`,
@@ -262,13 +287,32 @@ const ops = createOperations({
     if (editor) editor.value = script;
   },
 });
+const management = createManagement({
+  api,
+  esc,
+  badge,
+  date,
+  on,
+  value,
+  notify,
+  dialog,
+  content,
+  openDevice,
+  role: () => role,
+  username: () => username,
+  refresh: render,
+});
 async function renderFleet() {
+  if (role === "viewer") {
+    showPreviews = false;
+    fleetSelection.clear();
+  }
   fleet = await api("/devices");
   fleetSelection.forEach((id) => {
     if (!fleet.some((d) => d.id === id)) fleetSelection.delete(id);
   });
   content(`<div class="fleet-summary"><span><i class="status-dot"></i><b>${fleet.filter((d) => d.online).length}</b> online</span><span><b>${fleet.length}</b> machines</span><span><b>${fleet.filter((d) => !d.approved).length}</b> need review</span><button id="add" class="primary">${icon("plus")} Add a device</button></div>
-  <div class="fleet-toolbar"><div class="search-field">${icon("search")}<input id="fleet-search" aria-label="Search devices" placeholder="Search machines, apps or addresses" value="${esc(fleetQuery)}"></div><select id="fleet-filter" aria-label="Filter status"><option value="all">All statuses</option><option value="online">Online</option><option value="review">Needs review</option><option value="offline">Offline</option></select><select id="fleet-os" aria-label="Filter operating system"><option value="all">All systems</option><option value="windows">Windows</option><option value="linux">Linux</option></select><select id="fleet-sort" aria-label="Sort machines"><option value="name">Name A–Z</option><option value="cpu">CPU high–low</option><option value="memory">Memory high–low</option><option value="seen">Last seen</option></select><label class="check preview-toggle"><input id="fleet-previews" type="checkbox" ${showPreviews ? "checked" : ""}> Live previews</label></div>
+  <div class="fleet-toolbar"><div class="search-field">${icon("search")}<input id="fleet-search" aria-label="Search devices" placeholder="Search machines, sites, tags or apps" value="${esc(fleetQuery)}"></div><select id="fleet-filter" aria-label="Filter status"><option value="all">All statuses</option><option value="online">Online</option><option value="review">Needs review</option><option value="offline">Offline</option></select><select id="fleet-os" aria-label="Filter operating system"><option value="all">All systems</option><option value="windows">Windows</option><option value="linux">Linux</option></select><select id="fleet-sort" aria-label="Sort machines"><option value="name">Name A–Z</option><option value="cpu">CPU high–low</option><option value="memory">Memory high–low</option><option value="seen">Last seen</option></select><label class="check preview-toggle"><input id="fleet-previews" type="checkbox" ${showPreviews ? "checked" : ""}> Live previews</label></div>
   <div id="bulk-actions" class="bulk-actions"></div><div class="fleet-table-wrap"><table class="fleet-table"><thead><tr><th><input id="select-page" type="checkbox" aria-label="Select machines on this page"></th><th>Machine</th><th>Status</th><th>Active app</th><th>CPU / RAM</th><th>Network</th><th class="preview-column" ${showPreviews ? "" : "hidden"}>Live screen</th><th class="fleet-actions-head">Connect</th></tr></thead><tbody id="fleet-rows"></tbody></table></div><div class="fleet-pagination"><span id="fleet-count"></span><div><button id="fleet-prev" class="secondary">Previous</button><button id="fleet-next" class="secondary">Next</button></div></div>`);
   on("add", enrollmentDialog);
   (document.getElementById("fleet-filter") as HTMLSelectElement).value =
@@ -335,7 +379,7 @@ function visibleFleet() {
   return fleet
     .filter(
       (d) =>
-        `${d.label} ${d.hostname} ${d.platform} ${d.telemetry?.active_app?.process || ""} ${primaryAddress(d)}`
+        `${d.label} ${d.hostname} ${d.site || ""} ${(d.tags || []).join(" ")} ${d.platform} ${d.telemetry?.active_app?.process || ""} ${primaryAddress(d)}`
           .toLowerCase()
           .includes(fleetQuery.toLowerCase()) &&
         (fleetPlatform === "all" || d.platform === fleetPlatform) &&
@@ -418,8 +462,10 @@ function renderFleetRows() {
 }
 async function openDevice(id: string, initialTab = "overview") {
   selected = id;
-  tab = initialTab;
-  if (!fleet.some((d) => d.id === id)) fleet = await api("/devices");
+  tab = role === "viewer" ? "overview" : initialTab;
+  if (!fleet.some((d) => d.id === id))
+    fleet = await api("/devices?include_archived=true");
+  if (fleet.find((d) => d.id === id)?.archived) tab = "overview";
   const old = document.querySelector<HTMLDialogElement>(".device-drawer");
   old?.close();
   const panel = dialog("Machine details", '<div id="detail"></div>');
@@ -461,17 +507,20 @@ async function renderDevice() {
   const d = fleet.find((x) => x.id === selected)!;
   if (!d) return;
   const t = d.telemetry || {},
-    names = [
-      "overview",
-      "services",
-      "network",
-      "terminal",
-      "files",
-      "patches",
-      "remote",
-    ];
+    names =
+      role === "viewer" || d.archived
+        ? ["overview"]
+        : [
+            "overview",
+            "services",
+            "network",
+            "terminal",
+            "files",
+            "patches",
+            "remote",
+          ];
   document.getElementById("detail")!.innerHTML =
-    `<div class="detail-head"><div><span class="eyebrow">${esc(d.platform)} / ${esc(d.arch)}</span><h2>${esc(d.label)}</h2><small>Last report ${date(d.last_seen)}</small></div><button id="device-edit" class="secondary">Edit</button></div>${!d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}<div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body"></div>`;
+    `<div class="detail-head"><div><span class="eyebrow">${esc(d.platform)} / ${esc(d.arch)}</span><h2>${esc(d.label)}</h2><small>Last report ${date(d.last_seen)}</small></div>${role !== "viewer" && !d.archived ? '<button id="device-edit" class="secondary">Edit</button>' : ""}</div>${d.archived ? '<div class="callout">Archived. Management is disabled; retained history and Slide identity remain available.</div>' : !d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}<div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body"></div>`;
   document.querySelectorAll<HTMLElement>("[data-tab]").forEach(
     (el) =>
       (el.onclick = () => {
@@ -480,7 +529,7 @@ async function renderDevice() {
       }),
   );
   on("device-edit", () => editDevice(d));
-  if (d.approved) {
+  if (d.approved && !d.archived && role !== "viewer") {
     document
       .querySelector(".detail-head")!
       .insertAdjacentHTML(
@@ -498,7 +547,8 @@ async function renderDevice() {
   if (tab === "overview") {
     body.innerHTML = `<div class="meters"><div><small>Processor</small><strong>${Number(t.cpu_percent || 0).toFixed(1)}<em>%</em></strong><progress aria-label="Processor utilization" max="100" value="${Number(t.cpu_percent || 0)}"></progress></div><div><small>Memory</small><strong>${Number(t.memory?.usedPercent || 0).toFixed(0)}<em>%</em></strong><progress aria-label="Memory utilization" max="100" value="${Number(t.memory?.usedPercent || 0)}"></progress><small>${bytes(t.memory?.used)} / ${bytes(t.memory?.total)}</small></div></div><div class="info-block"><span class="eyebrow">IN THE FOREGROUND</span><h3>${esc(t.active_app?.title || "No interactive desktop reported")}</h3><p>${esc(t.active_app ? `${t.active_app.process || ""} · ${t.active_app.user || ""}` : "Headless servers report services and network activity.")}</p></div><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${bytes(x.used)} / ${bytes(x.total)}</span><progress aria-label="Storage utilization ${esc(x.path)}" value="${Number(x.usedPercent)}" max="100"></progress></div>`).join("")}<div class="mini-grid"><div><small>Operating system</small>${esc(t.host?.platform || d.platform)} ${esc(t.host?.platformVersion)}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion)}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
 
-    await ops.previewPanel(d, body);
+    management.devicePanel(d, body);
+    if (role !== "viewer" && !d.archived) await ops.previewPanel(d, body);
   } else if (tab === "patches") {
     await ops.devicePatches(d, body);
   } else if (tab === "services") {
@@ -1211,7 +1261,7 @@ async function newPlan() {
     await renderRecovery();
   });
 }
-async function renderActivity() {
+async function renderJobs() {
   const [audit, jobs, devices] = await Promise.all([
     api("/audit"),
     api("/jobs"),
@@ -1222,6 +1272,7 @@ async function renderActivity() {
   );
 }
 async function renderSettings() {
+  if (role === "viewer") return management.renderAccount();
   const c = await api("/slide/connection");
   content(
     `<div class="settings-grid"><article class="panel"><span class="eyebrow">SLIDE INTEGRATION</span><h2>Slide connection</h2><p>${c.connected ? "A Slide account is connected. Enter a new token to replace it." : "Add an account-scoped Slide API token."}</p><label>API origin<input id="slide-url" value="${esc(c.url || "https://api.slide.tech")}"></label><label>API token<input id="slide-token" type="password" autocomplete="new-password"></label><button id="save-slide" class="primary">Verify & connect</button></article><article class="panel"><span class="eyebrow">DEVICE ENROLLMENT</span><h2>Windows and Linux agents</h2><p>Install Speck as a Windows service or a Linux systemd service. Devices connect outbound over HTTPS.</p><button id="enrollment" class="secondary">Add a device</button><hr><h3>Remote access</h3><p>Browser RDP with audio and microphone, VNC for desktop viewing, or SSH for a terminal. Configure each connection from the device's Remote tab.</p><p>Native RDP fallback requires network reachability to the endpoint.</p></article></div>`,
@@ -1236,6 +1287,11 @@ async function renderSettings() {
   });
   on("enrollment", enrollmentDialog);
   await ops.settingsPanel();
+  await management.settingsPanel();
+  if (role !== "admin") {
+    for (const id of ["save-slide", "save-ai"])
+      document.getElementById(id)?.setAttribute("disabled", "");
+  }
 }
 window.addEventListener("hashchange", () => {
   if (username) render();
@@ -1261,10 +1317,14 @@ setInterval(async () => {
     polling = false;
   }
 }, 15000);
+setInterval(() => {
+  if (username) void management.updateIndicator().catch(() => {});
+}, 30000);
 api("/auth/me")
   .then(async (r) => {
     csrf = r.csrf;
     username = r.username;
+    role = r.role;
     await render();
   })
   .catch(() => login());
