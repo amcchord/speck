@@ -20,7 +20,7 @@ struct AlertsView: View {
         VStack(alignment: .leading, spacing: 12) {
           HStack {
             Image(systemName: item.resolved ? "checkmark.circle" : "exclamationmark.circle")
-              .foregroundStyle(item.resolved ? .speckTint : .orange)
+              .foregroundStyle(item.resolved ? Color.speckTint : Color.orange)
             Text(item.title).font(.headline)
             Spacer()
           }
