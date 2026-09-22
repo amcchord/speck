@@ -1,0 +1,32 @@
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 260px;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ink);
+}
+.loading-state strong { font-size: 14px; font-weight: 550; }
+.loading-state small { max-width: 34ch; line-height: 1.6; color: var(--muted); }
+.loading-orbit { position: relative; display: grid; place-items: center; width: 64px; height: 64px; margin-bottom: 6px; }
+.loading-orbit img { width: 25px; height: 25px; }
+.loading-orbit i { position: absolute; inset: 0; border: 1px solid var(--line); border-radius: 50%; animation: loading-orbit 2.4s linear infinite; }
+.loading-orbit i::after { content: ""; position: absolute; top: -4px; left: calc(50% - 4px); width: 8px; height: 8px; border-radius: 50%; background: var(--fern); }
+@keyframes loading-orbit { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .loading-orbit i { animation: none; } }
+.boot-loading { min-height: 100dvh; display: grid; place-items: center; background: var(--paper); }
+#device-body > .loading-state, #transfers > .loading-state { min-height: 180px; }
+.remote-stage { position: relative; }
+.remote-startup { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--forest); color: var(--lime); padding: 20px; overflow: auto; }
+.remote-startup[hidden] { display: none; }
+.remote-startup .loading-state { min-height: 0; color: var(--lime); padding: 24px 10px; }
+.remote-startup .loading-state small { color: #c0cdb7; }
+.remote-startup .loading-orbit img { filter: brightness(0) saturate(100%) invert(91%) sepia(18%) saturate(498%) hue-rotate(27deg) brightness(102%) contrast(89%); }
+.remote-startup .loading-orbit i { border-color: #57735d; }
+.remote-startup .loading-orbit i::after { background: var(--lime); }
+.remote-startup .toolbar { justify-content: center; flex-wrap: wrap; }
+.remote-startup[data-error] .loading-orbit i { animation: none; }
+@media (max-width: 600px) { .loading-state { min-height: 220px; } }

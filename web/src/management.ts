@@ -1,3 +1,4 @@
+import { loadingState } from "./loading";
 import "./management.css";
 type Item = Record<string, any>;
 
@@ -24,6 +25,7 @@ export function createManagement(ui: Item) {
     alertCursor = "";
 
   async function renderAlerts() {
+    ui.loading("Loading alerts…");
     const [data, devices, monitoring] = await Promise.all([
       api(
         "/alerts?state=" +
@@ -193,6 +195,7 @@ export function createManagement(ui: Item) {
   }
 
   async function renderSchedules() {
+    ui.loading("Loading schedules…");
     const [schedules, devices] = await Promise.all([
       api("/schedules"),
       api("/devices?include_archived=true"),
@@ -348,9 +351,10 @@ export function createManagement(ui: Item) {
     until: "",
   };
   async function renderAudit() {
+    ui.loading("Loading activity…");
     const devices = await api("/devices?include_archived=true");
     content(
-      `<div class="management-toolbar audit-filters"><label>Actor<input id="audit-actor" value="${esc(auditQuery.actor)}" placeholder="Any actor"></label><label>Action<input id="audit-action" value="${esc(auditQuery.action)}" placeholder="e.g. schedule"></label><label>Machine<select id="audit-device"><option value="">All machines</option>${devices.map((d: Item) => `<option value="${d.id}" ${auditQuery.device_id === d.id ? "selected" : ""}>${esc(d.label)}${d.archived ? " · archived" : ""}</option>`).join("")}</select></label><label>From<input type="date" id="audit-since" value="${auditQuery.since}"></label><label>Through<input type="date" id="audit-until" value="${auditQuery.until}"></label>${button("audit-filter", "Apply filters")}${button("audit-export", "Export JSON")}${canManage() ? '<a href="#jobs" class="text-link">Job history</a>' : ""}</div><div class="scroll"><table class="audit-table"><thead><tr><th>Event</th><th>Actor</th><th>Machine</th><th>When</th></tr></thead><tbody id="audit-rows"></tbody></table></div><div class="management-footer">${button("audit-more", "Load more")}<span id="audit-count"></span></div>`,
+      `<div class="management-toolbar audit-filters"><label>Actor<input id="audit-actor" value="${esc(auditQuery.actor)}" placeholder="Any actor"></label><label>Action<input id="audit-action" value="${esc(auditQuery.action)}" placeholder="e.g. schedule"></label><label>Machine<select id="audit-device"><option value="">All machines</option>${devices.map((d: Item) => `<option value="${d.id}" ${auditQuery.device_id === d.id ? "selected" : ""}>${esc(d.label)}${d.archived ? " · archived" : ""}</option>`).join("")}</select></label><label>From<input type="date" id="audit-since" value="${auditQuery.since}"></label><label>Through<input type="date" id="audit-until" value="${auditQuery.until}"></label>${button("audit-filter", "Apply filters")}${button("audit-export", "Export JSON")}${canManage() ? '<a href="#jobs" class="text-link">Job history</a>' : ""}</div><div class="scroll"><table class="audit-table"><thead><tr><th>Event</th><th>Actor</th><th>Machine</th><th>When</th></tr></thead><tbody id="audit-rows"><tr><td colspan="4">${loadingState("Loading activity…")}</td></tr></tbody></table></div><div class="management-footer">${button("audit-more", "Load more")}<span id="audit-count"></span></div>`,
     );
     let next: number | null = null,
       count = 0,
@@ -441,6 +445,7 @@ export function createManagement(ui: Item) {
   }
 
   async function renderAccount() {
+    ui.loading("Loading account & access…");
     const me = await api("/access/me");
     const users: Item[] = isAdmin() ? await api("/access/users") : [];
     content(

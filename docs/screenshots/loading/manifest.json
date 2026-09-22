@@ -1,0 +1,23 @@
+[
+  {
+    "file": "drawer-loading.png",
+    "sha256": "8703619dac5b94d76f4631b8e2b960c90a083607be188d6b344b2720f9ec976e",
+    "width": 65536,
+    "height": 4292542531,
+    "source": "Local synthetic API preview, 3-second API delay, real frontend, unretouched CUA screenshot"
+  },
+  {
+    "file": "fleet-loading.png",
+    "sha256": "082189015c5dd4aa353b789f9e59056f659312e8d0fa491a7477a712f89f58e7",
+    "width": 65536,
+    "height": 4292542531,
+    "source": "Local synthetic API preview, 3-second API delay, real frontend, unretouched CUA screenshot"
+  },
+  {
+    "file": "mobile-loading.png",
+    "sha256": "24526969a3314f33fcf7e95173c0fab1e070aa09f1542369838125202df0185b",
+    "width": 65536,
+    "height": 4292542531,
+    "source": "Local synthetic API preview, 3-second API delay, real frontend, unretouched CUA screenshot"
+  }
+]

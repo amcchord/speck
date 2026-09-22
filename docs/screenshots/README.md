@@ -1,5 +1,7 @@
 # Speck screenshots
 
+**[Loading states](loading/README.md)**: immediate progress on desktop, mobile and machine details.
+
 **[Desktop downloads](downloads/README.md)**: installers in the console and on the sign-in page.
 
 **[Open the current 0.2 gallery](v0.2/README.md)**: fleet table, device drawer,

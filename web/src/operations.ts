@@ -1,3 +1,4 @@
+import { loadingState } from "./loading";
 type Item = Record<string, any>;
 export function createOperations(ui: Item) {
   const { api, esc, badge, date, icon, on, value, notify, content } = ui;
@@ -40,7 +41,7 @@ export function createOperations(ui: Item) {
   async function showBatch(id: string) {
     const modal = dialog(
       "Operation progress",
-      '<div id="batch-progress">Loading…</div><div class="dialog-footer">' +
+      `<div id="batch-progress">${loadingState("Loading operation…")}</div><div class="dialog-footer">` +
         button("cancel-queued", "Cancel queued jobs") +
         "</div>",
     );
@@ -77,6 +78,7 @@ export function createOperations(ui: Item) {
     }
   }
   async function renderPatches() {
+    ui.loading("Loading updates…");
     const [devices, reports, batches] = await Promise.all([
       ui.devices(),
       api("/patches"),
@@ -139,7 +141,9 @@ export function createOperations(ui: Item) {
       .forEach((el) => (el.onclick = () => void showBatch(el.dataset.batch!)));
   }
   async function devicePatches(d: Item, el: HTMLElement) {
+    el.innerHTML = loadingState("Loading updates…");
     const reports = await api("/patches");
+    if (!el.isConnected) return;
     const r = reports.find((r: Item) => r.device_id === d.id);
     el.innerHTML = `<div class="section-head"><h3>Available updates</h3>${button("device-scan", "Scan now")}</div>${r ? `<p>Scanned ${date(r.scanned)} · ${esc(r.report.manager)}${r.report.reboot_required ? " · Reboot required" : ""}</p><div class="scroll"><table><thead><tr><th><input id="updates-all" type="checkbox" aria-label="Select all displayed updates"></th><th>Update</th><th>Type</th></tr></thead><tbody>${r.report.updates.map((u: Item) => `<tr><td><input type="checkbox" data-update="${esc(u.id)}" aria-label="Select ${esc(u.title)}"></td><td><b>${esc(u.title)}</b><small>${esc(u.version || "")} ${esc((u.kb || []).join(", "))}</small></td><td>${esc(u.severity || "Update")}</td></tr>`).join("")}</tbody></table></div>${r.report.truncated ? "<p>Showing the first 150 updates. Install these, then scan again for the rest.</p>" : ""}<div class="toolbar">${button("install-updates", "Install selected", true)}<small>No automatic reboot.</small></div>` : '<div class="empty"><h3>Start with a scan</h3><p>Find available updates without installing them.</p></div>'}`;
     on("device-scan", () => scan([d.id]));
@@ -165,6 +169,7 @@ export function createOperations(ui: Item) {
     });
   }
   async function renderSoftware() {
+    ui.loading("Loading software & scripts…");
     const [library, batches] = await Promise.all([
       refreshTemplates(),
       api("/batches"),
@@ -343,6 +348,7 @@ export function createOperations(ui: Item) {
           "<span>Screen preview is off for this machine</span></div>";
         return;
       }
+      if (!target.innerHTML) target.innerHTML = loadingState("Loading live screen…");
       const info = await api("/devices/" + d.id + "/preview-status");
       if (!target.isConnected) return;
       if (info.available) {
@@ -430,6 +436,7 @@ export function createOperations(ui: Item) {
     });
   }
   async function renderAssistant() {
+    ui.loading("Loading AI assistant…");
     const cfg = await api("/ai/settings");
     content(
       `<div class="assistant-home"><span class="assistant-symbol">${icon("spark")}</span><h2>What are we fixing?</h2><p>Draft a script, diagnose an issue, or create a reusable template.</p><div class="assistant-composer"><label>Operating system<select id="assistant-platform"><option value="windows">Windows · PowerShell</option><option value="linux">Linux · shell</option></select></label><label>Your task<textarea id="assistant-task" rows="4" placeholder="Write a script that checks disk space and reports services that failed to start"></textarea></label><div class="toolbar">${button("assistant-start", icon("spark") + " Ask Speck", true)}<small>${cfg.configured ? "Connected · " + esc(cfg.model) : "Connect OpenAI in Settings"}</small></div></div><div class="assistant-prompts">${["Diagnose a slow workstation", "Check DNS and connectivity", "Draft a software installer"].map((s) => `<button class="secondary" data-prompt="${esc(s)}">${esc(s)}</button>`).join("")}</div><p class="muted">AI drafts are reviewed before execution. For machine context, use Ask AI in its detail panel.</p></div>`,
@@ -450,9 +457,12 @@ export function createOperations(ui: Item) {
     );
   }
   async function settingsPanel() {
-    const cfg = await api("/ai/settings");
     const el = document.createElement("section");
     el.className = "panel";
+    el.innerHTML = loadingState("Loading AI settings…");
+    document.getElementById("content")!.append(el);
+    const cfg = await api("/ai/settings");
+    if (!el.isConnected) return;
     el.innerHTML = `<h2>OpenAI</h2><p>${cfg.configured ? "Connected" : "Not connected"}. Keys stay encrypted on the server.</p><label>Model<input id="ai-model" value="${esc(cfg.model)}"></label><label>API key<input id="ai-key" type="password" autocomplete="new-password" placeholder="${cfg.configured ? "Leave blank to keep the current key" : "OpenAI API key"}"></label>${button("save-ai", "Save AI settings", true)}<h2>Remote workspace</h2><label>Open remote sessions with<select id="remote-client"><option value="browser">Browser workspace</option><option value="desktop">Speck Desktop, with browser fallback</option></select></label><p>Speck Desktop adds shared clipboard and native key shortcuts.</p><a class="text-link" href="#downloads">Download Speck Desktop →</a>`;
     document.getElementById("content")!.append(el);
     (el.querySelector("#remote-client") as HTMLSelectElement).value =

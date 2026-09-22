@@ -9,6 +9,11 @@ import { createOperations } from "./operations";
 import { createManagement } from "./management";
 import { icon, wordmark } from "./icons";
 import { startMicrophone } from "./microphone";
+import { loadingState, createViewScope, StaleViewError } from "./loading";
+import { useReliableImageDecoder, hasVisiblePixels, watchRemoteStartup } from "./remote-startup";
+import "./loading.css";
+
+const viewScope = createViewScope();
 
 type Item = Record<string, any>;
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -78,6 +83,7 @@ const badge = (s: string, good = false) => {
 };
 
 async function api(path: string, method = "GET", body?: any): Promise<any> {
+  const current = viewScope.checkpoint();
   const headers: Record<string, string> = { "X-CSRF-Token": csrf };
   if (body !== undefined && !(body instanceof FormData))
     headers["Content-Type"] = "application/json";
@@ -90,8 +96,9 @@ async function api(path: string, method = "GET", body?: any): Promise<any> {
         : body === undefined
           ? undefined
           : JSON.stringify(body),
-  });
+  }).catch((err) => { current(); throw err; });
   const value = await r.json().catch(() => ({}));
+  current();
   if (r.status === 401 && path !== "/auth/login") {
     signedOut();
     throw new Error("Your session ended. Sign in again.");
@@ -121,6 +128,9 @@ function on(id: string, handler: (e: Event) => any, event = "click") {
     try {
       await handler(e);
     } catch (err) {
+      if (err instanceof StaleViewError) return;
+      if (document.getElementById("content")?.getAttribute("aria-busy") === "true")
+        content(loadError(err));
       notify((err as Error).message, true);
     } finally {
       el.disabled = false;
@@ -141,6 +151,7 @@ function disconnect() {
   keyboard = null;
 }
 function signedOut() {
+  viewScope.reset();
   disconnect();
   csrf = "";
   username = "";
@@ -148,6 +159,7 @@ function signedOut() {
   app.innerHTML = `<main class="downloads-public"><header><a href="#signin" aria-label="Speck home">${wordmark()}</a><a class="secondary" href="#signin">Sign in ${icon("arrow")}</a></header><h1>Downloads</h1>${desktopDownloads(false)}</main>`;
 }
 function login() {
+  viewScope.reset();
   disconnect();
   csrf = "";
   username = "";
@@ -213,9 +225,21 @@ function shell(title: string, subtitle: string) {
   on("refresh", render);
 }
 function content(html: string) {
-  document.getElementById("content")!.innerHTML = html;
+  const el = document.getElementById("content");
+  if (!el) return;
+  el.innerHTML = html;
+  el.setAttribute("aria-busy", "false");
+}
+function loadError(error: unknown) {
+  return `<div class="empty" role="alert"><h2>Unable to load</h2><p>${esc((error as Error).message)}</p><p>Use Refresh to try again.</p></div>`;
+}
+function loading(label: string) {
+  viewScope.reset();
+  content(loadingState(label));
+  document.getElementById("content")?.setAttribute("aria-busy", "true");
 }
 async function render() {
+  viewScope.reset();
   disconnect();
   document
     .querySelectorAll<HTMLDialogElement>("dialog")
@@ -277,9 +301,7 @@ async function render() {
     }[page]!();
     void management.updateIndicator().catch(() => {});
   } catch (err) {
-    content(
-      `<div class="empty"><h2>Unable to load</h2><p>${esc((err as Error).message)}</p></div>`,
-    );
+    if (!(err instanceof StaleViewError) && username) content(loadError(err));
   }
 }
 const ops = createOperations({
@@ -294,6 +316,7 @@ const ops = createOperations({
   notify,
   dialog,
   content,
+  loading,
   devices: () => api("/devices"),
   selected: () => [...fleetSelection],
   openDevice,
@@ -312,12 +335,14 @@ const management = createManagement({
   notify,
   dialog,
   content,
+  loading,
   openDevice,
   role: () => role,
   username: () => username,
   refresh: render,
 });
 async function renderFleet() {
+  loading("Loading fleet…");
   if (role === "viewer") {
     showPreviews = false;
     fleetSelection.clear();
@@ -478,14 +503,20 @@ function renderFleetRows() {
 async function openDevice(id: string, initialTab = "overview") {
   selected = id;
   tab = role === "viewer" ? "overview" : initialTab;
-  if (!fleet.some((d) => d.id === id))
-    fleet = await api("/devices?include_archived=true");
-  if (fleet.find((d) => d.id === id)?.archived) tab = "overview";
   const old = document.querySelector<HTMLDialogElement>(".device-drawer");
   old?.close();
-  const panel = dialog("Machine details", '<div id="detail"></div>');
+  const panel = dialog("Machine details", `<div id="detail">${loadingState("Loading machine…")}</div>`);
   panel.classList.add("device-drawer");
-  await renderDevice();
+  try {
+    if (!fleet.some((d) => d.id === id))
+      fleet = await api("/devices?include_archived=true");
+    if (!panel.isConnected || selected !== id) return;
+    if (fleet.find((d) => d.id === id)?.archived) tab = "overview";
+    await renderDevice();
+  } catch (err) {
+    if (!(err instanceof StaleViewError) && panel.isConnected)
+      panel.querySelector("#detail")!.innerHTML = loadError(err);
+  }
 }
 function launchRemote(d: Item) {
   if (!d.remote_configured) {
@@ -517,7 +548,17 @@ function launchRemote(d: Item) {
     notify("Opening Speck Desktop. Your browser connection remains available.");
   } else location.hash = "remote/" + d.id;
 }
+let detailVersion = 0;
 async function renderDevice() {
+  const version = ++detailVersion;
+  try { await renderDeviceContent(); }
+  catch (err) {
+    const body = document.getElementById("device-body");
+    if (!(err instanceof StaleViewError) && version === detailVersion && body)
+      body.innerHTML = loadError(err);
+  }
+}
+async function renderDeviceContent() {
   disconnect();
   const d = fleet.find((x) => x.id === selected)!;
   if (!d) return;
@@ -535,7 +576,7 @@ async function renderDevice() {
             "remote",
           ];
   document.getElementById("detail")!.innerHTML =
-    `<div class="detail-head"><div><span class="eyebrow">${esc(d.platform)} / ${esc(d.arch)}</span><h2>${esc(d.label)}</h2><small>Last report ${date(d.last_seen)}</small></div>${role !== "viewer" && !d.archived ? '<button id="device-edit" class="secondary">Edit</button>' : ""}</div>${d.archived ? '<div class="callout">Archived. Management is disabled; retained history and Slide identity remain available.</div>' : !d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}<div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body"></div>`;
+    `<div class="detail-head"><div><span class="eyebrow">${esc(d.platform)} / ${esc(d.arch)}</span><h2>${esc(d.label)}</h2><small>Last report ${date(d.last_seen)}</small></div>${role !== "viewer" && !d.archived ? '<button id="device-edit" class="secondary">Edit</button>' : ""}</div>${d.archived ? '<div class="callout">Archived. Management is disabled; retained history and Slide identity remain available.</div>' : !d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}<div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body">${loadingState("Loading " + tab + "…")}</div>`;
   document.querySelectorAll<HTMLElement>("[data-tab]").forEach(
     (el) =>
       (el.onclick = () => {
@@ -637,7 +678,7 @@ async function renderDevice() {
       }),
     );
   } else if (tab === "files") {
-    body.innerHTML = `<p>Transfers are verified with SHA-256. Maximum file size: 256 MiB.</p><div class="toolbar"><input id="file-path" aria-label="Full file path" placeholder="Full path on this device" value="${d.platform === "windows" ? "C:\\ProgramData" : "/tmp"}"><button id="browse" class="secondary">List</button><button id="download" class="primary">Download</button></div><div class="toolbar"><input id="file-upload" aria-label="Choose file to upload" type="file"><button id="upload" class="secondary">Upload to path</button></div><small>Upload path includes the filename. Existing files are preserved.</small><div id="job-result"></div><div id="transfers"></div>`;
+    body.innerHTML = `<p>Transfers are verified with SHA-256. Maximum file size: 256 MiB.</p><div class="toolbar"><input id="file-path" aria-label="Full file path" placeholder="Full path on this device" value="${d.platform === "windows" ? "C:\\ProgramData" : "/tmp"}"><button id="browse" class="secondary">List</button><button id="download" class="primary">Download</button></div><div class="toolbar"><input id="file-upload" aria-label="Choose file to upload" type="file"><button id="upload" class="secondary">Upload to path</button></div><small>Upload path includes the filename. Existing files are preserved.</small><div id="job-result"></div><div id="transfers">${loadingState("Loading transfers…")}</div>`;
     on("browse", async () =>
       showJob(await queue("files.list", { path: value("file-path") })),
     );
@@ -690,9 +731,9 @@ async function showJob(id: string) {
   }
 }
 async function transfers(id: string) {
-  const rows = await api("/transfers?device_id=" + id);
   const el = document.getElementById("transfers");
-  if (el)
+  const rows = await api("/transfers?device_id=" + id);
+  if (el?.isConnected)
     el.innerHTML = `<h3>Recent transfers</h3>${rows.map((r: Item) => `<div class="transfer"><span>${esc(r.name)}<small>${esc(r.direction)} · ${bytes(r.size)} · ${esc(r.status)}</small></span>${r.status === "ready" ? `<a href="/api/transfers/${r.id}/file">Save file ↗</a>` : ""}</div>`).join("") || "<p>No transfers yet.</p>"}`;
 }
 function dialog(title: string, html: string) {
@@ -774,9 +815,9 @@ function configureRemote(d: Item) {
     notify("Connection saved");
   });
 }
-async function renderRemotePage(id: string) {
+async function renderRemotePage(id: string, attempt = 0) {
   app.innerHTML =
-    '<main class="remote-workspace"><div class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a><h1>Opening remote workspace…</h1></div></main>';
+    `<main class="remote-workspace"><div class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a><h1>Remote workspace</h1></div><section class="remote-stage"><div class="remote-startup">${loadingState("Opening remote workspace…")}</div></section></main>`;
   try {
     fleet = await api("/devices");
     const d = fleet.find((d) => d.id === id);
@@ -785,17 +826,27 @@ async function renderRemotePage(id: string) {
       throw new Error(
         "Configure the machine’s Remote connection in Fleet first.",
       );
-    await connectRemote(d);
+    await connectRemote(d, attempt);
   } catch (e) {
+    if (e instanceof StaleViewError || !username) return;
     app.innerHTML = `<main class="remote-workspace"><div class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a><h1>Remote workspace</h1></div><div class="empty"><p class="remote-error">${esc((e as Error).message)}</p></div></main>`;
   }
 }
-async function connectRemote(d: Item) {
-  app.innerHTML = `<main class="remote-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${esc(d.label)}</h1><small id="remote-status">Connecting…</small></div><button id="remote-ai" class="secondary">${icon("spark")} Screen assistant</button><button id="fullscreen" class="secondary">Full screen</button></header><div class="remote-controls"><button id="sound" class="secondary">Enable sound</button><button id="mic" class="secondary">Enable microphone</button><label>Keys <select id="key-macro"><option value="">Send shortcut…</option><option value="cad">Ctrl + Alt + Del</option><option value="task">Task manager</option><option value="run">Windows + R</option><option value="alt-tab">Alt + Tab</option><option value="copy">Ctrl + C</option><option value="paste">Ctrl + V</option><option value="escape">Escape</option><option value="tab">Tab</option></select></label><button id="type-secret" class="secondary">Type password</button><button id="fit-screen" class="secondary">View at 100%</button><button id="desktop-launch" class="secondary">Open in desktop app</button><span id="remote-stats"></span></div><section class="remote-stage"><div id="remote-display" tabindex="0" aria-label="Remote screen. Keyboard input is sent to this machine."></div></section><footer class="remote-footer"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary">Copy to remote</button><button id="read-clipboard" class="secondary">Use my clipboard</button><label class="check"><input id="shared-clipboard" type="checkbox"> Shared clipboard</label></footer></main>`;
+async function connectRemote(d: Item, attempt = 0) {
+  app.innerHTML = `<main class="remote-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${esc(d.label)}</h1><small id="remote-status">Connecting…</small></div><button id="remote-ai" class="secondary">${icon("spark")} Screen assistant</button><button id="fullscreen" class="secondary">Full screen</button></header><div class="remote-controls"><button id="sound" class="secondary">Enable sound</button><button id="mic" class="secondary">Enable microphone</button><label>Keys <select id="key-macro"><option value="">Send shortcut…</option><option value="cad">Ctrl + Alt + Del</option><option value="task">Task manager</option><option value="run">Windows + R</option><option value="alt-tab">Alt + Tab</option><option value="copy">Ctrl + C</option><option value="paste">Ctrl + V</option><option value="escape">Escape</option><option value="tab">Tab</option></select></label><button id="type-secret" class="secondary">Type password</button><button id="fit-screen" class="secondary">View at 100%</button><button id="remote-reconnect" class="secondary">Reconnect</button><button id="desktop-launch" class="secondary">Open in desktop app</button><span id="remote-stats"></span></div><section class="remote-stage"><div id="remote-display" tabindex="0" aria-label="Remote screen. Keyboard input is sent to this machine."></div><div id="remote-startup" class="remote-startup">${loadingState(attempt ? "Reconnecting the display…" : "Connecting to machine…", "The screen will appear as soon as it is ready.")}</div></section><footer class="remote-footer"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary">Copy to remote</button><button id="read-clipboard" class="secondary">Use my clipboard</button><label class="check"><input id="shared-clipboard" type="checkbox"> Shared clipboard</label></footer></main>`;
   const modal = document.querySelector<HTMLElement>(".remote-workspace")!;
+  let closed = false;
   remoteCleanup = () => {
+    closed = true;
     modal.dispatchEvent(new Event("close"));
   };
+  const reconnect = async (nextAttempt = 0) => {
+    if (closed || !modal.isConnected) return;
+    disconnect();
+    viewScope.reset();
+    await renderRemotePage(d.id, nextAttempt);
+  };
+  on("remote-reconnect", () => reconnect());
   const native = (window as any).speckDesktop;
   if (!native) {
     document.getElementById("shared-clipboard")!.parentElement!.title =
@@ -821,6 +872,7 @@ async function connectRemote(d: Item) {
     width,
     height,
   });
+  if (closed || !modal.isConnected) return;
   if (session.protocol !== "rdp") {
     document.getElementById("mic")!.hidden = true;
   }
@@ -832,9 +884,54 @@ async function connectRemote(d: Item) {
   const client = new Guacamole.Client(tunnel);
   remote = client;
   const display = document.getElementById("remote-display")!;
-  display.appendChild(client.getDisplay().getElement());
+  const guacDisplay = client.getDisplay();
+  useReliableImageDecoder(guacDisplay, Guacamole, navigator.userAgent);
+  display.appendChild(guacDisplay.getElement());
   const status = document.getElementById("remote-status")!;
-  let connectionState = 0;
+  let connectionState = 0, screenReady = false, flushed = false;
+  const overlay = document.getElementById("remote-startup")!;
+  const sample = document.createElement("canvas");
+  sample.width = 32; sample.height = 18;
+  const context = sample.getContext("2d", { willReadFrequently: true });
+  guacDisplay.statisticWindow = 1000;
+  guacDisplay.onstatistics = () => { flushed = true; };
+  const showScreen = () => {
+    screenReady = true;
+    guacDisplay.statisticWindow = 0;
+    overlay.hidden = true;
+    display.setAttribute("aria-busy", "false");
+    status.textContent = "Connected";
+    if (document.hasFocus()) display.focus();
+  };
+  const showFailure = (message: string) => {
+    overlay.hidden = false;
+    overlay.setAttribute("data-error", "");
+    display.setAttribute("aria-busy", "false");
+    overlay.innerHTML = loadingState(message, "Try reconnecting, or inspect the current screen.") +
+      '<div class="toolbar"><button id="retry-screen" class="secondary">Reconnect</button><button id="show-screen" class="secondary">Show current screen</button></div>';
+    on("retry-screen", () => reconnect());
+    on("show-screen", () => { startup.stop(); showScreen(); status.textContent = connectionState === 3 ? "Connected" : "Disconnected"; });
+  };
+  display.setAttribute("aria-busy", "true");
+  const startup = watchRemoteStartup({
+    visible: () => !document.hidden && document.hasFocus(),
+    ready: () => {
+      if (!flushed || !guacDisplay.getWidth() || !guacDisplay.getHeight()) return false;
+      if (session.protocol === "ssh") return true;
+      if (!context) return true;
+      try {
+        context.clearRect(0, 0, 32, 18);
+        context.drawImage(guacDisplay.getDefaultLayer().getCanvas(), 0, 0, 32, 18);
+        return hasVisiblePixels(context.getImageData(0, 0, 32, 18).data);
+      } catch { return true; }
+    },
+    wake: () => client.sendMouseState({ x: 1, y: 1, left: false, middle: false, right: false, up: false, down: false }),
+    recover: () => { void reconnect(attempt + 1); },
+    show: showScreen,
+    stalled: () => showFailure("The desktop hasn’t appeared yet"),
+    canRecover: attempt === 0,
+  });
+  modal.addEventListener("close", () => { startup.stop(); guacDisplay.onstatistics = null; });
   client.onstatechange = (state: number) => {
     connectionState = state;
     status.textContent = (
@@ -842,22 +939,32 @@ async function connectRemote(d: Item) {
         0: "Idle",
         1: "Connecting…",
         2: "Waiting for session…",
-        3: "Connected",
+        3: screenReady ? "Connected" : "Waiting for first screen…",
         4: "Disconnecting…",
         5: "Disconnected",
       } as Item
     )[state];
+    if (state === 3) {
+      startup.connected();
+      if (!screenReady) overlay.querySelector("strong")!.textContent = "Waiting for first screen…";
+    }
+    if (state === 5) {
+      startup.stop();
+      if (!closed && modal.isConnected) showFailure(remoteError || "Session disconnected");
+    }
   };
   let remoteError = "";
   client.onerror = (error: Item) => {
     remoteError = error.message;
     status.textContent = remoteError;
-    notify(remoteError, true);
+    startup.stop();
+    if (!closed && modal.isConnected) showFailure(remoteError || "Unable to connect");
   };
   const statistics = setInterval(async () => {
-    if (!modal.isConnected || connectionState !== 3) return;
+    if (!modal.isConnected || connectionState !== 3 || !screenReady) return;
     try {
       const stats = await api("/remote/sessions/" + session.id + "/stats");
+      if (closed || connectionState !== 3) return;
       status.textContent =
         session.protocol === "rdp"
           ? `Connected · ${stats.audio_bytes ? (stats.audio_bytes / 1024).toFixed(0) + " KB audio received" : "Audio idle"}`
@@ -869,16 +976,19 @@ async function connectRemote(d: Item) {
   modal.addEventListener("close", () => clearInterval(statistics));
   const mouse = new Guacamole.Mouse(client.getDisplay().getElement());
   mouse.onEach(["mousedown", "mouseup", "mousemove"], (event: any) => {
+    startup.interacted();
     client.sendMouseState(event.state, true);
   });
   const touch = new Guacamole.Mouse.Touchscreen(
     client.getDisplay().getElement(),
   );
-  touch.onEach(["mousedown", "mouseup", "mousemove"], (event: any) =>
-    client.sendMouseState(event.state, true),
-  );
+  touch.onEach(["mousedown", "mouseup", "mousemove"], (event: any) => {
+    startup.interacted();
+    client.sendMouseState(event.state, true);
+  });
   keyboard = new Guacamole.Keyboard(display);
   keyboard.onkeydown = (key: number) => {
+    startup.interacted();
     client.sendKeyEvent(1, key);
     return false;
   };
@@ -963,6 +1073,7 @@ async function connectRemote(d: Item) {
     tab: [0xff09],
   };
   const sendKeys = (keys: number[]) => {
+    startup.interacted();
     keyboard?.reset();
     keys.forEach((k) => client.sendKeyEvent(1, k));
     [...keys].reverse().forEach((k) => client.sendKeyEvent(0, k));
@@ -1126,6 +1237,7 @@ async function connectRemote(d: Item) {
   display.focus();
 }
 async function renderSlide() {
+  loading("Loading Slide…");
   const cfg = await api("/slide/connection");
   if (!cfg.connected) {
     content(
@@ -1190,6 +1302,7 @@ function recoveryEvidence(run: Item) {
   return `<div class="table-wrap"><table><thead><tr><th>System</th><th>Backup</th><th>Restored instance</th><th>Application check</th></tr></thead><tbody>${rows}</tbody></table></div><details><summary>Detailed evidence</summary><pre>${pretty({ state: run.state, report: run.report })}</pre></details>`;
 }
 async function renderRecovery() {
+  loading("Loading recovery lab…");
   const [plans, runs, devices] = await Promise.all([
     api("/recovery/plans"),
     api("/recovery/runs"),
@@ -1337,6 +1450,7 @@ async function newPlan() {
   });
 }
 async function renderJobs() {
+  loading("Loading job history…");
   const [audit, jobs, devices] = await Promise.all([
     api("/audit"),
     api("/jobs"),
@@ -1347,6 +1461,7 @@ async function renderJobs() {
   );
 }
 async function renderSettings() {
+  loading("Loading settings…");
   if (role === "viewer") return management.renderAccount();
   const c = await api("/slide/connection");
   content(
@@ -1396,6 +1511,7 @@ setInterval(async () => {
 setInterval(() => {
   if (username) void management.updateIndicator().catch(() => {});
 }, 30000);
+app.innerHTML = `<main class="boot-loading">${loadingState("Opening Speck…")}</main>`;
 api("/auth/me")
   .then(async (r) => {
     csrf = r.csrf;
@@ -1403,7 +1519,7 @@ api("/auth/me")
     role = r.role;
     await render();
   })
-  .catch(() => signedOut());
+  .catch((err) => { if (!(err instanceof StaleViewError)) signedOut(); });
 
 async function remoteAssistant(
   d: Item,
