@@ -5,9 +5,16 @@ remote-session startup fixes and **passkey sign-in**. Enroll in Settings → Acc
 & access, or Account → Passkeys on iOS. Password/authenticator login remains
 available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
 
+- **Shared UI**: `2c22311` is live with uniform controls, distinct navigation icons,
+  restrained decoration and responsive layouts. Native 0.1.2 (5) fixes full-width
+  sign-in and aligns compact light/dark styles. Forty browser scenarios pass;
+  live Mac Fleet/Settings and iPhone/iPad simulator views were inspected.
+  [Audit](../ui-review.md#shared-ui-and-native-audit--september-22-2026),
+  [gallery](../screenshots/visual-audit/README.md),
+  [release and rollback](../operations/visual-audit.md).
 - **Fleet**: compact header and single-line desktop rows, OS/action icons, and
   immediate cached return with filters, selection and scroll preserved. Static
-  layout and cached navigation remain in place. Runtime `d1692a8` adds row-wide
+  layout and cached navigation remain in place. The pane release adds row-wide
   activation, a non-modal pane with 180 ms entrance, and persistent row context
   without blur. Desktop/mobile UI and live CPU-cell activation passed; backend
   process/environment were preserved. [Pane details](../operations/fleet-row-pane.md).
@@ -18,7 +25,7 @@ available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
   staples. Apple silicon launch, retained login, browser handoff and cancellation
   passed. Windows remains unsigned; Linux desktop and Intel Mac runtime checks,
   and physical passkey provider ceremonies, remain open.
-- **iPhone/iPad 0.1.1 (4)**: VALID and IN_BETA_TESTING for the existing Speck testing
+- **iPhone/iPad 0.1.2 (5)**: VALID and IN_BETA_TESTING for the existing Speck testing
   group. Twenty-five native unit tests pass. Associated domains and server/RP
   binding are verified. Physical Face ID/Touch ID/provider sync, audio and older
   iOS qualification remain device acceptance work. Build 3 is withdrawn/expired.

@@ -1,6 +1,6 @@
 # iOS qualification
 
-Internal beta: **Speck 0.1.0 (2)**, universal iPhone/iPad, iOS 18 minimum.
+Current internal beta: **Speck 0.1.2 (5)**, universal iPhone/iPad, iOS 18 minimum.
 App Store Connect: **Speck RMM**, Apple ID `6814871051`, bundle `com.speckrmm.ios`.
 The internal **Speck testing** group contains the account holder; automatic
 build distribution is disabled. Build 1 completed Apple processing, then was
@@ -117,3 +117,16 @@ fallback. This does not prove a physical Face ID/Touch ID ceremony. The new nati
 passkey sheet and provider sync need acceptance on the operator’s devices through
 TestFlight. No personal passkey was enrolled during development. Previous remote
 media, hardware keyboard and older-OS limits still apply.
+
+## Shared UI — 0.1.2 (5), September 22, 2026
+
+Apple reports VALID and IN_BETA_TESTING in the existing Speck testing group. The
+sign-in masthead fills iPad width and iPhone landscape safe areas; fields and
+actions share compact spacing, metrics use text, and semantic colors/surfaces
+adapt to light/dark appearance. The full [visual audit](ui-review.md#shared-ui-and-native-audit--september-22-2026)
+and [gallery](screenshots/visual-audit/README.md) record the updated screens.
+
+Twenty-five unit tests and eight iPad UI scenarios passed. Corrected iPhone
+portrait/landscape sign-in and dark appearance passed targeted checks. The iPad
+masthead assertions now run in CI. Broader physical-device and remote-media
+qualification above remains unchanged. [Release evidence](operations/visual-audit.md).
