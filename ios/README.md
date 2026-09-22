@@ -36,6 +36,10 @@ xcodegen generate --spec ios/project.yml
 open ios/Speck.xcodeproj
 ```
 
+Use Xcode 26 or later; the release was built with Xcode 27. CI uses the macOS 26
+image because the older default Swift 6.1 compiler crashes during IR generation
+for a SwiftUI binding. The deployment target remains iOS 18.
+
 The checked-in project is generated from `project.yml`. Asset generation consumes
 the canonical vector icon and outlined wordmarks in `brand/`; do not fork the logo.
 
