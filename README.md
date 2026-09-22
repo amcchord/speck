@@ -6,11 +6,12 @@
 **A LITTLE LIGHTWEIGHT RMM**
 
 An open source RMM for Windows and Linux, with browser remote access and Slide
-backup and recovery workflows. Speck is an early, single-administrator release.
+backup and recovery workflows. Speck is an early release for a single organization.
 
 [Website](https://speckrmm.com) · [Screenshot gallery](docs/screenshots/v0.2/README.md) ·
 [Brand identity](brand/README.md) · [UI review](docs/ui-review.md) ·
-[Operations guide](docs/operations.md) · [Desktop downloads](https://github.com/amcchord/speck/releases)
+[Operations guide](docs/operations.md) · [Management guide](docs/management.md) ·
+[MVP review](docs/MVP-REVIEW.md) · [Desktop downloads](https://github.com/amcchord/speck/releases)
 
 [![Speck sign-in](docs/screenshots/v0.2/sign-in.jpg)](docs/screenshots/README.md)
 
@@ -23,6 +24,10 @@ for provenance and the local preview workflow.
 
 - Wide fleet table, right-side details drawer, direct screen and prompt actions.
 - Services, CPU, memory, disks, active application, and host inventory.
+- Persistent health/service/job alerts, acknowledgement and per-machine maintenance.
+- Sites, tags, reversible retirement and clone-aware installation revocation.
+- Scheduled patch scans and reviewed software/script templates with durable run history.
+- Admin/operator/viewer accounts, optional authenticator MFA and searchable audit history.
 - Opt-in live screen previews, expiring automatically and disabled per device.
 - Native Windows Update/apt/dnf inventory and reviewed update installation.
 - Bulk software deployment with versioned, parameterized templates and results.

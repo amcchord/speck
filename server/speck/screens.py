@@ -25,7 +25,7 @@ def policy(device_id):
 
 
 def screen_info(device):
-    enabled = bool(device["approved"] and policy(device["id"]))
+    enabled = bool(device["approved"] and not device.get("archived") and policy(device["id"]))
     with lock:
         frame = frames.get(device["id"])
         if frame and (not enabled or time.time() - frame["received"] > 45):
@@ -59,7 +59,7 @@ def update_policy(device_id: str, body: ScreenPolicy, user=Depends(require_user)
 @router.get("/agent/preview-policy")
 def agent_policy(device=Depends(require_agent)):
     return {
-        "enabled": bool(device["approved"] and policy(device["id"])),
+        "enabled": bool(device["approved"] and not device.get("archived") and policy(device["id"])),
         "expires": time.time() + 30,
         "interval_seconds": 10,
     }

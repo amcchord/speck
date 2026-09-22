@@ -71,9 +71,11 @@ def initialize():
         CREATE TABLE IF NOT EXISTS patch_reports(device_id TEXT PRIMARY KEY REFERENCES devices(id),job_id TEXT NOT NULL,scanned REAL NOT NULL,report TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS ai_requests(id TEXT PRIMARY KEY,actor TEXT NOT NULL,created REAL NOT NULL);
         ''')
+        from speck.management_schema import migrate
+        migrate(conn)
         if not conn.execute('SELECT 1 FROM users LIMIT 1').fetchone():
             password = os.environ.get('SPECK_BOOTSTRAP_PASSWORD', '')
             if len(password) < 16:
                 raise RuntimeError('A new installation requires SPECK_BOOTSTRAP_PASSWORD (16+ characters)')
-            conn.execute('INSERT INTO users VALUES(?,?,?)', (ident(), os.environ.get('SPECK_ADMIN_USERNAME', 'admin'), PasswordHasher().hash(password)))
+            conn.execute('INSERT INTO users(id,username,password_hash) VALUES(?,?,?)', (ident(), os.environ.get('SPECK_ADMIN_USERNAME', 'admin'), PasswordHasher().hash(password)))
     os.chmod(data_dir() / 'speck.db', 0o600)

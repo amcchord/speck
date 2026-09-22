@@ -2,7 +2,7 @@ import hashlib
 import secrets
 import time
 
-from fastapi import HTTPException, Request, WebSocket
+from fastapi import Depends, HTTPException, Request, WebSocket
 
 from speck.config import origin
 from speck.db import db
@@ -16,8 +16,8 @@ def digest(value):
 
 def session_for(token):
     with db() as conn:
-        row = conn.execute('SELECT sessions.*,users.username FROM sessions JOIN users ON users.id=sessions.user_id '
-                           'WHERE token_hash=? AND expires>?', (digest(token or ''), time.time())).fetchone()
+        row = conn.execute('SELECT sessions.*,users.username,users.role FROM sessions JOIN users ON users.id=sessions.user_id '
+                           'WHERE token_hash=? AND expires>? AND users.disabled=0', (digest(token or ''), time.time())).fetchone()
     if not row:
         raise HTTPException(401, 'Sign in to Speck')
     return dict(row)
@@ -30,13 +30,30 @@ def require_user(request: Request):
             raise HTTPException(403, 'Origin rejected')
         if not secrets.compare_digest(user['csrf'], request.headers.get('x-csrf-token', '')):
             raise HTTPException(403, 'CSRF token rejected')
+    path = request.url.path
+    if user['role'] == 'viewer':
+        reads = {'/api/auth/me', '/api/devices', '/api/alerts', '/api/monitoring', '/api/audit/events', '/api/access/me'}
+        personal = {'/api/auth/logout', '/api/access/password', '/api/access/sessions/revoke', '/api/access/totp/setup', '/api/access/totp/confirm', '/api/access/totp/disable'}
+        if not ((request.method == 'GET' and path in reads) or path in personal):
+            raise HTTPException(403, 'Viewer accounts can read inventory, alerts and audit history')
+    if request.method not in ('GET', 'HEAD', 'OPTIONS') and path in ('/api/slide/connection', '/api/ai/settings') and user['role'] != 'admin':
+        raise HTTPException(403, 'Administrator access required')
+    return user
+
+
+def require_admin(user=Depends(require_user)):
+    if user['role'] != 'admin':
+        raise HTTPException(403, 'Administrator access required')
     return user
 
 
 def websocket_user(socket: WebSocket):
     if socket.headers.get('origin') != origin():
         raise HTTPException(403, 'Origin rejected')
-    return session_for(socket.cookies.get(COOKIE))
+    user = session_for(socket.cookies.get(COOKIE))
+    if user['role'] == 'viewer':
+        raise HTTPException(403, 'Remote access requires an operator')
+    return user
 
 
 def agent_credentials(headers):
@@ -57,4 +74,8 @@ def require_agent(request: Request):
     installation, device = agent_credentials(request.headers)
     if not device:
         raise HTTPException(409, 'Check in before requesting work')
+    if device['archived'] and not request.url.path.endswith('/jobs/next'):
+        raise HTTPException(403, 'This device is archived')
+    if not device['approved'] and '/transfers/' in request.url.path:
+        raise HTTPException(403, 'Approve this device before transferring files')
     return device

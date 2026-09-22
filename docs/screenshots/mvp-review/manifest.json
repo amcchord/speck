@@ -1,0 +1,48 @@
+{
+  "captured": "2026-09-22",
+  "source": "Isolated local Speck instance with synthetic Windows/Linux telemetry and test accounts",
+  "method": "Codex in-app browser; original screenshot bytes; no image editing",
+  "viewports": {
+    "desktop": "1280x720",
+    "mobile": "390x844"
+  },
+  "files": [
+    {
+      "file": "accounts-desktop.png",
+      "sha256": "e319054ebc795cb3a68f8f8ba31d725f9480d83cb051b7b99d2a8b277230ede9",
+      "bytes": 68722
+    },
+    {
+      "file": "alerts-desktop.png",
+      "sha256": "54dd74afd64b570d3a69be576b1b89b4878efb8e75706779b02fd551cc849802",
+      "bytes": 67369
+    },
+    {
+      "file": "alerts-mobile.png",
+      "sha256": "40c347eb9c48c41b43fef6898688e368071a00498ca8e7e59d94ecf09877cc00",
+      "bytes": 50134
+    },
+    {
+      "file": "monitoring-policy.png",
+      "sha256": "bf1da5a1849b2aace9c271b4bf2a60e1ba9a6e13a507d84961687dd456a4d46c",
+      "bytes": 45405
+    },
+    {
+      "file": "schedules-desktop.png",
+      "sha256": "1d792785c04e57e0a75a196e699de3ecd6fe908b6600eadcc01c5a5abbcf7513",
+      "bytes": 51117
+    },
+    {
+      "file": "schedules-mobile.png",
+      "sha256": "be7f4acd74f4b62dc8301efb293e8a3243a87d16e45ce45df9d686848ed19a77",
+      "bytes": 41640
+    },
+    {
+      "file": "safari-fleet.png",
+      "sha256": "e01d91ad30f7bb0e56601d92737fa1cdc4efe4ed043068e18a4fab7b24f4513d",
+      "bytes": 101454,
+      "dimensions": "4718592x4292935744",
+      "method": "Native Safari window capture; synthetic local fleet; original PNG bytes"
+    }
+  ]
+}

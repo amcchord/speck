@@ -1,4 +1,5 @@
 """Speck's authenticated control plane. Remote endpoints always dial out over TLS."""
+import asyncio
 import hashlib
 import json
 import os
@@ -26,8 +27,14 @@ async def lifespan(app):
     # An interrupted command is not safe to replay automatically.
     with db(write=True) as conn:
         conn.execute("UPDATE jobs SET status='unknown',finished=? WHERE status IN ('leased','running')", (time.time(),))
+        conn.execute("DELETE FROM monitor_states")
         conn.execute("UPDATE recovery_runs SET status='needs_attention',phase='interrupted',updated=? WHERE status='running'", (time.time(),))
-    yield
+    from speck.scheduling import worker, stop_worker
+    management_task = asyncio.create_task(worker())
+    try:
+        yield
+    finally:
+        await stop_worker(management_task)
     from speck.remote import sessions, close_session
     from speck.slide import workers
     for session_id in list(sessions):
@@ -62,6 +69,7 @@ def health():
 class Login(BaseModel):
     username: str = Field(max_length=100)
     password: str = Field(max_length=256)
+    code: str = Field(default="", max_length=40)
 
 
 @app.post('/api/auth/login')
@@ -69,14 +77,15 @@ def login(body: Login, request: Request, response: Response):
     if request.headers.get('origin') != origin():
         raise HTTPException(403, 'Origin rejected')
     ip = request.client.host
+    account_attempt = 'login:' + body.username
     with db(write=True) as conn:
         conn.execute('DELETE FROM login_attempts WHERE at<?', (time.time() - 900,))
-        if conn.execute('SELECT count(*) FROM login_attempts WHERE ip=?', (ip,)).fetchone()[0] >= 10:
+        if any(conn.execute('SELECT count(*) FROM login_attempts WHERE ip=?', (key,)).fetchone()[0] >= 10 for key in (ip, account_attempt)):
             raise HTTPException(429, 'Too many sign-in attempts. Try again in 15 minutes.')
-        conn.execute('INSERT INTO login_attempts VALUES(?,?)', (ip, time.time()))
+        conn.executemany('INSERT INTO login_attempts VALUES(?,?)', [(key, time.time()) for key in (ip, account_attempt)])
         row = conn.execute('SELECT * FROM users WHERE username=?', (body.username,)).fetchone()
     try:
-        if not row:
+        if not row or row['disabled']:
             # Avoid a fast path that reveals valid usernames.
             PasswordHasher().verify(PasswordHasher().hash('unused-random-password'), body.password)
             raise VerificationError('Invalid user')
@@ -85,17 +94,21 @@ def login(body: Login, request: Request, response: Response):
         raise HTTPException(401, 'Incorrect username or password') from None
     token, csrf = secrets.token_urlsafe(40), secrets.token_urlsafe(32)
     with db(write=True) as conn:
-        conn.execute('DELETE FROM login_attempts WHERE ip=?', (ip,))
+        from speck.access import check_second_factor
+        current = conn.execute('SELECT * FROM users WHERE id=? AND disabled=0', (row['id'],)).fetchone()
+        if not current or current['password_hash'] != row['password_hash'] or not check_second_factor(conn, current, body.code):
+            raise HTTPException(401, 'Incorrect credentials or authenticator code')
+        conn.execute('DELETE FROM login_attempts WHERE ip IN (?,?)', (ip, account_attempt))
         conn.execute('DELETE FROM sessions WHERE expires<?', (time.time(),))
         conn.execute('INSERT INTO sessions VALUES(?,?,?,?)', (digest(token), row['id'], csrf, time.time() + 43200))
         audit(conn, row['username'], 'session.login')
     response.set_cookie(COOKIE, token, httponly=True, secure=origin().startswith('https://'), samesite='strict', max_age=43200)
-    return {'username': row['username'], 'csrf': csrf}
+    return {'username': row['username'], 'csrf': csrf, 'role': current['role']}
 
 
 @app.get('/api/auth/me')
 def me(user=Depends(require_user)):
-    return {'username': user['username'], 'csrf': user['csrf']}
+    return {'username': user['username'], 'csrf': user['csrf'], 'role': user['role']}
 
 
 @app.post('/api/auth/logout')
@@ -176,13 +189,15 @@ def checkin(body: Checkin, request: Request):
             device_id = device['id']
         conn.execute('UPDATE devices SET hostname=?,telemetry=?,last_seen=? WHERE id=?',
                      (body.hostname, telemetry, time.time(), device_id))
-    return {'ok': True, 'device_id': device_id, 'approved': bool(device and device['approved'])}
+    return {'ok': True, 'device_id': device_id, 'approved': bool(device and device['approved'] and not device['archived'])}
 
 
 @app.get('/api/devices')
-def devices(user=Depends(require_user)):
+def devices(include_archived: bool = False, user=Depends(require_user)):
     with db() as conn:
-        rows = conn.execute('SELECT * FROM devices ORDER BY label').fetchall()
+        rows = conn.execute('SELECT d.*,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id WHERE (? OR d.archived=0) ORDER BY d.label', (include_archived,)).fetchall()
+        from speck.monitoring import policy_for
+        monitoring = {row['id']: policy_for(conn, row['id']).enabled for row in rows}
     result = []
     for row in rows:
         obj = dict(row)
@@ -190,6 +205,9 @@ def devices(user=Depends(require_user)):
         obj['remote_configured'] = bool(connection)
         obj['remote_protocol'] = json.loads(unseal(connection)).get('protocol') if connection else None
         obj['telemetry'] = json.loads(obj['telemetry'])
+        obj['tags'] = json.loads(obj['tags'])
+        obj['monitoring_enabled'] = monitoring[obj['id']]
+        obj['manageable'] = bool(obj['approved'] and not obj['archived'] and not obj['revoked'])
         obj['online'] = time.time() - obj['last_seen'] < 75
         from speck.screens import screen_info
         obj['preview'] = screen_info(obj)
@@ -204,12 +222,18 @@ class DeviceUpdate(BaseModel):
 
 
 @app.patch('/api/devices/{device_id}')
-def update_device(device_id: str, body: DeviceUpdate, user=Depends(require_user)):
+async def update_device(device_id: str, body: DeviceUpdate, user=Depends(require_user)):
     get_device(device_id)
     with db(write=True) as conn:
         conn.execute('UPDATE devices SET label=?,approved=?,slide_agent_id=? WHERE id=?',
                      (body.label, int(body.approved), body.slide_agent_id, device_id))
+        if not body.approved:
+            from speck.management import stop_management
+            stop_management(conn, device_id, user['username'])
         audit(conn, user['username'], 'device.updated', device_id, {'approved': body.approved})
+    if not body.approved:
+        from speck.management import close_devices
+        await close_devices([device_id])
     return {'ok': True}
 
 
@@ -269,9 +293,12 @@ def job(job_id: str, user=Depends(require_user)):
 
 @app.get('/api/agent/jobs/next')
 def next_job(device=Depends(require_agent)):
-    if not device['approved']:
+    if not device['approved'] or device['archived']:
         return {'job': None}
     with db(write=True) as conn:
+        state = conn.execute('SELECT d.approved,d.archived,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id WHERE d.id=?', (device['id'],)).fetchone()
+        if not state or not state['approved'] or state['archived'] or state['revoked']:
+            return {'job': None}
         conn.execute("UPDATE jobs SET status=CASE WHEN status='queued' THEN 'expired' ELSE 'unknown' END,finished=? "
                      "WHERE device_id=? AND status IN ('queued','leased','running') AND deadline<?", (time.time(), device['id'], time.time()))
         row = conn.execute("SELECT * FROM jobs WHERE device_id=? AND status='queued' ORDER BY created LIMIT 1", (device['id'],)).fetchone()
@@ -429,6 +456,14 @@ from speck.assistant import router as assistant_router  # noqa: E402
 app.include_router(operations_router)
 app.include_router(screens_router)
 app.include_router(assistant_router)
+from speck.access import router as access_router  # noqa: E402
+app.include_router(access_router)
+from speck.management import router as management_router  # noqa: E402
+from speck.monitoring import router as monitoring_router  # noqa: E402
+app.include_router(management_router)
+app.include_router(monitoring_router)
+from speck.scheduling import router as scheduling_router  # noqa: E402
+app.include_router(scheduling_router)
 
 downloads = Path(os.environ.get('SPECK_DOWNLOAD_DIR', 'output/downloads'))
 if downloads.exists():

@@ -25,5 +25,13 @@
       passes repeated resize/fullscreen checks. Current RDP uses stable resolution.
 - [ ] Live Windows MSI installation and selected-patch installation validation
       on disposable targets; native scans and Linux package deployment are verified.
-- [ ] Patch maintenance windows, scheduled deployments and scheduled recoveries.
-- [ ] MFA, operator roles, SSO, signed automatic agent updates and security review.
+- [x] Reviewed scheduled templates and Windows/Linux patch scans with durable history.
+- [x] Persistent health/service/job alerts, maintenance, sites/tags and retirement.
+- [x] Optional authenticator MFA, admin/operator/viewer roles and audit filtering.
+- [ ] Patch maintenance windows/reboots and scheduled recoveries.
+- [ ] SSO, required organization-wide MFA, signed automatic agent updates and security review.
+- [ ] Installed-software inventory, external alert escalation and supported retention cleanup.
+
+The management additions are deployed and passed live Windows/Linux scan and
+management acceptance on September 22, 2026;
+see [MVP review](MVP-REVIEW.md) and the [management guide](management.md).

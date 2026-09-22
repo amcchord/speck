@@ -122,7 +122,11 @@ async def start_session(device_id: str, body: StartSession, user=Depends(require
         writer.close()
     session.listener = await asyncio.start_server(connected, '127.0.0.1', 0)
     sessions[session.id] = session
-    create_job(device_id, 'tunnel', {'session_id': session.id, 'secret': session.secret, 'port': session.config['port'], 'timeout': 7200}, user['username'], 7200)
+    try:
+        create_job(device_id, 'tunnel', {'session_id': session.id, 'secret': session.secret, 'port': session.config['port'], 'timeout': 7200}, user['username'], 7200)
+    except Exception:
+        await close_session(session.id)
+        raise
     asyncio.create_task(expire_session(session.id))
     with db(write=True) as conn:
         audit(conn, user['username'], 'remote.started', device_id, {'session_id': session.id, 'protocol': session.config['protocol']})

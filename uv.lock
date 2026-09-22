@@ -841,6 +841,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "pyotp" },
     { name = "python-multipart" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
@@ -848,7 +849,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "pyotp" },
     { name = "pytest" },
     { name = "requests" },
     { name = "ruff" },
@@ -860,6 +860,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=46,<47" },
     { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "httpx", specifier = ">=0.28,<1" },
+    { name = "pyotp", specifier = ">=2,<3" },
     { name = "python-multipart", specifier = ">=0.0.20,<1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34,<1" },
     { name = "websockets", specifier = ">=15,<16" },
@@ -867,7 +868,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pyotp", specifier = ">=2,<3" },
     { name = "pytest", specifier = ">=8,<10" },
     { name = "requests", specifier = ">=2,<3" },
     { name = "ruff", specifier = ">=0.11,<1" },

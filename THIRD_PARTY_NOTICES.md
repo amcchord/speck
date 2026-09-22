@@ -9,7 +9,7 @@ Speck's original code is MIT licensed. Dependencies retain their own licenses.
 - Go libraries: gorilla/websocket (BSD-2-Clause), kardianos/service (Zlib),
   gopsutil (BSD-3-Clause), and golang.org/x/sys (BSD-3-Clause).
 - FastAPI (MIT), Starlette (BSD-3-Clause), Uvicorn (BSD-3-Clause), HTTPX (BSD-3-Clause),
-  Argon2-cffi (MIT), Cryptography (Apache-2.0 or BSD-3-Clause), and their dependencies.
+  Argon2-cffi (MIT), PyOTP (MIT), Cryptography (Apache-2.0 or BSD-3-Clause), and their dependencies.
 - Vite and TypeScript retain their upstream licenses.
 
 Consult the pinned dependency lockfiles and installed package license files for
