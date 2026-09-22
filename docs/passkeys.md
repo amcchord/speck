@@ -28,7 +28,7 @@ responding to a compromised account. Keep at least one trusted recovery route.
   to Desktop. The desktop keeps its random verifier in memory; the browser never
   receives that verifier or the resulting desktop session cookie. The approval is
   single use, expires after two minutes, and leaves the browser's account alone.
-- **iPhone/iPad 0.1.1 (3):** native AuthenticationServices registration/sign-in and
+- **iPhone/iPad 0.1.1 (4):** native AuthenticationServices registration/sign-in and
   passkey management. The distributed app is associated with `speckrmm.com`.
   Self-hosted deployments use browser passkeys or build the native app with their
   own associated domain and signing identity. Password login remains supported.

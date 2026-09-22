@@ -6,6 +6,11 @@ API and account permissions as the web console. Requires iOS / iPadOS 18 or late
 App Store Connect: **Speck RMM**, Apple ID `6814871051`.
 Bundle ID: `com.speckrmm.ios`. Team: `7PTN7E8EDS`.
 
+Passkey sign-in and native enrollment/rename/removal are available in **0.1.1 (4)**
+through **Account → Passkeys**. The shipped app is associated with `speckrmm.com`;
+password and optional authenticator login remain supported for every configured
+HTTPS server. See [passkeys](../docs/passkeys.md) for self-hosted signing setup.
+
 ## Work from your phone
 
 - Search and filter the fleet; inspect services, current app, storage and networking.

@@ -28,7 +28,7 @@ for provenance and the local preview workflow.
 - Persistent health/service/job alerts, acknowledgement and per-machine maintenance.
 - Sites, tags, reversible retirement and clone-aware installation revocation.
 - Scheduled patch scans and reviewed software/script templates with durable run history.
-- Admin/operator/viewer accounts, optional authenticator MFA and searchable audit history.
+- Admin/operator/viewer accounts, [passkey sign-in](docs/passkeys.md), optional authenticator MFA and searchable audit history.
 - Opt-in live screen previews, expiring automatically and disabled per device.
 - Native Windows Update/apt/dnf inventory and reviewed update installation.
 - Bulk software deployment with versioned, parameterized templates and results.

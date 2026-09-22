@@ -206,7 +206,7 @@ Private deployment and release evidence: `output/ios/` in `worktrees/ios-testfli
 administrator lost-key reset, a verifier-bound desktop browser handoff and native
 iPhone/iPad AuthenticationServices. Desktop 0.2.2 enables Mac Touch ID/account
 selection and browser fallback across all three desktop platforms. Native build
-0.1.1 (3) adds associated-domain entitlements. See `docs/passkeys.md`.
+0.1.1 (4) adds associated-domain entitlements. See `docs/passkeys.md`.
 
 Protocol tests use real ECDSA signatures; web/desktop and native session-isolation
 checks cover the new flows. Private release evidence: `output/passkeys/`.

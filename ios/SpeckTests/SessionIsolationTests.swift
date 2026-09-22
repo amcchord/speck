@@ -269,6 +269,37 @@ private actor DelayedServer {
     XCTAssertEqual(Data(base64URL: bytes.base64URL), bytes)
     XCTAssertFalse(bytes.base64URL.contains("="))
   }
+  func testCustomServerCannotRequestTheOfficialDomainsPasskey() async throws {
+    let session = SpeckSession(
+      persistence: SessionPersistence(load: { nil }, save: { _ in XCTFail("No session may be stored") }, clear: {}),
+      dataLoader: { request in
+        XCTAssertEqual(request.url?.host, "custom.example.com")
+        return (Data("{\"challenge_id\":\"fixture\",\"publicKey\":{\"rpId\":\"speckrmm.com\"}}".utf8),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: [:])!)
+      })
+    do {
+      try await session.signInWithPasskey(server: "https://custom.example.com") { _ in
+        XCTFail("An unrelated server must never invoke the official domain's credential provider")
+        return .null
+      }
+      XCTFail("Mismatched RP must fail")
+    } catch { XCTAssertTrue(error.localizedDescription.contains("domain does not match")) }
+  }
+  func testAlternatePortCannotRequestTheOfficialDomainsPasskey() async throws {
+    let session = SpeckSession(
+      persistence: SessionPersistence(load: { nil }, save: { _ in XCTFail("No session may be stored") }, clear: {}),
+      dataLoader: { request in
+        return (Data("{\"challenge_id\":\"fixture\",\"publicKey\":{\"rpId\":\"speckrmm.com\"}}".utf8),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: [:])!)
+      })
+    do {
+      try await session.signInWithPasskey(server: "https://speckrmm.com:8443") { _ in
+        XCTFail("An alternate origin must not invoke the official provider")
+        return .null
+      }
+      XCTFail("Alternate origin must fail")
+    } catch { XCTAssertTrue(error.localizedDescription.contains("domain does not match")) }
+  }
   func testNativeCeremonyCannotFinishAfterSigningOut() async throws {
     var finish: CheckedContinuation<JSON, Error>?
     let arrived = expectation(description: "native passkey sheet")
@@ -277,7 +308,7 @@ private actor DelayedServer {
       dataLoader: { request in
         XCTAssertEqual(request.url?.path, "/api/auth/passkeys/options")
         XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
-        return (Data("{\"challenge_id\":\"fixture\",\"publicKey\":{}}".utf8),
+        return (Data("{\"challenge_id\":\"fixture\",\"publicKey\":{\"rpId\":\"speckrmm.com\"}}".utf8),
                 HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: [:])!)
       })
     let login = Task {
@@ -300,7 +331,7 @@ private actor DelayedServer {
         let path = request.url!.path
         var body = "{}"
         var headers = [String: String]()
-        if path == "/api/auth/passkeys/options" { body = "{\"challenge_id\":\"fixture\",\"publicKey\":{}}" }
+        if path == "/api/auth/passkeys/options" { body = "{\"challenge_id\":\"fixture\",\"publicKey\":{\"rpId\":\"speckrmm.com\"}}" }
         if path == "/api/auth/passkeys/verify" {
           let sent = try JSONDecoder().decode(JSON.self, from: request.httpBody!)
           XCTAssertEqual(sent["challenge_id"].string, "fixture")
