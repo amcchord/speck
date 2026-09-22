@@ -153,9 +153,8 @@ function createWindow() {
       event.preventDefault();
     }
   });
-  const fullscreenChanged = () => window?.webContents.send("speck:fullscreen", window.isFullScreen());
-  window.on("enter-full-screen", fullscreenChanged);
-  window.on("leave-full-screen", fullscreenChanged);
+  window.on("enter-full-screen", () => window?.webContents.send("speck:fullscreen", true));
+  window.on("leave-full-screen", () => window?.webContents.send("speck:fullscreen", false));
   window.webContents.session.setPermissionCheckHandler(
     (webContents, permission, origin) =>
       trusted(origin) &&

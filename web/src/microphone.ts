@@ -61,8 +61,11 @@ export function startMicrophone(
         source!.connect(node!); node!.connect(context!.destination);
         handlers.state("active");
       };
-    } catch {
-      fail("Microphone access failed. Check the device and permission, then try again.");
+    } catch (error) {
+      const name = error instanceof Error ? error.name : "";
+      fail(name === "NotFoundError" ? "No microphone was found. Connect an input device and try again."
+        : name === "NotAllowedError" ? "Microphone access was not allowed. Enable it in system permissions and try again."
+        : "Microphone access failed. Check the device and permission, then try again.");
     }
   })();
   return { stop };

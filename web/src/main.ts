@@ -856,7 +856,7 @@ async function connectRemote(d: Item) {
       document.fullscreenElement ? "Exit full screen" : "Full screen";
     resizeRemote();
   };
-  document.addEventListener("fullscreenchange", fullscreenChanged);
+  if (!native?.toggleFullscreen) document.addEventListener("fullscreenchange", fullscreenChanged);
   const updateNativeFullscreen = (full: boolean) => {
     if (!modal.isConnected) return;
     document.getElementById("fullscreen")!.textContent = full
@@ -1015,6 +1015,7 @@ async function connectRemote(d: Item) {
     if (native?.toggleFullscreen) await native.toggleFullscreen();
     else if (document.fullscreenElement) await document.exitFullscreen();
     else await modal.requestFullscreen();
+    display.focus();
   });
   const sound = document.getElementById("sound")!;
   const audioContext = session.protocol === "rdp"
