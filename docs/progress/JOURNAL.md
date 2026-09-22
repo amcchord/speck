@@ -428,3 +428,20 @@ change after the original branch baseline. The initial web rollout omitted it.
 Coordinated with the active app-label task, which owns the combined static repair
 from main plus `5d1e39d`; this task holds further deployments. The original feature
 checks remain valid, and no further backend or endpoint changes are needed.
+## 2026-09-22 — Restore app titles in the combined production release
+
+The user reported executable names after PR #11 had been deployed. Production
+index `bb287bf0…` came from the subsequent `5d1e39d` shell release, whose older
+base omitted PR #11. Merged latest main and that exact deployed source into
+`8ba0f74`, then merged rollout documentation `d8e829b`. Runtime changes relative
+to `5d1e39d` are only the app-title/search repair. The shell task held deployments.
+
+Published static `8ba0f74` with an inspected-index precondition, atomic index
+replacement and retained old assets. Backup:
+`/var/lib/speck-rollback/20260922T233949Z-app-name-release-sync-8ba0f74/web`.
+Public index `0aedb3b1…` and referenced assets match the build. Service identity,
+environment and five original device identities are unchanged. Reloaded Safari
+Fleet visibly reports Molar Office Manager, ByteWing Imaging and Server Manager,
+while Linux retains web-shell actions. Build, 28 web checks and 22 focused browser
+cases pass. No backend restart or endpoint operation was needed. Added release
+coordination rules to AGENTS.md; combined GitHub integration owns the final state.

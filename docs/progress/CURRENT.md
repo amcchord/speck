@@ -9,7 +9,7 @@ available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
   encrypted checkpoint every five minutes. All five original agents now run 0.3.1.
   The open pane refreshes user/desktop/app details; disconnected users and the last
   app stay explicit. Fleet displays taskbar/window titles for current and last apps,
-  with executable fallback, and searches both names (web runtime `6420df3`).
+  with executable fallback, and searches both names (combined web runtime `8ba0f74`).
   Live Windows capture, five-minute saving, saved fallback and
   in-place presence changes passed. [Details](../operations/preview-reliability.md).
 - **Slide restore cleanup**: runtime `e5d37c6` tracks separate restored endpoints
@@ -76,8 +76,8 @@ deploy endpoint software or clean up existing recovery resources.
 
 ## Headless web shell and automatic agent updates — live
 
-Server/agent source `0a09f6b` and web source `5d1e39d` are deployed from
-`worktrees/headless-webshell`, branch `codex/headless-webshell`. Both headless Linux
+Server/agent source `0a09f6b` and combined web source `8ba0f74` are deployed. The
+web integrates `5d1e39d` with main's app-title fix. Both headless Linux
 screen actions open the PTY web shell; Windows retains RDP. Live Unicode, resize,
 Ctrl+C, reconnect and Windows desktop rendering pass. Screen-reader mode is
 optional to preserve normal insert-text/emoji input.
@@ -94,11 +94,14 @@ iOS/graphical Linux acceptance remain open. Matching full rollback:
 `/var/lib/speck-rollback/20260922T232347Z-agent-updates-0a09f6b`.
 See [web shell](../operations/web-shell.md),
 [agent update operations](../operations/agent-updates.md) and ignored
-`output/agent-updates/` for exact evidence. No shared Git history was pushed.
-Next integration action: review the local commits before any separately authorized
-GitHub push/merge; future signed agent releases use the documented publisher.
+`output/agent-updates/` in the headless-webshell worktree for exact evidence.
+GitHub integration is coordinated by `codex/app-name-release-sync`; future signed
+agent releases use the documented publisher.
 
-Integration follow-up: main's app-title display fix (PR #11, `6420df3`) was
-missing from the initial combined web release. The active app-label task owns
-the static repair integrating it with `5d1e39d`; this task is holding deployments
-to avoid a second overwrite. Backend/agents need no further change.
+The later shell deployment temporarily replaced the app-title fix with its older
+executable-first code. Combined web `8ba0f74` restored it, retaining the shell and
+updater. Safari Fleet visibly shows the three Windows titles and Linux web-shell
+actions after reload. Build, 28 web checks and 22 focused Chrome/Safari browser
+checks pass; served hashes, backend process/environment and identities match.
+Static rollback: `/var/lib/speck-rollback/20260922T233949Z-app-name-release-sync-8ba0f74/web`.
+Private evidence: `worktrees/app-name-release-sync/output/app-name-release-sync/`.

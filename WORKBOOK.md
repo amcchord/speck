@@ -399,3 +399,16 @@ Unicode input required making xterm's accessibility mode optional; browser
 regressions and final mobile captures cover that fix. Automatic updates are on;
 Settings provides an admin pause. Local commits remain unpushed. See the
 [release record](docs/operations/agent-updates.md#september-22-rollout).
+
+## Combined release repair — September 22, 2026
+
+The shell rollout was based on main before PR #11 and accidentally restored the
+executable-first app labels. Combined web `8ba0f74` merges latest main with deployed
+shell `5d1e39d`; its only runtime changes relative to the live shell release are
+the app-title and search fix. The static repair is verified in Safari Fleet and
+retains the newer shell/updater. Backend, agents, settings and identities remain
+unchanged. Build, 28 web checks and 22 focused Chrome/Safari checks pass.
+Rollback: `/var/lib/speck-rollback/20260922T233949Z-app-name-release-sync-8ba0f74/web`.
+Private evidence: `worktrees/app-name-release-sync/output/app-name-release-sync/`.
+The integration includes the shell task's rollout documentation `d8e829b` and
+adds explicit current-main, deployed-baseline and single-owner release rules.
