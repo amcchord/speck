@@ -6,6 +6,7 @@ import "./orbits.css";
 import { createOperations } from "./operations";
 import { createManagement } from "./management";
 import { icon, wordmark } from "./icons";
+import { startMicrophone } from "./microphone";
 
 type Item = Record<string, any>;
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -130,7 +131,7 @@ function value(id: string) {
 function disconnect() {
   remoteCleanup();
   remoteCleanup = () => {};
-  if (recorder) recorder.sendEnd();
+  if (recorder) recorder.stop();
   recorder = null;
   remote?.disconnect();
   remote = null;
@@ -776,7 +777,7 @@ async function renderRemotePage(id: string) {
   }
 }
 async function connectRemote(d: Item) {
-  app.innerHTML = `<main class="remote-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${esc(d.label)}</h1><small id="remote-status">Connecting…</small></div><button id="remote-ai" class="secondary">${icon("spark")} Screen assistant</button><button id="fullscreen" class="secondary">Full screen</button></header><div class="remote-controls"><button id="mic" class="secondary">Enable microphone</button><label>Keys <select id="key-macro"><option value="">Send shortcut…</option value="cad">Ctrl + Alt + Del</option><option value="task">Task manager</option><option value="run">Windows + R</option><option value="alt-tab">Alt + Tab</option><option value="copy">Ctrl + C</option><option value="paste">Ctrl + V</option><option value="escape">Escape</option><option value="tab">Tab</option></select></label><button id="type-secret" class="secondary">Type password</button><button id="fit-screen" class="secondary">View at 100%</button><button id="desktop-launch" class="secondary">Open in desktop app</button><span id="remote-stats"></span></div><section class="remote-stage"><div id="remote-display" tabindex="0" aria-label="Remote screen. Keyboard input is sent to this machine."></div></section><footer class="remote-footer"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary">Copy to remote</button><button id="read-clipboard" class="secondary">Use my clipboard</button><label class="check"><input id="shared-clipboard" type="checkbox"> Shared clipboard</label></footer></main>`;
+  app.innerHTML = `<main class="remote-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${esc(d.label)}</h1><small id="remote-status">Connecting…</small></div><button id="remote-ai" class="secondary">${icon("spark")} Screen assistant</button><button id="fullscreen" class="secondary">Full screen</button></header><div class="remote-controls"><button id="sound" class="secondary">Enable sound</button><button id="mic" class="secondary">Enable microphone</button><label>Keys <select id="key-macro"><option value="">Send shortcut…</option value="cad">Ctrl + Alt + Del</option><option value="task">Task manager</option><option value="run">Windows + R</option><option value="alt-tab">Alt + Tab</option><option value="copy">Ctrl + C</option><option value="paste">Ctrl + V</option><option value="escape">Escape</option><option value="tab">Tab</option></select></label><button id="type-secret" class="secondary">Type password</button><button id="fit-screen" class="secondary">View at 100%</button><button id="desktop-launch" class="secondary">Open in desktop app</button><span id="remote-stats"></span></div><section class="remote-stage"><div id="remote-display" tabindex="0" aria-label="Remote screen. Keyboard input is sent to this machine."></div></section><footer class="remote-footer"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary">Copy to remote</button><button id="read-clipboard" class="secondary">Use my clipboard</button><label class="check"><input id="shared-clipboard" type="checkbox"> Shared clipboard</label></footer></main>`;
   const modal = document.querySelector<HTMLElement>(".remote-workspace")!;
   remoteCleanup = () => {
     modal.dispatchEvent(new Event("close"));
@@ -819,8 +820,10 @@ async function connectRemote(d: Item) {
   const display = document.getElementById("remote-display")!;
   display.appendChild(client.getDisplay().getElement());
   const status = document.getElementById("remote-status")!;
-  client.onstatechange = (state: number) =>
-    (status.textContent = (
+  let connectionState = 0;
+  client.onstatechange = (state: number) => {
+    connectionState = state;
+    status.textContent = (
       {
         0: "Idle",
         1: "Connecting…",
@@ -829,7 +832,8 @@ async function connectRemote(d: Item) {
         4: "Disconnecting…",
         5: "Disconnected",
       } as Item
-    )[state]);
+    )[state];
+  };
   let remoteError = "";
   client.onerror = (error: Item) => {
     remoteError = error.message;
@@ -837,7 +841,7 @@ async function connectRemote(d: Item) {
     notify(remoteError, true);
   };
   const statistics = setInterval(async () => {
-    if (!modal.isConnected || client.getState() !== 3) return;
+    if (!modal.isConnected || connectionState !== 3) return;
     try {
       const stats = await api("/remote/sessions/" + session.id + "/stats");
       status.textContent =
@@ -902,7 +906,15 @@ async function connectRemote(d: Item) {
       document.fullscreenElement ? "Exit full screen" : "Full screen";
     resizeRemote();
   };
-  document.addEventListener("fullscreenchange", fullscreenChanged);
+  if (!native?.toggleFullscreen) document.addEventListener("fullscreenchange", fullscreenChanged);
+  const updateNativeFullscreen = (full: boolean) => {
+    if (!modal.isConnected) return;
+    document.getElementById("fullscreen")!.textContent = full
+      ? "Exit full screen" : "Full screen";
+    resizeRemote();
+  };
+  const removeFullscreen = native?.onFullscreen?.(updateNativeFullscreen);
+  if (native?.getFullscreen) void native.getFullscreen().then(updateNativeFullscreen).catch(() => {});
   const releaseKeys = () => keyboard?.reset();
   window.addEventListener("blur", releaseKeys);
   display.addEventListener("blur", releaseKeys);
@@ -911,6 +923,7 @@ async function connectRemote(d: Item) {
     clearTimeout(resizeTimer);
     document.removeEventListener("fullscreenchange", fullscreenChanged);
     window.removeEventListener("blur", releaseKeys);
+    removeFullscreen?.();
     if (document.fullscreenElement === modal) void document.exitFullscreen();
   });
   on("fit-screen", () => {
@@ -928,10 +941,15 @@ async function connectRemote(d: Item) {
     "alt-tab": [0xffe9, 0xff09],
     copy: [0xffe3, 0x63],
     paste: [0xffe3, 0x76],
+    cut: [0xffe3, 0x78],
+    selectAll: [0xffe3, 0x61],
+    undo: [0xffe3, 0x7a],
+    redo: [0xffe3, 0x79],
     escape: [0xff1b],
     tab: [0xff09],
   };
   const sendKeys = (keys: number[]) => {
+    keyboard?.reset();
     keys.forEach((k) => client.sendKeyEvent(1, k));
     [...keys].reverse().forEach((k) => client.sendKeyEvent(0, k));
     display.focus();
@@ -956,10 +974,27 @@ async function connectRemote(d: Item) {
   const sharedEnabled = () =>
     !!(document.getElementById("shared-clipboard") as HTMLInputElement)
       ?.checked;
+  const removeEdit = native?.onEdit?.(async (action: string) => {
+    if (!modal.isConnected || document.activeElement !== display || !shortcuts[action]) return;
+    if (action === "paste" && sharedEnabled()) {
+      try {
+        const text = await native.readClipboard();
+        if (!modal.isConnected || !sharedEnabled() || document.activeElement !== display) return;
+        sharedText = text;
+        copyToRemote(text);
+      } catch {
+        notify("Could not read your clipboard. Focus the session and try again.", true);
+        return;
+      }
+    }
+    sendKeys(shortcuts[action]);
+  });
+  modal.addEventListener("close", () => removeEdit?.());
   const clipboardTimer = setInterval(async () => {
     if (native && sharedEnabled() && document.hasFocus()) {
       try {
         const text = await native.readClipboard();
+        if (!modal.isConnected || !sharedEnabled() || !document.hasFocus()) return;
         if (text !== sharedText) {
           sharedText = text;
           copyToRemote(text);
@@ -986,9 +1021,10 @@ async function connectRemote(d: Item) {
       const reader = new Guacamole.StringReader(stream);
       let text = "";
       reader.ontext = (s: string) => {
-        if (text.length < 65536) text += s;
+        text = (text + s).slice(0, 65536);
       };
       reader.onend = () => {
+        if (!modal.isConnected) return;
         (document.getElementById("clipboard") as HTMLInputElement).value = text;
         if (native && sharedEnabled()) {
           sharedText = text;
@@ -1026,26 +1062,51 @@ async function connectRemote(d: Item) {
     });
   });
   on("fullscreen", async () => {
-    if (document.fullscreenElement) await document.exitFullscreen();
+    if (native?.toggleFullscreen) await native.toggleFullscreen();
+    else if (document.fullscreenElement) await document.exitFullscreen();
     else await modal.requestFullscreen();
+    display.focus();
+  });
+  const sound = document.getElementById("sound")!;
+  const audioContext = session.protocol === "rdp"
+    ? Guacamole.AudioContextFactory.getAudioContext() : null;
+  sound.hidden = !audioContext;
+  const soundState = () => {
+    if (!modal.isConnected || !audioContext) return;
+    sound.textContent = audioContext.state === "running" ? "Mute sound" : "Enable sound";
+    sound.setAttribute("aria-pressed", String(audioContext.state === "running"));
+  };
+  audioContext?.addEventListener("statechange", soundState);
+  soundState();
+  modal.addEventListener("close", () => audioContext?.removeEventListener("statechange", soundState));
+  on("sound", async () => {
+    if (audioContext?.state === "running") await audioContext.suspend();
+    else await audioContext?.resume();
+    soundState();
   });
   on("mic", () => {
-    if (recorder) {
-      recorder.sendEnd();
-      recorder = null;
-      document.getElementById("mic")!.textContent = "Enable microphone";
-      return;
-    }
-    const stream = client.createAudioStream("audio/L16;rate=44100,channels=1");
-    recorder = Guacamole.AudioRecorder.getInstance(
-      stream,
-      "audio/L16;rate=44100,channels=1",
-    );
-    if (!recorder)
-      throw new Error("Microphone capture is not available in this browser");
-    recorder.onerror = () =>
-      notify("Microphone permission or remote audio input failed", true);
-    document.getElementById("mic")!.textContent = "Mute microphone";
+    if (recorder) { recorder.stop(); recorder = null; return; }
+    const micButton = document.getElementById("mic")!;
+    recorder = startMicrophone(client, {
+      state: (state) => {
+        if (!modal.isConnected) return;
+        micButton.textContent = state === "starting" ? "Cancel microphone"
+          : state === "waiting" ? "Microphone ready"
+          : state === "active" ? "Mute microphone" : "Enable microphone";
+        micButton.title = state === "waiting"
+          ? "Waiting for a remote application to record audio. Click to disable."
+          : "";
+        if (state === "stopped") recorder = null;
+      },
+      error: (message) => { if (modal.isConnected) notify(message, true); },
+    }, {
+      getUserMedia: (constraints) => navigator.mediaDevices.getUserMedia(constraints),
+      createContext: () => new AudioContext({ sampleRate: 44100 }),
+      createNode: (context) => new AudioWorkletNode(context, "speck-microphone", {
+        channelCount: 1, channelCountMode: "explicit", numberOfInputs: 1, numberOfOutputs: 1,
+      }),
+      createWriter: (stream) => new Guacamole.ArrayBufferWriter(stream),
+    });
   });
   client.connect("");
   display.focus();

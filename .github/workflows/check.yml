@@ -21,3 +21,4 @@ jobs:
       - run: go test ./internal/agent
         working-directory: agent
       - run: ./scripts/build.sh
+      - run: node --experimental-strip-types --test web/test/*.test.mjs

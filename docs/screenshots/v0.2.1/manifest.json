@@ -1,0 +1,14 @@
+[
+  {
+    "file": "mac-linux-ssh.jpg",
+    "sha256": "2a695d54454f6b827557a1c3cf83b0921862b9942191b3b16fac564bf97c00b7",
+    "capture": "CUA original capture bytes",
+    "date": "2026-09-22"
+  },
+  {
+    "file": "windows-native.jpg",
+    "sha256": "0ac6aa8a2e9336d5874a21f6f471e44058a28aa070b19c1e1e114d21cb354fb1",
+    "capture": "CUA original capture bytes",
+    "date": "2026-09-22"
+  }
+]

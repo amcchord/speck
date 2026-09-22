@@ -15,11 +15,12 @@
 
 ## Release follow-ups
 
-- [ ] Interactive native-client verification on all three operating systems.
-      The initial local macOS run was blocked by a locked operator workstation.
-      Packaging and protocol/origin tests pass; native clipboard and shortcut
-      smoke tests remain necessary before a stable client release.
-- [ ] Windows code signing and macOS signing/notarization for distributed builds.
+- [x] Interactive macOS Apple silicon and Windows native-client smoke tests.
+      See [0.2.1 qualification](desktop-quality.md) for results and limits.
+- [x] Developer ID signing and Apple notarization for both Mac architectures.
+- [ ] Linux graphical client and Intel Mac runtime verification.
+- [ ] Physical microphone round-trip and subjective call-quality verification.
+- [ ] Windows code signing.
 - [ ] Re-enable dynamic RDP resolution after qualifying a gateway version that
       passes repeated resize/fullscreen checks. Current RDP uses stable resolution.
 - [ ] Live Windows MSI installation and selected-patch installation validation

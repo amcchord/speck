@@ -1,7 +1,7 @@
 {
   "name": "speck-desktop",
   "productName": "Speck Desktop",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A little lightweight RMM — desktop remote workspace",
   "author": {
     "name": "Speck contributors",
@@ -74,7 +74,10 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "installerSidebar": "assets/installer-sidebar.bmp",
+      "uninstallerSidebar": "assets/installer-sidebar.bmp",
+      "installerHeader": "assets/installer-header.bmp"
     },
     "linux": {
       "target": [

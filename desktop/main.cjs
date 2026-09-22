@@ -11,7 +11,8 @@ const {
 const path = require("node:path");
 const { ORIGIN, trusted, destination, remotePage } = require("./policy.cjs");
 let window = null,
-  pendingURL = null;
+  pendingURL = null,
+  remoteInputFocused = false;
 app.setName("Speck Desktop");
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -41,7 +42,7 @@ function openLink(value) {
   if (window) {
     void window.loadURL(url);
     focus();
-  }
+  } else if (app.isReady()) createWindow();
 }
 function validSender(event) {
   return (
@@ -53,24 +54,47 @@ function validSender(event) {
     window.isFocused()
   );
 }
-ipcMain.handle("speck:clipboard:read", (event) => {
+ipcMain.handle("speck:clipboard:read", async (event) => {
   if (!validSender(event))
     throw new Error(
       "Clipboard is available only in the active Speck remote workspace",
     );
-  return clipboard.readText().slice(0, 65536);
+  const text = await clipboard.readText();
+  if (!validSender(event)) throw new Error("Remote workspace lost focus");
+  return text.slice(0, 65536);
 });
-ipcMain.handle("speck:clipboard:write", (event, text) => {
+ipcMain.handle("speck:clipboard:write", async (event, text) => {
   if (!validSender(event) || typeof text !== "string" || text.length > 65536)
     throw new Error("Clipboard request rejected");
-  clipboard.writeText(text);
+  await clipboard.writeText(text);
   return true;
 });
+ipcMain.on("speck:input-focus", (event, active) => {
+  if (window && event.sender === window.webContents &&
+      event.senderFrame === window.webContents.mainFrame) {
+    remoteInputFocused = active === true && remotePage(event.senderFrame.url);
+  }
+});
+ipcMain.handle("speck:fullscreen:get", (event) => {
+  if (!validSender(event)) throw new Error("Remote workspace is not active");
+  return window.isFullScreen();
+});
+ipcMain.handle("speck:fullscreen:toggle", (event) => {
+  if (!validSender(event)) throw new Error("Remote workspace is not active");
+  window.setFullScreen(!window.isFullScreen());
+});
+function edit(action) {
+  if (!window) return;
+  if (remoteInputFocused && remotePage(window.webContents.getURL())) {
+    window.webContents.send("speck:edit", action);
+  } else window.webContents[action]();
+}
 function macro(name) {
   if (window && remotePage(window.webContents.getURL()))
     window.webContents.send("speck:macro", name);
 }
 function createWindow() {
+  remoteInputFocused = false;
   if (process.defaultApp) {
     app.setAsDefaultProtocolClient("speck", process.execPath, [
       path.resolve(process.argv[1]),
@@ -110,6 +134,27 @@ function createWindow() {
   window.webContents.on("will-attach-webview", (event) =>
     event.preventDefault(),
   );
+  window.webContents.on("did-start-navigation", (_event, _url, _inPlace, isMainFrame) => {
+    if (isMainFrame) remoteInputFocused = false;
+  });
+  // Canvas sessions cannot use Electron's normal text-edit menu roles. Route
+  // edit shortcuts to the remote OS while preserving native editing in forms.
+  window.webContents.on("before-input-event", (event, input) => {
+    if (!remoteInputFocused || !remotePage(window.webContents.getURL())) return;
+    const key = input.key.toLowerCase();
+    const modifier = process.platform === "darwin" ? input.meta : input.control;
+    const action = { a: "selectAll", c: "copy", x: "cut", v: "paste",
+      z: input.shift ? "redo" : "undo", y: "redo" }[key];
+    if (modifier && !input.alt && action) {
+      event.preventDefault();
+      if (input.type === "keyDown" && !input.isAutoRepeat) edit(action);
+    } else if (process.platform === "darwin" && key === "meta") {
+      // Command is a local modifier. Windows-key combinations use Session macros.
+      event.preventDefault();
+    }
+  });
+  window.on("enter-full-screen", () => window?.webContents.send("speck:fullscreen", true));
+  window.on("leave-full-screen", () => window?.webContents.send("speck:fullscreen", false));
   window.webContents.session.setPermissionCheckHandler(
     (webContents, permission, origin) =>
       trusted(origin) &&
@@ -191,13 +236,13 @@ function createWindow() {
     {
       label: "Edit",
       submenu: [
-        { role: "undo" },
-        { role: "redo" },
+        { label: "Undo", accelerator: "CmdOrCtrl+Z", click: () => edit("undo") },
+        { label: "Redo", accelerator: "CmdOrCtrl+Shift+Z", click: () => edit("redo") },
         { type: "separator" },
-        { role: "cut" },
-        { role: "copy" },
-        { role: "paste" },
-        { role: "selectAll" },
+        { label: "Cut", accelerator: "CmdOrCtrl+X", click: () => edit("cut") },
+        { label: "Copy", accelerator: "CmdOrCtrl+C", click: () => edit("copy") },
+        { label: "Paste", accelerator: "CmdOrCtrl+V", click: () => edit("paste") },
+        { label: "Select all", accelerator: "CmdOrCtrl+A", click: () => edit("selectAll") },
       ],
     },
     {
@@ -226,6 +271,7 @@ function createWindow() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(menu));
   window.on("closed", () => {
     window = null;
+    remoteInputFocused = false;
   });
   void window.loadURL(pendingURL || ORIGIN);
 }

@@ -24,3 +24,17 @@ Refreshed ten public screenshots with original-byte digests. Native application
 UI checks were blocked by the locked Mac and remain explicitly unverified. Next:
 complete that matrix, sign/notarize distributed clients and test Windows installers
 and patch application on disposable systems. See roadmap and private rollout record.
+
+## 2026-09-22 — Native desktop quality release
+
+Native macOS/Windows use revealed actual clipboard, keyboard, fullscreen, audio
+statistics and microphone cleanup failures. Corrected them and added focused
+regressions. Windows setup now uses Speck artwork. Verified upgrades and retained
+sign-in on Windows 11, Mac browser handoff, Windows RDP, Linux SSH, shared clipboard
+and key macros. Native Windows output audio and synthetic microphone recording
+succeeded. Removed a false microphone timeout while the remote app is idle.
+
+Both Mac packages are signed/notarized/stapled; assessment passed. No physical
+microphone, Linux GUI or Intel Mac runtime pass is claimed. Published qualification
+matrix and native workspace captures. Static web deployment only; backend, Slide,
+agent identities and retained recoveries were not changed.
