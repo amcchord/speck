@@ -31,3 +31,16 @@ command, device write or recovery action was run by these UI checks.
 The [public screenshots](../screenshots/fleet-row-pane/README.md) contain synthetic
 data. This change is served by the web console and Desktop's hosted interface;
 no new native installer or endpoint-agent binary is required.
+
+## Deployment — September 22, 2026
+
+Runtime source `d1692a8` is live, with `index-CpEaJ9yc.js` and
+`index-Cs7f2vcI.css`. The public files match the tested build. Live UI verification
+opened the correct machine from its CPU cell, with exactly one expanded row,
+non-modal state, 180 ms animation and no backdrop filter. Service PID/start time,
+environment fingerprint and HTTPS health passed. No backend restart or endpoint
+operation was needed. The prior web tree is retained at
+`/var/lib/speck-rollback/20260922T201132Z-fleet-row-pane-d1692a8/web`.
+Restore its assets and atomically replace `index.html` for a static-only rollback.
+Private evidence is in `output/fleet-row-pane/`. The separate visual-audit task
+will integrate this source before its later shared-style rollout.

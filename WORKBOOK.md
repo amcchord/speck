@@ -238,3 +238,19 @@ navigation returned the table before the background response. Only static assets
 were updated; service PID/start time and environment were unchanged. Rollback:
 `/var/lib/speck-rollback/20260922T195747Z-compact-fleet-ed04607/web`.
 See `docs/operations/compact-fleet.md`; private evidence: `output/compact-fleet/`.
+
+## Fleet row and pane — September 22, 2026
+
+Runtime `d1692a8` opens machine details from ordinary row content and blank space.
+The pane is non-modal with a 180 ms entrance; the current row stays highlighted
+and visible rows can switch directly. Other dialogs remain modal. Keyboard
+activation, Escape/focus restoration, bulk selection and quick actions retain
+independent behavior. Mobile fills the screen without scrolling the fleet behind
+it; reduced motion disables animation. See `docs/operations/fleet-row-pane.md` and
+the original synthetic screenshots in `docs/screenshots/fleet-row-pane/`.
+
+TypeScript/Vite and 24 web tests passed; desktop/mobile Chromium and live row
+activation were checked. Static files match the build; backend PID/start time,
+environment and HTTPS health are preserved. Prior web assets remain available
+for rollback. No new agent package, endpoint operation or recovery action was
+needed. The visual-audit task will integrate this change before its next rollout.

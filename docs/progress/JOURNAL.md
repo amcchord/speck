@@ -239,3 +239,19 @@ filtered rows before the response. TypeScript/Vite, 24 web tests, 14 desktop tes
 and GitHub Checks pass. Public captures are synthetic. Previous static assets are
 backed up and service identity/environment were preserved. See compact-fleet
 operations notes and ignored `output/compact-fleet/` for exact release evidence.
+
+## 2026-09-22 — Row-wide Fleet activation and contextual pane
+
+`codex/fleet-row-pane`, runtime `d1692a8`, is deployed. Ordinary row cells and blank
+space open details; interactive controls and text selection remain independent.
+Non-modal presentation keeps the Fleet accessible and highlights the open machine.
+A short entrance respects reduced motion, and mobile prevents background scroll.
+Replacements remove old detail DOM immediately; navigation/sign-out remove the
+pane, nested modals retain Escape, and dismissal returns keyboard focus.
+
+TypeScript/Vite, 24 existing web tests, desktop/mobile Chromium, and live CPU-cell
+activation passed. Two original synthetic screenshots and digests are committed.
+Static rollout retained rollback assets and verified service identity/environment,
+HTTPS health and exact public asset bytes. No backend restart, device command,
+remote session or recovery action was triggered. Private evidence is under
+`output/fleet-row-pane/`; shared-style rollout coordination is with visual-audit.
