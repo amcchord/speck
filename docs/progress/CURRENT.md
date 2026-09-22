@@ -10,6 +10,8 @@ available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
   offline endpoint and a five-minute grace period trigger reversible archiving.
   Stopped VMs, originals, credentials and retained history are preserved. The
   Slide page has status, **Check now** and an admin policy toggle.
+  The scheduled worker archived five confirmed removed copies in the live
+  acceptance test; all originals remained online and manageable.
   [Behavior and limits](../recovery.md#automatic-fleet-cleanup).
 - **Machine overview**: the deployed cleanup release retains `37105be`'s name/status/IP and report
   details at the top, health beside a 16:9 preview, and compact system/organization

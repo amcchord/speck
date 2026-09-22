@@ -320,5 +320,11 @@ backend suite (77 tests) and 24 web checks pass; server Ruff and TypeScript/Vite
 pass. Runtime `e5d37c6` is deployed with the previously live machine overview
 preserved. The backend restart followed a consistent SQLite and runtime/config
 backup at `/var/lib/speck-rollback/20260922T214123Z-restore-cleanup`.
-No endpoint packages or provider credentials changed. The scheduled worker has
-observed removed restores and correctly retained them through the grace period.
+No endpoint packages or provider credentials changed. The scheduled worker
+retained removed restores through the grace period, then automatically archived
+all five tracked copies at 21:51:36 UTC. Audit actors confirm `slide-sync` performed
+the archives. All five originals remain online and manageable, with identical
+device, installation and protected-agent identities. The live Slide controls and
+five-machine Fleet were checked; a subsequent **Check now** was a no-op.
+Private proof stays outside this public repository. Draft integration PR:
+https://github.com/amcchord/speck/pull/9.
