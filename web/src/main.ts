@@ -853,6 +853,14 @@ async function connectRemote(d: Item) {
     resizeRemote();
   };
   document.addEventListener("fullscreenchange", fullscreenChanged);
+  const updateNativeFullscreen = (full: boolean) => {
+    if (!modal.isConnected) return;
+    document.getElementById("fullscreen")!.textContent = full
+      ? "Exit full screen" : "Full screen";
+    resizeRemote();
+  };
+  const removeFullscreen = native?.onFullscreen?.(updateNativeFullscreen);
+  if (native?.getFullscreen) void native.getFullscreen().then(updateNativeFullscreen).catch(() => {});
   const releaseKeys = () => keyboard?.reset();
   window.addEventListener("blur", releaseKeys);
   display.addEventListener("blur", releaseKeys);
@@ -861,6 +869,7 @@ async function connectRemote(d: Item) {
     clearTimeout(resizeTimer);
     document.removeEventListener("fullscreenchange", fullscreenChanged);
     window.removeEventListener("blur", releaseKeys);
+    removeFullscreen?.();
     if (document.fullscreenElement === modal) void document.exitFullscreen();
   });
   on("fit-screen", () => {
@@ -878,10 +887,15 @@ async function connectRemote(d: Item) {
     "alt-tab": [0xffe9, 0xff09],
     copy: [0xffe3, 0x63],
     paste: [0xffe3, 0x76],
+    cut: [0xffe3, 0x78],
+    selectAll: [0xffe3, 0x61],
+    undo: [0xffe3, 0x7a],
+    redo: [0xffe3, 0x79],
     escape: [0xff1b],
     tab: [0xff09],
   };
   const sendKeys = (keys: number[]) => {
+    keyboard?.reset();
     keys.forEach((k) => client.sendKeyEvent(1, k));
     [...keys].reverse().forEach((k) => client.sendKeyEvent(0, k));
     display.focus();
@@ -906,10 +920,27 @@ async function connectRemote(d: Item) {
   const sharedEnabled = () =>
     !!(document.getElementById("shared-clipboard") as HTMLInputElement)
       ?.checked;
+  const removeEdit = native?.onEdit?.(async (action: string) => {
+    if (!modal.isConnected || document.activeElement !== display || !shortcuts[action]) return;
+    if (action === "paste" && sharedEnabled()) {
+      try {
+        const text = await native.readClipboard();
+        if (!modal.isConnected || !sharedEnabled() || document.activeElement !== display) return;
+        sharedText = text;
+        copyToRemote(text);
+      } catch {
+        notify("Could not read your clipboard. Focus the session and try again.", true);
+        return;
+      }
+    }
+    sendKeys(shortcuts[action]);
+  });
+  modal.addEventListener("close", () => removeEdit?.());
   const clipboardTimer = setInterval(async () => {
     if (native && sharedEnabled() && document.hasFocus()) {
       try {
         const text = await native.readClipboard();
+        if (!modal.isConnected || !sharedEnabled() || !document.hasFocus()) return;
         if (text !== sharedText) {
           sharedText = text;
           copyToRemote(text);
@@ -936,9 +967,10 @@ async function connectRemote(d: Item) {
       const reader = new Guacamole.StringReader(stream);
       let text = "";
       reader.ontext = (s: string) => {
-        if (text.length < 65536) text += s;
+        text = (text + s).slice(0, 65536);
       };
       reader.onend = () => {
+        if (!modal.isConnected) return;
         (document.getElementById("clipboard") as HTMLInputElement).value = text;
         if (native && sharedEnabled()) {
           sharedText = text;
@@ -976,7 +1008,8 @@ async function connectRemote(d: Item) {
     });
   });
   on("fullscreen", async () => {
-    if (document.fullscreenElement) await document.exitFullscreen();
+    if (native?.toggleFullscreen) await native.toggleFullscreen();
+    else if (document.fullscreenElement) await document.exitFullscreen();
     else await modal.requestFullscreen();
   });
   on("mic", () => {
