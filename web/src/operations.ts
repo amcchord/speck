@@ -388,7 +388,7 @@ export function createOperations(ui: Item) {
           if (target.dataset.capture !== String(info.captured_at) || !target.querySelector(":scope > img")) {
             target.dataset.capture = String(info.captured_at);
             target.innerHTML = `<img src="${url}" alt="Screen preview of ${esc(d.label)}"><span class="capture-time">${label} · ${date(info.captured_at)}</span>`;
-            target.querySelector(":scope > img")!.onerror = () => {
+            target.querySelector<HTMLImageElement>(":scope > img")!.onerror = () => {
               if (!enabled || request !== generation) return;
               empty("Preview unavailable. Retrying automatically…");
             };

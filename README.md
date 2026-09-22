@@ -29,7 +29,7 @@ for provenance and the local preview workflow.
 - Sites, tags, reversible retirement and clone-aware installation revocation.
 - Scheduled patch scans and reviewed software/script templates with durable run history.
 - Admin/operator/viewer accounts, [passkey sign-in](docs/passkeys.md), optional authenticator MFA and searchable audit history.
-- Opt-in live screen previews, expiring automatically and disabled per device.
+- Opt-in live screen previews with an encrypted last preview saved every five minutes.
 - Native Windows Update/apt/dnf inventory and reviewed update installation.
 - Bulk software deployment with versioned, parameterized templates and results.
 - OpenAI script assistance and reviewed computer-use proposals.

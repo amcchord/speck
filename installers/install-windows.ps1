@@ -81,6 +81,11 @@ try {
      $Interactive=New-ScheduledTaskPrincipal -UserId $User -LogonType Interactive -RunLevel Limited
      Register-ScheduledTask -TaskName $Task -Action $Action -Principal $Interactive -Settings $Settings -Force | Out-Null
      Start-ScheduledTask -TaskName $Task
+     # Let Task Scheduler launch the process before removing its one-shot entry.
+     for ($Attempt=0; $Attempt -lt 10; $Attempt++) {
+       if ((Get-ScheduledTask -TaskName $Task).State -eq 'Running') {break}
+       Start-Sleep -Milliseconds 500
+     }
    } catch {Write-Warning 'Desktop helper will start at the next sign-in.'}
    finally {Unregister-ScheduledTask -TaskName $Task -Confirm:$false -ErrorAction SilentlyContinue}
  }
