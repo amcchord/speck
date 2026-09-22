@@ -5,6 +5,11 @@ remote-session startup fixes and **passkey sign-in**. Enroll in Settings → Acc
 & access, or Account → Passkeys on iOS. Password/authenticator login remains
 available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
 
+- **Fleet**: compact header and single-line desktop rows, OS/action icons, and
+  immediate cached return with filters, selection and scroll preserved. Static
+  release `ed04607` is live; Safari, responsive layouts and slow/error refresh
+  verified. [Details](../operations/compact-fleet.md) and
+  [screenshots](../screenshots/compact-fleet/README.md).
 - **Desktop 0.2.2**: published Mac, Windows and Linux downloads. Mac builds include
   their required provisioning profile, Developer ID signature, notarization and
   staples. Apple silicon launch, retained login, browser handoff and cancellation

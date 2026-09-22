@@ -39,3 +39,21 @@ a machine leaves inventory, and authorization remains enforced by the server.
 
 The [public gallery](../screenshots/compact-fleet/README.md) uses a local synthetic
 fixture. Private QA and release evidence is in `output/compact-fleet/`.
+
+## Deployment — September 22, 2026
+
+Static runtime source `ed04607` is live. Production serves
+`index-9pYAlSu7.js` and `index-B3EWvvn7.css`; their bytes match the tested build.
+HTTPS health, service PID/start time and environment fingerprint checks passed.
+No backend restart, database change, endpoint operation or recovery action was
+performed. The preceding web tree is retained at
+`/var/lib/speck-rollback/20260922T195747Z-compact-fleet-ed04607/web`.
+Rollback copies that tree's assets back and atomically replaces `index.html`;
+no service restart is needed. Existing hashed assets were retained for open tabs.
+
+Live Chromium verified 46-pixel rows, an approximately 124-pixel table offset,
+and no horizontal overflow at 1280 pixels. Returning from Downloads immediately
+showed all 11 filtered Windows rows with the BYD search and memory sort intact,
+no loader, and Refresh still busy. GitHub Checks passed for the release commit.
+The cache is per signed-in page session; refresh the browser once to load this
+release. Existing remote sessions were not interrupted.

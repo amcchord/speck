@@ -223,3 +223,19 @@ matching before any native ceremony. Twenty-five native, 57 backend, 24 web and
 passkey management were reviewed and captured without personal credentials. No
 endpoint credentials, agent packages, Slide recovery identities or retained cloud
 resources were changed. Upload keys were temporary; AustinLand remains the source.
+
+## 2026-09-22 — Compact Fleet and cached navigation
+
+`ed04607` is deployed as a static-only release. Header consolidation moves the
+table roughly 133 pixels earlier; 46-pixel desktop rows replace 80.75-pixel rows.
+Windows/Linux icons, separate CPU/RAM columns and labeled action icons reduce
+repetition. Mobile keeps accessible touch targets. Search, filters, sort, page,
+selection, preview state and scroll survive navigation; background failures keep
+the cached table and sign-out resets it. No inventory is written to browser storage.
+
+Native Safari and 320/390/1024/1280-pixel Chromium were reviewed. Delayed, failed,
+first-load, cached-return and sign-out cases passed; live navigation restored 11
+filtered rows before the response. TypeScript/Vite, 24 web tests, 14 desktop tests
+and GitHub Checks pass. Public captures are synthetic. Previous static assets are
+backed up and service identity/environment were preserved. See compact-fleet
+operations notes and ignored `output/compact-fleet/` for exact release evidence.
