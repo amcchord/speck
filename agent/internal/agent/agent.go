@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,13 +20,15 @@ import (
 	"time"
 )
 
-const Version = "0.2.2"
+var Version = "0.3.1"
+
 const FileLimit = int64(256 * 1024 * 1024)
 
 type Config struct {
-	Server         string `json:"server"`
-	Token          string `json:"token"`
-	InstallationID string `json:"installation_id"`
+	Server          string `json:"server"`
+	UpdatePublicKey string `json:"update_public_key,omitempty"`
+	Token           string `json:"token"`
+	InstallationID  string `json:"installation_id"`
 }
 type Client struct {
 	Config     Config
@@ -102,14 +105,16 @@ func Enroll(path, server, token string) error {
 	hostname, _ := os.Hostname()
 	input := map[string]any{"token": token, "hardware_id": c.Hardware, "hostname": hostname, "platform": runtime.GOOS, "arch": runtime.GOARCH}
 	var response struct {
-		Token          string `json:"token"`
-		InstallationID string `json:"installation_id"`
+		Token           string `json:"token"`
+		InstallationID  string `json:"installation_id"`
+		UpdatePublicKey string `json:"update_public_key"`
 	}
 	if err := c.api(context.Background(), "POST", "/api/agent/enroll", input, &response); err != nil {
 		return err
 	}
 	c.Config.Token = response.Token
 	c.Config.InstallationID = response.InstallationID
+	c.Config.UpdatePublicKey = response.UpdatePublicKey
 	return writeJSON(path, c.Config, 0600)
 }
 func writeJSON(path string, value any, mode os.FileMode) error {
@@ -193,7 +198,13 @@ func Run(ctx context.Context, path string) error {
 			if current != nil {
 				updateDesktopTelemetry(current, filepath.Join(filepath.Dir(path), "telemetry"))
 				hostname, _ := os.Hostname()
-				_ = c.api(ctx, "POST", "/api/agent/check-in", map[string]any{"hostname": hostname, "platform": runtime.GOOS, "arch": runtime.GOARCH, "telemetry": current}, nil)
+				current["agent_update"] = updateTelemetry(path)
+				var report struct {
+					Approved bool `json:"approved"`
+				}
+				if c.api(ctx, "POST", "/api/agent/check-in", map[string]any{"hostname": hostname, "platform": runtime.GOOS, "arch": runtime.GOARCH, "telemetry": current}, &report) == nil && report.Approved {
+					c.confirmUpdate()
+				}
 			}
 			select {
 			case <-ctx.Done():
@@ -204,7 +215,35 @@ func Run(ctx context.Context, path string) error {
 	}()
 	go c.previewLoop(ctx)
 	slots := make(chan struct{}, 4)
+	nextUpdate := time.Now().Add(time.Duration(30+rand.IntN(60)) * time.Second)
 	for {
+		pending := updateState(path)
+		if pending.Status == "installing" && time.Now().Unix()-pending.At > 300 {
+			// A killed updater or machine restart must not stall job polling forever.
+			pending.Status = "failed"
+			_ = saveUpdateState(path, pending)
+		}
+		if pending.Status == "installing" && pending.Version == Version {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(2 * time.Second):
+				continue
+			}
+		}
+		if len(slots) == 0 && time.Now().After(nextUpdate) {
+			nextUpdate = time.Now().Add(time.Duration(600+rand.IntN(300)) * time.Second)
+			updateCtx, updateCancel := context.WithTimeout(ctx, 3*time.Minute)
+			launched := c.checkUpdate(updateCtx)
+			updateCancel()
+			if launched {
+				select {
+				case <-ctx.Done():
+					return nil
+				case <-time.After(5 * time.Minute):
+				}
+			}
+		}
 		var response struct {
 			Job *Job `json:"job"`
 		}
@@ -243,7 +282,7 @@ func (c *Client) execute(parent context.Context, j Job) {
 		return
 	}
 	duration := number(j.Payload, "timeout", 60)
-	if j.Kind != "tunnel" && j.Kind != "command" && duration > 180 {
+	if j.Kind != "tunnel" && j.Kind != "shell" && j.Kind != "command" && duration > 180 {
 		duration = 180
 	}
 	if duration < 5 {
@@ -306,6 +345,8 @@ func (c *Client) handle(ctx context.Context, j Job) (map[string]any, error) {
 		return c.uploadToDevice(ctx, j.Payload)
 	case "files.download":
 		return c.downloadFromDevice(ctx, j.Payload)
+	case "shell":
+		return c.shell(ctx, j.Payload)
 	case "tunnel":
 		return c.tunnel(ctx, j.Payload)
 	}

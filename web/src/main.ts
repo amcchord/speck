@@ -360,7 +360,9 @@ async function render() {
   if (location.hash.startsWith("#desktop-signin/")) { await desktopSignIn(); return; }
   page = location.hash.slice(1) || "fleet";
   if (page.startsWith("remote/")) {
-    await renderRemotePage(page.slice(7));
+    const [id, query = ""] = page.slice(7).split("?");
+    const mode = new URLSearchParams(query).get("mode") || "auto";
+    await renderRemotePage(id, 0, mode);
     return;
   }
   if (
@@ -613,10 +615,10 @@ function renderFleetRows() {
         const status = !d.approved ? "Review" : d.online ? "Online" : "Offline";
         const presence = machinePresence(d);
         const active = presence.app;
-        const screenAction = `${d.remote_protocol === "ssh" ? "Open SSH session" : "Screen control"} · ${d.label}`;
+        const screenAction = `${d.remote_protocol === "shell" ? "Open web shell" : d.remote_protocol === "ssh" ? "Open SSH session" : "Screen control"} · ${d.label}`;
         const shellAction = `Run ${d.platform === "windows" ? "PowerShell" : "shell command"} · ${d.label}`;
         const usage = (value: any) => value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(0) + "%" : "—";
-        return `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon" title="${esc(os)}">${icon(d.platform === "windows" ? "windows" : "linux")}</span><b>${esc(d.label)}</b></button></td><td data-label="Status" class="status-cell" title="Last report: ${date(d.last_seen)}">${badge(status)}</td><td data-label="App" class="app-cell"><span title="${esc(active ? [active.title, active.process, active.user].filter(Boolean).join(" · ") : presence.desktop)}">${esc(presence.table)}</span></td><td data-label="CPU" class="util-cell cpu-cell">${usage(d.telemetry?.cpu_percent)}</td><td data-label="RAM" class="util-cell ram-cell">${usage(d.telemetry?.memory?.usedPercent)}</td><td data-label="IP address" class="network-cell mono" title="${esc(primaryAddress(d))}">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Screen preview of ${esc(d.label)}"><span>${d.preview.source === "live" ? "Live" : "Saved"} · ${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "No preview yet" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")}</button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button></td></tr>`;
+        return `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon" title="${esc(os)}">${icon(d.platform === "windows" ? "windows" : "linux")}</span><b>${esc(d.label)}</b></button></td><td data-label="Status" class="status-cell" title="Last report: ${date(d.last_seen)}">${badge(status)}</td><td data-label="App" class="app-cell"><span title="${esc(active ? [active.title, active.process, active.user].filter(Boolean).join(" · ") : presence.desktop)}">${esc(presence.table)}</span></td><td data-label="CPU" class="util-cell cpu-cell">${usage(d.telemetry?.cpu_percent)}</td><td data-label="RAM" class="util-cell ram-cell">${usage(d.telemetry?.memory?.usedPercent)}</td><td data-label="IP address" class="network-cell mono" title="${esc(primaryAddress(d))}">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Screen preview of ${esc(d.label)}"><span>${d.preview.source === "live" ? "Live" : "Saved"} · ${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "No preview yet" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(["shell", "ssh"].includes(d.remote_protocol) ? "terminal" : "monitor")}</button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button></td></tr>`;
       })
       .join("") ||
     `<tr class="fleet-empty-row"><td colspan="${showPreviews ? 9 : 8}"><div class="empty"><h3>No matching machines</h3><p>Try another search or filter.</p></div></td></tr>`;
@@ -728,7 +730,7 @@ function launchRemote(d: Item) {
     configureRemote(d);
     return;
   }
-  if (localStorage.getItem("speck-remote-client") === "desktop") {
+  if (d.remote_protocol !== "shell" && localStorage.getItem("speck-remote-client") === "desktop") {
     let launched = false;
     const blur = () => {
       launched = true;
@@ -825,7 +827,7 @@ async function renderDeviceContent() {
         <div><dt>Uptime${d.online ? "" : " at last report"}</dt><dd class="machine-uptime">${uptime(t.host?.uptime)}</dd></div>
         <div><dt>Last report</dt><dd class="machine-report">${esc(date(d.last_seen))}</dd></div>
       </dl>
-      <div class="drawer-actions">${d.approved && !d.archived && role !== "viewer" ? `<button id="drawer-screen" class="primary" ${d.online ? "" : "disabled"}>${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")} ${d.remote_protocol === "ssh" ? "Open SSH" : "Screen control"}</button><button id="drawer-terminal" class="secondary">${icon("terminal")} ${d.platform === "windows" ? "PowerShell" : "Shell"}</button><button id="drawer-ai" class="secondary">${icon("spark")} Ask AI</button>` : ""}${role !== "viewer" && !d.archived ? '<button id="device-edit" class="secondary">Edit</button>' : ""}</div>
+      <div class="drawer-actions">${d.approved && !d.archived && role !== "viewer" ? `<button id="drawer-screen" class="primary" ${d.online ? "" : "disabled"}>${icon(["shell", "ssh"].includes(d.remote_protocol) ? "terminal" : "monitor")} ${d.remote_protocol === "shell" ? "Open web shell" : d.remote_protocol === "ssh" ? "Open SSH" : "Screen control"}</button><button id="drawer-terminal" class="secondary">${icon("terminal")} ${d.platform === "windows" ? "PowerShell" : "Shell"}</button><button id="drawer-ai" class="secondary">${icon("spark")} Ask AI</button>` : ""}${role !== "viewer" && !d.archived ? '<button id="device-edit" class="secondary">Edit</button>' : ""}</div>
     </div>
     ${d.archived ? '<div class="callout">Archived. Management is disabled; retained history and Slide identity remain available.</div>' : !d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}
     <div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body">${loadingState("Loading " + tab + "…")}</div>`;
@@ -964,7 +966,7 @@ async function renderDeviceContent() {
     });
     await transfers(d.id);
   } else if (tab === "remote") {
-    body.innerHTML = `<div class="remote-intro"><h2>Remote access</h2><p>${d.remote_protocol === "ssh" ? "Open an SSH terminal through the agent." : d.remote_protocol === "vnc" ? "Open a VNC desktop through the agent." : "Open an RDP desktop through the agent, with speaker output and microphone input."}</p><div class="toolbar"><button id="connect" class="primary">Open browser session</button><button id="remote-config" class="secondary">Connection settings</button></div>${d.remote_protocol === "rdp" ? `<a class="text-link" href="/api/devices/${d.id}/remote/native.rdp">Download native RDP fallback ↗</a><small>The native viewer needs a LAN or VPN route to this machine.</small>` : ""}<div class="callout">RDP creates or reconnects a desktop session. Windows client editions may lock the local console. Linux needs an RDP or VNC desktop service; headless machines can use browser SSH.</div></div>`;
+    body.innerHTML = `<div class="remote-intro"><h2>Remote access</h2><p>${d.remote_protocol === "shell" ? "Open an interactive web shell through the agent. No SSH setup is needed." : d.remote_protocol === "ssh" ? "Open an SSH terminal through the agent." : d.remote_protocol === "vnc" ? "Open a VNC desktop through the agent." : "Open an RDP desktop through the agent, with speaker output and microphone input."}</p><div class="toolbar"><button id="connect" class="primary">Open browser session</button><button id="remote-config" class="secondary">Connection settings</button>${d.remote_shell_available && d.remote_protocol !== "shell" ? `<a class="secondary" href="#remote/${d.id}?mode=shell">Open web shell</a>` : ""}</div>${d.remote_protocol === "rdp" ? `<a class="text-link" href="/api/devices/${d.id}/remote/native.rdp">Download native RDP fallback ↗</a><small>The native viewer needs a LAN or VPN route to this machine.</small>` : ""}<div class="callout">RDP creates or reconnects a desktop session. Windows client editions may lock the local console. Linux needs an RDP or VNC desktop service; headless Linux machines open a web shell with an updated agent.</div></div>`;
     on("remote-config", () => configureRemote(d));
     on("connect", () => launchRemote(d));
   }
@@ -1071,12 +1073,13 @@ function configureRemote(d: Item) {
       ).checked,
     });
     d.remote_configured = true;
-    d.remote_protocol = value("protocol");
+    d.configured_remote_protocol = value("protocol");
+    d.remote_protocol = d.remote_shell_available && d.telemetry?.capabilities?.desktop === "headless" ? "shell" : value("protocol");
     modal.close();
     notify("Connection saved");
   });
 }
-async function renderRemotePage(id: string, attempt = 0) {
+async function renderRemotePage(id: string, attempt = 0, mode = "auto") {
   app.innerHTML =
     `<main class="remote-workspace"><div class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a><h1>Remote workspace</h1></div><section class="remote-stage"><div class="remote-startup">${loadingState("Opening remote workspace…")}</div></section></main>`;
   try {
@@ -1088,7 +1091,14 @@ async function renderRemotePage(id: string, attempt = 0) {
       throw new Error(
         "Configure the machine’s Remote connection in Fleet first.",
       );
-    await connectRemote(d, attempt);
+    if (mode === "shell" || (mode === "auto" && d.remote_protocol === "shell")) {
+      const current = viewScope.checkpoint();
+      const { openWebShell } = await import("./web-shell");
+      current();
+      remoteCleanup = openWebShell(app, { id: d.id, label: d.label, configured_remote_protocol: d.configured_remote_protocol }, csrf, signedOut);
+    } else {
+      await connectRemote({ ...d, remote_protocol: d.configured_remote_protocol || d.remote_protocol }, attempt);
+    }
   } catch (e) {
     if (e instanceof StaleViewError || !username) return;
     app.innerHTML = `<main class="remote-workspace"><div class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a><h1>Remote workspace</h1></div><div class="empty"><p class="remote-error">${esc((e as Error).message)}</p></div></main>`;
@@ -1106,7 +1116,7 @@ async function connectRemote(d: Item, attempt = 0) {
     if (closed || !modal.isConnected) return;
     disconnect();
     viewScope.reset();
-    await renderRemotePage(d.id, nextAttempt);
+    await renderRemotePage(d.id, nextAttempt, "connection");
   };
   on("remote-reconnect", () => reconnect());
   const native = (window as any).speckDesktop;
@@ -1133,6 +1143,7 @@ async function connectRemote(d: Item, attempt = 0) {
   const session = await api("/devices/" + d.id + "/remote/sessions", "POST", {
     width,
     height,
+    mode: "connection",
   });
   if (closed || !modal.isConnected) return;
   if (session.protocol !== "rdp") {
@@ -1794,6 +1805,23 @@ async function renderSettings() {
     await renderSettings();
   });
   on("enrollment", enrollmentDialog);
+  if (role === "admin") {
+    const updates = await api("/agent-updates");
+    document
+      .querySelector(".settings-grid")!
+      .insertAdjacentHTML(
+        "beforeend",
+        `<article class="panel"><span class="eyebrow">AGENT UPDATES</span><h2>Automatic updates</h2><p>Keep Windows and Linux agents current with verified, signed releases. Updates wait for commands and remote sessions to finish.</p><label class="check"><input id="agent-updates-enabled" type="checkbox" ${updates.enabled ? "checked" : ""}> Automatically update agents</label><p>${updates.version ? `Published agent: <strong>${esc(updates.version)}</strong>` : "No agent release published yet."}</p><p>Agents reconnect after a brief service restart. If the new agent cannot reconnect, Speck attempts to restore the previous version.</p><button id="save-agent-updates" class="secondary">Save update policy</button><p>${(updates.devices || []).filter((d: Item) => d.status === "installing").length} updating · ${(updates.devices || []).filter((d: Item) => ["failed", "rollback_failed"].includes(d.status)).length} need attention</p></article>`,
+      );
+    on("save-agent-updates", async () => {
+      await api("/agent-updates", "PUT", {
+        enabled: (
+          document.getElementById("agent-updates-enabled") as HTMLInputElement
+        ).checked,
+      });
+      notify("Agent update policy saved");
+    });
+  }
   await ops.settingsPanel();
   await management.settingsPanel();
   if (role !== "admin") {

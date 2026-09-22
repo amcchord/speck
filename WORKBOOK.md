@@ -367,3 +367,58 @@ Rollback index and assets:
 `/var/lib/speck-rollback/20260922T231219Z-app-display-name-6420df3/web`.
 Private deployment/evidence: `worktrees/app-display-name/output/app-display-name/`.
 Integration: https://github.com/amcchord/speck/pull/11.
+
+## Headless web shell — September 22, 2026
+
+Implemented in `worktrees/headless-webshell` on `codex/headless-webshell` from
+main `b6dfb32`, preserving the latest machine overview, preview and restore-lifecycle changes. Headless Linux screen actions open an agent PTY in an xterm.js
+workspace without SSH configuration. Includes search, copy/paste, resize, full
+screen and teardown; preserves existing graphical connections and old agents.
+Server, Linux runtime, cross-build, browser and iOS build checks passed.
+No production release or endpoint changes. See [implementation and release order](docs/operations/web-shell.md)
+and [synthetic gallery](docs/screenshots/web-shell/README.md).
+
+## Automatic agent updates — September 22, 2026
+
+The user authorized the web-shell release and requested automatic agent upgrades.
+The same worktree adds signed Windows/Linux releases, idle claims, detached service
+replacement with authenticated health confirmation, rollback and admin pause.
+The new 0.3.1 agent retains enrollment and includes the headless PTY shell.
+Local checks pass; a live remote session currently defers the coordinated release.
+See [publishing and recovery](docs/operations/agent-updates.md).
+
+## Headless shell and automatic-update rollout — September 22, 2026
+
+Both features are live. Runtime/agent `0a09f6b`, final web `5d1e39d`. After the user
+authorized disconnecting an active session, the backed-up server release preserved
+all identities and protected settings. Linux/Windows canaries and then all five
+originals upgraded themselves from updater bootstrap 0.3.0 to signed 0.3.1. Every
+service, executable hash, previous-binary backup and original enrollment hash
+passed verification. Both Linux shells and Windows RDP passed live acceptance.
+Unicode input required making xterm's accessibility mode optional; browser
+regressions and final mobile captures cover that fix. Automatic updates are on;
+Settings provides an admin pause. Local commits remain unpushed. See the
+[release record](docs/operations/agent-updates.md#september-22-rollout).
+
+## Combined release repair — September 22, 2026
+
+The shell rollout was based on main before PR #11 and accidentally restored the
+executable-first app labels. Combined web `8ba0f74` merges latest main with deployed
+shell `5d1e39d`; its only runtime changes relative to the live shell release are
+the app-title and search fix. The static repair is verified in Safari Fleet and
+retains the newer shell/updater. Backend, agents, settings and identities remain
+unchanged. Build, 28 web checks and 22 focused Chrome/Safari checks pass.
+Rollback: `/var/lib/speck-rollback/20260922T233949Z-app-name-release-sync-8ba0f74/web`.
+Private evidence: `worktrees/app-name-release-sync/output/app-name-release-sync/`.
+The integration includes the shell task's rollout documentation `d8e829b` and
+adds explicit current-main, deployed-baseline and single-owner release rules.
+
+At the user's request, release checks now run locally first through
+`scripts/check-local.sh core|ios|all`; GitHub remains secondary. This combined
+release passed the local core suite in 112 seconds (113 backend, Linux agent race
+tests, platform builds, 28 web unit and 84 browser checks). iPhone unit tests (25)
+and iPad portrait/landscape sign-in passed in 36 seconds on Xcode 27 / iOS 27.
+Hosted iPhone tests passed, but hosted iPad execution failed before assertions
+because Xcode timed out launching the app after an 11m34s job. That hosted failure
+is retained as distinct evidence; no required branch checks were configured or
+bypassed. Logs and simulator test results remain in ignored `output/local-checks/`.

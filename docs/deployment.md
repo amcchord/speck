@@ -45,6 +45,31 @@ firewall allows inbound 22/80/443; adapt SSH access for your network. The option
 `scripts/provision_linode.py` and `scripts/deploy.py` use a local AustinLand vault
 and are not required for manual deployment.
 
+## Local release checks
+
+Use the local checks as the primary release gate and retain GitHub Actions as a
+secondary check. From the repository root:
+
+```sh
+./scripts/check-local.sh core  # backend, Linux agent, all agent builds, web and browsers
+./scripts/check-local.sh ios   # iPhone unit tests and iPad sign-in layout
+./scripts/check-local.sh all   # both groups, sequentially
+```
+
+Core checks need uv, Node.js, npm and Go; macOS also needs Docker to execute Linux
+agent tests. Install the Chromium/WebKit Playwright browsers once with
+`cd web && npx playwright install chromium webkit` after `npm ci`. iOS checks need
+Xcode and available iPhone/iPad simulators. They prefer already-booted simulators,
+wait for readiness and disable parallel simulator clones. Set
+`SPECK_SIMULATOR_ID` / `SPECK_IPAD_SIMULATOR_ID` to select particular devices.
+Derived data remains under ignored `output/local-checks/`.
+
+Run the groups relevant to the change. Record source revision, test results and
+any host/runner differences. A hosted simulator launch failure is distinct from a
+test assertion failure; local success does not make the hosted run successful.
+Required GitHub branch checks still apply. The scripts validate/build only and do
+not deploy, publish agent releases or contact production.
+
 ## Enroll a device
 
 Create an enrollment in the console. Download and inspect the appropriate
@@ -55,8 +80,10 @@ SHA-256 manifest. Authenticode signing is not included in this initial release.
 
 Linux installs `SpeckAgent.service` and a desktop autostart helper. Windows
 installs `SpeckAgent` and an unprivileged logon task. The helper starts at the
-next sign-in. Headless servers need no helper. Binary updates are manual by
-rerunning the installer; the existing enrollment is preserved.
+next sign-in. Headless servers need no helper. Agents 0.3.1 and later automatically install signed releases while idle. Admins
+can pause this in Settings → Automatic updates. Older agents require one installer
+upgrade to bootstrap the updater; existing enrollment is preserved. See
+[agent releases and rollback](operations/agent-updates.md).
 
 ## Back up the server
 

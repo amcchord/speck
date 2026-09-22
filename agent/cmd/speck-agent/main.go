@@ -48,6 +48,12 @@ func main() {
 		mode = args[0]
 	}
 	switch mode {
+	case "apply-update":
+		if err := agent.ApplyAgentUpdate(config); err != nil {
+			fatal(err)
+		}
+	case "update-version":
+		fmt.Println(agent.Version)
 	case "help", "--help", "-h":
 		fmt.Printf("%s %s\n%s\n\n", identity.Agent, agent.Version, identity.Tagline)
 		fmt.Println("Usage: speck-agent [--config path] <command>")

@@ -29,7 +29,8 @@
 - [x] Persistent health/service/job alerts, maintenance, sites/tags and retirement.
 - [x] Optional authenticator MFA, admin/operator/viewer roles and audit filtering.
 - [ ] Patch maintenance windows/reboots and scheduled recoveries.
-- [ ] SSO, required organization-wide MFA, signed automatic agent updates and security review.
+- [x] Signed automatic Windows/Linux agent updates, idle deferral and rollback.
+- [ ] SSO, required organization-wide MFA and security review.
 - [ ] Installed-software inventory, external alert escalation and supported retention cleanup.
 
 The management additions are deployed and passed live Windows/Linux scan and

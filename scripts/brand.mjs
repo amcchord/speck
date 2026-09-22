@@ -129,6 +129,8 @@ fs.copyFileSync(
   path.join(root, "brand/fonts/OFL.txt"),
   path.join(publicDir, "OFL.txt"),
 );
+const agentVersion = fs.readFileSync(path.join(root, "agent/internal/agent/agent.go"), "utf8")
+  .match(/(?:const|var) Version = "([0-9.]+)"/)[1];
 for (const [command, description] of [
   ["speck-agent", "Speck Agent"],
   ["speck-desktop", "Speck Desktop Helper"],
@@ -138,14 +140,14 @@ for (const [command, description] of [
     RT_VERSION: {
       "#1": {
         "0409": {
-          fixed: { file_version: "0.2.2.0", product_version: "0.2.2.0" },
+          fixed: { file_version: `${agentVersion}.0`, product_version: `${agentVersion}.0` },
           info: {
             "0409": {
               CompanyName: "Speck contributors",
               FileDescription: description,
               ProductName: "Speck RMM",
-              ProductVersion: "0.2.2",
-              FileVersion: "0.2.2",
+              ProductVersion: agentVersion,
+              FileVersion: agentVersion,
               OriginalFilename: command + ".exe",
               InternalName: command,
               Comments: brand.tagline,

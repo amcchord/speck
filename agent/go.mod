@@ -3,6 +3,7 @@ module github.com/amcchord/speck/agent
 go 1.24.0
 
 require (
+	github.com/creack/pty v1.1.24
 	github.com/gorilla/websocket v1.5.3
 	github.com/kardianos/service v1.2.4
 	github.com/kbinani/screenshot v0.0.0-20250624051815-089614a94018

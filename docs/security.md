@@ -6,8 +6,7 @@ read/write endpoint files, and access configured remote sessions. It is intended
 for a controlled lab or small trusted deployment, not as a multi-tenant MSP
 security boundary. Admin/operator/viewer roles and optional authenticator MFA are
 implemented; roles apply across the organization. Per-device RBAC, SSO, mandatory
-MFA, general approval queues, signed automatic agent updates and an external
-security review remain follow-ups. See [account controls](management.md).
+MFA, general approval queues and an external security review remain follow-ups. See [account controls](management.md).
 
 - Passwords are hashed with Argon2id. Bootstrap only creates the first account.
 - Browser sessions use random opaque tokens, stored hashed in SQLite, with a
@@ -103,3 +102,21 @@ See [passkeys](passkeys.md) for enrollment, revocation, desktop browser handoff,
 native Apple associations, threat boundaries and coordinated rollback. Verified
 passkeys are an alternative to password/TOTP sign-in, not a way to change roles.
 Existing agent tokens and Slide recovery identities remain independent.
+
+## Interactive Linux shell
+
+The [web shell](operations/web-shell.md) runs with the agent service account’s
+privileges. Its outbound TLS relay uses the same operator, device, one-use session,
+revocation and lifetime restrictions as remote desktops. PTY output is bounded in
+memory and is not recorded in job results or audit. Start/end metadata is audited.
+Clipboard operations are explicit; no automatic clipboard synchronization is used.
+
+## Automatic agent updates
+
+Windows/Linux agents verify an Ed25519 signature against a pinned release key,
+then enforce the target OS/architecture, increasing version, bounded validity,
+fixed asset names, lengths and SHA-256 hashes. Signing keys stay off the RMM server.
+Enrollment pins the server's public release key over HTTPS; existing official
+agents use the compiled public key. Root/Administrator can deliberately change
+that trust configuration. Signed updates do not reduce a compromised operator's
+existing command privileges. See [publishing and recovery](operations/agent-updates.md).

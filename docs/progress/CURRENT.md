@@ -6,10 +6,10 @@ remote-session startup fixes and **passkey sign-in**. Enroll in Settings → Acc
 available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
 
 - **Preview and desktop presence**: previews recover from timeouts and retain one
-  encrypted checkpoint every five minutes. All five original agents run 0.2.2.
+  encrypted checkpoint every five minutes. All five original agents now run 0.3.1.
   The open pane refreshes user/desktop/app details; disconnected users and the last
   app stay explicit. Fleet displays taskbar/window titles for current and last apps,
-  with executable fallback, and searches both names (web runtime `6420df3`).
+  with executable fallback, and searches both names (combined web runtime `8ba0f74`).
   Live Windows capture, five-minute saving, saved fallback and
   in-place presence changes passed. [Details](../operations/preview-reliability.md).
 - **Slide restore cleanup**: runtime `e5d37c6` tracks separate restored endpoints
@@ -64,7 +64,7 @@ the restore-cleanup release also updated and restarted the backend after a
 consistent database/runtime/configuration backup. Existing login, agents, installation tokens,
 original/restore identities, Slide bindings, provider secrets and recovery records
 were verified preserved. Private evidence and rollback records: `output/passkeys/`.
-Endpoint agents now run 0.2.2 and retain their unattended service credentials.
+Endpoint agents now run 0.3.1 and retain their unattended service credentials.
 
 Existing management/recovery capabilities and qualification limits are documented
 in [MVP review](../MVP-REVIEW.md), [management rollout](../operations/management-rollout.md),
@@ -73,3 +73,43 @@ in [MVP review](../MVP-REVIEW.md), [management rollout](../operations/management
 acceptance, remaining native media/platform tests and broader recovery qualification
 are still open. This passkey work did not launch new recoveries, install patches,
 deploy endpoint software or clean up existing recovery resources.
+
+## Headless web shell and automatic agent updates — live
+
+Server/agent source `0a09f6b` and combined web source `8ba0f74` are deployed. The
+web integrates `5d1e39d` with main's app-title fix. Both headless Linux
+screen actions open the PTY web shell; Windows retains RDP. Live Unicode, resize,
+Ctrl+C, reconnect and Windows desktop rendering pass. Screen-reader mode is
+optional to preserve normal insert-text/emoji input.
+
+Signed automatic updates are enabled; admins can pause them in Settings. All five
+originals bootstrapped the updater and then upgraded themselves to 0.3.1. Services,
+Windows helpers, signed binary hashes, retained backups and unchanged enrollment
+files were verified. Original/clone IDs, accounts, credentials, provider settings,
+recovery records and environment remain unchanged.
+
+113 backend, 28 web unit and 84 browser checks, Linux race/PTY/transaction tests,
+all platform builds and the iOS simulator build pass. ARM64 runtime and physical
+iOS/graphical Linux acceptance remain open. Matching full rollback:
+`/var/lib/speck-rollback/20260922T232347Z-agent-updates-0a09f6b`.
+See [web shell](../operations/web-shell.md),
+[agent update operations](../operations/agent-updates.md) and ignored
+`output/agent-updates/` in the headless-webshell worktree for exact evidence.
+GitHub integration is coordinated by `codex/app-name-release-sync`; future signed
+agent releases use the documented publisher.
+
+The later shell deployment temporarily replaced the app-title fix with its older
+executable-first code. Combined web `8ba0f74` restored it, retaining the shell and
+updater. Safari Fleet visibly shows the three Windows titles and Linux web-shell
+actions after reload. Build, 28 web checks and 22 focused Chrome/Safari browser
+checks pass; served hashes, backend process/environment and identities match.
+Static rollback: `/var/lib/speck-rollback/20260922T233949Z-app-name-release-sync-8ba0f74/web`.
+Private evidence: `worktrees/app-name-release-sync/output/app-name-release-sync/`.
+
+Release validation now prefers local checks at the user's request:
+`./scripts/check-local.sh core` (112s: 113 backend, agent race tests/builds, 28 web
+units, 84 browser cases) and `./scripts/check-local.sh ios` (36s: 25 iPhone units
+and the iPad portrait/landscape sign-in test), both passed on this combined source.
+Hosted CI remains enabled as a secondary check. Its iPad simulator launch timeout
+occurred before assertions; local Xcode 27/iOS 27 passed the same test target.
+No required GitHub branch check was bypassed. See [local checks](../deployment.md#local-release-checks).
