@@ -1172,7 +1172,7 @@ async function connectRemote(d: Item, attempt = 0) {
   on("remote-keyboard", () => {
     const prompt = dialog(
       "Remote keyboard",
-      `<label>Text to type<textarea id="remote-text" rows="4" maxlength="8192" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type text or a command…"></textarea></label><p>Text is typed into the focused remote application. New lines press Return.</p><button id="send-text" class="primary">Type text</button><div class="toolbar"><button id="remote-enter" class="secondary">Return</button><button id="remote-tab" class="secondary">Tab</button><button id="remote-escape" class="secondary">Escape</button><button id="remote-backspace" class="secondary">Backspace</button></div>`,
+      `<label>Text to type<textarea id="remote-text" rows="4" maxlength="8192" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type text or a command…"></textarea></label><p>Text is typed into the focused remote application. New lines press Return.</p><button id="send-text" class="primary">Type text</button><div class="toolbar remote-keyboard-keys"><button id="remote-enter" class="secondary">Return</button><button id="remote-tab" class="secondary">Tab</button><button id="remote-escape" class="secondary">Escape</button><button id="remote-backspace" class="secondary">Backspace</button></div>`,
     );
     on("send-text", () => {
       for (const key of remoteTextKeys(value("remote-text"))) sendKeys([key]);
