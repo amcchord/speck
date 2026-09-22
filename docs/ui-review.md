@@ -73,3 +73,48 @@ A browser SSH session showed the real Linux agent help and installer about text.
 Windows agent help and file properties were also checked. The product
 remains an early single-administrator RMM; branding does not change the capability
 or security limits documented in the main README.
+
+## 0.2 fleet and remote upgrade — September 22, 2026
+
+The current [gallery](screenshots/v0.2/README.md) replaces the card grid with a wide
+fleet table and right-side device drawer. Screen/SSH and prompt actions are
+visible in each row. Patches, software templates and AI have dedicated views.
+The same brand tokens, Inter type and native icons remain in use. Sign-in dots
+orbit slowly while the mark stays still; observed positions changed over time.
+
+Desktop and 390×844 mobile layouts were inspected in the browser. A scrollbar
+width bug that pushed the mobile drawer off the left edge was fixed by sizing it
+to the available width. Tabs intentionally scroll horizontally. The table turns
+into compact device rows on mobile; page-level overflow was not observed there.
+Template editor, patch inventory, command panel and AI entry points were inspected.
+
+Remote control now has its own full-frame workspace. Browser fullscreen entry
+and exit, Windows+R, Escape, remote clipboard paste and Linux keystrokes were
+exercised. A real Windows RDP session received audio output. Live Windows preview
+capture succeeded in an active session; disabling the policy immediately removed
+the frame. Locked/disconnected desktops correctly had no fresh frame.
+
+A live-resize assertion in the deployed Guacamole/FreeRDP RDP path froze the
+initial test session. Speck now explicitly selects a stable RDP resolution at
+connection time and scales or scrolls it on the client. The final fullscreen test
+kept the session interactive: Windows+R opened Run and clipboard paste populated
+its input. SSH remains resizable. Runtime gateway crashes are a regression gate
+for any future dynamic-RDP work; a pretty frozen screenshot is not a pass.
+
+Verification: 15 Python tests, four native Linux Go tests, Windows amd64 and Linux
+amd64/arm64 agent builds, TypeScript build, two desktop URL/origin tests, and CI
+packaging on Windows/macOS/Linux passed. All five original agents were upgraded,
+passed health templates, and completed native update scans. A package template
+completed on both Linux machines. Real OpenAI script generation and bounded
+computer-action proposals were exercised. A reviewed click opened the Windows
+imaging application’s connection dialog; it was closed without changing settings. Source/clone identities, Slide links,
+existing backups and retained recovery resources were preserved.
+
+Native application interaction could not be verified because the operator Mac
+was locked. Native clipboard synchronization and platform key interception are
+implemented but are not claimed as interactively verified. Windows MSI and real
+selected-update installation were not exercised on the active dental machines;
+validation and command construction have automated coverage. Linux graphical
+preview/audio, ARM execution, microphone input and additional browsers remain
+unverified. Desktop downloads are preview packages; signing/notarization remains
+on the [roadmap](ROADMAP.md).

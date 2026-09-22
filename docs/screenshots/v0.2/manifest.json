@@ -1,0 +1,92 @@
+[
+  {
+    "file": "ai-assistant.jpg",
+    "width": 1265,
+    "height": 832,
+    "sha256": "566a81e527b9514719a98ac9b679b1c9f2883de88970480a0c70f246be800568",
+    "source": "built Speck console; synthetic local fixtures",
+    "retouched": false,
+    "captured": "2026-09-22"
+  },
+  {
+    "file": "device-drawer.jpg",
+    "width": 1265,
+    "height": 712,
+    "sha256": "dcfa50212ea41a88a21353da92ec3972c22dc7abada1de9d380d4967b108527b",
+    "source": "built Speck console; synthetic local fixtures",
+    "retouched": false,
+    "captured": "2026-09-22"
+  },
+  {
+    "file": "device-mobile.jpg",
+    "width": 375,
+    "height": 812,
+    "sha256": "fef964e08d832a77604110499d12006f70ab96c31476b436ec57e9e9253aaaa2",
+    "source": "built Speck console; synthetic local fixtures",
+    "retouched": false,
+    "captured": "2026-09-22"
+  },
+  {
+    "file": "fleet-desktop.jpg",
+    "width": 1265,
+    "height": 1054,
+    "sha256": "07ad51d1aca393fa96cad2a07e7b5638a43fc017a1f743a78c43743bf76cac63",
+    "source": "built Speck console; synthetic local fixtures",
+    "retouched": false,
+    "captured": "2026-09-22"
+  },
+  {
+    "file": "fleet-mobile.jpg",
+    "width": 375,
+    "height": 812,
+    "sha256": "9747426f116d99e1e662eac55498ed10e7e04484eadd35ce5d1600940992baad",
+    "source": "built Speck console; synthetic local fixtures",
+    "retouched": false,
+    "captured": "2026-09-22"
+  },
+  {
+    "file": "patches.jpg",
+    "width": 1265,
+    "height": 1194,
+    "sha256": "e99ff16a49f2e4949f971449d676d30e70541f81fe867aab0d1ca24b7d5114a8",
+    "source": "built Speck console; synthetic local fixtures",
+    "retouched": false,
+    "captured": "2026-09-22"
+  },
+  {
+    "file": "powershell.jpg",
+    "width": 1265,
+    "height": 712,
+    "sha256": "16ab404b1b5490e7255c23b13925a8592b124de1fda01a7438b57cac2bd0b7f4",
+    "source": "built Speck console; synthetic local fixtures",
+    "retouched": false,
+    "captured": "2026-09-22"
+  },
+  {
+    "file": "remote-workspace.jpg",
+    "width": 1280,
+    "height": 720,
+    "sha256": "e579e57a250a3fffa84279b0f1a238306ebfdc4d6c268abb7ca0f6b3a28217af",
+    "source": "live Linux browser SSH; agent help only",
+    "retouched": false,
+    "captured": "2026-09-22"
+  },
+  {
+    "file": "sign-in.jpg",
+    "width": 1280,
+    "height": 720,
+    "sha256": "7223546f98108159ea53d210b0ba86a2efb9e910d2583f9fdeba1a5d7ca503c6",
+    "source": "built Speck console; synthetic local fixtures",
+    "retouched": false,
+    "captured": "2026-09-22"
+  },
+  {
+    "file": "software.jpg",
+    "width": 1265,
+    "height": 1200,
+    "sha256": "9c5ee69aec1be5e9c400c871801e47f96c4da859f78e26d39f57678326c1bcaf",
+    "source": "built Speck console; synthetic local fixtures",
+    "retouched": false,
+    "captured": "2026-09-22"
+  }
+]

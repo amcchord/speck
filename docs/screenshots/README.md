@@ -1,5 +1,11 @@
 # Speck screenshots
 
+**[Open the current 0.2 gallery](v0.2/README.md)**: fleet table, device drawer,
+patching, templates, AI, mobile layouts and full-frame remote access.
+
+The captures below document the initial 0.1 identity release; fleet and remote
+layouts have since changed.
+
 A curated tour of the actual Speck console, its shared identity and its agents.
 Click any image for the full-resolution JPEG. All images are unretouched browser
 captures; none are generated UI mockups.

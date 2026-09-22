@@ -44,3 +44,28 @@ expose port 4822. Do not put credentials in repository files or command argument
 A compromised RMM server has administrative reach to its enrolled fleet. Keep
 its operating system and dependencies patched, limit operator access, and back
 up its state and encryption key separately.
+
+## Fleet operations and native client
+
+Bulk operations validate all targets before enqueueing; idempotency keys bind the
+exact request body. Template values are shell quoted, scripts are encrypted, and
+per-device jobs retain the existing lease/journal rules. Failed or uncertain
+operations do not automatically replay. Updates never request a reboot.
+
+Live previews are opt-in per device, require an approved identity, and are kept
+only in server memory for 45 seconds. Disabling a preview purges it immediately.
+Interactive helpers honor a 30-second permission lease and never receive agent
+credentials. User-session telemetry is not cryptographically attested.
+
+AI drafts cannot enqueue jobs. Screen assistance requires explicit invocation,
+review and application. Server code bounds actions and honors pending provider
+safety checks. Screens and telemetry remain untrusted input. Review proposed
+commands and UI actions; model instructions are not a security boundary.
+
+Speck Desktop disables Node integration, enables renderer sandboxing and context
+isolation, pins navigation to the exact Speck HTTPS origin, and validates native
+IPC against the top frame, remote route and window focus. Its exposed native
+surface is bounded plain-text clipboard access and key-macro events, not shell or
+filesystem access. Shared clipboard is off until enabled in each session. The
+application has no password-bearing deep links and never skips TLS validation.
+See [operations](operations.md) for preview-build and platform verification limits.

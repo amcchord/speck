@@ -8,19 +8,27 @@
 An open source RMM for Windows and Linux, with browser remote access and Slide
 backup and recovery workflows. Speck is an early, single-administrator release.
 
-[Website](https://speckrmm.com) · [Screenshot gallery](docs/screenshots/README.md) ·
-[Brand identity](brand/README.md) · [UI review](docs/ui-review.md)
+[Website](https://speckrmm.com) · [Screenshot gallery](docs/screenshots/v0.2/README.md) ·
+[Brand identity](brand/README.md) · [UI review](docs/ui-review.md) ·
+[Operations guide](docs/operations.md) · [Desktop downloads](https://github.com/amcchord/speck/releases)
 
-[![Speck sign-in](docs/screenshots/01-sign-in.jpg)](docs/screenshots/README.md)
+[![Speck sign-in](docs/screenshots/v0.2/sign-in.jpg)](docs/screenshots/README.md)
 
 | Fleet | Recovery lab |
 | --- | --- |
-| [![Windows and Linux fleet](docs/screenshots/02-fleet.jpg)](docs/screenshots/02-fleet.jpg) | [![Recovery evidence](docs/screenshots/08-recovery.jpg)](docs/screenshots/08-recovery.jpg) |
+| [![Windows and Linux fleet](docs/screenshots/v0.2/fleet-desktop.jpg)](docs/screenshots/v0.2/fleet-desktop.jpg) | [![Recovery evidence](docs/screenshots/08-recovery.jpg)](docs/screenshots/08-recovery.jpg) |
 
 Gallery data is synthetic. See the [capture notes](docs/screenshots/README.md)
 for provenance and the local preview workflow.
 
+- Wide fleet table, right-side details drawer, direct screen and prompt actions.
 - Services, CPU, memory, disks, active application, and host inventory.
+- Opt-in live screen previews, expiring automatically and disabled per device.
+- Native Windows Update/apt/dnf inventory and reviewed update installation.
+- Bulk software deployment with versioned, parameterized templates and results.
+- OpenAI script assistance and reviewed computer-use proposals.
+- Full-frame browser remote workspaces and macOS/Windows/Linux desktop clients
+  with opt-in shared clipboard and remote key macros.
 - Network interfaces, IPs, routes, DNS, traffic counters, sockets, process IDs,
   and on-demand ping, DNS, TCP and traceroute checks.
 - Windows PowerShell and Linux shell commands, with job history and bounded output.
@@ -106,6 +114,7 @@ cleanup or scheduled testing in this release. See [recovery design](docs/recover
 agent/       Go Windows/Linux services and desktop observer
 server/      FastAPI control plane, authentication, jobs, remote relay, Slide
 web/         TypeScript console
+desktop/     Electron operator client for macOS, Windows and Linux
 installers/  Windows and Linux enrollment installers
 scripts/     Build and optional AustinLand deployment helpers
 deploy/      systemd, Caddy and dedicated-host firewall configuration

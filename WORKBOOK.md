@@ -1,6 +1,6 @@
 # Speck working record
 
-Branch: `codex/brand-identity`. Independent Windows/Linux RMM repository.
+Branch: `codex/fleet-operations`. Independent Windows/Linux RMM repository.
 
 ## Implemented
 
@@ -75,3 +75,31 @@ gallery when their visible behavior changes.
 The final gallery contains 19 unretouched captures with dimensions, digests and
 provenance in `docs/screenshots/manifest.json`. Linux SSH and Windows RDP captures
 show the real installed agent help; console screenshots use synthetic fixtures.
+
+## Fleet operations and remote workspace — September 22, 2026
+
+Speck 0.2 adds the fleet table/drawer, direct screen and prompt actions, opt-in
+previews, patch inventory/install workflow, bulk templates, OpenAI drafting and
+reviewed computer steps. The operator client is packaged for Windows x64,
+macOS Intel/Apple silicon and Linux x64. See `docs/operations.md`, the current
+`docs/screenshots/v0.2/` gallery, `docs/ui-review.md` and `docs/ROADMAP.md`.
+
+All five original agents run 0.2.0 and retain their Slide links. Real health
+templates and native update scans succeeded on all five; the Linux software
+package template succeeded on both Linux systems. Windows active-session preview
+capture and immediate policy-off removal were verified. OpenAI text drafting
+and a reviewed UI click were tested. Existing restores and backups were preserved.
+
+RDP now uses explicit stable resolution plus client fit/100% modes. Dynamic
+resolution triggered a Guacamole/FreeRDP assertion; final fullscreen tests retained
+working key macros, clipboard and mouse input. Linux SSH key input was verified.
+Desktop packages passed platform CI; native UI tests remain pending because the
+operator Mac was locked. Signing/notarization, Windows MSI/patch installation on
+disposable targets and other limitations are tracked in the roadmap.
+
+Private rollback snapshots, deployment scripts, binary validation, live evidence
+and release artifacts are under ignored `output/fleet-review/`. Server, database,
+environment and previous downloads are retained under private server rollback
+paths. Server restart preflights checked for active jobs and recovery runs.
+The orbit subagent's source was integrated from `worktrees/orbit-animation`; that
+worktree is retained, with its original uncommitted source, for explicit cleanup.
