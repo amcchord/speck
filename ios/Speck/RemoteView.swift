@@ -36,9 +36,13 @@ struct RemoteView: View {
               .disabled(!ready || session.demo)
           }
         }
-        .task {
-          await session.remoteCookies()
-          ready = true
+        .sessionTask(session) {
+          do {
+            try await session.remoteCookies()
+            ready = true
+          } catch is CancellationError {
+            ready = false
+          } catch { self.error = error.localizedDescription }
         }
     }
   }

@@ -77,7 +77,7 @@ struct FilesView: View {
           Image(systemName: "square.and.arrow.up")
         }.disabled(busy || !device.manageable || !loaded).accessibilityLabel("Upload a file")
       }
-      .task {
+      .sessionTask(session) {
         path = device.windows ? "C:\\" : "/"
         browse()
       }
@@ -108,7 +108,7 @@ struct FilesView: View {
     busy = true
     error = nil
     message = nil
-    Task {
+    session.perform {
       do {
         let started = try await session.submit(
           device: device, kind: "files.list", payload: .object(["path": .string(path)]))
@@ -123,7 +123,7 @@ struct FilesView: View {
   func fetch(_ entry: JSON) {
     busy = true
     error = nil
-    Task {
+    session.perform {
       do {
         let transfer = try await session.request(
           "/devices/\(device.id)/files/download", method: "POST",
@@ -145,7 +145,7 @@ struct FilesView: View {
     let scoped = url.startAccessingSecurityScopedResource()
     busy = true
     error = nil
-    Task {
+    session.perform {
       defer {
         if scoped { url.stopAccessingSecurityScopedResource() }
         busy = false

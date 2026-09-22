@@ -22,7 +22,7 @@ struct JobsView: View {
           }
         }
       }
-      if let error { InlineError(text: error) { Task { await load() } } }
+      if let error { InlineError(text: error) { session.perform { await load() } } }
       Section("Recent jobs") {
         ForEach(jobs) { job in
           NavigationLink {
@@ -48,9 +48,9 @@ struct JobsView: View {
           title: "No jobs yet", symbol: "terminal",
           detail: "Commands and management actions appear here.")
       }
-    }.navigationTitle("Jobs").scrollContentBackground(.hidden).background(Color.paper).task {
+    }.navigationTitle("Jobs").scrollContentBackground(.hidden).background(Color.paper).sessionTask(session) {
       await load()
-    }.refreshable { await load() }
+    }.sessionRefreshable(session) { await load() }
   }
   func load() async {
     do {
@@ -95,7 +95,7 @@ struct JobDetailView: View {
     }.background(Color.paper).navigationTitle(titleCase(job.kind)).navigationBarTitleDisplayMode(
       .inline
     )
-    .task {
+    .sessionTask(session) {
       while !Task.isCancelled {
         do {
           updated = Job(raw: try await session.request("/jobs/" + job.id))
@@ -194,7 +194,7 @@ struct CommandView: View {
   func run() {
     busy = true
     error = nil
-    Task {
+    session.perform {
       do {
         job = try await session.submit(
           device: device, kind: "command",
@@ -208,7 +208,7 @@ struct CommandView: View {
   func draft() {
     busy = true
     error = nil
-    Task {
+    session.perform {
       do {
         let value = try await session.request(
           "/ai/assist", method: "POST",

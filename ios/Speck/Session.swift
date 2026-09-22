@@ -53,8 +53,21 @@ enum SessionVault {
   }
 }
 
+@MainActor struct SessionPersistence {
+  var load: () -> SessionRecord?
+  var save: (SessionRecord) throws -> Void
+  var clear: () -> Void
+  static let keychain = SessionPersistence(
+    load: SessionVault.load, save: SessionVault.save, clear: SessionVault.clear)
+}
+
+private enum SessionOperation {
+  @TaskLocal static var generation: UUID?
+}
+
 @MainActor @Observable final class SpeckSession {
-  var record: SessionRecord?
+  private(set) var record: SessionRecord?
+  private(set) var generation = UUID()
   var restoring = true
   var error: String?
   var devices: [Device] = []
@@ -66,21 +79,35 @@ enum SessionVault {
   var demo = false
   private let transport: URLSession
   private let redirects = NoRedirects()
-  let webData = WKWebsiteDataStore.nonPersistent()
+  private(set) var webData = WKWebsiteDataStore.nonPersistent()
+  private let persistence: SessionPersistence
+  private let dataLoader: @Sendable (URLRequest) async throws -> (Data, URLResponse)
+  private let downloadLoader: @Sendable (URLRequest) async throws -> (URL, URLResponse)
+  private let uploadLoader: @Sendable (URLRequest, URL) async throws -> (Data, URLResponse)
   var signedIn: Bool { record != nil || demo }
   var username: String { demo ? "Alex" : record?.username ?? "" }
   var role: String { demo ? "admin" : record?.role ?? "viewer" }
   var canManage: Bool { ["admin", "operator"].contains(role) }
   var server: String { record?.server ?? "https://speckrmm.com" }
   var activeAlerts: Int { alerts.filter { !$0.resolved }.count }
-  init() {
+  init(
+    persistence: SessionPersistence = .keychain,
+    dataLoader: (@Sendable (URLRequest) async throws -> (Data, URLResponse))? = nil,
+    downloadLoader: (@Sendable (URLRequest) async throws -> (URL, URLResponse))? = nil,
+    uploadLoader: (@Sendable (URLRequest, URL) async throws -> (Data, URLResponse))? = nil
+  ) {
+    self.persistence = persistence
     let config = URLSessionConfiguration.ephemeral
     config.httpShouldSetCookies = false
     config.httpCookieStorage = nil
     config.urlCache = nil
     config.requestCachePolicy = .reloadIgnoringLocalCacheData
     config.timeoutIntervalForRequest = 30
-    transport = URLSession(configuration: config, delegate: redirects, delegateQueue: nil)
+    let transport = URLSession(configuration: config, delegate: redirects, delegateQueue: nil)
+    self.transport = transport
+    self.dataLoader = dataLoader ?? { try await transport.data(for: $0) }
+    self.downloadLoader = downloadLoader ?? { try await transport.download(for: $0) }
+    self.uploadLoader = uploadLoader ?? { try await transport.upload(for: $0, fromFile: $1) }
     #if DEBUG
       demo = ProcessInfo.processInfo.arguments.contains("--demo")
     #endif
@@ -97,8 +124,32 @@ enum SessionVault {
     }
     return url
   }
+  func isCurrent(_ expected: UUID) -> Bool {
+    generation == expected && !Task.isCancelled
+      && (SessionOperation.generation == nil || SessionOperation.generation == generation)
+  }
+  private func checkCurrent(_ expected: UUID) throws {
+    guard isCurrent(expected) else { throw CancellationError() }
+  }
+  func withSession<T>(
+    generation expected: UUID? = nil, _ operation: @MainActor () async throws -> T
+  ) async rethrows -> T {
+    try await SessionOperation.$generation.withValue(
+      expected ?? SessionOperation.generation ?? generation
+    ) {
+      try await operation()
+    }
+  }
+  @discardableResult
+  func perform(_ operation: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
+    let expected = SessionOperation.generation ?? generation
+    return Task {
+      await withSession(generation: expected) { await operation() }
+    }
+  }
   func restore() async {
-    defer { restoring = false }
+    let expected = generation
+    defer { if generation == expected { restoring = false } }
     #if DEBUG
       if ProcessInfo.processInfo.arguments.contains("--sign-in-preview") { return }
     #endif
@@ -106,23 +157,28 @@ enum SessionVault {
       await refresh()
       return
     }
-    guard let saved = SessionVault.load(), saved.expires > Date(),
+    guard let saved = persistence.load(), saved.expires > Date(),
       (try? Self.validatedOrigin(saved.server)) != nil
     else {
-      SessionVault.clear()
+      persistence.clear()
       return
     }
     record = saved
     do {
       let me = try await request("/auth/me")
+      try checkCurrent(expected)
       record?.csrf = me["csrf"].string
       record?.role = me["role"].string
-      if let record { try SessionVault.save(record) }
-      await refresh()
-    } catch { self.error = error.localizedDescription }
+      if let record { try persistence.save(record) }
+      await withSession(generation: expected) { await refresh() }
+    } catch { if isCurrent(expected) { self.error = error.localizedDescription } }
   }
   func signIn(server: String, username: String, password: String, code: String) async throws {
+    try checkCurrent(generation)
     let origin = try Self.validatedOrigin(server)
+    clearSession()
+    restoring = false
+    let expected = generation
     let body: JSON = .object([
       "username": .string(username.trimmingCharacters(in: .whitespacesAndNewlines)),
       "password": .string(password),
@@ -130,6 +186,7 @@ enum SessionVault {
     ])
     let (data, response) = try await send(
       origin: origin, path: "/auth/login", method: "POST", body: body, authenticated: false)
+    try checkCurrent(expected)
     let value = try JSONDecoder().decode(JSON.self, from: data)
     let headers = response.allHeaderFields.reduce(into: [String: String]()) { result, pair in
       if let k = pair.key as? String, let v = pair.value as? String { result[k] = v }
@@ -144,14 +201,21 @@ enum SessionVault {
       cookie: cookie.value, expires: cookie.expiresDate ?? Date().addingTimeInterval(43200),
       csrf: value["csrf"].string, username: value["username"].string,
       role: value["role"].string.isEmpty ? "viewer" : value["role"].string)
-    try SessionVault.save(saved)
+    try persistence.save(saved)
     record = saved
     error = nil
-    await refresh()
+    await withSession(generation: expected) { await refresh() }
   }
   func send(origin: URL, path: String, method: String, body: JSON?, authenticated: Bool = true)
     async throws -> (Data, HTTPURLResponse)
   {
+    let expected = generation
+    try checkCurrent(expected)
+    if authenticated {
+      guard let record, try Self.validatedOrigin(record.server) == origin else {
+        throw SpeckError(message: "Sign in to continue.")
+      }
+    }
     guard path.hasPrefix("/"), !path.hasPrefix("//"),
       let url = URL(
         string: origin.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
@@ -171,7 +235,12 @@ enum SessionVault {
       request.setValue("speck_session=" + record.cookie, forHTTPHeaderField: "Cookie")
       request.setValue(record.csrf, forHTTPHeaderField: "X-CSRF-Token")
     }
-    let (data, response) = try await transport.data(for: request)
+    let (data, response): (Data, URLResponse)
+    do { (data, response) = try await dataLoader(request) } catch {
+      try checkCurrent(expected)
+      throw error
+    }
+    try checkCurrent(expected)
     guard let response = response as? HTTPURLResponse else {
       throw SpeckError(message: "Invalid response from the server.")
     }
@@ -186,22 +255,29 @@ enum SessionVault {
     return (data, response)
   }
   func request(_ path: String, method: String = "GET", body: JSON? = nil) async throws -> JSON {
+    try checkCurrent(generation)
     if demo { return try DemoData.response(path, method: method) }
     let origin = try Self.validatedOrigin(server)
     let (data, _) = try await send(origin: origin, path: path, method: method, body: body)
     return data.isEmpty ? .null : try JSONDecoder().decode(JSON.self, from: data)
   }
   func refresh() async {
-    guard signedIn, !refreshing else { return }
+    await withSession { await refreshCurrentSession() }
+  }
+  private func refreshCurrentSession() async {
+    let expected = generation
+    guard signedIn, !refreshing, isCurrent(expected) else { return }
     refreshing = true
-    defer { refreshing = false }
+    defer { if generation == expected { refreshing = false } }
     do {
       async let fleet = request("/devices")
       async let inbox = request("/alerts?state=active&limit=100")
       let (f, a) = try await (fleet, inbox)
+      try checkCurrent(expected)
       if canManage && Date().timeIntervalSince(recoveryRefreshed) > 300,
         let runs = try? await request("/recovery/runs")
       {
+        try checkCurrent(expected)
         for member in runs.array.flatMap({ $0["state"]["members"].array }) {
           let restored = member["restored_device_id"].string
           let source = member["source_device_id"].string
@@ -209,6 +285,7 @@ enum SessionVault {
         }
         recoveryRefreshed = Date()
       }
+      try checkCurrent(expected)
       devices = f.array.map { raw in
         var values = raw.object
         if let source = restoredSources[raw["id"].string] {
@@ -221,55 +298,81 @@ enum SessionVault {
       alerts = a["items"].array.map(AlertItem.init)
       lastRefresh = Date()
       error = nil
-    } catch { if !Task.isCancelled { self.error = error.localizedDescription } }
+    } catch { if isCurrent(expected) { self.error = error.localizedDescription } }
   }
   func clearSession() {
+    generation = UUID()
     record = nil
+    refreshing = false
+    restoring = false
+    error = nil
     restoredSources = [:]
     recoveryRefreshed = .distantPast
     devices = []
     alerts = []
     lastRefresh = nil
-    SessionVault.clear()
-    webData.removeData(
+    persistence.clear()
+    let previousWebData = webData
+    webData = .nonPersistent()
+    previousWebData.removeData(
       ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast,
       completionHandler: {})
   }
   func signOut() async {
-    if !demo { _ = try? await request("/auth/logout", method: "POST") }
+    guard isCurrent(generation) else { return }
+    // Capture the old credentials before invalidating all local operations.
+    let logout = !demo ? try? fileRequest(path: "/auth/logout", method: "POST") : nil
     demo = false
     clearSession()
+    if let logout { _ = try? await dataLoader(logout) }
+    // A late logout response must never mutate a subsequent login.
   }
   func submit(device: Device, kind: String, payload: JSON, timeout: Double = 60) async throws -> Job
   {
-    let data = try await request(
-      "/devices/\(device.id)/jobs", method: "POST",
-      body: .object(["kind": .string(kind), "payload": payload, "timeout": .number(timeout)]))
-    return Job(raw: try await request("/jobs/" + data["id"].string))
+    try await withSession {
+      let expected = generation
+      try checkCurrent(expected)
+      let data = try await request(
+        "/devices/\(device.id)/jobs", method: "POST",
+        body: .object(["kind": .string(kind), "payload": payload, "timeout": .number(timeout)]))
+      try checkCurrent(expected)
+      return Job(raw: try await request("/jobs/" + data["id"].string))
+    }
   }
   func waitForJob(_ id: String) async throws -> Job {
-    for _ in 0..<100 {
-      try Task.checkCancellation()
-      let job = Job(raw: try await request("/jobs/" + id))
-      if job.finished {
-        guard job.status == "complete" else { throw SpeckError(message: job.output) }
-        return job
+    try await withSession {
+      let expected = generation
+      for _ in 0..<100 {
+        try checkCurrent(expected)
+        let job = Job(raw: try await request("/jobs/" + id))
+        if job.finished {
+          guard job.status == "complete" else { throw SpeckError(message: job.output) }
+          return job
+        }
+        try await Task.sleep(for: .seconds(2))
       }
-      try await Task.sleep(for: .seconds(2))
+      throw SpeckError(message: "This job is still running. Follow its progress in Jobs.")
     }
-    throw SpeckError(message: "This job is still running. Follow its progress in Jobs.")
   }
-  func remoteCookies() async {
+  func remoteCookies() async throws {
+    let expected = generation
+    try checkCurrent(expected)
+    let store = webData
     guard let record, let host = URL(string: record.server)?.host,
       let cookie = HTTPCookie(properties: [
         .domain: host, .path: "/", .name: "speck_session", .value: record.cookie, .secure: "TRUE",
         .expires: record.expires, HTTPCookiePropertyKey("HttpOnly"): "TRUE",
         HTTPCookiePropertyKey("SameSite"): "Strict",
       ])
-    else { return }
-    await webData.httpCookieStore.setCookie(cookie)
+    else { throw SpeckError(message: "Sign in to control this machine.") }
+    await store.httpCookieStore.setCookie(cookie)
+    guard isCurrent(expected) else {
+      await store.httpCookieStore.deleteCookie(cookie)
+      throw CancellationError()
+    }
   }
   private func fileRequest(path: String, method: String = "GET") throws -> URLRequest {
+    try checkCurrent(generation)
     guard let record else { throw SpeckError(message: "Sign in to transfer files.") }
     let origin = try Self.validatedOrigin(record.server)
     guard let url = URL(string: origin.absoluteString + "/api" + path), url.host == origin.host
@@ -283,9 +386,12 @@ enum SessionVault {
     return request
   }
   func downloadFile(id: String, name: String) async throws -> URL {
-    let (temporary, response) = try await transport.download(
-      for: fileRequest(path: "/transfers/" + id + "/file"))
+    let expected = generation
+    try checkCurrent(expected)
+    let (temporary, response) = try await downloadLoader(
+      fileRequest(path: "/transfers/" + id + "/file"))
     defer { try? FileManager.default.removeItem(at: temporary) }
+    try checkCurrent(expected)
     if (response as? HTTPURLResponse)?.statusCode == 401 { clearSession() }
     guard let http = response as? HTTPURLResponse, http.statusCode == 200,
       let expected = http.value(forHTTPHeaderField: "X-Content-SHA256"), expected.count == 64
@@ -314,6 +420,8 @@ enum SessionVault {
     return destination
   }
   func uploadFile(deviceID: String, destination: String, file: URL) async throws -> JSON {
+    let expected = generation
+    try checkCurrent(expected)
     let size = try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
     guard size <= 256 * 1024 * 1024 else {
       throw SpeckError(message: "Files must be 256 MiB or smaller.")
@@ -350,7 +458,8 @@ enum SessionVault {
     }
     try out.write(contentsOf: Data(("\r\n--" + boundary + "--\r\n").utf8))
     try out.close()
-    let (data, response) = try await transport.upload(for: request, fromFile: body)
+    let (data, response) = try await uploadLoader(request, body)
+    try checkCurrent(expected)
     if (response as? HTTPURLResponse)?.statusCode == 401 { clearSession() }
     guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
       let result = try? JSONDecoder().decode(JSON.self, from: data)

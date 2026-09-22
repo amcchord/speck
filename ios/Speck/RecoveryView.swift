@@ -18,7 +18,7 @@ struct RecoveryView: View {
             .foregroundStyle(.secondary)
         }.padding(.vertical, 8)
       }
-      if let error { InlineError(text: error) { Task { await load() } } }
+      if let error { InlineError(text: error) { session.perform { await load() } } }
       Section("Recovery plans") {
         ForEach(Array(plans.enumerated()), id: \.offset) { _, plan in
           VStack(alignment: .leading, spacing: 12) {
@@ -58,9 +58,9 @@ struct RecoveryView: View {
           }
         }
       }
-    }.navigationTitle("Recovery").scrollContentBackground(.hidden).background(Color.paper).task {
+    }.navigationTitle("Recovery").scrollContentBackground(.hidden).background(Color.paper).sessionTask(session) {
       await load()
-    }.refreshable { await load() }
+    }.sessionRefreshable(session) { await load() }
       .alert("Start \(selectedPlan?["name"].string ?? "recovery test")?", isPresented: $confirm) {
         Button("Cancel", role: .cancel) {}
         Button("Start test") { start() }
@@ -83,7 +83,7 @@ struct RecoveryView: View {
   func start() {
     guard let selectedPlan else { return }
     busy = true
-    Task {
+    session.perform {
       do {
         _ = try await session.request(
           "/recovery/plans/\(selectedPlan["id"].string)/runs", method: "POST")
@@ -134,7 +134,7 @@ struct RecoveryRunView: View {
         Section("Run details") { Text(run["state"]["error"].string).foregroundStyle(.red) }
       }
     }.navigationTitle(run["state"]["name"].string).navigationBarTitleDisplayMode(.inline)
-      .task {
+      .sessionTask(session) {
         while !Task.isCancelled {
           do {
             updated = try await session.request("/recovery/runs").array.first {

@@ -102,7 +102,7 @@ struct NetworkView: View {
         }
       }
     }.scrollContentBackground(.hidden).background(Color.paper).navigationTitle("Network")
-      .navigationBarTitleDisplayMode(.inline).refreshable {
+      .navigationBarTitleDisplayMode(.inline).sessionRefreshable(session) {
         await session.refresh()
       }
   }
@@ -113,7 +113,7 @@ struct NetworkView: View {
     }
     busy = true
     error = nil
-    Task {
+    session.perform {
       do {
         job = try await session.submit(
           device: device, kind: "network.check",

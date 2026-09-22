@@ -44,7 +44,7 @@ struct BatchReviewView: View {
   func run() {
     busy = true
     error = nil
-    Task {
+    session.perform {
       do {
         var body = review.body.object
         body["confirmed"] = .bool(true)
@@ -122,9 +122,9 @@ struct DevicePatchesView: View {
           .foregroundStyle(Color.speckTint)
       }
     }.scrollContentBackground(.hidden).background(Color.paper).navigationTitle("Updates")
-      .navigationBarTitleDisplayMode(.inline).task { await load() }
-      .refreshable { await load() }
-      .sheet(item: $review, onDismiss: { Task { await load() } }) { item in
+      .navigationBarTitleDisplayMode(.inline).sessionTask(session) { await load() }
+      .sessionRefreshable(session) { await load() }
+      .sheet(item: $review, onDismiss: { session.perform { await load() } }) { item in
         NavigationStack { BatchReviewView(review: item) }
       }
   }
@@ -141,7 +141,7 @@ struct DevicePatchesView: View {
   func prepare(_ kind: String) {
     busy = true
     error = nil
-    Task {
+    session.perform {
       do {
         let body: JSON = .object([
           "request_id": .string(UUID().uuidString),
@@ -180,7 +180,7 @@ struct TemplatesView: View {
         }
       }
     }.scrollContentBackground(.hidden).background(Color.paper).navigationTitle("Software & scripts")
-      .task {
+      .sessionTask(session) {
         do { templates = try await session.request("/templates").array } catch {
           self.error = error.localizedDescription
         }
@@ -245,7 +245,7 @@ struct TemplateRunView: View {
   }
   func prepare() {
     busy = true
-    Task {
+    session.perform {
       do {
         let body: JSON = .object([
           "request_id": .string(UUID().uuidString), "name": template["name"],
@@ -290,7 +290,7 @@ struct SchedulesView: View {
           title: "No schedules", symbol: "calendar",
           detail: "Create recurring scans and template runs in the web console.")
       }
-    }.navigationTitle("Schedules").task { await load() }.refreshable { await load() }
+    }.navigationTitle("Schedules").sessionTask(session) { await load() }.sessionRefreshable(session) { await load() }
   }
   func load() async {
     do {

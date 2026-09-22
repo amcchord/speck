@@ -66,7 +66,7 @@ struct FleetView: View {
           }.padding(.vertical, 4)
         }.listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
         if let error = session.error {
-          InlineError(text: error) { Task { await session.refresh() } }.listRowInsets(EdgeInsets())
+          InlineError(text: error) { session.perform { await session.refresh() } }.listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
         }
       }.listRowSeparator(.hidden)
@@ -110,11 +110,11 @@ struct FleetView: View {
         prompt: "Machines, sites, addresses"
       )
       .navigationDestination(for: Device.self) { DeviceDetailView(initialDevice: $0) }
-      .refreshable { await session.refresh() }
+      .sessionRefreshable(session) { await session.refresh() }
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
           Button {
-            Task { await session.refresh() }
+            session.perform { await session.refresh() }
           } label: {
             Image(systemName: "arrow.clockwise")
           }.accessibilityLabel("Refresh fleet").disabled(session.refreshing)

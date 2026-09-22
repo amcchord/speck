@@ -12,7 +12,7 @@ import SwiftUI
             SpeckWordmark(light: true)
           }
         } else if session.signedIn {
-          MainView()
+          MainView().id(session.generation)
         } else {
           SignInView()
         }
@@ -43,7 +43,7 @@ struct MainView: View {
       }
       Tab("Account", systemImage: "person.crop.circle") { NavigationStack { AccountView() } }
     }.tabViewStyle(.sidebarAdaptable)
-      .task(id: phase) {
+      .sessionTask(session, id: phase) {
         guard phase == .active else { return }
         while !Task.isCancelled {
           try? await Task.sleep(for: .seconds(20))

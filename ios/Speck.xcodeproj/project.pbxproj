@@ -10,6 +10,7 @@
 		117DC1E77103E0674CF61822 /* ScreenPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6B164853C8B20EE2DC1504 /* ScreenPreviewView.swift */; };
 		1A20677975F6F13C042CAF28 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9CA718DE8A3322676681B9 /* DemoData.swift */; };
 		35ACED705522006D583B7CE4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4C4CC784D160B77F337D00C5 /* PrivacyInfo.xcprivacy */; };
+		3627BE22A37D80A7E9F2AF9D /* SessionIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED80F9E2C866070B46C5B68 /* SessionIsolationTests.swift */; };
 		455ED76D4AD5FA11513A51C5 /* RemoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E4A4FFEEE9EDC10AE1DD926 /* RemoteView.swift */; };
 		51D3A847FD283DEE0F61CB2E /* SpeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD100ADB164AC5D33EDC5C /* SpeckApp.swift */; };
 		66B4467F735A2ED6D47D66A1 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DE9DEF7F74EA164772F1331 /* AccountView.swift */; };
@@ -72,6 +73,7 @@
 		C2EA8D5281153EF3D5D46EF0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		CA07B57997786309C24B029C /* RecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryView.swift; sourceTree = "<group>"; };
 		D797FFA66F84D64C7DAE0464 /* CodeEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeEditor.swift; sourceTree = "<group>"; };
+		DED80F9E2C866070B46C5B68 /* SessionIsolationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionIsolationTests.swift; sourceTree = "<group>"; };
 		E7509DD5BDF15E34D84F4EC3 /* Preview.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Preview.json; sourceTree = "<group>"; };
 		EAC05A9CA4D7331D24F7214C /* SpeckTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SpeckTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EB5BB5909D0A2EAD28FC1D8F /* FleetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetView.swift; sourceTree = "<group>"; };
@@ -137,6 +139,7 @@
 		9C95F4E8106380B2A8FD9E0C /* SpeckTests */ = {
 			isa = PBXGroup;
 			children = (
+				DED80F9E2C866070B46C5B68 /* SessionIsolationTests.swift */,
 				AEFC81FA48601EB653CB5F21 /* SpeckTests.swift */,
 			);
 			path = SpeckTests;
@@ -292,6 +295,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3627BE22A37D80A7E9F2AF9D /* SessionIsolationTests.swift in Sources */,
 				885F38ADE85E7E018D3F7815 /* SpeckTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -346,7 +350,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 7PTN7E8EDS;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -449,7 +453,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 7PTN7E8EDS;
 				ENABLE_NS_ASSERTIONS = NO;

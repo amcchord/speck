@@ -15,7 +15,7 @@ struct AlertsView: View {
           Text("All").tag("all")
         }.pickerStyle(.segmented)
       }.listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
-      if let error { InlineError(text: error) { Task { await load() } } }
+      if let error { InlineError(text: error) { session.perform { await load() } } }
       ForEach(items) { item in
         VStack(alignment: .leading, spacing: 12) {
           HStack {
@@ -51,7 +51,7 @@ struct AlertsView: View {
       }
     }.navigationTitle("Alerts").scrollContentBackground(.hidden).background(Color.paper)
       .navigationDestination(for: Device.self) { DeviceDetailView(initialDevice: $0) }
-      .task(id: state) { await load() }.refreshable {
+      .sessionTask(session, id: state) { await load() }.sessionRefreshable(session) {
         await load()
         await session.refresh()
       }
@@ -66,7 +66,7 @@ struct AlertsView: View {
     } catch { if !Task.isCancelled { self.error = error.localizedDescription } }
   }
   func acknowledge(_ item: AlertItem) {
-    Task {
+    session.perform {
       do {
         _ = try await session.request(
           "/alerts/" + item.id, method: "POST", body: .object(["action": .string("acknowledge")]))

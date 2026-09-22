@@ -1,5 +1,38 @@
 import SwiftUI
 
+extension View {
+  @MainActor func sessionRefreshable(
+    _ session: SpeckSession, _ action: @escaping @MainActor @Sendable () async -> Void
+  ) -> some View {
+    let expected = session.generation
+    return refreshable {
+      await session.withSession(generation: expected) {
+        guard session.isCurrent(expected) else { return }
+        await action()
+      }
+    }
+  }
+
+  @MainActor func sessionTask(
+    _ session: SpeckSession, _ action: @escaping @MainActor @Sendable () async -> Void
+  ) -> some View {
+    sessionTask(session, id: session.generation, action)
+  }
+
+  @MainActor func sessionTask<ID: Hashable & Sendable>(
+    _ session: SpeckSession, id: ID,
+    _ action: @escaping @MainActor @Sendable () async -> Void
+  ) -> some View {
+    let expected = session.generation
+    return task(id: id) {
+      await session.withSession(generation: expected) {
+        guard session.isCurrent(expected) else { return }
+        await action()
+      }
+    }
+  }
+}
+
 extension Color {
   static let forest = Color(red: 25 / 255, green: 46 / 255, blue: 36 / 255)
   static let fern = Color(red: 56 / 255, green: 93 / 255, blue: 68 / 255)

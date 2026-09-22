@@ -33,7 +33,7 @@ struct ScreenPreviewView: View {
       }
       if let error { InlineError(text: error) }
     }.padding(.vertical, 4)
-      .task(id: "\(phase)-\(enabled)") {
+      .sessionTask(session, id: "\(phase)-\(enabled)") {
         guard phase == .active, enabled, !session.demo else {
           frame = nil
           return
@@ -61,7 +61,7 @@ struct ScreenPreviewView: View {
   private func updatePolicy(_ value: Bool) {
     busy = true
     error = nil
-    Task {
+    session.perform {
       do {
         _ = try await session.request(
           "/devices/\(device.id)/preview-policy", method: "PUT",

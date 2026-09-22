@@ -61,16 +61,16 @@ struct AccountView: View {
       }
       Section { Button("Sign out", role: .destructive) { signOut = true } }
     }.navigationTitle("Account").scrollContentBackground(.hidden).background(Color.paper)
-      .task { await load() }.refreshable { await load() }
+      .sessionTask(session) { await load() }.sessionRefreshable(session) { await load() }
       .confirmationDialog("Sign out of Speck?", isPresented: $signOut, titleVisibility: .visible) {
-        Button("Sign out", role: .destructive) { Task { await session.signOut() } }
+        Button("Sign out", role: .destructive) { session.perform { await session.signOut() } }
       } message: {
         Text("Your current remote sessions will close.")
       }
       .alert("Revoke other sessions?", isPresented: $revoke) {
         Button("Cancel", role: .cancel) {}
         Button("Revoke", role: .destructive) {
-          Task {
+          session.perform {
             do {
               let result = try await session.request("/access/sessions/revoke", method: "POST")
               message = "Revoked \(Int(result["revoked"].number)) sessions."

@@ -131,7 +131,7 @@ struct DeviceDetailView: View {
       }
     }.scrollContentBackground(.hidden).background(Color.paper).navigationTitle(device.name)
       .navigationBarTitleDisplayMode(.inline)
-      .refreshable { await session.refresh() }
+      .sessionRefreshable(session) { await session.refresh() }
       .toolbar {
         if session.canManage {
           Button {
@@ -221,7 +221,7 @@ struct ServicesView: View {
         }.padding(.vertical, 4)
       }
     }.scrollContentBackground(.hidden).background(Color.paper).navigationTitle("Services")
-      .refreshable { await session.refresh() }.searchable(
+      .sessionRefreshable(session) { await session.refresh() }.searchable(
         text: $search, prompt: "Find a service"
       )
       .alert("\(titleCase(action)) service?", isPresented: $confirm) {
@@ -237,7 +237,7 @@ struct ServicesView: View {
     guard let selected else { return }
     busy = true
     error = nil
-    Task {
+    session.perform {
       do {
         job = try await session.submit(
           device: device, kind: "service.control",
@@ -281,7 +281,7 @@ struct OrganizeView: View {
   }
   func save() {
     busy = true
-    Task {
+    session.perform {
       do {
         _ = try await session.request(
           "/devices/\(device.id)/organization", method: "PUT",
