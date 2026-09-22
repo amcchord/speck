@@ -2,6 +2,7 @@ name: Desktop clients
 on:
   workflow_dispatch:
   push:
+    branches: ['**']
     paths: ['desktop/**', '.github/workflows/desktop.yml']
     tags: ['desktop-v*']
 permissions:

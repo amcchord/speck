@@ -695,6 +695,8 @@ function configureRemote(d: Item) {
       ).checked,
     });
     modal.close();
+    d.remote_configured = true;
+    d.remote_protocol = value("protocol");
     notify("Connection saved");
   });
 }

@@ -1050,7 +1050,8 @@ input[type="checkbox"] {
     font-size: 11px;
   }
   .device-drawer {
-    width: 100vw;
+    width: 100%;
+    max-width: 100%;
     height: 100dvh;
     border-radius: 0;
   }
