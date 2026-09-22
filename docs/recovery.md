@@ -72,7 +72,7 @@ for restores created outside Speck, provided Speck observes them before removal.
 Backup-verification VMs are excluded.
 
 After a linked VM disappears from complete provider inventory, Speck checks its
-exact restore URL. Two HTTP404 observations at least five minutes apart, plus
+exact restore URL. Two HTTP 404 observations at least five minutes apart, plus
 an offline endpoint and unchanged source/clone identity, allow automatic
 archiving. An offline endpoint alone, a stopped VM, incomplete inventory, denied
 access, a rate limit, or a server/network error is insufficient. Changing the
