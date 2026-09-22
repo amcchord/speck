@@ -1,5 +1,7 @@
 # Speck screenshots
 
+**[Fleet row and pane](fleet-row-pane/README.md)**: row-wide activation, persistent context and mobile details.
+
 **[Compact Fleet](compact-fleet/README.md)**: dense desktop rows, OS icons, Safari and mobile.
 
 **[Passkeys](passkeys/README.md)**: web, mobile enrollment, account controls and native Mac sign-in.
