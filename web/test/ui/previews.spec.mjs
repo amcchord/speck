@@ -67,3 +67,26 @@ test('no desktop explains recovery instead of waiting indefinitely', async ({ pa
   await page.getByText('About screen previews').click();
   await expect(page.locator('#preview-help')).toContainText('including when this page is closed');
 });
+
+test('open machine refreshes user, desktop and app without resetting its preview', async ({ page }) => {
+  let refreshed = false;
+  await page.context().addCookies([{ name: 'speck-gallery', value: '1', url: 'http://127.0.0.1:8761' }]);
+  await page.route('**/api/devices', async route => {
+    const response = await route.fetch();
+    await route.fulfill({ json: (await response.json()).map(d => ({ ...d, preview: { enabled: true },
+      telemetry: {...d.telemetry,active_app:refreshed?{title:'Newly opened chart',process:'Chart.exe',user:'OFFICE\\Pat'}:null,
+        logged_in_users:refreshed?[{user:'OFFICE\\Pat',state:'active'}]:[], desktop:{state:refreshed?'active':'no_session',sessions_available:true}} })) });
+  });
+  await page.route('**/api/devices/frontdesk/preview-status', route => route.fulfill({json:saved}));
+  await page.route('**/api/devices/frontdesk/preview?*', route => route.fulfill({contentType:'image/svg+xml',body:svg}));
+  await page.goto('/'); await page.locator('[data-device="frontdesk"]').first().click();
+  await expect(page.locator('.machine-user')).toContainText('No users signed in');
+  await expect(page.locator('.capture-time')).toContainText('Last saved');
+  await page.locator('.live-screen > img').evaluate(img=>img.dataset.testKeep='yes');
+  refreshed = true;
+  await expect(page.locator('.machine-user')).toContainText('OFFICE\\Pat',{timeout:20000});
+  await expect(page.locator('.machine-desktop')).toContainText('Active');
+  await expect(page.locator('.machine-foreground h3')).toHaveText('Newly opened chart');
+  await expect(page.locator('[data-row="frontdesk"] .app-cell')).toHaveText('Chart.exe');
+  await expect(page.locator('.live-screen > img')).toHaveAttribute('data-test-keep','yes');
+});

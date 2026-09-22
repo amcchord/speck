@@ -3,10 +3,11 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
+	"strings"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -71,47 +72,143 @@ func Collect(foregroundDir string) map[string]any {
 	detail["connections_truncated"] = truncated
 	result["network"] = detail
 	result["services"] = services(ctx)
-	result["active_app"] = latestForeground(foregroundDir)
+	updateDesktopTelemetry(result, foregroundDir)
 	result["capabilities"] = map[string]any{"managed_operations": true, "screen_preview": true, "commands": true, "files": true, "powershell": hasPowerShell(), "active_app": result["active_app"] != nil, "desktop_note": "Browser desktop requires a local RDP/VNC service; headless Linux supports shell commands and files"}
 	return result
 }
-func latestForeground(dir string) any {
+
+type DesktopSession struct {
+	User    string `json:"user"`
+	Session string `json:"session"`
+	State   string `json:"state"`
+}
+
+// Desktop observations are refreshed on every heartbeat, independently of the
+// slower CPU/disk/service inventory. Logged-in sessions do not require a helper.
+func updateDesktopTelemetry(result map[string]any, dir string) {
+	sessions, err := loggedInSessions()
+	current, last, helperActive := foregroundState(dir, time.Now(), sessions)
+	state := "no_session"
+	if err != nil {
+		state = "unknown"
+	}
+	if len(sessions) > 0 {
+		state = "disconnected"
+	}
+	for _, s := range sessions {
+		if s.State == "active" {
+			state = "unavailable"
+		}
+		if s.State == "signed_in" && state != "unavailable" {
+			state = "no_desktop"
+		}
+	}
+	if helperActive {
+		state = "active"
+	}
+	result["active_app"] = current
+	result["last_active_app"] = last
+	result["logged_in_users"] = sessions
+	result["desktop"] = map[string]any{"state": state, "observed_at": time.Now().UTC().Format(time.RFC3339), "sessions_available": err == nil}
+}
+
+func foregroundState(dir string, now time.Time, sessions []DesktopSession) (map[string]any, map[string]any, bool) {
 	files, _ := os.ReadDir(dir)
-	sort.Slice(files, func(i, j int) bool {
-		a, _ := files[i].Info()
-		b, _ := files[j].Info()
-		return a != nil && b != nil && a.ModTime().After(b.ModTime())
-	})
+	var current, last map[string]any
+	var currentAt, lastAt time.Time
+	helperActive := false
+	// A usable desktop can exist without a foreground window/app.
 	for _, f := range files {
-		if f.Type()&os.ModeSymlink != 0 || filepath.Ext(f.Name()) != ".json" {
+		if f.Type()&os.ModeSymlink != 0 || !strings.HasPrefix(f.Name(), "session-") || filepath.Ext(f.Name()) != ".desktop-status" {
 			continue
 		}
 		info, e := f.Info()
-		if e != nil || info.Size() > 8192 || time.Since(info.ModTime()) > 45*time.Second {
+		if e != nil || !info.Mode().IsRegular() || info.Size() > 2048 {
 			continue
 		}
 		data, e := os.ReadFile(filepath.Join(dir, f.Name()))
-		if e != nil {
+		var status PreviewStatus
+		if e != nil || json.Unmarshal(data, &status) != nil || status.State != "active" || now.Unix()-status.ObservedAt > 30 || status.ObservedAt > now.Unix()+5 {
 			continue
 		}
-		var result map[string]any
-		if json.Unmarshal(data, &result) == nil {
-			return result
+		if runtime.GOOS == "windows" {
+			connected := false
+			for _, session := range sessions {
+				if "session-"+session.Session+".desktop-status" == f.Name() && session.State == "active" {
+					connected = true
+				}
+			}
+			if !connected {
+				continue
+			}
+		}
+		helperActive = true
+	}
+	for _, f := range files {
+		if f.Type()&os.ModeSymlink != 0 || !strings.HasPrefix(f.Name(), "session-") || filepath.Ext(f.Name()) != ".json" {
+			continue
+		}
+		info, e := f.Info()
+		if e != nil || !info.Mode().IsRegular() || info.Size() > 8192 {
+			continue
+		}
+		data, e := os.ReadFile(filepath.Join(dir, f.Name()))
+		var value map[string]any
+		if e != nil || json.Unmarshal(data, &value) != nil {
+			continue
+		}
+		observed, e := time.Parse(time.RFC3339, fmt.Sprint(value["observed_at"]))
+		if e != nil || observed.After(now.Add(5*time.Second)) {
+			continue
+		}
+		if observed.After(lastAt) {
+			last, lastAt = value, observed
+		}
+		stateFile := filepath.Join(dir, strings.TrimSuffix(f.Name(), ".json")+".desktop-status")
+		statusInfo, e := os.Lstat(stateFile)
+		if e != nil || !statusInfo.Mode().IsRegular() || statusInfo.Size() > 2048 {
+			continue
+		}
+		raw, e := os.ReadFile(stateFile)
+		var status PreviewStatus
+		if e != nil || json.Unmarshal(raw, &status) != nil || status.State != "active" || now.Unix()-status.ObservedAt > 30 || status.ObservedAt > now.Unix()+5 {
+			continue
+		}
+		if runtime.GOOS == "windows" {
+			connected := false
+			for _, session := range sessions {
+				if session.Session == fmt.Sprint(value["session"]) && session.State == "active" && strings.EqualFold(session.User, fmt.Sprint(value["user"])) {
+					connected = true
+				}
+			}
+			if !connected {
+				continue
+			}
+		}
+		helperActive = true
+		if now.Sub(observed) <= 30*time.Second && observed.After(currentAt) {
+			current, currentAt = value, observed
 		}
 	}
-	return nil
+	return current, last, helperActive
 }
+
 func WriteForeground(dir string) {
+	state := previewDesktopState()
+	if state == "" {
+		state = "active"
+	}
+	// A locked/disconnected session retains its last app, but never labels it current.
+	name := filepath.Join(dir, foregroundFilename())
+	_ = writeJSON(strings.TrimSuffix(name, ".json")+".desktop-status", PreviewStatus{state, time.Now().Unix()}, 0644)
+	if state != "active" {
+		return
+	}
 	value := foreground()
 	if value == nil {
 		return
 	}
 	value["observed_at"] = time.Now().UTC().Format(time.RFC3339)
-	// Installers create a separate writable telemetry directory; it contains no credentials.
-	data, e := json.Marshal(value)
-	if e != nil {
-		return
-	}
-	name := filepath.Join(dir, foregroundFilename())
-	_ = os.WriteFile(name, data, 0644)
+	// Atomic replacement prevents service reads from seeing a truncated JSON file.
+	_ = writeJSON(name, value, 0644)
 }

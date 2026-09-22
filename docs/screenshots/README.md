@@ -110,3 +110,5 @@ are rejected. Never deploy it or bind it to a public interface.
 
 The [capture manifest](manifest.json) records dimensions, SHA-256 digests and provenance. Live
 operational evidence and before screenshots stay in ignored `output/`.
+
+[Saved desktop previews](previews/README.md) show the last saved timestamp and desktop recovery guidance on desktop and mobile.

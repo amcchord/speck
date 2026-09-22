@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/shirou/gopsutil/v4/host"
 	"os"
 	"os/exec"
 	"strconv"
@@ -110,4 +111,15 @@ func previewDesktopState() string {
 		return "no_desktop"
 	}
 	return ""
+}
+
+func loggedInSessions() ([]DesktopSession, error) {
+	result := []DesktopSession{}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	users, err := host.UsersWithContext(ctx)
+	for _, u := range users {
+		result = append(result, DesktopSession{User: u.User, Session: u.Terminal, State: "signed_in"})
+	}
+	return result, err
 }

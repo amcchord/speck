@@ -31,6 +31,16 @@ permission lease expires after 30 seconds without renewal. Preview images are no
 automatically sent to AI. Windows agent installer upgrades restart helpers for
 already signed-in users; the logon task covers subsequent sessions.
 
+## Signed-in users and desktop activity
+
+The machine pane and Fleet refresh every 15 seconds while the pane is open.
+Windows session enumeration reports signed-in users even when disconnected;
+Linux reports its login records. Desktop availability and the foreground app are
+separate observations. When a session disconnects or its helper stops reporting,
+the last observed app remains timestamped and is labeled historical. “Last:” in
+the Fleet app column means it is not a current foreground app. Agent 0.2.2 is
+required for the separate session and last-app fields.
+
 ## Updates
 
 Select online machines in **Patches**, then **Scan selected**. Windows uses the

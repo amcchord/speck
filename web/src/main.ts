@@ -1,4 +1,5 @@
 import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
+import { machinePresence } from "./presence";
 import Guacamole from "guacamole-common-js";
 import "../../brand/tokens.css";
 import "./style.css";
@@ -574,7 +575,7 @@ function visibleFleet() {
   return fleet
     .filter(
       (d) =>
-        `${d.label} ${d.hostname} ${d.site || ""} ${(d.tags || []).join(" ")} ${d.platform} ${d.telemetry?.active_app?.process || ""} ${primaryAddress(d)}`
+        `${d.label} ${d.hostname} ${d.site || ""} ${(d.tags || []).join(" ")} ${d.platform} ${d.telemetry?.active_app?.process || d.telemetry?.last_active_app?.process || ""} ${primaryAddress(d)}`
           .toLowerCase()
           .includes(fleetQuery.toLowerCase()) &&
         (fleetPlatform === "all" || d.platform === fleetPlatform) &&
@@ -610,11 +611,12 @@ function renderFleetRows() {
       .map((d) => {
         const os = d.telemetry?.host?.platform || d.platform;
         const status = !d.approved ? "Review" : d.online ? "Online" : "Offline";
-        const active = d.telemetry?.active_app;
+        const presence = machinePresence(d);
+        const active = presence.app;
         const screenAction = `${d.remote_protocol === "ssh" ? "Open SSH session" : "Screen control"} · ${d.label}`;
         const shellAction = `Run ${d.platform === "windows" ? "PowerShell" : "shell command"} · ${d.label}`;
         const usage = (value: any) => value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(0) + "%" : "—";
-        return `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon" title="${esc(os)}">${icon(d.platform === "windows" ? "windows" : "linux")}</span><b>${esc(d.label)}</b></button></td><td data-label="Status" class="status-cell" title="Last report: ${date(d.last_seen)}">${badge(status)}</td><td data-label="App" class="app-cell"><span title="${esc(active ? [active.title, active.process, active.user].filter(Boolean).join(" · ") : "No interactive desktop reported")}">${esc(active?.process || "—")}</span></td><td data-label="CPU" class="util-cell cpu-cell">${usage(d.telemetry?.cpu_percent)}</td><td data-label="RAM" class="util-cell ram-cell">${usage(d.telemetry?.memory?.usedPercent)}</td><td data-label="IP address" class="network-cell mono" title="${esc(primaryAddress(d))}">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Screen preview of ${esc(d.label)}"><span>${d.preview.source === "live" ? "Live" : "Saved"} · ${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "No preview yet" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")}</button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button></td></tr>`;
+        return `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon" title="${esc(os)}">${icon(d.platform === "windows" ? "windows" : "linux")}</span><b>${esc(d.label)}</b></button></td><td data-label="Status" class="status-cell" title="Last report: ${date(d.last_seen)}">${badge(status)}</td><td data-label="App" class="app-cell"><span title="${esc(active ? [active.title, active.process, active.user].filter(Boolean).join(" · ") : presence.desktop)}">${esc(presence.table)}</span></td><td data-label="CPU" class="util-cell cpu-cell">${usage(d.telemetry?.cpu_percent)}</td><td data-label="RAM" class="util-cell ram-cell">${usage(d.telemetry?.memory?.usedPercent)}</td><td data-label="IP address" class="network-cell mono" title="${esc(primaryAddress(d))}">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Screen preview of ${esc(d.label)}"><span>${d.preview.source === "live" ? "Live" : "Saved"} · ${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "No preview yet" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")}</button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button></td></tr>`;
       })
       .join("") ||
     `<tr class="fleet-empty-row"><td colspan="${showPreviews ? 9 : 8}"><div class="empty"><h3>No matching machines</h3><p>Try another search or filter.</p></div></td></tr>`;
@@ -752,6 +754,38 @@ function launchRemote(d: Item) {
   } else location.hash = "remote/" + d.id;
 }
 let detailVersion = 0;
+function machineHealth(d: Item) {
+  const t = d.telemetry || {}, presence = machinePresence(d);
+  const percent = (n: unknown) => typeof n === "number" && Number.isFinite(n) ? n : null;
+  const cpu = percent(t.cpu_percent), memory = percent(t.memory?.usedPercent);
+  return `
+          <div class="meters">
+            <div><small>Processor</small><strong>${cpu === null ? "—" : cpu.toFixed(1) + "<em>%</em>"}</strong>${cpu === null ? '<small>Not reported</small>' : `<progress aria-label="Processor utilization" max="100" value="${cpu}"></progress>`}</div>
+            <div><small>Memory</small><strong>${memory === null ? "—" : memory.toFixed(0) + "<em>%</em>"}</strong>${memory === null ? '<small>Not reported</small>' : `<progress aria-label="Memory utilization" max="100" value="${memory}"></progress>`}${t.memory?.total != null ? `<small>${t.memory.used == null ? "—" : bytes(t.memory.used)} / ${bytes(t.memory.total)}</small>` : ""}</div>
+          </div>
+          <section class="machine-storage"><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${x.used == null ? "—" : bytes(x.used)} / ${x.total == null ? "—" : bytes(x.total)}</span>${percent(x.usedPercent) === null ? "" : `<progress aria-label="Storage utilization ${esc(x.path)}" value="${x.usedPercent}" max="100"></progress>`}</div>`).join("") || '<small>No storage reported</small>'}</section>
+          <div class="machine-foreground"><div><small>${presence.appLabel}</small><h3>${esc(presence.title)}</h3>${presence.app?.process ? `<small>${esc(presence.app.process)}</small>` : ""}${!presence.current && presence.app?.observed_at ? `<small>Last observed ${esc(date(Date.parse(presence.app.observed_at) / 1000))}</small>` : ""}</div><div class="machine-user"><small>${presence.userHeading}</small><b>${esc(presence.userLabel)}</b></div><div class="machine-desktop"><small>Interactive desktop</small><b>${esc(presence.desktop)}</b></div></div>`;
+}
+function refreshOpenMachine() {
+  if (!activeDevicePanel?.open || tab !== "overview") return;
+  const d = fleet.find(d => d.id === selected);
+  if (!d) { activeDevicePanel.close(); return; }
+  const health = activeDevicePanel.querySelector(".machine-health");
+  if (health) health.innerHTML = machineHealth(d);
+  const report = activeDevicePanel.querySelector(".machine-report");
+  if (report) report.textContent = date(d.last_seen);
+  const up = activeDevicePanel.querySelector(".machine-uptime");
+  if (up) up.textContent = uptime(d.telemetry?.host?.uptime);
+  const heading = activeDevicePanel.querySelector(".dialog-head h2");
+  if (heading) heading.innerHTML = `<span class="machine-title">${esc(d.label)}</span>${badge(d.online ? "Online" : "Offline")}${d.archived ? badge("Archived") : !d.approved ? badge("Review") : ""}`;
+  let note = activeDevicePanel.querySelector(".telemetry-note");
+  if (!d.online && !note) {
+    note = document.createElement("p"); note.className = "telemetry-note";
+    activeDevicePanel.querySelector("#device-body")?.prepend(note);
+  }
+  if (note) { note.textContent = d.online ? "" : "Machine is offline. Values below are from its last report."; }
+}
+
 async function renderDevice() {
   const version = ++detailVersion;
   try { await renderDeviceContent(); }
@@ -788,7 +822,7 @@ async function renderDeviceContent() {
       <dl class="machine-facts">
         <div><dt>IP address</dt><dd class="machine-address"><span class="mono">${esc(address)}</span>${address !== "—" ? '<button id="copy-machine-ip" class="quick-action" title="Copy IP address" aria-label="Copy IP address">' + icon("copy") + '</button>' : ""}</dd></div>
         <div><dt>Operating system</dt><dd>${esc(t.host?.platform || d.platform || "Not reported")}<small>${esc([t.host?.platformVersion, d.arch].filter(Boolean).join(" · "))}</small></dd></div>
-        <div><dt>Uptime${d.online ? "" : " at last report"}</dt><dd>${uptime(t.host?.uptime)}</dd></div>
+        <div><dt>Uptime${d.online ? "" : " at last report"}</dt><dd class="machine-uptime">${uptime(t.host?.uptime)}</dd></div>
         <div><dt>Last report</dt><dd class="machine-report">${esc(date(d.last_seen))}</dd></div>
       </dl>
       <div class="drawer-actions">${d.approved && !d.archived && role !== "viewer" ? `<button id="drawer-screen" class="primary" ${d.online ? "" : "disabled"}>${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")} ${d.remote_protocol === "ssh" ? "Open SSH" : "Screen control"}</button><button id="drawer-terminal" class="secondary">${icon("terminal")} ${d.platform === "windows" ? "PowerShell" : "Shell"}</button><button id="drawer-ai" class="secondary">${icon("spark")} Ask AI</button>` : ""}${role !== "viewer" && !d.archived ? '<button id="device-edit" class="secondary">Edit</button>' : ""}</div>
@@ -817,20 +851,13 @@ async function renderDeviceContent() {
   }
   const body = document.getElementById("device-body")!;
   if (tab === "overview") {
-    const percent = (n: unknown) => typeof n === "number" && Number.isFinite(n) ? n : null;
-    const cpu = percent(t.cpu_percent), memory = percent(t.memory?.usedPercent);
     const canPreview = role !== "viewer" && !d.archived;
     body.innerHTML = `
       ${!d.online ? '<p class="telemetry-note">Machine is offline. Values below are from its last report.</p>' : ""}
       <div class="machine-overview ${canPreview ? "" : "without-preview"}">
         ${canPreview ? '<div id="machine-preview"></div>' : ""}
         <div class="machine-health">
-          <div class="meters">
-            <div><small>Processor</small><strong>${cpu === null ? "—" : cpu.toFixed(1) + "<em>%</em>"}</strong>${cpu === null ? '<small>Not reported</small>' : `<progress aria-label="Processor utilization" max="100" value="${cpu}"></progress>`}</div>
-            <div><small>Memory</small><strong>${memory === null ? "—" : memory.toFixed(0) + "<em>%</em>"}</strong>${memory === null ? '<small>Not reported</small>' : `<progress aria-label="Memory utilization" max="100" value="${memory}"></progress>`}${t.memory?.total != null ? `<small>${t.memory.used == null ? "—" : bytes(t.memory.used)} / ${bytes(t.memory.total)}</small>` : ""}</div>
-          </div>
-          <section class="machine-storage"><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${x.used == null ? "—" : bytes(x.used)} / ${x.total == null ? "—" : bytes(x.total)}</span>${percent(x.usedPercent) === null ? "" : `<progress aria-label="Storage utilization ${esc(x.path)}" value="${x.usedPercent}" max="100"></progress>`}</div>`).join("") || '<small>No storage reported</small>'}</section>
-          <div class="machine-foreground"><div><small>Foreground app</small><h3>${esc(t.active_app?.title || "No interactive desktop reported")}</h3>${t.active_app?.process ? `<small>${esc(t.active_app.process)}</small>` : ""}</div><div class="machine-user"><small>Signed-in user</small><b>${esc(t.active_app?.user || "Not reported")}</b></div></div>
+          ${machineHealth(d)}
         </div>
       </div>
       <div class="mini-grid machine-system"><div><small>Hostname</small>${esc(d.hostname || "Not reported")}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion || "Not reported")}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
@@ -1785,7 +1812,7 @@ setInterval(async () => {
     polling ||
     page !== "fleet" ||
     remote ||
-    document.querySelector("dialog") ||
+    document.querySelector("dialog:modal") ||
     ["fleet-search", "fleet-filter", "fleet-os", "fleet-sort"].includes(
       document.activeElement?.id || "",
     )
@@ -1796,6 +1823,7 @@ setInterval(async () => {
     fleet = await api("/devices");
     fleetCache = fleet;
     if (document.getElementById("fleet-rows")) renderFleetRows();
+    refreshOpenMachine();
   } catch {
   } finally {
     polling = false;

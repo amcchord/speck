@@ -39,5 +39,23 @@ the deployment entry below and in ignored `output/preview-reliability/`.
 Linux headless/Wayland environments cannot provide a desktop preview; Linux X11
 capture needs a signed-in helper. Automated capture-process tests on Linux do not
 claim graphical X11 acceptance. Old endpoint agents can still upload previews
-and benefit from durable checkpoints, but need agent 0.2.1 for capture isolation
+and benefit from durable checkpoints, but need agent 0.2.2 for capture isolation
 and detailed status reports. The operator desktop app is a separate package.
+
+## Desktop presence and last app
+
+Agent 0.2.2 refreshes desktop metadata on each 15-second heartbeat rather than
+waiting for the slower inventory collection. Windows signed-in users come from
+Terminal Services session enumeration, independently of foreground-window capture;
+disconnected users remain signed in. Linux uses its login records. The helper
+reports desktop availability independently and atomically writes app observations.
+A disconnected/locked or stale helper cannot label an old app current. The last
+observed app remains available with its original timestamp. Session telemetry is
+still local, unprivileged observation, not cryptographic attestation.
+
+The open machine pane no longer suspends Fleet polling. Health, user, desktop,
+app and report time refresh in place every 15 seconds; the image and preview toggle
+are preserved. The Fleet app column prefixes historical values with “Last:”.
+A missing foreground window does not imply there is no signed-in user or desktop.
+An unavailable connected desktop is labeled “locked or unavailable”, since session
+connection alone cannot distinguish every lock/display/helper condition.
