@@ -101,3 +101,13 @@ func foreground() map[string]any {
 	return map[string]any{"title": strings.TrimSpace(title), "user": os.Getenv("USER"), "session": os.Getenv("XDG_SESSION_ID"), "display": os.Getenv("DISPLAY"), "source": "X11"}
 }
 func foregroundFilename() string { return fmt.Sprintf("session-%s.json", strconv.Itoa(os.Getuid())) }
+
+func previewDesktopState() string {
+	if os.Getenv("XDG_SESSION_TYPE") == "wayland" {
+		return "unsupported"
+	}
+	if os.Getenv("DISPLAY") == "" || foreground() == nil {
+		return "no_desktop"
+	}
+	return ""
+}

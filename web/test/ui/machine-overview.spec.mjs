@@ -65,7 +65,7 @@ test('preview preserves its shape through loading, waiting, errors, image and po
   await expect(page.locator('.live-screen .loading-state')).toBeVisible();
   await frameFits(page);
   state = 'waiting'; release();
-  await expect(page.locator('.live-screen')).toContainText('Waiting for a live desktop frame');
+  await expect(page.locator('.live-screen')).toContainText('No preview captured yet');
   await frameFits(page);
   for (const next of ['error', 'image']) {
     state = next;

@@ -138,14 +138,14 @@ for (const [command, description] of [
     RT_VERSION: {
       "#1": {
         "0409": {
-          fixed: { file_version: "0.2.0.0", product_version: "0.2.0.0" },
+          fixed: { file_version: "0.2.1.0", product_version: "0.2.1.0" },
           info: {
             "0409": {
               CompanyName: "Speck contributors",
               FileDescription: description,
               ProductName: "Speck RMM",
-              ProductVersion: "0.2.0",
-              FileVersion: "0.2.0",
+              ProductVersion: "0.2.1",
+              FileVersion: "0.2.1",
               OriginalFilename: command + ".exe",
               InternalName: command,
               Comments: brand.tagline,

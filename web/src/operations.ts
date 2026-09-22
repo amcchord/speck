@@ -336,64 +336,109 @@ export function createOperations(ui: Item) {
   async function previewPanel(d: Item, el: HTMLElement) {
     const section = document.createElement("section");
     section.className = "preview-panel";
-    section.innerHTML = `<div class="section-head"><h3>Live screen</h3><label class="switch-label"><input id="preview-policy" type="checkbox" role="switch" aria-describedby="preview-help" ${d.preview?.enabled ? "checked" : ""} ${d.approved ? "" : "disabled"}> Allow previews</label></div><div class="live-screen"></div><details class="preview-help"><summary>About screen previews</summary><p id="preview-help">One recent frame, refreshed about every 10 seconds. Requires a signed-in desktop helper. Turning this off removes the server’s frame.</p></details>`;
+    section.innerHTML = `<div class="section-head"><h3>Screen preview</h3><label class="switch-label"><input id="preview-policy" type="checkbox" role="switch" aria-describedby="preview-help" ${d.preview?.enabled ? "checked" : ""} ${d.approved ? "" : "disabled"}> Allow previews</label></div><div class="live-screen"></div><p class="preview-status" role="status"></p><details class="preview-help"><summary>About screen previews</summary><p id="preview-help">Live frames refresh about every 10 seconds while a desktop is available. One encrypted preview is saved about every 5 minutes, including when this page is closed, and retained until replaced. Requires a signed-in, unlocked Windows or X11 desktop and its helper. Turning this off deletes the live and saved preview.</p></details>`;
     el.prepend(section);
-    const target = section.querySelector(".live-screen")!;
+    const target = section.querySelector<HTMLElement>(".live-screen")!;
+    const status = section.querySelector<HTMLElement>(".preview-status")!;
     const policy = section.querySelector<HTMLInputElement>("#preview-policy")!;
     let enabled = !!d.preview?.enabled;
+    let generation = 0, busy = false;
+    let controller: AbortController | undefined;
+    const empty = (text: string) => {
+      target.innerHTML = `<div class="preview-disabled">${icon("monitor")}<span>${esc(text)}</span></div>`;
+    };
+    const reason = (state: string) => ({
+      offline: "Machine is offline. Capture resumes when it reconnects.",
+      no_desktop: "No active desktop. Sign in or reconnect and unlock the machine to resume previews.",
+      helper_unavailable: "Desktop helper is not reporting. Sign in to a Windows or X11 desktop; reinstall the agent if this persists.",
+      unsupported: "This desktop does not support previews. Linux previews require X11.",
+      capture_failed: "Desktop capture failed. Speck will retry automatically.",
+      capture_timeout: "Desktop capture timed out. Speck will retry automatically.",
+    }[state] || "No desktop frame is available yet. Check that the desktop is signed in and unlocked.");
     const draw = async () => {
       if (!enabled) {
-        target.innerHTML =
-          '<div class="preview-disabled">' +
-          icon("monitor") +
-          "<span>Screen preview is off for this machine</span></div>";
+        empty("Screen preview is off for this machine");
+        status.textContent = "";
         return;
       }
-      if (!target.innerHTML) target.innerHTML = loadingState("Loading live screen…");
-      let info: Item;
+      if (busy) return;
+      busy = true;
+      const request = generation;
+      const requestController = new AbortController();
+      controller = requestController;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      if (!target.innerHTML) target.innerHTML = loadingState("Loading screen preview…");
       try {
-        info = await api("/devices/" + d.id + "/preview-status");
-      } catch {
-        if (target.isConnected && enabled)
-          target.innerHTML = '<div class="preview-disabled" role="status"><span>Preview unavailable. Retrying…</span></div>';
-        return;
-      }
-      if (!target.isConnected || !enabled) return;
-      if (info.available) {
-        target.innerHTML = `<img src="/api/devices/${d.id}/preview?t=${info.captured_at}" alt="Live screen of ${esc(d.label)}"><span class="capture-time">Captured ${date(info.captured_at)}</span>`;
-        target.querySelector("img")!.onerror = () => {
-          target.innerHTML = '<div class="preview-disabled" role="status"><span>Preview unavailable. Retrying…</span></div>';
-        };
-      } else
-        target.innerHTML =
-          '<div class="preview-disabled">' +
-          icon("monitor") +
-          "<span>Waiting for a live desktop frame</span></div>";
-    };
-    on(
-      "preview-policy",
-      async () => {
-        enabled = policy.checked;
-        try {
-          await api("/devices/" + d.id + "/preview-policy", "PUT", { enabled });
-          d.preview = { ...d.preview, enabled };
-          await draw();
-        } catch (e) {
-          enabled = !enabled;
-          policy.checked = enabled;
-          throw e;
+        const info: Item = await Promise.race([
+          api("/devices/" + d.id + "/preview-status", "GET", undefined, requestController.signal),
+          new Promise((_, reject) => { timer = setTimeout(() => { requestController.abort(); reject(new Error("Preview timed out")); }, 8000); }),
+        ]);
+        if (!target.isConnected || !enabled || request !== generation) return;
+        if (info.enabled === false) {
+          enabled = false;
+          policy.checked = false;
+          empty("Screen preview is off for this machine");
+          status.textContent = "";
+          return;
         }
-      },
-      "change",
-    );
-    await draw();
-    const interval = setInterval(() => {
-      if (!target.isConnected) {
-        clearInterval(interval);
-        return;
+        if (info.available) {
+          const label = info.source === "live" ? "Live" : "Last saved";
+          const url = `/api/devices/${d.id}/preview?t=${info.captured_at}`;
+          status.textContent = info.source === "live" ? "Live preview · Saved automatically every 5 minutes" : reason(info.state);
+          if (target.dataset.capture !== String(info.captured_at) || !target.querySelector(":scope > img")) {
+            target.dataset.capture = String(info.captured_at);
+            target.innerHTML = `<img src="${url}" alt="Screen preview of ${esc(d.label)}"><span class="capture-time">${label} · ${date(info.captured_at)}</span>`;
+            target.querySelector(":scope > img")!.onerror = () => {
+              if (!enabled || request !== generation) return;
+              empty("Preview unavailable. Retrying automatically…");
+            };
+          } else {
+            target.querySelector(".capture-time")!.textContent = `${label} · ${date(info.captured_at)}`;
+          }
+        } else {
+          empty("No preview captured yet");
+          status.textContent = reason(info.state);
+        }
+      } catch {
+        if (!target.isConnected || !enabled || request !== generation) return;
+        if (!target.querySelector(":scope > img")) empty("Preview unavailable. Retrying automatically…");
+        // A previously rendered frame is still useful, but must not claim to be live.
+        const caption = target.querySelector(".capture-time");
+        if (caption) caption.textContent = caption.textContent!.replace(/^Live/, "Last received");
+        status.textContent = "Cannot refresh the preview right now. Retrying automatically…";
+      } finally {
+        clearTimeout(timer);
+        if (request === generation) busy = false;
       }
-      void draw().catch(() => {});
+    };
+    on("preview-policy", async () => {
+      const previous = enabled;
+      enabled = policy.checked;
+      generation++;
+      controller?.abort();
+      busy = false;
+      policy.disabled = true;
+      // Hide the old frame immediately, even while policy confirmation is pending.
+      if (!enabled) await draw();
+      try {
+        await api("/devices/" + d.id + "/preview-policy", "PUT", { enabled });
+        d.preview = { ...d.preview, enabled, available: false };
+        await draw();
+      } catch (e) {
+        enabled = previous;
+        policy.checked = enabled;
+        await draw();
+        throw e;
+      } finally {
+        policy.disabled = false;
+      }
+    }, "change");
+    // Install polling before the initial fetch so failures cannot stop recovery.
+    const interval = setInterval(() => {
+      if (!target.isConnected) { clearInterval(interval); generation++; controller?.abort(); return; }
+      void draw();
     }, 10000);
+    void draw();
   }
   async function assistDialog(
     d: Item,

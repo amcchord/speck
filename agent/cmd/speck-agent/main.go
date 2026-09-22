@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"time"
 
 	"github.com/amcchord/speck/agent/internal/agent"
 	"github.com/amcchord/speck/agent/internal/identity"
@@ -74,17 +73,12 @@ func main() {
 			fatal(err)
 		}
 		fmt.Println(identity.Agent + ": enrolled.")
-	case "foreground":
-		tick := 0
-		dir := filepath.Join(filepath.Dir(config), "telemetry")
-		for {
-			agent.WriteForeground(dir)
-			if tick%5 == 0 {
-				agent.WritePreview(dir)
-			}
-			tick++
-			time.Sleep(2 * time.Second)
+	case "capture-preview":
+		if len(args) == 2 {
+			agent.WritePreview(args[1])
 		}
+	case "foreground":
+		agent.RunObserver(filepath.Join(filepath.Dir(config), "telemetry"))
 	case "version", "--version":
 		fmt.Printf("%s %s (%s/%s)\n", identity.Agent, agent.Version, runtime.GOOS, runtime.GOARCH)
 	default:

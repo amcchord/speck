@@ -166,3 +166,38 @@ func foregroundFilename() string {
 	_ = windows.ProcessIdToSessionId(uint32(os.Getpid()), &session)
 	return fmt.Sprintf("session-%d.json", session)
 }
+
+// Do not enter GDI capture for a disconnected session or secure/locked desktop.
+func previewDesktopState() string {
+	var session uint32
+	if windows.ProcessIdToSessionId(uint32(os.Getpid()), &session) != nil {
+		return "no_desktop"
+	}
+	var sessions *windows.WTS_SESSION_INFO
+	var count uint32
+	if windows.WTSEnumerateSessions(0, 0, 1, &sessions, &count) != nil {
+		return "no_desktop"
+	}
+	defer windows.WTSFreeMemory(uintptr(unsafe.Pointer(sessions)))
+	active := false
+	for _, s := range unsafe.Slice(sessions, count) {
+		if s.SessionID == session && s.State == windows.WTSActive {
+			active = true
+		}
+	}
+	if !active {
+		return "no_desktop"
+	}
+	desktop, _, _ := user32.NewProc("OpenInputDesktop").Call(0, 0, 1) // DESKTOP_READOBJECTS
+	if desktop == 0 {
+		return "no_desktop"
+	}
+	defer user32.NewProc("CloseDesktop").Call(desktop)
+	var name [256]uint16
+	var needed uint32
+	ok, _, _ := user32.NewProc("GetUserObjectInformationW").Call(desktop, 2, uintptr(unsafe.Pointer(&name[0])), uintptr(len(name)*2), uintptr(unsafe.Pointer(&needed)))
+	if ok == 0 || !strings.EqualFold(windows.UTF16ToString(name[:]), "Default") {
+		return "no_desktop"
+	}
+	return ""
+}

@@ -68,6 +68,22 @@ try {
  Register-ScheduledTask -Description 'Speck Desktop Helper. A little lightweight RMM.' -TaskName 'Speck Foreground' -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force | Out-Null
  Write-Host "`n  [3/3] Start Speck Agent"
  Start-Service SpeckAgent
+ # Restart the observer for existing interactive users after an upgrade. The
+ # logon trigger remains for future sessions; no password or elevated token is used.
+ $Users=@{}
+ Get-CimInstance Win32_Process -Filter "Name='explorer.exe'" | ForEach-Object {
+   $Owner=Invoke-CimMethod -InputObject $_ -MethodName GetOwner
+   if ($Owner.ReturnValue -eq 0) {$Users[($Owner.Domain+'\'+$Owner.User)]=$_.SessionId}
+ }
+ foreach ($User in $Users.Keys) {
+   $Task='Speck Foreground Start-'+$Users[$User]
+   try {
+     $Interactive=New-ScheduledTaskPrincipal -UserId $User -LogonType Interactive -RunLevel Limited
+     Register-ScheduledTask -TaskName $Task -Action $Action -Principal $Interactive -Settings $Settings -Force | Out-Null
+     Start-ScheduledTask -TaskName $Task
+   } catch {Write-Warning 'Desktop helper will start at the next sign-in.'}
+   finally {Unregister-ScheduledTask -TaskName $Task -Confirm:$false -ErrorAction SilentlyContinue}
+ }
  Write-Host "`n  Ready. Speck Agent is running." -ForegroundColor Green
- Write-Host "  Active application: starts at the next desktop sign-in.`n"
+ Write-Host "  Previews: available on signed-in, unlocked desktops.`n"
 } finally {Remove-Item $Temp -ErrorAction SilentlyContinue}
