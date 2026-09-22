@@ -36,8 +36,13 @@ let fleetPlatform = "all",
   fleetPage = 0,
   showPreviews = false;
 let fleetCache: Item[] | null = null;
+let activeDevicePanel: HTMLDialogElement | null = null;
 let fleetScroll = { x: 0, y: 0, table: 0 };
 function clearFleetState() {
+  activeDevicePanel?.close();
+  activeDevicePanel?.remove();
+  activeDevicePanel = null;
+  selected = "";
   fleet = [];
   fleetCache = null;
   fleetSelection.clear();
@@ -529,6 +534,14 @@ function drawFleet() {
       );
     renderFleetRows();
   });
+  document.getElementById("fleet-rows")!.addEventListener("click", (event) => {
+    const target = event.target as Element;
+    // Preserve checkboxes, quick actions, and text selection within a row.
+    if (target.closest("button, a, input, select, textarea, label")) return;
+    if (window.getSelection()?.isCollapsed === false) return;
+    const row = target.closest<HTMLTableRowElement>("tr[data-row]");
+    if (row) void openDevice(row.dataset.row!);
+  });
   renderFleetRows();
   const table = document.querySelector<HTMLElement>(".fleet-table-wrap")!;
   table.scrollLeft = fleetScroll.table;
@@ -588,7 +601,7 @@ function renderFleetRows() {
         const screenAction = `${d.remote_protocol === "ssh" ? "Open SSH session" : "Screen control"} · ${d.label}`;
         const shellAction = `Run ${d.platform === "windows" ? "PowerShell" : "shell command"} · ${d.label}`;
         const usage = (value: any) => value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(0) + "%" : "—";
-        return `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon" title="${esc(os)}">${icon(d.platform === "windows" ? "windows" : "linux")}</span><b>${esc(d.label)}</b></button></td><td data-label="Status" class="status-cell" title="Last report: ${date(d.last_seen)}">${badge(status)}</td><td data-label="App" class="app-cell"><span title="${esc(active ? [active.title, active.process, active.user].filter(Boolean).join(" · ") : "No interactive desktop reported")}">${esc(active?.process || "—")}</span></td><td data-label="CPU" class="util-cell cpu-cell">${usage(d.telemetry?.cpu_percent)}</td><td data-label="RAM" class="util-cell ram-cell">${usage(d.telemetry?.memory?.usedPercent)}</td><td data-label="IP address" class="network-cell mono" title="${esc(primaryAddress(d))}">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Live screen of ${esc(d.label)}"><span>${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "Waiting for desktop" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")}</button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button></td></tr>`;
+        return `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon" title="${esc(os)}">${icon(d.platform === "windows" ? "windows" : "linux")}</span><b>${esc(d.label)}</b></button></td><td data-label="Status" class="status-cell" title="Last report: ${date(d.last_seen)}">${badge(status)}</td><td data-label="App" class="app-cell"><span title="${esc(active ? [active.title, active.process, active.user].filter(Boolean).join(" · ") : "No interactive desktop reported")}">${esc(active?.process || "—")}</span></td><td data-label="CPU" class="util-cell cpu-cell">${usage(d.telemetry?.cpu_percent)}</td><td data-label="RAM" class="util-cell ram-cell">${usage(d.telemetry?.memory?.usedPercent)}</td><td data-label="IP address" class="network-cell mono" title="${esc(primaryAddress(d))}">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Live screen of ${esc(d.label)}"><span>${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "Waiting for desktop" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")}</button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button></td></tr>`;
       })
       .join("") ||
     `<tr class="fleet-empty-row"><td colspan="${showPreviews ? 9 : 8}"><div class="empty"><h3>No matching machines</h3><p>Try another search or filter.</p></div></td></tr>`;
@@ -630,6 +643,7 @@ function renderFleetRows() {
         (el.onclick = () =>
           launchRemote(fleet.find((d) => d.id === el.dataset.screen)!)),
     );
+  highlightActiveMachine();
   const bulk = document.getElementById("bulk-actions")!;
   bulk.hidden = !fleetSelection.size;
   bulk.innerHTML = `<b>${fleetSelection.size} selected</b><button id="bulk-scan" class="secondary">Scan updates</button><button id="bulk-deploy" class="secondary">Deploy template</button><button id="bulk-clear" class="text-link">Clear</button>`;
@@ -640,21 +654,57 @@ function renderFleetRows() {
   on("bulk-scan", () => ops.scan([...fleetSelection]));
   on("bulk-deploy", () => ops.deployDialog([...fleetSelection]));
 }
+function highlightActiveMachine() {
+  document.querySelectorAll<HTMLTableRowElement>("#fleet-rows tr[data-row]").forEach((row) => {
+    const active = !!activeDevicePanel?.open && row.dataset.row === selected;
+    row.classList.toggle("active-machine", active);
+    row.querySelector(".machine-name")?.setAttribute("aria-expanded", String(active));
+  });
+}
 async function openDevice(id: string, initialTab = "overview") {
+  if (activeDevicePanel?.open && selected === id && tab === initialTab) {
+    activeDevicePanel.querySelector<HTMLButtonElement>(".close")?.focus();
+    return;
+  }
+  // Remove synchronously: close events are queued, and two #detail trees must
+  // never coexist while a different machine is being rendered.
+  activeDevicePanel?.close();
+  activeDevicePanel?.remove();
   selected = id;
   tab = role === "viewer" ? "overview" : initialTab;
-  const old = document.querySelector<HTMLDialogElement>(".device-drawer");
-  old?.close();
-  const panel = dialog("Machine details", `<div id="detail">${loadingState("Loading machine…")}</div>`);
-  panel.classList.add("device-drawer");
+  const panel = dialog("Machine details", `<div id="detail">${loadingState("Loading machine…")}</div>`,
+    { className: "device-drawer", modal: false });
+  panel.id = "machine-details";
+  activeDevicePanel = panel;
+  highlightActiveMachine();
+  const escape = (event: KeyboardEvent) => {
+    if (event.key !== "Escape" || !panel.open || document.querySelector("dialog:modal")) return;
+    event.preventDefault();
+    panel.close();
+  };
+  document.addEventListener("keydown", escape);
+  panel.addEventListener("close", () => {
+    document.removeEventListener("keydown", escape);
+    if (activeDevicePanel !== panel) return;
+    activeDevicePanel = null;
+    detailVersion++;
+    highlightActiveMachine();
+    // Return to the machine after dismissal; navigation and replacement panes
+    // keep their own focus instead.
+    if (page === "fleet") {
+      document.querySelectorAll<HTMLButtonElement>("#fleet-rows .machine-name").forEach((button) => {
+        if (button.dataset.device === id) button.focus({ preventScroll: true });
+      });
+    }
+  });
   try {
     if (!fleet.some((d) => d.id === id))
       fleet = await api("/devices?include_archived=true");
-    if (!panel.isConnected || selected !== id) return;
+    if (!panel.isConnected || !panel.open || activeDevicePanel !== panel) return;
     if (fleet.find((d) => d.id === id)?.archived) tab = "overview";
     await renderDevice();
   } catch (err) {
-    if (!(err instanceof StaleViewError) && panel.isConnected)
+    if (!(err instanceof StaleViewError) && panel.isConnected && panel.open)
       panel.querySelector("#detail")!.innerHTML = loadError(err);
   }
 }
@@ -876,12 +926,14 @@ async function transfers(id: string) {
   if (el?.isConnected)
     el.innerHTML = `<h3>Recent transfers</h3>${rows.map((r: Item) => `<div class="transfer"><span>${esc(r.name)}<small>${esc(r.direction)} · ${bytes(r.size)} · ${esc(r.status)}</small></span>${r.status === "ready" ? `<a href="/api/transfers/${r.id}/file">Save file ↗</a>` : ""}</div>`).join("") || "<p>No transfers yet.</p>"}`;
 }
-function dialog(title: string, html: string) {
+function dialog(title: string, html: string, options: { className?: string; modal?: boolean } = {}) {
   const d = document.createElement("dialog");
   d.setAttribute("aria-label", title);
+  if (options.className) d.className = options.className;
   d.innerHTML = `<div class="dialog-head"><h2>${esc(title)}</h2><button class="close" aria-label="Close">×</button></div>${html}`;
   document.body.append(d);
-  d.showModal();
+  if (options.modal === false) d.show();
+  else d.showModal();
   d.querySelector(".close")!.addEventListener("click", () => d.close());
   d.addEventListener("close", () => d.remove());
   return d;

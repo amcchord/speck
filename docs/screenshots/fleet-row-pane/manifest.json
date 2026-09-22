@@ -1,0 +1,16 @@
+[
+  {
+    "file": "desktop.jpg",
+    "width": 1280,
+    "height": 720,
+    "sha256": "d0e3dcdba625e3b9bd529b05c5eeb21ec53427211bdc7b150d895af6f1d24180",
+    "source": "Original CUA screenshot of the real frontend and local synthetic fixtures"
+  },
+  {
+    "file": "mobile.jpg",
+    "width": 390,
+    "height": 844,
+    "sha256": "aa84d2f0c756a5c578d1b6050878478fce0dbb2d34824998151f7c8a7d8e2d2d",
+    "source": "Original CUA screenshot of the real frontend and local synthetic fixtures"
+  }
+]
