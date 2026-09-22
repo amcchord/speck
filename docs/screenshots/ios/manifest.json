@@ -1,0 +1,254 @@
+[
+  {
+    "file": "ipad-services.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "6ceb95d7371f829981bd8aec63f8e545758f4742e858c6d35a7211ca8f107723",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testFleetDeviceAndNavigation()"
+  },
+  {
+    "file": "ipad-command.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "18b1fef106ba4bd776303d8e19188c06dd6452c5ce51bebb3992a6f795b71339",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testFleetDeviceAndNavigation()"
+  },
+  {
+    "file": "ipad-machine.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "08712a15ac6c923e6072df6e3ba171f0b4f593eab74dfea67bd7a56dab025909",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testFleetDeviceAndNavigation()"
+  },
+  {
+    "file": "ipad-fleet.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "2d1da7db637143b209d2220ff0bd2c85174291120c492dffea11768de7466436",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testFleetDeviceAndNavigation()"
+  },
+  {
+    "file": "ipad-machine-large-text.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "511b64557f459220afbba13b412c6cc0b96a7ff6775e24da24c2baeaa5479be8",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testLargeText()"
+  },
+  {
+    "file": "ipad-account.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "245d67b73f5d2f36d0cea7e21ef32ef95786355dda0c52adbe649fa3a2331fbb",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testPrimaryDestinations()"
+  },
+  {
+    "file": "ipad-recovery.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "cf7ae91b9ed3716077fc6bad2e1f7ee50ac9999e8adf6c062a698d9048f15a6f",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testPrimaryDestinations()"
+  },
+  {
+    "file": "ipad-jobs.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "ebbdf29095e02715fa11569ebb2329a7d2514bcda88c1813dfa139420371c3d6",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testPrimaryDestinations()"
+  },
+  {
+    "file": "ipad-alerts.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "b42826f97c9e85ce829e810be17de4240f255c6a39491381abffb5263afa059b",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testPrimaryDestinations()"
+  },
+  {
+    "file": "ipad-search.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "b0b03143df433fd54d20f00b07e309d1cfb7e162537b4d2aeb5d6286e378343f",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testSearchFiltersFleet()"
+  },
+  {
+    "file": "ipad-sign-in.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "400d0714138da4dbfa6872afb8c4f05055bee59755501d45a2189946cfb8c744",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testSignInLayout()"
+  },
+  {
+    "file": "ipad-machine-dark.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "b74c92403cdbe05aa450a3e8022c147bdd583c3fc5f2a0e2d40a02c4bdb47d2b",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testDarkAppearance()"
+  },
+  {
+    "file": "ipad-fleet-dark.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "cc5fcfb7cc4404a811ade4036d4d9aaffcfea8859986d84cdc3fa5a1ffdcb7b9",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testDarkAppearance()"
+  },
+  {
+    "file": "ipad-machine-landscape.png",
+    "width": 2064,
+    "height": 2752,
+    "sha256": "3992898709e8137d35726f6396211fdc3ba1ac6a5243bb13fab105c1261fbec1",
+    "device": "iPad Pro 13-inch (M5)",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testLandscapeLayout()"
+  },
+  {
+    "file": "iphone-services.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "eb129a2dc79b95079181b0e40f442d69940dc30858e38e5c7de6a3055230ce8d",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testFleetDeviceAndNavigation()"
+  },
+  {
+    "file": "iphone-command.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "615da6fd89be9614e354b31ba66f58421ae228fe31bfc39d09f4745449d7dc05",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testFleetDeviceAndNavigation()"
+  },
+  {
+    "file": "iphone-machine.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "d24bfa5fbe75a6a7daf09ee6dc7da0f8c57f4665192e9295a9e0e9335bcddf31",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testFleetDeviceAndNavigation()"
+  },
+  {
+    "file": "iphone-fleet.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "f7875052d1a1193453c5deb02c7472843c0edc89043b978bb2fd852fc22fb622",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testFleetDeviceAndNavigation()"
+  },
+  {
+    "file": "iphone-machine-large-text.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "084208dc7c748320cc6c059642454249aad484fcd49270cf6f032eb02cedb661",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testLargeText()"
+  },
+  {
+    "file": "iphone-account.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "b116a9dfc1bfb5e4e7b107122f9d0cabede54279f389ba3c28b4896f6e4c655c",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testPrimaryDestinations()"
+  },
+  {
+    "file": "iphone-recovery.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "af1451a1778e51f65f36e42e10093edb0d7c92df6d9097dd43d9d59cd8bf5938",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testPrimaryDestinations()"
+  },
+  {
+    "file": "iphone-jobs.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "e9361bc503ebe784828ecfeb67f36fb8282db9b8abf2f52a8f56350dc53adff7",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testPrimaryDestinations()"
+  },
+  {
+    "file": "iphone-alerts.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "77d21b91879ef7007d93ec9ecea8b41b2c8d3ff4e346a9509ee17da14550f5c4",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testPrimaryDestinations()"
+  },
+  {
+    "file": "iphone-search.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "b304fa3672ee7b2955a3531060539e1714e75c33b80d27369de83d650a53acee",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testSearchFiltersFleet()"
+  },
+  {
+    "file": "iphone-sign-in.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "f1840a721491d26b5c80f66403b7f847449f0587c222aa8508128e9242391bce",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testSignInLayout()"
+  },
+  {
+    "file": "iphone-machine-dark.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "afcf17b41230d89962cad9032ccc5f231d5712668a3cb6b44750bc81b51d2305",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testDarkAppearance()"
+  },
+  {
+    "file": "iphone-fleet-dark.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "4d5fdb959b426fe88fe6798fae509d584adaffe25d020fd2f5b3c30d6b4c711c",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testDarkAppearance()"
+  },
+  {
+    "file": "iphone-machine-landscape.png",
+    "width": 1206,
+    "height": 2622,
+    "sha256": "7c9be38ae3e52bae9d26f9f69093d36c18263da71badb7ffb1da716b4e6b9066",
+    "device": "iPhone 18 Pro",
+    "source": "Apple XCTest screenshot, iOS 27 simulator, synthetic --demo fixture or empty sign-in form",
+    "test": "SpeckUITests/testLandscapeLayout()"
+  }
+]

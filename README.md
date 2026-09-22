@@ -11,7 +11,8 @@ backup and recovery workflows. Speck is an early release for a single organizati
 [Website](https://speckrmm.com) · [Screenshot gallery](docs/screenshots/v0.2/README.md) ·
 [Brand identity](brand/README.md) · [UI review](docs/ui-review.md) ·
 [Operations guide](docs/operations.md) · [Management guide](docs/management.md) ·
-[MVP review](docs/MVP-REVIEW.md) · [Desktop downloads](https://speckrmm.com/#downloads)
+[MVP review](docs/MVP-REVIEW.md) · [Desktop downloads](https://speckrmm.com/#downloads) ·
+[iPhone & iPad](ios/README.md)
 
 [![Speck sign-in](docs/screenshots/v0.2/sign-in.jpg)](docs/screenshots/README.md)
 

@@ -179,3 +179,21 @@ The previous web tree and exact deployment evidence are in private rollback and
 `output/windows-session-start/`. The original intermittent symptom could not be
 consistently reproduced; this removes a demonstrated decode failure and provides
 bounded recovery rather than claiming every black-screen cause is eliminated.
+
+## Native iPhone/iPad beta — September 22, 2026
+
+`ios/` contains the universal SwiftUI operator app, sharing the existing server's
+permissions and APIs. See `ios/README.md`, `docs/ios-quality.md` and the 28-image
+synthetic gallery. App Store Connect and the internal Speck testing group are set
+up. Credentials/signing material remain in AustinLand and ignored local output.
+
+Native UI checks cover both simulator form factors, dark/light, landscape, large
+text, centered actions, search and literal code entry. Native login, Windows/Linux
+commands and verified binary transfers passed against the live lab. WKWebView
+rendered Windows RDP and Linux SSH; the mobile keyboard executed a harmless SSH
+command. Physical-device audio and older OS versions remain open.
+
+The shared remote toolbar adds touch text entry and control keys. Static rollout
+preserved the service process and environment, with the previous web tree retained
+for rollback. No backend restart, agent/Slide identity changes or recovery cleanup.
+Private deployment and release evidence: `output/ios/` in `worktrees/ios-testflight`.

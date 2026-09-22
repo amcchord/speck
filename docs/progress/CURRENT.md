@@ -47,3 +47,10 @@ image-decode failure and delayed/error API checks passed. No backend restart or
 agent/configuration change. See [startup notes](../operations/session-startup.md)
 and [loading screenshots](../screenshots/loading/README.md). Private release and
 rollback evidence: `output/windows-session-start/`.
+
+Native iOS work adds the universal iPhone/iPad operator client and mobile remote
+keyboard. The screenshot-driven UI review and live Windows/Linux acceptance are
+recorded in [iOS qualification](../ios-quality.md), with a
+[28-image native gallery](../screenshots/ios/README.md). App Store Connect is set up;
+consult that report for the current TestFlight build/distribution state. Physical
+mobile audio, older iOS versions and long-running background checks remain open.
