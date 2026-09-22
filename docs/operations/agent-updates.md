@@ -23,7 +23,8 @@ Linux observers use the new binary at their next sign-in.
 
 A failed version is not retried automatically; a later release can be installed.
 Audit records and `/api/agent-updates` expose installation/current/failure states.
-Rollback errors are recorded separately as `rollback_failed`. A killed updater
+Binary recovery errors are recorded separately as `rollback_failed`; any failed
+update warrants checking the service and its retained backup. A killed updater
 cannot reserve job polling indefinitely: server/local update holds expire after
 five minutes. Power loss during replacement may still need operator recovery.
 
@@ -86,4 +87,32 @@ failed helper stop and partial replacement rollback. Backend tests cover CSRF an
 admin boundaries, clone/revocation rejection, pause, busy jobs/sessions, atomic
 update/job leases, confirmed completion and suppression of a failed release.
 Chromium/WebKit exercise pause/resume and persistence at desktop/mobile sizes.
-Live rollout and exact source/backup evidence are recorded below after deployment.
+
+## September 22 rollout
+
+Server and agent source `0a09f6b` is deployed; final console source is `5d1e39d`.
+The release followed a consistent runtime/configuration/database backup:
+`/var/lib/speck-rollback/20260922T232347Z-agent-updates-0a09f6b`. The prior web tree
+for the final static correction is retained at
+`/var/lib/speck-rollback/20260922T233544Z-shell-controls-5d1e39d/web`.
+
+One Linux and one Windows original were canaries. All five originals (two Linux
+amd64 and three Windows amd64) then received the updater bootstrap built from
+the same source with version 0.3.0. Each fetched the signed 0.3.1 release, claimed
+an idle lease, replaced its own binaries and confirmed a new authenticated check-in.
+The audit contains five `agent_update.started` and five `agent_update.current`
+events. No failure was recorded. The temporary bootstrap downloads were removed.
+
+On every endpoint, final binary hashes match the signed release, the service runs,
+the previous binary remains available and the enrollment file hash is unchanged.
+Windows helpers run in user sessions and retain ordinary-user executable access.
+Both Linux screen actions and Windows RDP passed live browser acceptance.
+The pause/resume settings flow passed Chromium/WebKit desktop/mobile checks.
+
+113 backend tests, 28 web unit tests, 84 browser scenarios, Linux race/real-PTY
+and staged-transaction tests, all agent/helper cross-builds and the earlier iOS
+simulator build pass. Linux arm64 is build-tested, not tested on a live ARM host.
+Automatic rollback failures were exercised in isolated tests, not by publishing
+a deliberately broken production release. Existing identity/account/provider/
+recovery/environment hashes and SQLite integrity match the pre-release snapshot.
+Private proof lives in `output/agent-updates/` in the task worktree.

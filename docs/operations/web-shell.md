@@ -1,7 +1,8 @@
 # Headless web shell
 
-Status: implemented and locally verified on `codex/headless-webshell`, based on
-main `b6dfb32` (including the latest machine overview, preview and restore-lifecycle changes). Not deployed. No production agents, credentials or services changed.
+Status: live at https://speckrmm.com. Server/agent source `0a09f6b` and web
+source `5d1e39d` preserve the machine overview, previews and restore lifecycle.
+Both original Linux agents run 0.3.1 and default their screen action to the shell.
 
 ## Behavior
 
@@ -55,7 +56,7 @@ during resize so a blocked read can be interrupted on disconnect.
 
 ## Verification
 
-- Backend suite: 104 tests pass, including 22 shell cases. Covers capability selection, old agents, GUI and
+- Backend suite: 113 tests pass, including 22 shell cases. Covers capability selection, old agents, GUI and
   unknown states, explicit connection override, offline/unapproved devices,
   viewer/other-owner/origin rejection, wrong agent/secret, single claim, duplex
   Unicode, resize/input bounds, logout, queued cancellation, session cap and expiry.
@@ -63,21 +64,27 @@ during resize so a blocked read can be interrupted on disconnect.
   WebSocket verifies shell execution, Unicode, resize, Ctrl+C, removal of inherited
   environment variables and closing while a foreground command runs.
 - Linux amd64/arm64 and Windows amd64 agent cross-builds pass.
-- TypeScript/Vite build, 28 web unit tests and 80 browser checks pass.
+- TypeScript/Vite build, 28 web unit tests and 84 browser checks pass.
   Chromium and WebKit cover all existing pages plus the terminal at 1440/390/320px,
   typed input, shortcuts, search, resize, reconnect and leaving during creation.
 - iOS simulator build passes with the updated Web shell label and terminal icon.
   Native physical-device shell/clipboard acceptance has not been performed.
 - Screenshots use synthetic terminal output against the actual built frontend.
-  See [gallery](../screenshots/web-shell/README.md). No live endpoint was contacted.
+  See [gallery](../screenshots/web-shell/README.md). Public captures remain synthetic.
+- Live checks on both original Linux endpoints passed default routing, `pwd`,
+  Unicode typing, PTY resizing, Ctrl+C, disconnect and fresh-session reconnect.
+  A Windows RDP connection still rendered its desktop. Native physical-device
+  acceptance and a real Linux graphical desktop remain unverified.
 
 ## Release order
 
 This is a coordinated server/web/Linux-agent release, not a static-only update.
-After release authorization, preserve the current server/web and agent binaries,
+For future coordinated releases, preserve the current server/web and agent binaries,
 check for active sessions/jobs, then release matching server and web assets before
 upgrading Linux agents. Confirm a fresh telemetry report advertises `web_shell`.
-There is no database schema migration and no remote credential rewrite.
+The shell itself has no schema migration or remote credential rewrite. Its combined
+release adds the automatic-update state table; restore matching database/runtime
+backups when reverting the complete release.
 
 Acceptance should open the Fleet screen action on a headless Linux endpoint,
 exercise `pwd`, Unicode, terminal resize, Ctrl+C, exit/reconnect and a tab close,
@@ -90,3 +97,18 @@ Existing RDP/SSH/VNC credentials remain available. Updating only the web cannot
 activate the feature on a legacy server/agent; native installers do not need
 repackaging to load the shared web terminal. The iOS label change can ship with
 the next separately authorized native release.
+
+## September 22 rollout
+
+The user approved the server restart, including the active remote-session
+disconnection. Runtime/database/configuration rollback is retained at
+`/var/lib/speck-rollback/20260922T232347Z-agent-updates-0a09f6b`. Follow-up Unicode
+and checkbox-layout corrections were static-only; final previous-web backup:
+`/var/lib/speck-rollback/20260922T233544Z-shell-controls-5d1e39d/web`.
+
+Live testing found xterm's screen-reader mode suppresses insert-text events. It is
+now an explicit accessibility option. Chromium/WebKit regression tests cover
+Unicode typing and toggling that option. Exact served hashes, healthy service,
+unchanged credentials/identities/provider settings and all five successful agent
+updates were verified. Private evidence: `output/agent-updates/`. Source commits
+remain on local `codex/headless-webshell`; no shared Git history was pushed.

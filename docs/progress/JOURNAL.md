@@ -395,3 +395,36 @@ builds, 28 web unit tests and 80 existing browser checks passed; added dedicated
 pause/resume browser checks. Production preflight found an active remote session,
 so no service/endpoint changes have occurred. The next step is the backed-up
 coordinated release and Linux/Windows canary, retaining every original identity.
+
+## 2026-09-22 — Headless shell and automatic updates deployed
+
+User explicitly authorized restarting despite the open remote session. Deployed
+server/agent source `0a09f6b`; full rollback is
+`/var/lib/speck-rollback/20260922T232347Z-agent-updates-0a09f6b`. Identity/account/
+provider/recovery/policy/environment hashes and SQLite integrity remained intact.
+
+Bootstrapped one Linux and one Windows canary, then the remaining three originals.
+All five independently fetched and verified signed 0.3.1, claimed the idle lease,
+installed and checked in. Five start/current audit pairs, endpoint hashes, running
+services/helpers, retained backups and unchanged enrollment files prove the flow.
+Automatic updates remain enabled. Removed temporary public bootstrap binaries.
+
+Live headless screen actions passed shell execution, Unicode, actual PTY resize,
+Ctrl+C, disconnect/reconnect on both Linux originals; Windows RDP rendered its
+desktop. Live testing exposed xterm accessibility mode suppressing Unicode input;
+`ddd5a97` made it optional, and final web `5d1e39d` kept its control compact. Both
+follow-ups were static-only, preserving the backend process and environment.
+Final static backup: `/var/lib/speck-rollback/20260922T233544Z-shell-controls-5d1e39d/web`.
+
+113 backend tests, 28 web unit checks, 84 browser scenarios including targeted
+reruns, Linux race/PTY/update transactions and all platform builds pass; iOS
+simulator build was verified during shell implementation. ARM64 runtime, physical
+iOS and a real Linux graphical desktop are still unverified. Public screenshots
+are synthetic originals with hashes; private live evidence stays in ignored
+`output/agent-updates/`. Local task branch is committed; no GitHub push or merge.
+
+Final validation also found main had advanced with PR #11's app-title display
+change after the original branch baseline. The initial web rollout omitted it.
+Coordinated with the active app-label task, which owns the combined static repair
+from main plus `5d1e39d`; this task holds further deployments. The original feature
+checks remain valid, and no further backend or endpoint changes are needed.

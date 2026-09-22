@@ -6,7 +6,7 @@ remote-session startup fixes and **passkey sign-in**. Enroll in Settings → Acc
 available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
 
 - **Preview and desktop presence**: previews recover from timeouts and retain one
-  encrypted checkpoint every five minutes. All five original agents run 0.2.2.
+  encrypted checkpoint every five minutes. All five original agents now run 0.3.1.
   The open pane refreshes user/desktop/app details; disconnected users and the last
   app stay explicit. Fleet displays taskbar/window titles for current and last apps,
   with executable fallback, and searches both names (web runtime `6420df3`).
@@ -64,7 +64,7 @@ the restore-cleanup release also updated and restarted the backend after a
 consistent database/runtime/configuration backup. Existing login, agents, installation tokens,
 original/restore identities, Slide bindings, provider secrets and recovery records
 were verified preserved. Private evidence and rollback records: `output/passkeys/`.
-Endpoint agents now run 0.2.2 and retain their unattended service credentials.
+Endpoint agents now run 0.3.1 and retain their unattended service credentials.
 
 Existing management/recovery capabilities and qualification limits are documented
 in [MVP review](../MVP-REVIEW.md), [management rollout](../operations/management-rollout.md),
@@ -74,13 +74,31 @@ acceptance, remaining native media/platform tests and broader recovery qualifica
 are still open. This passkey work did not launch new recoveries, install patches,
 deploy endpoint software or clean up existing recovery resources.
 
-## Authorized rollout: headless web shell and automatic updates
+## Headless web shell and automatic agent updates — live
 
-`codex/headless-webshell` in `worktrees/headless-webshell` adds automatic Linux
-web-shell routing and signed Windows/Linux agent updates in 0.3.1. Based on main
-`b6dfb32`. User authorized deployment. Source and local protocol/rollback/browser
-checks are complete; a live remote session defers the server restart. Next: take
-a matching runtime/database backup, deploy server/web/downloads, then canary
-Linux/Windows before bootstrapping the fleet. No endpoint identities will change.
-See [web shell](../operations/web-shell.md) and
-[agent update operations](../operations/agent-updates.md).
+Server/agent source `0a09f6b` and web source `5d1e39d` are deployed from
+`worktrees/headless-webshell`, branch `codex/headless-webshell`. Both headless Linux
+screen actions open the PTY web shell; Windows retains RDP. Live Unicode, resize,
+Ctrl+C, reconnect and Windows desktop rendering pass. Screen-reader mode is
+optional to preserve normal insert-text/emoji input.
+
+Signed automatic updates are enabled; admins can pause them in Settings. All five
+originals bootstrapped the updater and then upgraded themselves to 0.3.1. Services,
+Windows helpers, signed binary hashes, retained backups and unchanged enrollment
+files were verified. Original/clone IDs, accounts, credentials, provider settings,
+recovery records and environment remain unchanged.
+
+113 backend, 28 web unit and 84 browser checks, Linux race/PTY/transaction tests,
+all platform builds and the iOS simulator build pass. ARM64 runtime and physical
+iOS/graphical Linux acceptance remain open. Matching full rollback:
+`/var/lib/speck-rollback/20260922T232347Z-agent-updates-0a09f6b`.
+See [web shell](../operations/web-shell.md),
+[agent update operations](../operations/agent-updates.md) and ignored
+`output/agent-updates/` for exact evidence. No shared Git history was pushed.
+Next integration action: review the local commits before any separately authorized
+GitHub push/merge; future signed agent releases use the documented publisher.
+
+Integration follow-up: main's app-title display fix (PR #11, `6420df3`) was
+missing from the initial combined web release. The active app-label task owns
+the static repair integrating it with `5d1e39d`; this task is holding deployments
+to avoid a second overwrite. Backend/agents need no further change.
