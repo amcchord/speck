@@ -219,3 +219,41 @@ def test_ai_secret_boundaries_suggestions_and_computer_validation(client, monkey
     with pytest.raises(HTTPException):
         validate_actions([{"type": "exec", "command": "arbitrary"}], 1280, 720)
     assert validate_actions([{"type": "click", "x": 10, "y": 20}], 1280, 720)
+
+
+def test_computer_assistant_supplies_initial_screenshot_without_executing(client, monkeypatch):
+    captured = []
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def post(self, url, **kwargs):
+            captured.append(kwargs["json"])
+            action = (
+                {"type": "screenshot"} if len(captured) == 1 else {"type": "click", "x": 42, "y": 50, "button": "left"}
+            )
+            return httpx.Response(
+                200,
+                json={
+                    "status": "completed",
+                    "output": [{"type": "computer_call", "call_id": "test-call", "actions": [action]}],
+                },
+            )
+
+    monkeypatch.setattr("speck.assistant.httpx.AsyncClient", FakeClient)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    image = "data:image/jpeg;base64," + base64.b64encode(b"\xff\xd8\xfftest").decode()
+    result = client.post("/api/ai/assist", json={"prompt": "Click the field", "mode": "computer", "image": image})
+    assert result.status_code == 200
+    assert result.json()["actions"][0]["type"] == "click"
+    assert len(captured) == 2 and all(p["store"] is False for p in captured)
+    assert captured[1]["input"][-1]["type"] == "computer_call_output"
+    assert captured[1]["input"][-1]["output"]["image_url"] == image
+    assert client.get("/api/jobs").json() == []

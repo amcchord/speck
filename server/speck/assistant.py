@@ -175,8 +175,10 @@ async def assist(body: Assist, user=Depends(require_user)):
     }
     if body.mode == "computer":
         payload["tools"] = [{"type": "computer"}]
+        payload["tool_choice"] = "required"
+        payload["include"] = ["reasoning.encrypted_content"]
         payload["instructions"] += (
-            f"\nSuggest only the next small step on the attached {body.width}x{body.height} screen using computer actions. The operator reviews every step. Never type credentials, send messages, buy, delete, consent to agreements, or change security settings; ask the operator to take over those steps."
+            f"\nSuggest only the next small step on the attached {body.width}x{body.height} screen using computer actions. Computer tool calls in this application are proposals only: return the proposed navigation as a computer tool call, not just prose. No tool action is executed by this API; the operator reviews and explicitly applies every step. Never type credentials, send messages, buy, delete, consent to agreements, or change security settings; ask the operator to take over those steps."
         )
     else:
         props = {key: {"type": "string"} for key in ("summary", "script", "verification", "caution")}
@@ -195,14 +197,45 @@ async def assist(body: Assist, user=Depends(require_user)):
         }
     try:
         async with httpx.AsyncClient(timeout=90, follow_redirects=False) as client:
-            response = await client.post(
-                "https://api.openai.com/v1/responses", headers={"Authorization": "Bearer " + cfg["key"]}, json=payload
-            )
-        if response.status_code != 200:
-            raise HTTPException(
-                502, f"OpenAI returned HTTP {response.status_code}. Check the configured key and model in Settings."
-            )
-        result = response.json()
+
+            async def request(data):
+                response = await client.post(
+                    "https://api.openai.com/v1/responses",
+                    headers={"Authorization": "Bearer " + cfg["key"]},
+                    json=data,
+                )
+                if response.status_code != 200:
+                    raise HTTPException(
+                        502,
+                        f"OpenAI returned HTTP {response.status_code}. Check the configured key and model in Settings.",
+                    )
+                return response.json()
+
+            result = await request(payload)
+            calls = [i for i in result.get("output", []) if i.get("type") == "computer_call"]
+            actions = [a for c in calls for a in c.get("actions", [c["action"]] if c.get("action") else [])]
+            # Fulfill only the initial read-only screenshot request. Never execute model inputs here.
+            if (
+                body.mode == "computer"
+                and calls
+                and actions
+                and all(a.get("type") == "screenshot" for a in actions)
+                and not any(c.get("pending_safety_checks") for c in calls)
+            ):
+                followup = dict(payload)
+                followup["input"] = (
+                    payload["input"]
+                    + result["output"]
+                    + [
+                        {
+                            "type": "computer_call_output",
+                            "call_id": c["call_id"],
+                            "output": {"type": "computer_screenshot", "image_url": body.image, "detail": "original"},
+                        }
+                        for c in calls
+                    ]
+                )
+                result = await request(followup)
         if result.get("status") != "completed":
             raise HTTPException(502, "The AI response did not finish. Shorten the request and try again.")
         text = "\n".join(
@@ -233,7 +266,7 @@ async def assist(body: Assist, user=Depends(require_user)):
                 "summary": text
                 or ("This step needs manual control." if blocked else "Review the next step before applying it."),
                 "actions": actions,
-                "manual_required": blocked,
+                "manual_required": blocked or not actions,
             }
         parsed = json.loads(text)
         if not all(isinstance(parsed.get(k), str) for k in ("summary", "script", "verification", "caution")):

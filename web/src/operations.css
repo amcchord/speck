@@ -1197,3 +1197,14 @@ input[type="checkbox"] {
     padding: 8px;
   }
 }
+
+.remote-stage.actual-size {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+.remote-stage.actual-size #remote-display {
+  width: max-content;
+}
+.remote-stage.actual-size #remote-display > div {
+  margin: 0;
+}

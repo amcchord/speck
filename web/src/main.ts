@@ -437,14 +437,23 @@ function launchRemote(d: Item) {
       launched = true;
     };
     window.addEventListener("blur", blur, { once: true });
+    const handoff = dialog(
+      "Open Speck Desktop",
+      `<p>Opening the installed client. You can also continue in your browser.</p><div class="toolbar"><button id="browser-fallback" class="primary">Continue in browser</button><a class="secondary" href="https://github.com/amcchord/speck/releases" target="_blank" rel="noopener">Download desktop client</a></div>`,
+    );
+    on("browser-fallback", () => {
+      handoff.close();
+      location.hash = "remote/" + d.id;
+    });
     location.href = `speck://connect/${encodeURIComponent(d.id)}`;
     setTimeout(() => {
       window.removeEventListener("blur", blur);
-      if (!launched) location.hash = "remote/" + d.id;
+      if (!launched && handoff.isConnected) {
+        handoff.close();
+        location.hash = "remote/" + d.id;
+      }
     }, 1800);
-    notify(
-      "Opening Speck Desktop. Browser fallback is available from Remote settings.",
-    );
+    notify("Opening Speck Desktop. Your browser connection remains available.");
   } else location.hash = "remote/" + d.id;
 }
 async function renderDevice() {
@@ -791,6 +800,12 @@ async function connectRemote(d: Item) {
   mouse.onEach(["mousedown", "mouseup", "mousemove"], (event: any) => {
     client.sendMouseState(event.state, true);
   });
+  const touch = new Guacamole.Mouse.Touchscreen(
+    client.getDisplay().getElement(),
+  );
+  touch.onEach(["mousedown", "mouseup", "mousemove"], (event: any) =>
+    client.sendMouseState(event.state, true),
+  );
   keyboard = new Guacamole.Keyboard(display);
   keyboard.onkeydown = (key: number) => {
     client.sendKeyEvent(1, key);
@@ -808,14 +823,25 @@ async function connectRemote(d: Item) {
       .scale(
         fit
           ? Math.min(
-              1,
               stage.clientWidth / Math.max(1, w),
               stage.clientHeight / Math.max(1, h),
             )
           : 1,
       );
   };
-  const observer = new ResizeObserver(resize);
+  let resizeTimer: ReturnType<typeof setTimeout>;
+  const resizeRemote = () => {
+    resize();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (modal.isConnected)
+        client.sendSize(
+          Math.min(3840, Math.max(768, stage.clientWidth)),
+          Math.min(2160, Math.max(480, stage.clientHeight)),
+        );
+    }, 180);
+  };
+  const observer = new ResizeObserver(resizeRemote);
   observer.observe(stage);
   client.getDisplay().onresize = resize;
   const fullscreenChanged = () => {
@@ -833,12 +859,14 @@ async function connectRemote(d: Item) {
   display.addEventListener("blur", releaseKeys);
   modal.addEventListener("close", () => {
     observer.disconnect();
+    clearTimeout(resizeTimer);
     document.removeEventListener("fullscreenchange", fullscreenChanged);
     window.removeEventListener("blur", releaseKeys);
     if (document.fullscreenElement === modal) void document.exitFullscreen();
   });
   on("fit-screen", () => {
     fit = !fit;
+    stage.classList.toggle("actual-size", !fit);
     document.getElementById("fit-screen")!.textContent = fit
       ? "View at 100%"
       : "Fit to window";
@@ -881,10 +909,14 @@ async function connectRemote(d: Item) {
       ?.checked;
   const clipboardTimer = setInterval(async () => {
     if (native && sharedEnabled() && document.hasFocus()) {
-      const text = await native.readClipboard();
-      if (text !== sharedText) {
-        sharedText = text;
-        copyToRemote(text);
+      try {
+        const text = await native.readClipboard();
+        if (text !== sharedText) {
+          sharedText = text;
+          copyToRemote(text);
+        }
+      } catch {
+        /* Focus can change while a clipboard request is in flight. */
       }
     }
   }, 1000);
@@ -911,7 +943,7 @@ async function connectRemote(d: Item) {
         (document.getElementById("clipboard") as HTMLInputElement).value = text;
         if (native && sharedEnabled()) {
           sharedText = text;
-          void native.writeClipboard(text);
+          void native.writeClipboard(text).catch(() => {});
         }
       };
     }
