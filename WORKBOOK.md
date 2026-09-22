@@ -275,3 +275,18 @@ device identities. No endpoint/recovery action or backend restart. Rollback is
 `docs/operations/visual-audit.md`; private evidence is in audit-worktree
 `output/visual-audit/`. Physical devices and Windows/Linux runtime qualification
 remain as documented in the platform matrices.
+
+## Compact machine overview — September 22, 2026
+
+Local branch `codex/machine-overview` starts from main `290ed31`. Machine name,
+Online/Offline state, copyable IP, OS/version, uptime and last report lead the pane.
+The 16:9 preview shares a row with CPU, memory, storage and active-app/user details;
+mobile leads with health. Organization controls and system metadata are compact.
+Missing/offline telemetry and preview failures remain explicit.
+
+TypeScript/Vite, 24 web unit tests and 62 Chromium/WebKit UI scenarios pass. Four
+synthetic screenshots were visually inspected. At 1440 × 960, CPU/memory move up
+363 pixels and storage 534 pixels compared with main. See
+`docs/operations/machine-overview.md` and `docs/screenshots/machine-overview/`.
+No push, integration, deployment or live endpoint action occurred. Review and an
+explicitly authorized static release are the next steps.

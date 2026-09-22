@@ -336,9 +336,10 @@ export function createOperations(ui: Item) {
   async function previewPanel(d: Item, el: HTMLElement) {
     const section = document.createElement("section");
     section.className = "preview-panel";
-    section.innerHTML = `<div class="section-head"><h3>Live screen</h3><label class="switch-label"><input id="preview-policy" type="checkbox" role="switch" ${d.preview?.enabled ? "checked" : ""} ${d.approved ? "" : "disabled"}> Allow previews</label></div><div class="live-screen"></div><small>One recent frame, refreshed about every 10 seconds. Requires a signed-in desktop helper. Turning this off removes the server’s frame.</small>`;
+    section.innerHTML = `<div class="section-head"><h3>Live screen</h3><label class="switch-label"><input id="preview-policy" type="checkbox" role="switch" aria-describedby="preview-help" ${d.preview?.enabled ? "checked" : ""} ${d.approved ? "" : "disabled"}> Allow previews</label></div><div class="live-screen"></div><details class="preview-help"><summary>About screen previews</summary><p id="preview-help">One recent frame, refreshed about every 10 seconds. Requires a signed-in desktop helper. Turning this off removes the server’s frame.</p></details>`;
     el.prepend(section);
     const target = section.querySelector(".live-screen")!;
+    const policy = section.querySelector<HTMLInputElement>("#preview-policy")!;
     let enabled = !!d.preview?.enabled;
     const draw = async () => {
       if (!enabled) {
@@ -349,10 +350,20 @@ export function createOperations(ui: Item) {
         return;
       }
       if (!target.innerHTML) target.innerHTML = loadingState("Loading live screen…");
-      const info = await api("/devices/" + d.id + "/preview-status");
-      if (!target.isConnected) return;
+      let info: Item;
+      try {
+        info = await api("/devices/" + d.id + "/preview-status");
+      } catch {
+        if (target.isConnected && enabled)
+          target.innerHTML = '<div class="preview-disabled" role="status"><span>Preview unavailable. Retrying…</span></div>';
+        return;
+      }
+      if (!target.isConnected || !enabled) return;
       if (info.available) {
         target.innerHTML = `<img src="/api/devices/${d.id}/preview?t=${info.captured_at}" alt="Live screen of ${esc(d.label)}"><span class="capture-time">Captured ${date(info.captured_at)}</span>`;
+        target.querySelector("img")!.onerror = () => {
+          target.innerHTML = '<div class="preview-disabled" role="status"><span>Preview unavailable. Retrying…</span></div>';
+        };
       } else
         target.innerHTML =
           '<div class="preview-disabled">' +
@@ -362,18 +373,14 @@ export function createOperations(ui: Item) {
     on(
       "preview-policy",
       async () => {
-        enabled = (
-          document.getElementById("preview-policy") as HTMLInputElement
-        ).checked;
+        enabled = policy.checked;
         try {
           await api("/devices/" + d.id + "/preview-policy", "PUT", { enabled });
           d.preview = { ...d.preview, enabled };
           await draw();
         } catch (e) {
           enabled = !enabled;
-          (
-            document.getElementById("preview-policy") as HTMLInputElement
-          ).checked = enabled;
+          policy.checked = enabled;
           throw e;
         }
       },

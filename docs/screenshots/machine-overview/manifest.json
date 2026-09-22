@@ -1,0 +1,38 @@
+{
+  "captured_at": "2026-09-22T20:50:50.356Z",
+  "browser": "Chromium 153.0.8010.12",
+  "captures": [
+    {
+      "file": "desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "c4d79c12d44bb134d51c1124be244350165ff5b652d15ef8446c3e23bffeae5c",
+      "source": "Built frontend and scripts/preview.py synthetic fixtures",
+      "scenario": "desktop"
+    },
+    {
+      "file": "mobile.png",
+      "width": 390,
+      "height": 960,
+      "sha256": "a0713d6d01daccff0094340d4b3da6a82f113d55dbe921dfe580eb166f591bb1",
+      "source": "Built frontend and scripts/preview.py synthetic fixtures",
+      "scenario": "mobile"
+    },
+    {
+      "file": "linux.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "a1e9455a43017debdced127b151003c4cf83d0ac23db93553027df5a8db5ff31",
+      "source": "Built frontend and scripts/preview.py synthetic fixtures",
+      "scenario": "linux"
+    },
+    {
+      "file": "offline.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "1d9e82f83ac35c96207ae854f1f016487c47016dc1439e7a068525c154347eca",
+      "source": "Built frontend and scripts/preview.py synthetic fixtures",
+      "scenario": "offline"
+    }
+  ]
+}

@@ -276,3 +276,18 @@ device identities. No endpoint/recovery action or backend restart. Rollback is
 `docs/operations/visual-audit.md`; private evidence is in audit-worktree
 `output/visual-audit/`. Physical devices and Windows/Linux runtime qualification
 remain as documented in the platform matrices.
+
+## 2026-09-22 — Compact individual machine overview
+
+Worktree `worktrees/machine-overview`, branch `codex/machine-overview`, based on
+main `290ed31`. The pane begins with name/connectivity and IP/OS/uptime/report
+facts. CPU, memory, storage and foreground app/user share space with a contained
+16:9 preview. Narrow screens prioritize health. System and organization sections
+use less vertical space; missing values and stale offline reports stay explicit.
+
+Machine-specific CSS now owns the pane/preview layout. Preview failures remain
+local to the frame, with retry and policy-off behavior retained. TypeScript/Vite,
+24 web tests and 62 Chromium/WebKit scenarios pass. Four original synthetic
+captures were reviewed; measurements and limits are in the machine-overview
+operations note. No production or live endpoint changes, push or integration.
+Next step: review, then explicitly authorized integration/static deployment.

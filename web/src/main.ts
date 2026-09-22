@@ -15,6 +15,7 @@ import { useReliableImageDecoder, hasVisiblePixels, watchRemoteStartup } from ".
 import "./loading.css";
 import "./ui.css";
 import "./fleet.css";
+import "./machine.css";
 import { remoteTextKeys } from "./remote-input";
 
 const viewScope = createViewScope();
@@ -549,14 +550,25 @@ function drawFleet() {
   requestAnimationFrame(() => { if (table.isConnected) window.scrollTo(fleetScroll.x, fleetScroll.y); });
 }
 function primaryAddress(d: Item) {
-  return (
-    (d.telemetry?.network?.interfaces || [])
-      .flatMap((n: Item) => n.addrs || [])
-      .map((a: Item) => a.address)
-      .find((a: string) => a && !a.startsWith("127.") && !a.includes(":")) ||
-    "—"
-  );
+  const interfaces = d.telemetry?.network?.interfaces || [];
+  const addresses = [...interfaces]
+    .sort((a: Item, b: Item) => Number(!!b.flags?.includes("up")) - Number(!!a.flags?.includes("up")))
+    .flatMap((n: Item) => n.addrs || [])
+    .map((a: Item) => String(a.address || ""))
+    .filter((a: string) => {
+      const ip = a.split("/")[0].toLowerCase();
+      return ip && !ip.startsWith("127.") && ip !== "::1" && ip !== "::" && ip !== "0.0.0.0";
+    });
+  return addresses.find((a: string) => !a.includes(":") && !a.startsWith("169.254.")) ||
+    addresses.find((a: string) => a.includes(":") && !a.toLowerCase().startsWith("fe80:")) ||
+    addresses[0] || "—";
 }
+function uptime(seconds: unknown) {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) return "Not reported";
+  const minutes = Math.floor(seconds / 60), hours = Math.floor(minutes / 60), days = Math.floor(hours / 24);
+  return days ? `${days}d ${hours % 24}h` : hours ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
+}
+
 function visibleFleet() {
   return fleet
     .filter(
@@ -765,8 +777,27 @@ async function renderDeviceContent() {
             "patches",
             "remote",
           ];
-  document.getElementById("detail")!.innerHTML =
-    `<div class="detail-head"><div><span class="eyebrow">${esc(d.platform)} / ${esc(d.arch)}</span><h2>${esc(d.label)}</h2><small>Last report ${date(d.last_seen)}</small></div>${role !== "viewer" && !d.archived ? '<button id="device-edit" class="secondary">Edit</button>' : ""}</div>${d.archived ? '<div class="callout">Archived. Management is disabled; retained history and Slide identity remain available.</div>' : !d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}<div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body">${loadingState("Loading " + tab + "…")}</div>`;
+  const address = primaryAddress(d).split("/")[0];
+  const status = d.online ? "Online" : "Offline";
+  const heading = activeDevicePanel?.querySelector(".dialog-head h2");
+  if (heading) heading.innerHTML = `<span class="machine-title">${esc(d.label)}</span>${badge(status)}${d.archived ? badge("Archived") : !d.approved ? badge("Review") : ""}`;
+  activeDevicePanel?.setAttribute("aria-label", `Machine details: ${d.label}`);
+  document.getElementById("detail")!.innerHTML = `
+    <div class="machine-summary">
+      <dl class="machine-facts">
+        <div><dt>IP address</dt><dd class="machine-address"><span class="mono">${esc(address)}</span>${address !== "—" ? '<button id="copy-machine-ip" class="quick-action" title="Copy IP address" aria-label="Copy IP address">' + icon("copy") + '</button>' : ""}</dd></div>
+        <div><dt>Operating system</dt><dd>${esc(t.host?.platform || d.platform || "Not reported")}<small>${esc([t.host?.platformVersion, d.arch].filter(Boolean).join(" · "))}</small></dd></div>
+        <div><dt>Uptime${d.online ? "" : " at last report"}</dt><dd>${uptime(t.host?.uptime)}</dd></div>
+        <div><dt>Last report</dt><dd class="machine-report">${esc(date(d.last_seen))}</dd></div>
+      </dl>
+      <div class="drawer-actions">${d.approved && !d.archived && role !== "viewer" ? `<button id="drawer-screen" class="primary" ${d.online ? "" : "disabled"}>${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")} ${d.remote_protocol === "ssh" ? "Open SSH" : "Screen control"}</button><button id="drawer-terminal" class="secondary">${icon("terminal")} ${d.platform === "windows" ? "PowerShell" : "Shell"}</button><button id="drawer-ai" class="secondary">${icon("spark")} Ask AI</button>` : ""}${role !== "viewer" && !d.archived ? '<button id="device-edit" class="secondary">Edit</button>' : ""}</div>
+    </div>
+    ${d.archived ? '<div class="callout">Archived. Management is disabled; retained history and Slide identity remain available.</div>' : !d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}
+    <div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body">${loadingState("Loading " + tab + "…")}</div>`;
+  on("copy-machine-ip", async () => {
+    await navigator.clipboard.writeText(address);
+    notify("IP address copied");
+  });
   document.querySelectorAll<HTMLElement>("[data-tab]").forEach(
     (el) =>
       (el.onclick = () => {
@@ -776,12 +807,6 @@ async function renderDeviceContent() {
   );
   on("device-edit", () => editDevice(d));
   if (d.approved && !d.archived && role !== "viewer") {
-    document
-      .querySelector(".detail-head")!
-      .insertAdjacentHTML(
-        "afterend",
-        `<div class="drawer-actions"><button id="drawer-screen" class="primary">${icon("monitor")} ${d.remote_protocol === "ssh" ? "Open SSH" : "Screen control"}</button><button id="drawer-terminal" class="secondary">${icon("terminal")} ${d.platform === "windows" ? "PowerShell" : "Shell"}</button><button id="drawer-ai" class="secondary">${icon("spark")} Ask AI</button></div>`,
-      );
     on("drawer-screen", () => launchRemote(d));
     on("drawer-terminal", () => {
       tab = "terminal";
@@ -791,10 +816,26 @@ async function renderDeviceContent() {
   }
   const body = document.getElementById("device-body")!;
   if (tab === "overview") {
-    body.innerHTML = `<div class="meters"><div><small>Processor</small><strong>${Number(t.cpu_percent || 0).toFixed(1)}<em>%</em></strong><progress aria-label="Processor utilization" max="100" value="${Number(t.cpu_percent || 0)}"></progress></div><div><small>Memory</small><strong>${Number(t.memory?.usedPercent || 0).toFixed(0)}<em>%</em></strong><progress aria-label="Memory utilization" max="100" value="${Number(t.memory?.usedPercent || 0)}"></progress><small>${bytes(t.memory?.used)} / ${bytes(t.memory?.total)}</small></div></div><div class="info-block"><span class="eyebrow">IN THE FOREGROUND</span><h3>${esc(t.active_app?.title || "No interactive desktop reported")}</h3><p>${esc(t.active_app ? `${t.active_app.process || ""} · ${t.active_app.user || ""}` : "Headless servers report services and network activity.")}</p></div><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${bytes(x.used)} / ${bytes(x.total)}</span><progress aria-label="Storage utilization ${esc(x.path)}" value="${Number(x.usedPercent)}" max="100"></progress></div>`).join("")}<div class="mini-grid"><div><small>Operating system</small>${esc(t.host?.platform || d.platform)} ${esc(t.host?.platformVersion)}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion)}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
+    const percent = (n: unknown) => typeof n === "number" && Number.isFinite(n) ? n : null;
+    const cpu = percent(t.cpu_percent), memory = percent(t.memory?.usedPercent);
+    const canPreview = role !== "viewer" && !d.archived;
+    body.innerHTML = `
+      ${!d.online ? '<p class="telemetry-note">Machine is offline. Values below are from its last report.</p>' : ""}
+      <div class="machine-overview ${canPreview ? "" : "without-preview"}">
+        ${canPreview ? '<div id="machine-preview"></div>' : ""}
+        <div class="machine-health">
+          <div class="meters">
+            <div><small>Processor</small><strong>${cpu === null ? "—" : cpu.toFixed(1) + "<em>%</em>"}</strong>${cpu === null ? '<small>Not reported</small>' : `<progress aria-label="Processor utilization" max="100" value="${cpu}"></progress>`}</div>
+            <div><small>Memory</small><strong>${memory === null ? "—" : memory.toFixed(0) + "<em>%</em>"}</strong>${memory === null ? '<small>Not reported</small>' : `<progress aria-label="Memory utilization" max="100" value="${memory}"></progress>`}${t.memory?.total != null ? `<small>${t.memory.used == null ? "—" : bytes(t.memory.used)} / ${bytes(t.memory.total)}</small>` : ""}</div>
+          </div>
+          <section class="machine-storage"><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${x.used == null ? "—" : bytes(x.used)} / ${x.total == null ? "—" : bytes(x.total)}</span>${percent(x.usedPercent) === null ? "" : `<progress aria-label="Storage utilization ${esc(x.path)}" value="${x.usedPercent}" max="100"></progress>`}</div>`).join("") || '<small>No storage reported</small>'}</section>
+          <div class="machine-foreground"><div><small>Foreground app</small><h3>${esc(t.active_app?.title || "No interactive desktop reported")}</h3>${t.active_app?.process ? `<small>${esc(t.active_app.process)}</small>` : ""}</div><div class="machine-user"><small>Signed-in user</small><b>${esc(t.active_app?.user || "Not reported")}</b></div></div>
+        </div>
+      </div>
+      <div class="mini-grid machine-system"><div><small>Hostname</small>${esc(d.hostname || "Not reported")}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion || "Not reported")}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
 
     management.devicePanel(d, body);
-    if (role !== "viewer" && !d.archived) await ops.previewPanel(d, body);
+    if (canPreview) await ops.previewPanel(d, body.querySelector<HTMLElement>("#machine-preview")!);
   } else if (tab === "patches") {
     await ops.devicePatches(d, body);
   } else if (tab === "services") {
