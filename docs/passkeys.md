@@ -59,6 +59,24 @@ own builds. The official app ID is returned by default only on the official
 `https://speckrmm.com` origin. Apple caches associations; new entitlements require
 an updated provisioning profile and app build.
 
+## Signed desktop releases
+
+Mac Touch ID requires an Apple Developer ID provisioning profile authorizing the
+application identifier and keychain group, embedded in `Contents/embedded.provisionprofile`.
+Notarization by itself does not satisfy this runtime requirement. The after-sign
+release hook rejects signed Mac packages that omit the profile. Build with:
+
+```sh
+npm --prefix desktop run build -- --mac --config.mac.provisioningProfile=/absolute/path/SpeckDesktop.provisionprofile
+```
+
+The official profile, certificate keys and notarization credentials remain outside
+source control. Community builds must replace the team and application identifiers
+with their own signing identity. CI deliberately builds unsigned artifacts; only
+the separately signed, profiled, notarized and launch-tested Mac packages are
+published. Verify both app architectures, staple the app and DMG, and create ZIPs
+from the stapled app before computing release checksums.
+
 ## Security and verification
 
 Registration and authentication require user presence and verification, exact
