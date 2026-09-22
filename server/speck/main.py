@@ -31,10 +31,13 @@ async def lifespan(app):
         conn.execute("UPDATE recovery_runs SET status='needs_attention',phase='interrupted',updated=? WHERE status='running'", (time.time(),))
     from speck.scheduling import worker, stop_worker
     management_task = asyncio.create_task(worker())
+    from speck.restore_lifecycle import worker as restore_worker
+    restore_task = asyncio.create_task(restore_worker())
     try:
         yield
     finally:
         await stop_worker(management_task)
+        await stop_worker(restore_task)
     from speck.remote import sessions, close_session
     from speck.slide import workers
     for session_id in list(sessions):
@@ -453,6 +456,8 @@ from speck.remote import router as remote_router  # noqa: E402
 from speck.slide import router as slide_router  # noqa: E402
 app.include_router(remote_router)
 app.include_router(slide_router)
+from speck.restore_lifecycle import router as restore_lifecycle_router  # noqa: E402
+app.include_router(restore_lifecycle_router)
 from speck.operations import router as operations_router  # noqa: E402
 from speck.screens import router as screens_router  # noqa: E402
 from speck.assistant import router as assistant_router  # noqa: E402

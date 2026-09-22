@@ -1487,6 +1487,44 @@ async function connectRemote(d: Item, attempt = 0) {
   client.connect("");
   display.focus();
 }
+async function renderRestoreCleanup() {
+  const host = document.getElementById("restore-cleanup");
+  if (!host) return;
+  const state = await api("/slide/restored-devices");
+  if (!host.isConnected) return;
+  const current = state.instances.filter((r: Item) => !r.archived);
+  const retired = state.instances.filter((r: Item) => r.archived);
+  host.innerHTML = `<div class="section-head"><div><h3>Restored machine cleanup</h3><p>Speck tracks Slide restore identities and automatically archives offline copies after Slide confirms deletion twice, at least five minutes apart. Stopped VMs remain in Fleet; original machines and retained history are preserved.</p><small>${current.length} tracked · ${retired.length} archived${state.last_sync?.checked_at ? " · Last checked " + date(state.last_sync.checked_at) : " · Waiting for first check"}</small></div><button id="sync-restores" class="secondary">Check now</button></div>${state.last_sync?.error || state.last_sync?.errors?.length ? '<p class="callout">Slide could not verify every restore. Unconfirmed entries remain in Fleet; the next check will retry.</p>' : ""}${state.last_sync?.pending?.length ? `<p>${state.last_sync.pending.length} removed restore(s) awaiting offline/grace checks.</p>` : ""}${role === "admin" ? `<label class="check"><input id="auto-archive-restores" type="checkbox" ${state.enabled ? "checked" : ""}> Automatically archive removed Slide restores</label>` : `<p>Automatic archiving is ${state.enabled ? "on" : "off"}.</p>`}`;
+  on("sync-restores", async () => {
+    const button = document.getElementById(
+      "sync-restores",
+    ) as HTMLButtonElement;
+    button.disabled = true;
+    try {
+      const result = await api("/slide/restored-devices/sync", "POST");
+      notify(
+        `${result.linked.length} linked; ${result.archived.length} archived; ${result.pending.length} awaiting confirmation.`,
+      );
+      await renderRestoreCleanup();
+    } finally {
+      if (button.isConnected) button.disabled = false;
+    }
+  });
+  if (role === "admin")
+    on("auto-archive-restores", async () => {
+      const input = document.getElementById(
+        "auto-archive-restores",
+      ) as HTMLInputElement;
+      try {
+        await api("/slide/restored-devices/settings", "PUT", {
+          enabled: input.checked,
+        });
+      } catch (e) {
+        input.checked = !input.checked;
+        throw e;
+      }
+    });
+}
 async function renderSlide() {
   loading("Loading Slide…");
   const cfg = await api("/slide/connection");
@@ -1497,8 +1535,9 @@ async function renderSlide() {
     return;
   }
   content(
-    `<div class="section-head"><div><h2>Slide inventory</h2><p>${esc(cfg.url)}</p></div><select id="slide-resource" aria-label="Slide resource type"><option value="agent">Protected systems</option><option value="device">Slide appliances</option><option value="snapshot">Snapshots + verification</option><option value="backup">Backup jobs</option><option value="network">Recovery networks</option><option value="restore/virt">Restored virtual machines</option><option value="restore/file">File restores</option><option value="restore/image">Image exports</option></select></div><div id="slide-data"></div>`,
+    `<div class="section-head"><div><h2>Slide inventory</h2><p>${esc(cfg.url)}</p></div><select id="slide-resource" aria-label="Slide resource type"><option value="agent">Protected systems</option><option value="device">Slide appliances</option><option value="snapshot">Snapshots + verification</option><option value="backup">Backup jobs</option><option value="network">Recovery networks</option><option value="restore/virt">Restored virtual machines</option><option value="restore/file">File restores</option><option value="restore/image">Image exports</option></select></div><article id="restore-cleanup" class="panel"></article><div id="slide-data"></div>`,
   );
+  await renderRestoreCleanup();
   const load = async () => {
     const resource = value("slide-resource");
     const rows = await api(

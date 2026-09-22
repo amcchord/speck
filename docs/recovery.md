@@ -61,3 +61,34 @@ address in one operation and schedules a DHCP rollback if the restored machine
 cannot reach a supplied health URL. Adapt the adapter selection and addressing
 to your application. Do not disable DHCP and then assume its old address still
 exists: that intermediate state can strand the RMM before a proof command runs.
+
+## Automatic Fleet cleanup
+
+Speck polls the connected Slide API every five minutes. It links a restored
+endpoint only when its interface MAC matches exactly one Slide test/disaster VM,
+its installation credential matches a distinct original linked to that VM's
+protected agent, and both hardware identities are unambiguous. This also works
+for restores created outside Speck, provided Speck observes them before removal.
+Backup-verification VMs are excluded.
+
+After a linked VM disappears from complete provider inventory, Speck checks its
+exact restore URL. Two HTTP404 observations at least five minutes apart, plus
+an offline endpoint and unchanged source/clone identity, allow automatic
+archiving. An offline endpoint alone, a stopped VM, incomplete inventory, denied
+access, a rate limit, or a server/network error is insufficient. Changing the
+provider origin or API token requires observing the VM again before automatic
+cleanup can use that connection.
+
+Archived copies leave the default Fleet and their alerts/queued management are
+closed. Audit records, recovery reports, jobs and the original machine remain.
+The shared installation credential is never revoked. An archived clone that
+checks in again remains archived and cannot receive commands. Administrators
+can turn automatic archiving off under **Slide → Restored machine cleanup**;
+operators can use **Check now**. Archived entries remain available through the
+existing device-history controls/API. A restore already deleted before Speck
+first observed it requires ordinary manual archiving.
+
+This process archives Speck entries only. It does not delete VMs, snapshots or
+recovery networks in Slide. Remove an unwanted test VM in Slide; its linked
+Speck entry is cleaned up after the confirmation window. Retain any evidence
+needed before removing a test VM's writable disks.

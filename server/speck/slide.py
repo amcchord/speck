@@ -31,6 +31,12 @@ def settings():
     return json.loads(unseal(row['value']))
 
 
+class SlideProviderError(HTTPException):
+    def __init__(self, provider_status):
+        self.provider_status = provider_status
+        super().__init__(502, f'Slide returned HTTP {provider_status}. Check the provider activity before retrying a write.')
+
+
 class Slide:
     def __init__(self, config=None):
         self.config = config or settings()
@@ -48,7 +54,7 @@ class Slide:
                     await asyncio.sleep(1 + attempt)
                     continue
                 if response.status_code >= 300:
-                    raise HTTPException(502, f'Slide returned HTTP {response.status_code}. Check the provider activity before retrying a write.')
+                    raise SlideProviderError(response.status_code)
                 return response.json() if response.content else {}
         raise HTTPException(502, 'Slide rate limit exceeded')
 
@@ -56,11 +62,13 @@ class Slide:
         result, offset, seen = [], 0, set()
         for _ in range(100):
             page = await self.request('GET', resource, params=(params or {}) | {'limit': 50, 'offset': offset})
-            result.extend(page.get('data', []))
+            if not isinstance(page, dict) or not isinstance(page.get('data'), list) or not all(isinstance(r, dict) for r in page['data']):
+                raise HTTPException(502, 'Slide returned an invalid inventory page')
+            result.extend(page['data'])
             next_offset = page.get('pagination', {}).get('next_offset')
             if next_offset is None:
                 return result
-            if next_offset in seen or next_offset == offset:
+            if not isinstance(next_offset, int) or next_offset <= offset or next_offset in seen:
                 raise HTTPException(502, 'Slide returned a repeated pagination cursor')
             seen.add(next_offset)
             offset = next_offset

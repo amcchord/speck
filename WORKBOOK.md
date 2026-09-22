@@ -302,3 +302,18 @@ operation or service restart occurred. See `docs/operations/machine-overview.md`
 for rollback and ignored `output/machine-overview/` for exact private evidence.
 The runtime and release records remain on local `codex/machine-overview`; no
 GitHub push or merge was performed as part of this deployment.
+## Slide restore lifecycle — September 22, 2026
+
+The Slide integration now correlates provider restore IDs/MACs with separate
+Speck clone identities, including restores created by external runbooks. A
+background poll archives offline copies only after repeated exact-resource404
+responses, a five-minute grace period and unchanged source/clone/provider scope.
+Originals, shared enrollment credentials, audit/jobs/recovery history and stopped
+VMs are preserved. The Slide page exposes status, a manual check and an admin
+policy toggle. Provider inventory validation rejects malformed pagination/data.
+
+Twenty focused regressions exercise deletion, stopped/online machines, API
+failures, ambiguous hardware, source changes, token rotation, restart persistence,
+archive/check-in behavior, role/CSRF boundaries and policy disabling. The complete
+backend suite and24web checks pass; server Ruff and TypeScript/Vite pass.
+Deployment and real-provider cleanup verification are recorded after rollout.

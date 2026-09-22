@@ -71,6 +71,8 @@ def initialize():
         CREATE TABLE IF NOT EXISTS patch_reports(device_id TEXT PRIMARY KEY REFERENCES devices(id),job_id TEXT NOT NULL,scanned REAL NOT NULL,report TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS ai_requests(id TEXT PRIMARY KEY,actor TEXT NOT NULL,created REAL NOT NULL);
         ''')
+        from speck.restore_lifecycle import migrate as migrate_restores
+        migrate_restores(conn)
         from speck.management_schema import migrate
         migrate(conn)
         from speck.passkeys import migrate as migrate_passkeys
