@@ -3,6 +3,8 @@ import "../../brand/tokens.css";
 import "./style.css";
 import "./operations.css";
 import "./orbits.css";
+import "./downloads.css";
+import { desktopDownloads } from "./downloads";
 import { createOperations } from "./operations";
 import { createManagement } from "./management";
 import { icon, wordmark } from "./icons";
@@ -91,7 +93,7 @@ async function api(path: string, method = "GET", body?: any): Promise<any> {
   });
   const value = await r.json().catch(() => ({}));
   if (r.status === 401 && path !== "/auth/login") {
-    login();
+    signedOut();
     throw new Error("Your session ended. Sign in again.");
   }
   if (!r.ok)
@@ -138,11 +140,18 @@ function disconnect() {
   keyboard?.reset();
   keyboard = null;
 }
+function signedOut() {
+  disconnect();
+  csrf = "";
+  username = "";
+  if (location.hash !== "#downloads") return login();
+  app.innerHTML = `<main class="downloads-public"><header><a href="#signin" aria-label="Speck home">${wordmark()}</a><a class="secondary" href="#signin">Sign in ${icon("arrow")}</a></header><h1>Downloads</h1>${desktopDownloads(false)}</main>`;
+}
 function login() {
   disconnect();
   csrf = "";
   username = "";
-  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><label>Authenticator or recovery code <small>if enabled</small><input id="login-code" autocomplete="one-time-code" maxlength="40"></label><button class="primary" type="submit">Sign in ${icon("arrow")}</button></form></main>`;
+  app.innerHTML = `<main class="login"><div class="login-brand">${wordmark(true)}<span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span><div class="orbit" aria-hidden="true"><i></i><i></i><i></i><img src="/assets/brand/speck-mark-lime.svg" alt=""></div></div><form id="login" class="login-card"><h1>Sign in</h1><label>Username<input id="username" autocomplete="username" required autofocus></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><label>Authenticator or recovery code <small>if enabled</small><input id="login-code" autocomplete="one-time-code" maxlength="40"></label><button class="primary" type="submit">Sign in ${icon("arrow")}</button><a class="login-downloads" href="#downloads">${icon("download")}Download Speck Desktop</a></form></main>`;
   on(
     "login",
     async () => {
@@ -171,12 +180,13 @@ function shell(title: string, subtitle: string) {
     ["recovery", "recovery", "Recovery lab"],
     ["slide", "slide", "Slide"],
     ["activity", "activity", "Activity"],
+    ["downloads", "download", "Downloads"],
     ["settings", "settings", "Settings"],
   ]
     .filter(
       ([id]) =>
         role !== "viewer" ||
-        ["fleet", "alerts", "activity", "settings"].includes(id),
+        ["fleet", "alerts", "activity", "downloads", "settings"].includes(id),
     )
     .map(
       ([id, symbol, label]) =>
@@ -197,6 +207,7 @@ function shell(title: string, subtitle: string) {
   };
   on("logout", async () => {
     await api("/auth/logout", "POST");
+    history.replaceState(null, "", "#signin");
     login();
   });
   on("refresh", render);
@@ -228,6 +239,7 @@ async function render() {
       "slide",
       "activity",
       "settings",
+      "downloads",
     ].includes(page)
   )
     page = "fleet";
@@ -244,6 +256,7 @@ async function render() {
     slide: ["Slide", ""],
     activity: ["Activity", ""],
     settings: ["Settings", ""],
+    downloads: ["Downloads", ""],
   };
   shell(...(titles[page] as [string, string]));
   try {
@@ -260,6 +273,7 @@ async function render() {
       slide: renderSlide,
       activity: management.renderAudit,
       settings: renderSettings,
+      downloads: () => content(desktopDownloads(true)),
     }[page]!();
     void management.updateIndicator().catch(() => {});
   } catch (err) {
@@ -486,7 +500,7 @@ function launchRemote(d: Item) {
     window.addEventListener("blur", blur, { once: true });
     const handoff = dialog(
       "Open Speck Desktop",
-      `<p>Opening the installed client. You can also continue in your browser.</p><div class="toolbar"><button id="browser-fallback" class="primary">Continue in browser</button><a class="secondary" href="https://github.com/amcchord/speck/releases" target="_blank" rel="noopener">Download desktop client</a></div>`,
+      `<p>Opening the installed client. You can also continue in your browser.</p><div class="toolbar"><button id="browser-fallback" class="primary">Continue in browser</button><a class="secondary" href="#downloads">Download desktop client</a></div>`,
     );
     on("browser-fallback", () => {
       handoff.close();
@@ -1356,6 +1370,7 @@ async function renderSettings() {
 }
 window.addEventListener("hashchange", () => {
   if (username) render();
+  else signedOut();
 });
 setInterval(async () => {
   if (
@@ -1388,7 +1403,7 @@ api("/auth/me")
     role = r.role;
     await render();
   })
-  .catch(() => login());
+  .catch(() => signedOut());
 
 async function remoteAssistant(
   d: Item,

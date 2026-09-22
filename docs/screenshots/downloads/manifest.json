@@ -1,0 +1,42 @@
+[
+  {
+    "file": "desktop.jpg",
+    "sha256": "ea4b583fa41a34f78099c7f5e0358a5983394c011c285aab7a1d4b501a992bfc",
+    "width": 1265,
+    "height": 712,
+    "capture": "CUA original capture bytes; built frontend with synthetic preview account",
+    "date": "2026-09-22"
+  },
+  {
+    "file": "mobile-installers.jpg",
+    "sha256": "44789d11ebcc3b18c064b00aa0cf8bd39d459de6dec625039128203aceb383dc",
+    "width": 375,
+    "height": 812,
+    "capture": "CUA original capture bytes; built frontend with synthetic preview account",
+    "date": "2026-09-22"
+  },
+  {
+    "file": "mobile-sign-in.jpg",
+    "sha256": "7ed31e9e6b5f29bdcf31049f41e1759d1026bc9cd2820ac3ee4cf88afef61b5b",
+    "width": 390,
+    "height": 844,
+    "capture": "CUA original capture bytes; built frontend with synthetic preview account",
+    "date": "2026-09-22"
+  },
+  {
+    "file": "mobile.jpg",
+    "sha256": "4e525283b09cc35082856d85c20471782ecd0f10c70c382a20ce678f133dcbf2",
+    "width": 375,
+    "height": 812,
+    "capture": "CUA original capture bytes; built frontend with synthetic preview account",
+    "date": "2026-09-22"
+  },
+  {
+    "file": "public.jpg",
+    "sha256": "8f5f347b69a994e4c88c6f39ca6202369183c641566ced26cbf458db6f65f32f",
+    "width": 1265,
+    "height": 712,
+    "capture": "CUA original capture bytes; built frontend with synthetic preview account",
+    "date": "2026-09-22"
+  }
+]
