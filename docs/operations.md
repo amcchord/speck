@@ -95,10 +95,11 @@ the native client is focused. It starts off, caps text at 64 KiB, and never read
 files or images from the clipboard. The native Session menu offers key macros
 and F11 fullscreen. Microphone use asks for permission.
 
-The initial desktop downloads are preview builds: Windows packages are unsigned
-and macOS packages are not notarized. Platform packaging passes in CI; additional
-native interactive verification and signing/notarization are release follow-ups.
-Do not disable OS security protections to install them. Browser access is available
+Desktop 0.2.1 includes fixes verified on macOS Apple silicon and Windows 11.
+The Mac packages are Developer ID signed, Apple-notarized and stapled. Windows
+packages remain unsigned. Linux native graphical interaction, Intel Mac execution
+and physical microphone round trips remain unverified; see the
+[qualification matrix](desktop-quality.md). Browser access remains available
 without a native download. This client targets `https://speckrmm.com`; self-hosters
 can rebuild with their own exact origin in `desktop/policy.cjs`.
 

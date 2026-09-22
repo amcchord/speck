@@ -118,3 +118,15 @@ validation and command construction have automated coverage. Linux graphical
 preview/audio, ARM execution, microphone input and additional browsers remain
 unverified. Desktop downloads are preview packages; signing/notarization remains
 on the [roadmap](ROADMAP.md).
+
+## 0.2.1 native follow-up — September 22, 2026
+
+The previous native-test limitation is superseded by the
+[qualification matrix](desktop-quality.md). Real Mac and Windows interaction
+found defects that packaging checks did not: asynchronous clipboard handling,
+Command keys reaching Windows incorrectly, full-screen state labels, and unsafe
+microphone teardown. Those failures were fixed and covered by regressions.
+Synthetic microphone recording also identified a false idle timeout; the UI now
+shows readiness while waiting for the remote app. Physical call quality remains
+unverified. The Windows setup wizard now shares Speck's wordmark and orbital art;
+the [native gallery](screenshots/v0.2.1/README.md) also records the remote workspace.

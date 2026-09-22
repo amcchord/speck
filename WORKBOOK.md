@@ -103,3 +103,23 @@ environment and previous downloads are retained under private server rollback
 paths. Server restart preflights checked for active jobs and recovery runs.
 The orbit subagent's source was integrated from `worktrees/orbit-animation`; that
 worktree is retained, with its original uncommitted source, for explicit cleanup.
+
+## Desktop quality — September 22, 2026
+
+Desktop 0.2.1 was exercised on the unlocked Mac and a Windows 11 lab VM. Fixed
+asynchronous native clipboard APIs, remote edit-key routing, native fullscreen
+state/Escape, closed-window deep links, sound controls and microphone ownership.
+A synthetic microphone stream was recorded on the remote Windows endpoint;
+this also caught and fixed an incorrect timeout while waiting for the remote app
+to begin recording. Seven microphone lifecycle and ten desktop tests pass.
+
+Both Mac architectures are Developer ID signed, Apple-notarized and stapled;
+Gatekeeper assessment passed. Windows installer upgrades, retained login, RDP,
+clipboard, key macros, fullscreen and audio transport were verified. Windows is
+still unsigned. Linux desktop interaction, Intel Mac execution and physical mic
+quality remain unverified. Full details: `docs/desktop-quality.md`.
+
+Only static web assets were deployed for this update, with rollback retained.
+No backend restart, agent identity change or recovery cleanup occurred. Native
+artifacts and private evidence are under `output/desktop-quality/`. The separate
+MVP task owns backend feature work in its isolated worktree; coordinate releases.
