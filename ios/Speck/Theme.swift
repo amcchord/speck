@@ -53,6 +53,11 @@ extension Color {
     $0.userInterfaceStyle == .dark
       ? UIColor(red: 25 / 255, green: 38 / 255, blue: 30 / 255, alpha: 1) : .white
   })
+  static let speckInk = Color(uiColor: UIColor {
+    $0.userInterfaceStyle == .dark
+      ? UIColor(red: 235 / 255, green: 241 / 255, blue: 230 / 255, alpha: 1)
+      : UIColor(red: 36 / 255, green: 56 / 255, blue: 44 / 255, alpha: 1)
+  })
   static let speckLine = Color(uiColor: UIColor {
     $0.userInterfaceStyle == .dark
       ? UIColor(red: 62 / 255, green: 78 / 255, blue: 65 / 255, alpha: 1)
@@ -140,7 +145,7 @@ struct InlineError: View {
 }
 struct EmptyState: View {
   var title: String
-  var symbol: String? = nil
+  var symbol: String
   var detail: String
   var body: some View {
     ContentUnavailableView(title, systemImage: symbol, description: Text(detail))
@@ -157,7 +162,7 @@ struct CodeBlock: View {
 }
 struct ActionLabel: View {
   var title: String
-  var symbol: String
+  var symbol: String? = nil
   var body: some View {
     HStack(spacing: 8) {
       if let symbol {

@@ -130,7 +130,10 @@ function notify(message: string, error = false) {
   n.className = "toast" + (error ? " error" : "");
   n.textContent = message;
   n.setAttribute("role", error ? "alert" : "status");
-  document.body.append(n);
+  // Native dialogs occupy the top layer, above any body-level z-index.
+  // Keep feedback for a dialog visible and available to assistive technology.
+  const host = Array.from(document.querySelectorAll("dialog[open]")).at(-1) || document.body;
+  host.append(n);
   setTimeout(() => n.remove(), 7000);
 }
 function on(id: string, handler: (e: Event) => any, event = "click") {

@@ -32,7 +32,7 @@ struct JobsView: View {
               HStack {
                 Text(titleCase(job.kind)).font(.headline)
                 Spacer()
-                StatusPill(text: job.status, tone: job.status == "failed" ? .red : .speckTint)
+                StatusPill(text: job.status, tone: job.status == "failed" ? .speckDanger : .speckTint)
               }
               Text(session.devices.first(where: { $0.id == job.deviceID })?.name ?? job.deviceID)
                 .font(.subheadline).foregroundStyle(.secondary)
@@ -71,7 +71,7 @@ struct JobDetailView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 20) {
         HStack {
-          StatusPill(text: job.status, tone: job.status == "failed" ? .red : .speckTint)
+          StatusPill(text: job.status, tone: job.status == "failed" ? .speckDanger : .speckTint)
           Spacer()
           if !job.finished { ProgressView() }
         }

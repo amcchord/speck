@@ -81,7 +81,7 @@ struct DevicePatchesView: View {
         }
         if inventory["report"]["reboot_required"].bool {
           Label("Restart required by the operating system", systemImage: "restart").foregroundStyle(
-            .orange)
+            Color.speckWarning)
         }
         if let error { InlineError(text: error) }
       }
@@ -290,7 +290,8 @@ struct SchedulesView: View {
           title: "No schedules", symbol: "calendar",
           detail: "Create recurring scans and template runs in the web console.")
       }
-    }.navigationTitle("Schedules").sessionTask(session) { await load() }.sessionRefreshable(session) { await load() }
+    }.scrollContentBackground(.hidden).background(Color.paper)
+      .navigationTitle("Schedules").sessionTask(session) { await load() }.sessionRefreshable(session) { await load() }
   }
   func load() async {
     do {

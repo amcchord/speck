@@ -21,9 +21,17 @@ jobs:
           device = next(d for runtime, devices in data['devices'].items() if 'iOS' in runtime for d in devices if d['name'].startswith('iPhone'))
           with open(os.environ['GITHUB_ENV'], 'a') as output:
               output.write('SPECK_SIMULATOR_ID=' + device['udid'] + '\n')
+              tablet = next(d for runtime, devices in data['devices'].items() if 'iOS' in runtime for d in devices if d['name'].startswith('iPad'))
+              output.write('SPECK_IPAD_SIMULATOR_ID=' + tablet['udid'] + '\n')
           PY
       - name: Build and test
         run: |
           xcodebuild -project ios/Speck.xcodeproj -scheme Speck \
             -destination "platform=iOS Simulator,id=$SPECK_SIMULATOR_ID" \
             -only-testing:SpeckTests test CODE_SIGNING_ALLOWED=NO
+      - name: Verify full-width iPad sign-in in both orientations
+        run: |
+          xcodebuild -project ios/Speck.xcodeproj -scheme Speck \
+            -destination "platform=iOS Simulator,id=$SPECK_IPAD_SIMULATOR_ID" \
+            -only-testing:SpeckUITests/SpeckUITests/testSignInLayout \
+            -collect-test-diagnostics never test CODE_SIGNING_ALLOWED=NO

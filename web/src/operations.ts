@@ -409,6 +409,9 @@ export function createOperations(ui: Item) {
         include_health: !!(
           document.getElementById("ai-health") as HTMLInputElement
         )?.checked,
+      }).catch((error: Error) => {
+        modal.querySelector("#ai-result")?.replaceChildren();
+        throw error;
       });
       const out = modal.querySelector("#ai-result")!;
       out.innerHTML = `<div class="ai-answer"><p>${esc(result.summary)}</p>${result.script ? `<h3>Suggested script</h3><pre>${esc(result.script)}</pre>` : ""}${result.caution ? `<p class="callout">${esc(result.caution)}</p>` : ""}<h3>Verify</h3><p>${esc(result.verification)}</p>${result.script ? `<div class="toolbar">${button("ai-use", "Use this script", true)}${button("ai-template", "Save as template")}</div>` : ""}</div>`;
@@ -458,12 +461,12 @@ export function createOperations(ui: Item) {
   }
   async function settingsPanel() {
     const el = document.createElement("section");
-    el.className = "panel";
+    el.className = "settings-grid";
     el.innerHTML = loadingState("Loading AI settings…");
     document.getElementById("content")!.append(el);
     const cfg = await api("/ai/settings");
     if (!el.isConnected) return;
-    el.innerHTML = `<h2>OpenAI</h2><p>${cfg.configured ? "Connected" : "Not connected"}. Keys stay encrypted on the server.</p><label>Model<input id="ai-model" value="${esc(cfg.model)}"></label><label>API key<input id="ai-key" type="password" autocomplete="new-password" placeholder="${cfg.configured ? "Leave blank to keep the current key" : "OpenAI API key"}"></label>${button("save-ai", "Save AI settings", true)}<h2>Remote workspace</h2><label>Open remote sessions with<select id="remote-client"><option value="browser">Browser workspace</option><option value="desktop">Speck Desktop, with browser fallback</option></select></label><p>Speck Desktop adds shared clipboard and native key shortcuts.</p><a class="text-link" href="#downloads">Download Speck Desktop →</a>`;
+    el.innerHTML = `<article class="panel"><span class="eyebrow">AI ASSISTANT</span><h2>OpenAI</h2><p>${cfg.configured ? "Connected" : "Not connected"}. Keys stay encrypted on the server.</p><label>Model<input id="ai-model" value="${esc(cfg.model)}"></label><label>API key<input id="ai-key" type="password" autocomplete="new-password" placeholder="${cfg.configured ? "Leave blank to keep the current key" : "OpenAI API key"}"></label>${button("save-ai", "Save AI settings", true)}</article><article class="panel"><span class="eyebrow">REMOTE ACCESS</span><h2>Remote workspace</h2><label>Open remote sessions with<select id="remote-client"><option value="browser">Browser workspace</option><option value="desktop">Speck Desktop, with browser fallback</option></select></label><p>Speck Desktop adds shared clipboard and native key shortcuts.</p><a class="text-link" href="#downloads">Download Speck Desktop →</a></article>`;
     document.getElementById("content")!.append(el);
     (el.querySelector("#remote-client") as HTMLSelectElement).value =
       localStorage.getItem("speck-remote-client") || "browser";

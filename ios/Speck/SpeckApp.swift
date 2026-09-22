@@ -16,7 +16,7 @@ import SwiftUI
         } else {
           SignInView()
         }
-      }.environment(session).tint(.speckTint)
+      }.environment(session).tint(.speckTint).foregroundStyle(Color.speckInk)
         .task { await session.restore() }
         .overlay {
           if phase != .active {
@@ -73,7 +73,7 @@ struct SignInView: View {
               .foregroundStyle(Color.lime)
           }.frame(maxWidth: .infinity, alignment: .leading).padding(24)
             .frame(maxWidth: 520).frame(maxWidth: .infinity)
-            .frame(minHeight: geo.size.height > 700 ? 180 : 140)
+            .frame(minHeight: geo.size.width > 700 ? 180 : 156)
             .background(Color.forest.ignoresSafeArea(edges: .top))
             .accessibilityElement(children: .contain).accessibilityIdentifier("sign-in-masthead")
           VStack(alignment: .leading, spacing: 20) {
@@ -123,7 +123,7 @@ struct SignInView: View {
             maxWidth: .infinity)
         }.frame(maxWidth: .infinity)
       }.background(Color.paper).scrollDismissesKeyboard(.interactively)
-    }
+    }.ignoresSafeArea(.container, edges: .horizontal)
   }
   private func passkeySignIn() {
     guard !busy else { return }

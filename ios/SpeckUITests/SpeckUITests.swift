@@ -1,12 +1,16 @@
 import XCTest
 
 @MainActor final class SpeckUITests: XCTestCase {
-  override func setUp() { continueAfterFailure = false }
+  override func setUp() {
+    continueAfterFailure = false
+    XCUIDevice.shared.orientation = .portrait
+  }
   private func launch() -> XCUIApplication {
     let app = XCUIApplication()
     app.launchArguments = ["--demo"]
     app.launch()
     XCTAssertTrue(app.navigationBars["Fleet"].waitForExistence(timeout: 15))
+    XCTAssertTrue(app.staticTexts["BYD-EXAM01"].firstMatch.waitForExistence(timeout: 10))
     return app
   }
   private func capture(_ name: String, _ app: XCUIApplication) {
@@ -46,8 +50,10 @@ import XCTest
     app.launchArguments = ["--demo", "-AppleInterfaceStyle", "Dark"]
     app.launch()
     XCTAssertTrue(app.navigationBars["Fleet"].waitForExistence(timeout: 15))
+    XCTAssertTrue(app.staticTexts["BYD-EXAM01"].firstMatch.waitForExistence(timeout: 10))
     capture("fleet-dark", app)
     app.staticTexts["BYD-EXAM01"].firstMatch.tap()
+    XCTAssertTrue(app.navigationBars["BYD-EXAM01"].waitForExistence(timeout: 5))
     capture("machine-dark", app)
   }
   func testSignInLayout() {
@@ -57,7 +63,46 @@ import XCTest
     XCTAssertTrue(app.buttons["sign-in"].waitForExistence(timeout: 10))
     XCTAssertTrue(app.textFields["username"].exists)
     XCTAssertFalse(app.buttons["sign-in"].isEnabled)
+    let masthead = app.descendants(matching: .any)["sign-in-masthead"].firstMatch
+    XCTAssertTrue(masthead.exists)
+    XCTAssertEqual(masthead.frame.minX, app.frame.minX, accuracy: 1)
+    XCTAssertEqual(masthead.frame.width, app.frame.width, accuracy: 1)
+    XCTAssertGreaterThanOrEqual(app.buttons["passkey-sign-in"].frame.height, 44)
+    XCTAssertEqual(app.buttons["sign-in"].frame.width, app.buttons["passkey-sign-in"].frame.width, accuracy: 1)
     capture("sign-in", app)
+    XCUIDevice.shared.orientation = .landscapeLeft
+    defer { XCUIDevice.shared.orientation = .portrait }
+    expectation(for: NSPredicate { _, _ in app.frame.width > app.frame.height }, evaluatedWith: app)
+    waitForExpectations(timeout: 10)
+    XCTAssertEqual(masthead.frame.width, app.frame.width, accuracy: 1)
+    capture("sign-in-landscape", app)
+  }
+  func testMachinePanels() {
+    for destination in ["Network", "Files", "Updates", "Job history"] {
+      let app = launch()
+      app.staticTexts["BYD-EXAM01"].firstMatch.tap()
+      let link = app.staticTexts[destination].firstMatch
+      if !link.isHittable { app.swipeUp() }
+      XCTAssertTrue(link.isHittable)
+      link.tap()
+      let title = destination == "Job history" ? "Jobs" : destination
+      XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 5))
+      capture(destination.lowercased(), app)
+      app.terminate()
+    }
+  }
+  func testSecondaryDestinations() {
+    for (parent, destination) in [("Jobs", "Software & scripts"), ("Jobs", "Schedules"), ("Account", "Passkeys"), ("Account", "Privacy")] {
+      let app = launch()
+      app.buttons[parent].firstMatch.tap()
+      let link = app.staticTexts[destination].firstMatch
+      if !link.isHittable { app.swipeUp() }
+      XCTAssertTrue(link.isHittable)
+      link.tap()
+      XCTAssertTrue(app.navigationBars[destination].waitForExistence(timeout: 5))
+      capture(destination.lowercased(), app)
+      app.terminate()
+    }
   }
   func testLargeText() {
     let app = XCUIApplication()

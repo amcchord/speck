@@ -291,7 +291,12 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--port", type=int, default=8741)
+    args = parser.parse_args()
     if not (ROOT / "web/dist/index.html").exists():
         raise SystemExit("Build first: ./scripts/build.sh")
-    print("Speck screenshot preview: http://127.0.0.1:8741 (synthetic data; loopback only)", flush=True)
-    ThreadingHTTPServer(("127.0.0.1", 8741), Handler).serve_forever()
+    print(f"Speck screenshot preview: http://127.0.0.1:{args.port} (synthetic data; loopback only)", flush=True)
+    ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()

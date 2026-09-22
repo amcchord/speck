@@ -48,7 +48,7 @@ struct RecoveryView: View {
                 Spacer()
                 StatusPill(
                   text: run["status"].string,
-                  tone: run["status"].string == "failed" ? .red : .speckTint)
+                  tone: run["status"].string == "failed" ? .speckDanger : .speckTint)
               }
               Text(titleCase(run["phase"].string)).font(.subheadline).foregroundStyle(.secondary)
               Text(Date(timeIntervalSince1970: run["created"].number), style: .relative).font(
