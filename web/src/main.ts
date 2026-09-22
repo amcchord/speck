@@ -747,8 +747,11 @@ async function connectRemote(d: Item) {
   if (d.platform === "linux")
     document.getElementById("mic")!.title =
       "Microphone is supported by RDP desktop sessions";
-  const width = Math.min(1920, Math.max(768, innerWidth - 32)),
-    height = Math.min(1080, Math.max(480, innerHeight - 180));
+  // Keep RDP resolution stable: display-update in the deployed Guacamole/FreeRDP
+  // gateway can assert during a resize. Fit/100% never interrupts the desktop.
+  const isDesktop = d.remote_protocol !== "ssh";
+  const width = Math.min(1920, Math.max(isDesktop ? 1600 : 768, innerWidth)),
+    height = Math.min(1080, Math.max(isDesktop ? 900 : 480, innerHeight - 134));
   const session = await api("/devices/" + d.id + "/remote/sessions", "POST", {
     width,
     height,
@@ -784,7 +787,7 @@ async function connectRemote(d: Item) {
     notify(remoteError, true);
   };
   const statistics = setInterval(async () => {
-    if (!modal.isConnected) return;
+    if (!modal.isConnected || client.getState() !== 3) return;
     try {
       const stats = await api("/remote/sessions/" + session.id + "/stats");
       status.textContent =
@@ -834,7 +837,7 @@ async function connectRemote(d: Item) {
     resize();
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      if (modal.isConnected)
+      if (modal.isConnected && session.protocol === "ssh")
         client.sendSize(
           Math.min(3840, Math.max(768, stage.clientWidth)),
           Math.min(2160, Math.max(480, stage.clientHeight)),
@@ -847,11 +850,7 @@ async function connectRemote(d: Item) {
   const fullscreenChanged = () => {
     document.getElementById("fullscreen")!.textContent =
       document.fullscreenElement ? "Exit full screen" : "Full screen";
-    client.sendSize(
-      Math.min(3840, Math.max(768, stage.clientWidth)),
-      Math.min(2160, Math.max(480, stage.clientHeight)),
-    );
-    resize();
+    resizeRemote();
   };
   document.addEventListener("fullscreenchange", fullscreenChanged);
   const releaseKeys = () => keyboard?.reset();

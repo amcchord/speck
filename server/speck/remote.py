@@ -195,7 +195,8 @@ async def browser_tunnel(socket: WebSocket, session_id: str):
                   'private-key': cfg.get('private_key', ''), 'passphrase': cfg.get('passphrase', ''),
                   'ignore-cert': str(cfg.get('ignore_certificate', False)).lower(), 'security': 'any',
                   'disable-audio': 'false', 'enable-audio-input': 'true', 'enable-wallpaper': 'true',
-                  'enable-theming': 'true', 'enable-font-smoothing': 'true', 'resize-method': 'display-update',
+                  'enable-theming': 'true', 'enable-font-smoothing': 'true', 'resize-method': '',
+                  'width': str(session.width), 'height': str(session.height), 'dpi': '96',
                   'color-depth': '24', 'server-layout': 'en-us-qwerty', 'client-name': 'Speck',
                   'font-size': '14', 'color-scheme': 'white-black', 'scrollback': '2000', 'timezone': 'UTC'}
         for values in [('size', session.width, session.height, 96), ('audio', 'audio/L16', 'audio/L8'),
