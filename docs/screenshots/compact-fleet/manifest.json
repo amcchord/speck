@@ -1,0 +1,38 @@
+[
+  {
+    "file": "desktop.jpg",
+    "width": 1265,
+    "height": 889,
+    "sha256": "a0a47511685abf10ea7346efbba82bc1384943f0dad74f6b87b5238ad305b898",
+    "source": "CUA original screenshot; Chromium",
+    "data": "Loopback-only synthetic dental inventory; actual built Speck frontend",
+    "date": "2026-09-22"
+  },
+  {
+    "file": "mobile.jpg",
+    "width": 375,
+    "height": 812,
+    "sha256": "50671842fc170993a4506e151c89d1bb4c6443ae51f0b624fc4f409bf57b2fde",
+    "source": "CUA original screenshot; Chromium",
+    "data": "Loopback-only synthetic dental inventory; actual built Speck frontend",
+    "date": "2026-09-22"
+  },
+  {
+    "file": "previews.jpg",
+    "width": 1265,
+    "height": 889,
+    "sha256": "10d086b608ebef2ecc793876f2d303cc810fad6f74627b7c4f8d89f78dd97d27",
+    "source": "CUA original screenshot; Chromium",
+    "data": "Loopback-only synthetic dental inventory; actual built Speck frontend",
+    "date": "2026-09-22"
+  },
+  {
+    "file": "safari.jpg",
+    "width": 1332,
+    "height": 768,
+    "sha256": "cbc3a43b7a5c9af8b4047f26a58fba409c3e9d1146826a88e976da4e8a5ec7d8",
+    "source": "CUA original screenshot; native Safari",
+    "data": "Loopback-only synthetic dental inventory; actual built Speck frontend",
+    "date": "2026-09-22"
+  }
+]
