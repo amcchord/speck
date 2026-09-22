@@ -27,7 +27,7 @@ export function openWebShell(
   csrf: string,
   expired: () => void,
 ) {
-  host.innerHTML = `<main class="remote-workspace shell-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${escape(device.label)}</h1><small>Web shell · Linux</small></div><button id="shell-fullscreen" class="secondary">Full screen</button></header><div class="remote-controls shell-controls"><button id="shell-copy" class="secondary">Copy selection</button><button id="shell-paste" class="secondary" data-shell-input>Paste</button><label>Keys <select id="shell-keys" data-shell-input><option value="">Send shortcut…</option><option value="interrupt">Ctrl + C · interrupt</option><option value="eof">Ctrl + D · end input</option><option value="suspend">Ctrl + Z · suspend</option><option value="clear">Ctrl + L · clear</option><option value="enter">Enter</option><option value="backspace">Backspace</option><option value="tab">Tab</option><option value="escape">Escape</option><option value="up">↑ Previous command</option><option value="down">↓ Next command</option></select></label><button id="shell-smaller" class="secondary" aria-label="Decrease terminal font size">A−</button><button id="shell-larger" class="secondary" aria-label="Increase terminal font size">A+</button><button id="shell-reconnect" class="secondary">Reconnect</button><button id="shell-disconnect" class="secondary">Disconnect</button></div><div class="shell-search"><label for="shell-search">Search scrollback</label><input id="shell-search" type="search" placeholder="Find in this session" autocomplete="off"><button id="shell-previous" class="secondary" aria-label="Previous match">↑</button><button id="shell-next" class="secondary" aria-label="Next match">↓</button><span id="shell-match" role="status"></span></div><section class="shell-stage"><div id="shell-terminal" aria-label="Interactive terminal for ${escape(device.label)}"></div><div id="shell-startup" class="remote-startup">${loadingState("Opening web shell…", "Connecting through the Speck agent.")}</div></section><footer class="remote-footer shell-footer"><span id="shell-status" role="status">Connecting…</span><span id="shell-size"></span><span class="shell-account">Agent service account</span>${device.configured_remote_protocol ? `<a href="#remote/${encodeURIComponent(device.id)}?mode=connection">Use saved ${escape(device.configured_remote_protocol.toUpperCase())} connection</a>` : ""}</footer></main>`;
+  host.innerHTML = `<main class="remote-workspace shell-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${escape(device.label)}</h1><small>Web shell · Linux</small></div><button id="shell-fullscreen" class="secondary">Full screen</button></header><div class="remote-controls shell-controls"><button id="shell-copy" class="secondary">Copy selection</button><button id="shell-paste" class="secondary" data-shell-input>Paste</button><label>Keys <select id="shell-keys" data-shell-input><option value="">Send shortcut…</option><option value="interrupt">Ctrl + C · interrupt</option><option value="eof">Ctrl + D · end input</option><option value="suspend">Ctrl + Z · suspend</option><option value="clear">Ctrl + L · clear</option><option value="enter">Enter</option><option value="backspace">Backspace</option><option value="tab">Tab</option><option value="escape">Escape</option><option value="up">↑ Previous command</option><option value="down">↓ Next command</option></select></label><button id="shell-smaller" class="secondary" aria-label="Decrease terminal font size">A−</button><button id="shell-larger" class="secondary" aria-label="Increase terminal font size">A+</button><button id="shell-reconnect" class="secondary">Reconnect</button><button id="shell-disconnect" class="secondary">Disconnect</button></div><div class="shell-search"><label for="shell-search">Search scrollback</label><input id="shell-search" type="search" placeholder="Find in this session" autocomplete="off"><button id="shell-previous" class="secondary" aria-label="Previous match">↑</button><button id="shell-next" class="secondary" aria-label="Next match">↓</button><span id="shell-match" role="status"></span></div><section class="shell-stage"><div id="shell-terminal" aria-label="Interactive terminal for ${escape(device.label)}"></div><div id="shell-startup" class="remote-startup">${loadingState("Opening web shell…", "Connecting through the Speck agent.")}</div></section><footer class="remote-footer shell-footer"><span id="shell-status" role="status">Connecting…</span><span id="shell-size"></span><span class="shell-account">Agent service account</span><label class="check"><input id="shell-screen-reader" type="checkbox"> Screen reader support</label>${device.configured_remote_protocol ? `<a href="#remote/${encodeURIComponent(device.id)}?mode=connection">Use saved ${escape(device.configured_remote_protocol.toUpperCase())} connection</a>` : ""}</footer></main>`;
   const root = host.querySelector<HTMLElement>(".shell-workspace")!;
   const element = <T extends HTMLElement = HTMLElement>(id: string) =>
     root.querySelector<T>("#" + id)!;
@@ -39,7 +39,9 @@ export function openWebShell(
     lineHeight: 1.2,
     fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
     scrollback: 10000,
-    screenReaderMode: true,
+    // xterm screen-reader mode suppresses insertText input (mobile/emoji).
+    // Keep it opt-in so the normal terminal accepts those input methods.
+    screenReaderMode: false,
     allowProposedApi: false,
     theme: {
       background: "#101d17",
@@ -88,6 +90,10 @@ export function openWebShell(
       >("[data-shell-input]")
       .forEach((e) => (e.disabled = !value));
   };
+  element<HTMLInputElement>("shell-screen-reader").addEventListener("change", (event) => {
+    terminal.options.screenReaderMode = (event.target as HTMLInputElement).checked;
+    terminal.focus();
+  });
   setReady(false);
   const send = (message: object) => {
     if (socket?.readyState === WebSocket.OPEN)

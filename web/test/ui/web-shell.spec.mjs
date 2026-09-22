@@ -40,6 +40,12 @@ for (const width of [1440, 390, 320]) {
     await page.locator('.xterm-helper-textarea').pressSequentially('pwd');
     await page.locator('.xterm-helper-textarea').press('Enter');
     await expect.poll(() => inputs.filter(i => i.type === 'input').map(i => i.data).join('')).toContain('pwd\r');
+    await page.locator('.xterm-helper-textarea').pressSequentially('café 漢字');
+    await expect.poll(() => inputs.filter(i => i.type === 'input').map(i => i.data).join('')).toContain('café 漢字');
+    await page.getByLabel('Screen reader support').check();
+    await expect(page.locator('.xterm-accessibility')).toHaveCount(1);
+    await page.getByLabel('Screen reader support').uncheck();
+    await expect(page.locator('.xterm-accessibility')).toHaveCount(0);
     await page.locator('#shell-keys').selectOption('interrupt');
     await expect.poll(() => inputs.some(i => i.data === '\x03')).toBeTruthy();
     await page.locator('#shell-search').fill('no matching text');

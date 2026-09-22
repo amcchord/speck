@@ -22,6 +22,8 @@ explicit paste, adjustable font size, responsive terminal resizing, shell key
 shortcuts, fullscreen, disconnect and reconnect. Reconnect creates a fresh shell;
 it does not replay commands. Ctrl+C interrupts remote programs. Cmd+C/V and
 Ctrl+Shift+C/V provide clipboard shortcuts. Ctrl+Shift+F searches scrollback.
+Screen reader support is optional; enabling it uses xterm’s accessibility mode.
+Default mode supports Unicode/emoji and mobile insert-text events.
 Desktop-only sound, microphone and Windows shortcuts are absent. The saved
 RDP/SSH/VNC connection is retained and available through the terminal footer.
 
