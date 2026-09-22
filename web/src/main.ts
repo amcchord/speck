@@ -405,7 +405,7 @@ function configureRemote(d: Item) {
 async function connectRemote(d: Item) {
   const modal = dialog(
     d.label,
-    `<div class="remote-toolbar"><span id="remote-status">Connecting…</span><button id="mic" class="secondary">Enable microphone</button><button id="fullscreen" class="secondary">Full screen</button><button id="cad" class="secondary">Ctrl + Alt + Del</button></div><div id="remote-display" tabindex="0"></div><div class="toolbar"><input id="clipboard" placeholder="Text to paste into the remote session"><button id="paste" class="secondary">Paste</button></div>`,
+    `<div class="remote-toolbar"><span id="remote-status">Connecting…</span><button id="mic" class="secondary">Enable microphone</button><button id="fullscreen" class="secondary">Full screen</button><button id="cad" class="secondary">Ctrl + Alt + Del</button><button id="type-secret" class="secondary">Type password</button></div><div id="remote-display" tabindex="0"></div><div class="toolbar"><input id="clipboard" placeholder="Text to paste into the remote session"><button id="paste" class="secondary">Paste</button></div>`,
   );
   modal.classList.add("remote-modal");
   if (d.platform === "linux")
@@ -419,8 +419,8 @@ async function connectRemote(d: Item) {
   });
   if (session.protocol !== "rdp") {
     document.getElementById("mic")!.hidden = true;
-    document.getElementById("cad")!.hidden = true;
   }
+  if (session.protocol === "ssh") document.getElementById("cad")!.hidden = true;
   const tunnel = new Guacamole.WebSocketTunnel(
     `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/remote/sessions/${session.id}/ws`,
   );
@@ -460,17 +460,16 @@ async function connectRemote(d: Item) {
   }, 3000);
   modal.addEventListener("close", () => clearInterval(statistics));
   const mouse = new Guacamole.Mouse(client.getDisplay().getElement());
-  mouse.onmousedown =
-    mouse.onmouseup =
-    mouse.onmousemove =
-      (s: any) => client.sendMouseState(s, true);
+  mouse.onEach(["mousedown", "mouseup", "mousemove"], (event: any) => {
+    client.sendMouseState(event.state, true);
+  });
   keyboard = new Guacamole.Keyboard(display);
   keyboard.onkeydown = (key: number) => {
     client.sendKeyEvent(1, key);
     return false;
   };
   keyboard.onkeyup = (key: number) => client.sendKeyEvent(0, key);
-  display.addEventListener("mousedown", () => display.focus());
+  display.addEventListener("mousedown", () => display.focus(), true);
   const resize = () =>
     client
       .getDisplay()
@@ -505,9 +504,30 @@ async function connectRemote(d: Item) {
     writer.sendEnd();
     display.focus();
   });
+  on("type-secret", () => {
+    const prompt = dialog(
+      "Type into the remote session",
+      `<label>Password<input id="remote-secret" type="password" autocomplete="off"></label><button id="send-secret" class="primary">Type password</button>`,
+    );
+    on("send-secret", () => {
+      const input = document.getElementById(
+        "remote-secret",
+      ) as HTMLInputElement;
+      for (const character of input.value) {
+        const point = character.codePointAt(0)!;
+        const key = point <= 255 ? point : 0x01000000 | point;
+        client.sendKeyEvent(1, key);
+        client.sendKeyEvent(0, key);
+      }
+      input.value = "";
+      prompt.close();
+      display.focus();
+    });
+  });
   on("cad", () => {
     [0xffe3, 0xffe9, 0xffff].forEach((k) => client.sendKeyEvent(1, k));
     [0xffff, 0xffe9, 0xffe3].forEach((k) => client.sendKeyEvent(0, k));
+    display.focus();
   });
   on("fullscreen", () => modal.requestFullscreen());
   on("mic", () => {
@@ -604,7 +624,7 @@ async function renderRecovery() {
   ]);
   fleet = devices;
   content(
-    `<div class="recovery-banner"><span class="big-spark">↺</span><div><h2>Recovery tests</h2><p>Capture proof → back up → restore together → compare.</p></div><button id="new-plan" class="primary">+ New recovery plan</button></div><div class="section-head"><div><h2>Your recovery plans</h2><p>Each run creates a shared, isolated network for its restored machines.</p></div></div><div class="plan-grid">${plans.map((p: Item) => `<article class="plan"><span class="eyebrow">RECOVERY PLAN</span><h2>${esc(p.name)}</h2><p>${p.spec.members.length} systems · ${esc(p.spec.router_prefix)}</p><button data-run="${p.id}" class="primary">Run recovery test →</button><details><summary>View plan</summary><pre>${pretty(p.spec)}</pre></details></article>`).join("") || '<div class="empty"><h3>No recovery plans</h3><p>Link devices to their Slide agent IDs, then define application checks.</p></div>'}</div><div class="section-head"><h2>Runs & evidence</h2><button id="refresh-runs" class="secondary">Refresh</button></div>${runs.map((r: Item) => `<details class="provider" open><summary><b>${esc(r.state.name)}</b>${badge(r.status, r.status === "passed")}<small>${date(r.created)}</small></summary><div class="run-phase">${esc(r.phase.replaceAll("_", " "))}</div>${r.state.error ? `<div class="callout">${esc(r.state.error)}</div>` : ""}${recoveryEvidence(r)}<div class="toolbar">${r.status === "awaiting_clones" ? `<button data-verify="${r.id}" class="primary">Verify restored machines</button>` : ""}${r.status !== "running" && r.status !== "stopped" ? `<button data-stop="${r.id}" class="secondary">Stop restored VMs</button>` : ""}</div></details>`).join("")}`,
+    `<div class="recovery-banner"><span class="big-spark">↺</span><div><h2>Recovery tests</h2><p>Capture proof → back up → restore together → compare.</p></div><button id="new-plan" class="primary">+ New recovery plan</button></div><div class="section-head"><div><h2>Your recovery plans</h2><p>Each run creates a shared, isolated network for its restored machines.</p></div></div><div class="plan-grid">${plans.map((p: Item) => `<article class="plan"><span class="eyebrow">RECOVERY PLAN</span><h2>${esc(p.name)}</h2><p>${p.spec.members.length} systems · ${esc(p.spec.router_prefix)}</p><button data-run="${p.id}" class="primary">Run recovery test →</button><details><summary>View plan</summary><pre>${pretty(p.spec)}</pre></details></article>`).join("") || '<div class="empty"><h3>No recovery plans</h3><p>Link devices to their Slide agent IDs, then define application checks.</p></div>'}</div><div class="section-head"><h2>Runs & evidence</h2><button id="refresh-runs" class="secondary">Refresh</button></div>${runs.map((r: Item) => `<details class="provider" ${r.status === "stopped" ? "" : "open"}><summary><b>${esc(r.state.name)}</b>${badge(r.status, r.status === "passed")}<small>${date(r.created)}</small></summary><div class="run-phase">${esc(r.phase.replaceAll("_", " "))}</div>${r.state.error ? `<div class="callout">${esc(r.state.error)}</div>` : ""}${recoveryEvidence(r)}<div class="toolbar">${r.status === "awaiting_clones" ? `<button data-verify="${r.id}" class="primary">Verify restored machines</button>` : ""}${r.status !== "running" && r.status !== "stopped" ? `<button data-stop="${r.id}" class="secondary">Stop restored VMs</button>` : ""}</div></details>`).join("")}`,
   );
   on("refresh-runs", renderRecovery);
   on("new-plan", newPlan);

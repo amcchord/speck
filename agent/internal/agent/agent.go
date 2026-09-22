@@ -66,6 +66,9 @@ func (c *Client) request(ctx context.Context, method, path string, body io.Reade
 	return c.HTTP.Do(req)
 }
 func (c *Client) api(ctx context.Context, method, path string, in, out any) error {
+	// Control messages must recover promptly after an endpoint changes networks.
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 	var body io.Reader
 	if in != nil {
 		data, err := json.Marshal(in)

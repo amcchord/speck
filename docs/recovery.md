@@ -54,3 +54,10 @@ needed. Unknown resources from ambiguous operations must be reconciled there.
 Read [Slide's network documentation](https://docs.slide.tech/networks/) for
 WireGuard peer configuration and [restore documentation](https://docs.slide.tech/restores/)
 for appliance capacity, virtualization and recovery access.
+
+For a single-NIC Windows restore, see
+[`windows-recovery-network.ps1`](windows-recovery-network.ps1). It changes the
+address in one operation and schedules a DHCP rollback if the restored machine
+cannot reach a supplied health URL. Adapt the adapter selection and addressing
+to your application. Do not disable DHCP and then assume its old address still
+exists: that intermediate state can strand the RMM before a proof command runs.
