@@ -18,5 +18,5 @@ python3 - <<'PY'
 import hashlib
 from pathlib import Path
 root=Path('output/downloads')
-(root/'SHA256SUMS').write_text(''.join(hashlib.sha256(f.read_bytes()).hexdigest()+'  '+f.name+'\n' for f in sorted(root.iterdir()) if f.name != 'SHA256SUMS'))
+(root/'SHA256SUMS').write_text(''.join(hashlib.sha256(f.read_bytes()).hexdigest()+'  '+f.name+'\n' for f in sorted(root.iterdir()) if f.is_file() and f.name != 'SHA256SUMS'))
 PY

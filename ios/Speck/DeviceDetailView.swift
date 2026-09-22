@@ -150,7 +150,9 @@ struct DeviceDetailView: View {
       remote = true
     } label: {
       ActionLabel(
-        title: device.raw["remote_protocol"].string == "ssh" ? "SSH" : "Screen", symbol: "display")
+        title: device.raw["remote_protocol"].string == "shell"
+          ? "Web shell" : device.raw["remote_protocol"].string == "ssh" ? "SSH" : "Screen",
+        symbol: ["shell", "ssh"].contains(device.raw["remote_protocol"].string) ? "terminal" : "display")
     }
     .buttonStyle(PrimaryButton()).disabled(
       !device.manageable || !device.raw["remote_configured"].bool)

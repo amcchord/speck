@@ -359,3 +359,39 @@ Chrome/Safari pane-refresh scenarios passed. Live Chrome/Safari verified window
 titles and title/executable search for all three Windows originals with no browser
 errors. Verification logins signed out; endpoint agents and backend were unchanged.
 Private release and acceptance records: `output/app-display-name/` in the worktree.
+
+## 2026-09-22 — Headless web shell implementation
+
+Contained branch/worktree `codex/headless-webshell`, from main `290ed31`, adds
+Linux desktop capability detection, a bounded authenticated PTY relay and a
+responsive xterm.js workspace selected by the Fleet screen action. Existing
+connections and credentials are preserved; a saved connection remains available
+from the terminal. Agent startup/disconnect, cross-builds, role/identity/session
+restrictions, browser behavior and native label compilation were verified.
+A Linux runtime test caught and fixed a blocking PTY descriptor on resize/close.
+Screenshots are synthetic, original and include hashes. Full validation and
+rollout instructions: `docs/operations/web-shell.md`. No shared branch push,
+production deployment, live endpoint command or credentials change. The next
+action is review and authorization for the coordinated release.
+
+Before handoff, rebased the feature onto main `b6dfb32` and resolved the
+Fleet/telemetry changes while retaining all recent overview, preview and lifecycle
+behavior. Combined validation: 104 backend, 28 web unit tests, full Windows/Linux
+build script, Linux race tests and all 80 browser checks pass.
+
+## 2026-09-22 — Signed automatic agent updates implemented
+
+User authorized deploying the headless web shell and requested automatic updates.
+Previously updates required rerunning installers. Agent 0.3.1 now checks signed,
+expiring Ed25519 release offers; enforces target, increasing version and hashes;
+claims an idle lease; and uses a separate protected helper for service replacement.
+It restores previous executables when the new agent cannot check in. Windows
+refreshes its desktop helper without a password or elevated interactive token.
+Admin policy pauses future installs. The signing seed is held only in its scoped
+AustinLand vault entry; source/server contain the public trust anchor.
+
+113 backend tests, Linux race/real-PTY and update transaction tests, all platform
+builds, 28 web unit tests and 80 existing browser checks passed; added dedicated
+pause/resume browser checks. Production preflight found an active remote session,
+so no service/endpoint changes have occurred. The next step is the backed-up
+coordinated release and Linux/Windows canary, retaining every original identity.

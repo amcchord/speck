@@ -73,3 +73,14 @@ in [MVP review](../MVP-REVIEW.md), [management rollout](../operations/management
 acceptance, remaining native media/platform tests and broader recovery qualification
 are still open. This passkey work did not launch new recoveries, install patches,
 deploy endpoint software or clean up existing recovery resources.
+
+## Authorized rollout: headless web shell and automatic updates
+
+`codex/headless-webshell` in `worktrees/headless-webshell` adds automatic Linux
+web-shell routing and signed Windows/Linux agent updates in 0.3.1. Based on main
+`b6dfb32`. User authorized deployment. Source and local protocol/rollback/browser
+checks are complete; a live remote session defers the server restart. Next: take
+a matching runtime/database backup, deploy server/web/downloads, then canary
+Linux/Windows before bootstrapping the fleet. No endpoint identities will change.
+See [web shell](../operations/web-shell.md) and
+[agent update operations](../operations/agent-updates.md).

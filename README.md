@@ -40,6 +40,8 @@ for provenance and the local preview workflow.
 - Windows PowerShell and Linux shell commands, with job history and bounded output.
 - File browsing and SHA-256-verified uploads/downloads, up to 256 MiB per file.
 - Browser RDP with speaker output and microphone input; browser SSH and VNC.
+- Automatic [web shell](docs/operations/web-shell.md) for headless Linux: interactive
+  terminal, search, copy/paste and resizing through the agent, without SSH setup.
 - Slide inventory, backups, snapshot verification, isolated recovery networks,
   multi-machine restores, and application checks with retained evidence.
 - Restored machines register as separate candidates requiring operator approval.
@@ -47,14 +49,15 @@ for provenance and the local preview workflow.
 ## Remote access
 
 Speck agents initiate HTTPS and WebSocket connections to the server. A session
-opens a temporary relay to a service on the endpoint's loopback address. The
+opens a temporary relay to a service on the endpoint's loopback address, or
+an interactive PTY for the Linux web shell. The
 endpoint does not need an inbound Internet firewall rule. Apache Guacamole's
 `guacd` runs on the server's loopback interface.
 
 | Endpoint | Monitoring, files, commands | Browser access | Active application |
 | --- | --- | --- | --- |
 | Windows amd64 | Windows service; PowerShell | RDP desktop and audio; optional VNC | Unprivileged helper in each signed-in session |
-| Linux amd64/arm64 | systemd service; `/bin/sh`; optional `pwsh` | SSH; RDP/VNC when a desktop service is installed | X11 helper and `xprop`; headless/Wayland reports unavailable |
+| Linux amd64/arm64 | systemd service; `/bin/sh`; optional `pwsh` | Agent web shell; optional SSH; RDP/VNC for graphical systems | X11 helper and `xprop`; headless/Wayland reports unavailable |
 
 RDP reconnects or creates a Windows session. Windows client editions can lock
 the local console: this is not simultaneous console shadowing. The downloaded
@@ -88,8 +91,8 @@ export PYTHONPATH=server
 uv run uvicorn speck.main:app --host 127.0.0.1 --port 8088
 ```
 
-Agents require HTTPS. For remote-access development, also run Guacamole 1.6.0
-with port 4822 bound only to loopback. See [deployment](docs/deployment.md).
+Agents require HTTPS. For RDP/SSH/VNC development, also run Guacamole 1.6.0
+with port 4822 bound only to loopback. The agent web shell does not require Guacamole. See [deployment](docs/deployment.md).
 
 ## Recovery tests
 

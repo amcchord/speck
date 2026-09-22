@@ -367,3 +367,22 @@ Rollback index and assets:
 `/var/lib/speck-rollback/20260922T231219Z-app-display-name-6420df3/web`.
 Private deployment/evidence: `worktrees/app-display-name/output/app-display-name/`.
 Integration: https://github.com/amcchord/speck/pull/11.
+
+## Headless web shell — September 22, 2026
+
+Implemented in `worktrees/headless-webshell` on `codex/headless-webshell` from
+main `b6dfb32`, preserving the latest machine overview, preview and restore-lifecycle changes. Headless Linux screen actions open an agent PTY in an xterm.js
+workspace without SSH configuration. Includes search, copy/paste, resize, full
+screen and teardown; preserves existing graphical connections and old agents.
+Server, Linux runtime, cross-build, browser and iOS build checks passed.
+No production release or endpoint changes. See [implementation and release order](docs/operations/web-shell.md)
+and [synthetic gallery](docs/screenshots/web-shell/README.md).
+
+## Automatic agent updates — September 22, 2026
+
+The user authorized the web-shell release and requested automatic agent upgrades.
+The same worktree adds signed Windows/Linux releases, idle claims, detached service
+replacement with authenticated health confirmation, rollback and admin pause.
+The new 0.3.1 agent retains enrollment and includes the headless PTY shell.
+Local checks pass; a live remote session currently defers the coordinated release.
+See [publishing and recovery](docs/operations/agent-updates.md).
