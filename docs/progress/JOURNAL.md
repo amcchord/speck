@@ -143,3 +143,49 @@ in `docs/screenshots/downloads/`.
   reproduced. The decode failure and recovery behavior are demonstrated; further
   reports may have distinct Windows/display causes. iOS native qualification
   continues separately. No broader RMM qualification claims changed.
+
+## 2026-09-22 — Native iOS UI qualification and remote keyboard
+
+Forked work in `worktrees/ios-testflight`, branch `codex/ios-testflight`, builds a
+universal SwiftUI app with native fleet, commands, networking, files, alerts,
+operations and saved Slide recovery workflows. Created the Speck RMM App Store
+Connect record and internal tester group using the scoped AustinLand key.
+
+The user's screenshot review prompted centered/shared action styling, adaptive
+iPad details, visible search, accessibility reflow, literal script input and a
+pinned run action. Twenty-eight unretouched synthetic captures document the app.
+Both simulators pass 11 unit and seven UI scenarios. Signed simulator integration
+passed real login/Keychain, Windows/Linux commands and 256 KiB verified transfers
+with test-file cleanup. Live WKWebView RDP/SSH rendered; mobile SSH text entry
+executed the expected harmless marker command. Device audio and older OS checks
+remain explicit limits.
+
+The shared remote Keyboard dialog supports text, Return/newlines, Tab, Escape and
+Backspace. Web tests (21) and TypeScript/Vite pass. A static-only release from
+`9ea115d`, then aligned-keyboard polish `acd0555`, preserved the running backend process and environment, retained rollback
+assets and verified downloaded asset hashes. No new backups/restores, patch installs
+or identity changes. Release archive and App Store distribution export succeeded;
+export required Apple's system tools first in PATH to avoid a Homebrew rsync
+incompatibility. TestFlight status is recorded in `docs/ios-quality.md`.
+
+## 2026-09-22 — Native account-transition isolation and build 2
+
+Integration review found that delayed authentication/refresh/logout responses could
+cross an account change. Commit `5eef9ae` binds native UI tasks, multi-step commands
+and transfer polling to their original session generation; invalidates local state
+immediately on sign-out; rejects old response/401 effects; and separates each
+login's WKWebView data store. Existing native navigation resets between accounts.
+
+Twenty unit tests pass on iPhone and iPad, including nine deterministic delayed
+response/operation regressions without real network or Keychain access. Repeated
+native action/script/sign-in smoke and live Windows/Linux commands, verified file
+transfers, Windows RDP controls/rotation and Linux SSH keyboard input pass.
+Build 2 archive and distribution export succeed. Build 1 was briefly assigned,
+then removed from the tester group and expired; it is superseded by build 2.
+No backend/agent deployment, recovery run or identity change was needed for this
+fix. The final Apple/GitHub release state is in `docs/ios-quality.md`.
+
+Apple processed build 2 successfully and reports IN_BETA_TESTING for the internal
+Speck testing group. What-to-test notes include physical-device acceptance items.
+All GitHub checks at `5eef9ae` pass, including Xcode 26's 20 native unit tests.
+The temporary local upload key was removed; the scoped key remains in AustinLand.

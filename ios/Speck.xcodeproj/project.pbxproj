@@ -1,0 +1,598 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		117DC1E77103E0674CF61822 /* ScreenPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6B164853C8B20EE2DC1504 /* ScreenPreviewView.swift */; };
+		1A20677975F6F13C042CAF28 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9CA718DE8A3322676681B9 /* DemoData.swift */; };
+		35ACED705522006D583B7CE4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4C4CC784D160B77F337D00C5 /* PrivacyInfo.xcprivacy */; };
+		3627BE22A37D80A7E9F2AF9D /* SessionIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED80F9E2C866070B46C5B68 /* SessionIsolationTests.swift */; };
+		455ED76D4AD5FA11513A51C5 /* RemoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E4A4FFEEE9EDC10AE1DD926 /* RemoteView.swift */; };
+		51D3A847FD283DEE0F61CB2E /* SpeckApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD100ADB164AC5D33EDC5C /* SpeckApp.swift */; };
+		66B4467F735A2ED6D47D66A1 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DE9DEF7F74EA164772F1331 /* AccountView.swift */; };
+		68E3DB7194519FA4EAE9DAC5 /* CodeEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D797FFA66F84D64C7DAE0464 /* CodeEditor.swift */; };
+		7339EE2225BAA406849FE5DA /* JobsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2487CDB88D09119304768EAC /* JobsView.swift */; };
+		789666CB1407069CDC5705F9 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90B4429FEF71346635F8756 /* OperationsView.swift */; };
+		7A5A5FB82CEC7F5FA885B3D5 /* NetworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65986F900AEDB59486123063 /* NetworkView.swift */; };
+		86A713C700983C80D7E7FD2F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1299A1858845D7C9693DC7F2 /* Assets.xcassets */; };
+		872B8B7C4079A42AB3796BE0 /* FilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B327B2D5DAD3706ED6E79864 /* FilesView.swift */; };
+		885F38ADE85E7E018D3F7815 /* SpeckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFC81FA48601EB653CB5F21 /* SpeckTests.swift */; };
+		977E783670EE6E06866F8FD5 /* AlertsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F688885147B3C317B1AD2D2 /* AlertsView.swift */; };
+		99C1C53778B5E48504056701 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F12BC71E75643A88573692 /* Session.swift */; };
+		A22EA9FD864AC5D14121ABE0 /* Preview.json in Resources */ = {isa = PBXBuildFile; fileRef = E7509DD5BDF15E34D84F4EC3 /* Preview.json */; };
+		B3464EE2D5B8196AF823DA19 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCD602D9516218A36B3274 /* Theme.swift */; };
+		C31CACF20D8CDDBF768AEA12 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D992D22A023FC77D9B8BB18 /* Models.swift */; };
+		C9DEB6B7090168F37128DAB5 /* DeviceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659DA910E5893EBEC83B71E5 /* DeviceDetailView.swift */; };
+		D776EE6645244A4CDCBDC701 /* FleetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB5BB5909D0A2EAD28FC1D8F /* FleetView.swift */; };
+		D81AEB3FB5414616D32F0652 /* SpeckUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7117F363AAE56CB0D8AF9C /* SpeckUITests.swift */; };
+		E7C213EE43290ED3EBD56BFB /* RecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA07B57997786309C24B029C /* RecoveryView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DA7B64893399FEAEECE933DA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B8CEF93831D79914C1181E66 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6FCCBA09A05A46A44316EF7F;
+			remoteInfo = Speck;
+		};
+		E6C1855742812AE5DE81EEC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B8CEF93831D79914C1181E66 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6FCCBA09A05A46A44316EF7F;
+			remoteInfo = Speck;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		09DD100ADB164AC5D33EDC5C /* SpeckApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeckApp.swift; sourceTree = "<group>"; };
+		09F12BC71E75643A88573692 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		1299A1858845D7C9693DC7F2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		14DCD602D9516218A36B3274 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		2487CDB88D09119304768EAC /* JobsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobsView.swift; sourceTree = "<group>"; };
+		287F01B1756BB64BAA08E61F /* Speck.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Speck.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4C4CC784D160B77F337D00C5 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		4D992D22A023FC77D9B8BB18 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		4E4A4FFEEE9EDC10AE1DD926 /* RemoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteView.swift; sourceTree = "<group>"; };
+		5DE9DEF7F74EA164772F1331 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
+		5E7117F363AAE56CB0D8AF9C /* SpeckUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeckUITests.swift; sourceTree = "<group>"; };
+		65986F900AEDB59486123063 /* NetworkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkView.swift; sourceTree = "<group>"; };
+		659DA910E5893EBEC83B71E5 /* DeviceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailView.swift; sourceTree = "<group>"; };
+		7B9CA718DE8A3322676681B9 /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
+		8CE847F2BF8A24FFAC6530A3 /* SpeckUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SpeckUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F688885147B3C317B1AD2D2 /* AlertsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertsView.swift; sourceTree = "<group>"; };
+		9C6B164853C8B20EE2DC1504 /* ScreenPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPreviewView.swift; sourceTree = "<group>"; };
+		AEFC81FA48601EB653CB5F21 /* SpeckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeckTests.swift; sourceTree = "<group>"; };
+		B327B2D5DAD3706ED6E79864 /* FilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesView.swift; sourceTree = "<group>"; };
+		B90B4429FEF71346635F8756 /* OperationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsView.swift; sourceTree = "<group>"; };
+		C2EA8D5281153EF3D5D46EF0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		CA07B57997786309C24B029C /* RecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryView.swift; sourceTree = "<group>"; };
+		D797FFA66F84D64C7DAE0464 /* CodeEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeEditor.swift; sourceTree = "<group>"; };
+		DED80F9E2C866070B46C5B68 /* SessionIsolationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionIsolationTests.swift; sourceTree = "<group>"; };
+		E7509DD5BDF15E34D84F4EC3 /* Preview.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Preview.json; sourceTree = "<group>"; };
+		EAC05A9CA4D7331D24F7214C /* SpeckTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SpeckTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EB5BB5909D0A2EAD28FC1D8F /* FleetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		299BA16F45AA5650A2EA50CE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				287F01B1756BB64BAA08E61F /* Speck.app */,
+				EAC05A9CA4D7331D24F7214C /* SpeckTests.xctest */,
+				8CE847F2BF8A24FFAC6530A3 /* SpeckUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		530072B1540C2B70508E5166 = {
+			isa = PBXGroup;
+			children = (
+				9BC336EAD14BF3F1FF94020B /* Speck */,
+				9C95F4E8106380B2A8FD9E0C /* SpeckTests */,
+				58B0FD31A6A96770F6204543 /* SpeckUITests */,
+				299BA16F45AA5650A2EA50CE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		58B0FD31A6A96770F6204543 /* SpeckUITests */ = {
+			isa = PBXGroup;
+			children = (
+				5E7117F363AAE56CB0D8AF9C /* SpeckUITests.swift */,
+			);
+			path = SpeckUITests;
+			sourceTree = "<group>";
+		};
+		9BC336EAD14BF3F1FF94020B /* Speck */ = {
+			isa = PBXGroup;
+			children = (
+				5DE9DEF7F74EA164772F1331 /* AccountView.swift */,
+				8F688885147B3C317B1AD2D2 /* AlertsView.swift */,
+				1299A1858845D7C9693DC7F2 /* Assets.xcassets */,
+				D797FFA66F84D64C7DAE0464 /* CodeEditor.swift */,
+				7B9CA718DE8A3322676681B9 /* DemoData.swift */,
+				659DA910E5893EBEC83B71E5 /* DeviceDetailView.swift */,
+				B327B2D5DAD3706ED6E79864 /* FilesView.swift */,
+				EB5BB5909D0A2EAD28FC1D8F /* FleetView.swift */,
+				C2EA8D5281153EF3D5D46EF0 /* Info.plist */,
+				2487CDB88D09119304768EAC /* JobsView.swift */,
+				4D992D22A023FC77D9B8BB18 /* Models.swift */,
+				65986F900AEDB59486123063 /* NetworkView.swift */,
+				B90B4429FEF71346635F8756 /* OperationsView.swift */,
+				E7509DD5BDF15E34D84F4EC3 /* Preview.json */,
+				4C4CC784D160B77F337D00C5 /* PrivacyInfo.xcprivacy */,
+				CA07B57997786309C24B029C /* RecoveryView.swift */,
+				4E4A4FFEEE9EDC10AE1DD926 /* RemoteView.swift */,
+				9C6B164853C8B20EE2DC1504 /* ScreenPreviewView.swift */,
+				09F12BC71E75643A88573692 /* Session.swift */,
+				09DD100ADB164AC5D33EDC5C /* SpeckApp.swift */,
+				14DCD602D9516218A36B3274 /* Theme.swift */,
+			);
+			path = Speck;
+			sourceTree = "<group>";
+		};
+		9C95F4E8106380B2A8FD9E0C /* SpeckTests */ = {
+			isa = PBXGroup;
+			children = (
+				DED80F9E2C866070B46C5B68 /* SessionIsolationTests.swift */,
+				AEFC81FA48601EB653CB5F21 /* SpeckTests.swift */,
+			);
+			path = SpeckTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		39FC7265BD5820C611D719B3 /* SpeckUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EE95B837D98AB1D420ABE24E /* Build configuration list for PBXNativeTarget "SpeckUITests" */;
+			buildPhases = (
+				7144C57C46300637281C6CA0 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3AA9B7600D3632E1558F5D91 /* PBXTargetDependency */,
+			);
+			name = SpeckUITests;
+			packageProductDependencies = (
+			);
+			productName = SpeckUITests;
+			productReference = 8CE847F2BF8A24FFAC6530A3 /* SpeckUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		52E05A1A51751DEC4FF9E287 /* SpeckTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C504F5864949BBD1D5DF2C57 /* Build configuration list for PBXNativeTarget "SpeckTests" */;
+			buildPhases = (
+				DB33CE929771AD70F6FBA446 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A0F5280082D7C528321B6C65 /* PBXTargetDependency */,
+			);
+			name = SpeckTests;
+			packageProductDependencies = (
+			);
+			productName = SpeckTests;
+			productReference = EAC05A9CA4D7331D24F7214C /* SpeckTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		6FCCBA09A05A46A44316EF7F /* Speck */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A8AE6F981B1ED24BFA8168BB /* Build configuration list for PBXNativeTarget "Speck" */;
+			buildPhases = (
+				A110DE7D0E295DE437EBDB5E /* Sources */,
+				28821D587E7C4779FD584C1B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Speck;
+			packageProductDependencies = (
+			);
+			productName = Speck;
+			productReference = 287F01B1756BB64BAA08E61F /* Speck.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B8CEF93831D79914C1181E66 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					39FC7265BD5820C611D719B3 = {
+						DevelopmentTeam = 7PTN7E8EDS;
+						TestTargetID = 6FCCBA09A05A46A44316EF7F;
+					};
+					52E05A1A51751DEC4FF9E287 = {
+						DevelopmentTeam = 7PTN7E8EDS;
+					};
+					6FCCBA09A05A46A44316EF7F = {
+						DevelopmentTeam = 7PTN7E8EDS;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 0D99BA6EE53B6342E598E0E1 /* Build configuration list for PBXProject "Speck" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 530072B1540C2B70508E5166;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 299BA16F45AA5650A2EA50CE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				6FCCBA09A05A46A44316EF7F /* Speck */,
+				52E05A1A51751DEC4FF9E287 /* SpeckTests */,
+				39FC7265BD5820C611D719B3 /* SpeckUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		28821D587E7C4779FD584C1B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				86A713C700983C80D7E7FD2F /* Assets.xcassets in Resources */,
+				A22EA9FD864AC5D14121ABE0 /* Preview.json in Resources */,
+				35ACED705522006D583B7CE4 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7144C57C46300637281C6CA0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D81AEB3FB5414616D32F0652 /* SpeckUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A110DE7D0E295DE437EBDB5E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				66B4467F735A2ED6D47D66A1 /* AccountView.swift in Sources */,
+				977E783670EE6E06866F8FD5 /* AlertsView.swift in Sources */,
+				68E3DB7194519FA4EAE9DAC5 /* CodeEditor.swift in Sources */,
+				1A20677975F6F13C042CAF28 /* DemoData.swift in Sources */,
+				C9DEB6B7090168F37128DAB5 /* DeviceDetailView.swift in Sources */,
+				872B8B7C4079A42AB3796BE0 /* FilesView.swift in Sources */,
+				D776EE6645244A4CDCBDC701 /* FleetView.swift in Sources */,
+				7339EE2225BAA406849FE5DA /* JobsView.swift in Sources */,
+				C31CACF20D8CDDBF768AEA12 /* Models.swift in Sources */,
+				7A5A5FB82CEC7F5FA885B3D5 /* NetworkView.swift in Sources */,
+				789666CB1407069CDC5705F9 /* OperationsView.swift in Sources */,
+				E7C213EE43290ED3EBD56BFB /* RecoveryView.swift in Sources */,
+				455ED76D4AD5FA11513A51C5 /* RemoteView.swift in Sources */,
+				117DC1E77103E0674CF61822 /* ScreenPreviewView.swift in Sources */,
+				99C1C53778B5E48504056701 /* Session.swift in Sources */,
+				51D3A847FD283DEE0F61CB2E /* SpeckApp.swift in Sources */,
+				B3464EE2D5B8196AF823DA19 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DB33CE929771AD70F6FBA446 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3627BE22A37D80A7E9F2AF9D /* SessionIsolationTests.swift in Sources */,
+				885F38ADE85E7E018D3F7815 /* SpeckTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3AA9B7600D3632E1558F5D91 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6FCCBA09A05A46A44316EF7F /* Speck */;
+			targetProxy = DA7B64893399FEAEECE933DA /* PBXContainerItemProxy */;
+		};
+		A0F5280082D7C528321B6C65 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6FCCBA09A05A46A44316EF7F /* Speck */;
+			targetProxy = E6C1855742812AE5DE81EEC8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		2109F7168A2BCF186BA4E418 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 2;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 7PTN7E8EDS;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4477AA2C7D5107F24B1A3888 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.speckrmm.SpeckTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Speck.app/Speck";
+			};
+			name = Debug;
+		};
+		53E2F8B1E09F15FD0B42F760 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.speckrmm.SpeckUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Speck;
+			};
+			name = Debug;
+		};
+		AFF4AD08AB0EFB24B3A6392F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 2;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7PTN7E8EDS;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B42424219895783AD6966A2A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.speckrmm.SpeckUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Speck;
+			};
+			name = Release;
+		};
+		C101B51A689EC03A2A9A1560 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = Speck/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.speckrmm.ios;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E2C188702A623FE88B5CFA58 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = Speck/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.speckrmm.ios;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F8EEF486967835F40BF18C04 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.speckrmm.SpeckTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Speck.app/Speck";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0D99BA6EE53B6342E598E0E1 /* Build configuration list for PBXProject "Speck" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2109F7168A2BCF186BA4E418 /* Debug */,
+				AFF4AD08AB0EFB24B3A6392F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A8AE6F981B1ED24BFA8168BB /* Build configuration list for PBXNativeTarget "Speck" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C101B51A689EC03A2A9A1560 /* Debug */,
+				E2C188702A623FE88B5CFA58 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C504F5864949BBD1D5DF2C57 /* Build configuration list for PBXNativeTarget "SpeckTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4477AA2C7D5107F24B1A3888 /* Debug */,
+				F8EEF486967835F40BF18C04 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EE95B837D98AB1D420ABE24E /* Build configuration list for PBXNativeTarget "SpeckUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				53E2F8B1E09F15FD0B42F760 /* Debug */,
+				B42424219895783AD6966A2A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = B8CEF93831D79914C1181E66 /* Project object */;
+}

@@ -1,0 +1,1640 @@
+{
+  "devices": [
+    {
+      "id": "frontdesk",
+      "label": "BYD-FRONTDESK",
+      "hostname": "BYD-FRONTDESK",
+      "platform": "windows",
+      "arch": "amd64",
+      "online": true,
+      "approved": true,
+      "restored_from": null,
+      "last_seen": 1790092024.147902,
+      "created": 1789207200,
+      "remote_protocol": "rdp",
+      "remote_configured": true,
+      "preview": {
+        "enabled": false,
+        "available": false
+      },
+      "slide_agent_id": "demo-frontdesk",
+      "telemetry": {
+        "version": "0.2.0",
+        "capabilities": {
+          "managed_operations": true,
+          "screen_preview": true
+        },
+        "cpu_percent": 12,
+        "memory": {
+          "usedPercent": 48,
+          "used": 2899102924.8,
+          "total": 8589934592
+        },
+        "host": {
+          "platform": "Windows 11 Pro",
+          "platformVersion": "24H2",
+          "kernelVersion": "10.0.26100",
+          "uptime": 234010
+        },
+        "disks": [
+          {
+            "path": "C:\\",
+            "total": 137438953472,
+            "used": 41231686041.6,
+            "usedPercent": 30
+          }
+        ],
+        "active_app": {
+          "title": "Molar Office \u00b7 Appointment book",
+          "process": "MolarOffice.exe",
+          "user": "Reception"
+        },
+        "services": [
+          {
+            "name": "SpeckAgent",
+            "display_name": "Speck Agent",
+            "status": "running"
+          },
+          {
+            "name": "MolarOfficeService",
+            "display_name": "Molar Office scheduling",
+            "status": "running"
+          },
+          {
+            "name": "TermService",
+            "display_name": "Remote Desktop Services",
+            "status": "running"
+          },
+          {
+            "name": "SlideAgent",
+            "display_name": "Slide backup agent",
+            "status": "running"
+          },
+          {
+            "name": "Dnscache",
+            "display_name": "DNS resolver",
+            "status": "running"
+          },
+          {
+            "name": "Spooler",
+            "display_name": "Print Spooler",
+            "status": "stopped"
+          }
+        ],
+        "network": {
+          "interfaces": [
+            {
+              "name": "Ethernet",
+              "addrs": [
+                {
+                  "address": "192.0.2.24/24"
+                }
+              ],
+              "mac": "02:00:00:00:00:24",
+              "mtu": 1500,
+              "flags": [
+                "up",
+                "broadcast"
+              ]
+            }
+          ],
+          "routes": [
+            {
+              "destination": "0.0.0.0/0",
+              "gateway": "192.0.2.1",
+              "interface": "Ethernet"
+            }
+          ],
+          "dns_servers": [
+            "192.0.2.1"
+          ],
+          "counters": [
+            {
+              "name": "Ethernet",
+              "bytes_sent": 18454216,
+              "bytes_recv": 228609231
+            }
+          ],
+          "connections": [
+            {
+              "process": "speck-agent.exe",
+              "pid": 2412,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50142
+              },
+              "remote": {
+                "ip": "198.51.100.10",
+                "port": 443
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MolarOffice.exe",
+              "pid": 5080,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 51004
+              },
+              "remote": {
+                "ip": "192.0.2.20",
+                "port": 8080
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MicroSIP.exe",
+              "pid": 3160,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50201
+              },
+              "remote": {
+                "ip": "192.0.2.21",
+                "port": 5060
+              },
+              "status": "ESTABLISHED"
+            }
+          ]
+        }
+      },
+      "site": "Brace Yourself Dental",
+      "tags": [
+        "dental",
+        "lab"
+      ]
+    },
+    {
+      "id": "server",
+      "label": "BYD-SERVER",
+      "hostname": "BYD-SERVER",
+      "platform": "windows",
+      "arch": "amd64",
+      "online": true,
+      "approved": true,
+      "restored_from": null,
+      "last_seen": 1790092024.147902,
+      "created": 1789207200,
+      "remote_protocol": "rdp",
+      "remote_configured": true,
+      "preview": {
+        "enabled": false,
+        "available": false
+      },
+      "slide_agent_id": "demo-server",
+      "telemetry": {
+        "version": "0.2.0",
+        "capabilities": {
+          "managed_operations": true,
+          "screen_preview": true
+        },
+        "cpu_percent": 8,
+        "memory": {
+          "usedPercent": 62,
+          "used": 2899102924.8,
+          "total": 8589934592
+        },
+        "host": {
+          "platform": "Windows Server 2025",
+          "platformVersion": "2025",
+          "kernelVersion": "10.0.26100",
+          "uptime": 234010
+        },
+        "disks": [
+          {
+            "path": "C:\\",
+            "total": 137438953472,
+            "used": 41231686041.6,
+            "usedPercent": 30
+          }
+        ],
+        "active_app": null,
+        "services": [
+          {
+            "name": "SpeckAgent",
+            "display_name": "Speck Agent",
+            "status": "running"
+          },
+          {
+            "name": "MolarOfficeService",
+            "display_name": "Molar Office scheduling",
+            "status": "running"
+          },
+          {
+            "name": "TermService",
+            "display_name": "Remote Desktop Services",
+            "status": "running"
+          },
+          {
+            "name": "SlideAgent",
+            "display_name": "Slide backup agent",
+            "status": "running"
+          },
+          {
+            "name": "Dnscache",
+            "display_name": "DNS resolver",
+            "status": "running"
+          },
+          {
+            "name": "Spooler",
+            "display_name": "Print Spooler",
+            "status": "stopped"
+          }
+        ],
+        "network": {
+          "interfaces": [
+            {
+              "name": "Ethernet",
+              "addrs": [
+                {
+                  "address": "192.0.2.24/24"
+                }
+              ],
+              "mac": "02:00:00:00:00:24",
+              "mtu": 1500,
+              "flags": [
+                "up",
+                "broadcast"
+              ]
+            }
+          ],
+          "routes": [
+            {
+              "destination": "0.0.0.0/0",
+              "gateway": "192.0.2.1",
+              "interface": "Ethernet"
+            }
+          ],
+          "dns_servers": [
+            "192.0.2.1"
+          ],
+          "counters": [
+            {
+              "name": "Ethernet",
+              "bytes_sent": 18454216,
+              "bytes_recv": 228609231
+            }
+          ],
+          "connections": [
+            {
+              "process": "speck-agent.exe",
+              "pid": 2412,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50142
+              },
+              "remote": {
+                "ip": "198.51.100.10",
+                "port": 443
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MolarOffice.exe",
+              "pid": 5080,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 51004
+              },
+              "remote": {
+                "ip": "192.0.2.20",
+                "port": 8080
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MicroSIP.exe",
+              "pid": 3160,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50201
+              },
+              "remote": {
+                "ip": "192.0.2.21",
+                "port": 5060
+              },
+              "status": "ESTABLISHED"
+            }
+          ]
+        }
+      },
+      "site": "Brace Yourself Dental",
+      "tags": [
+        "dental",
+        "lab"
+      ]
+    },
+    {
+      "id": "pbx",
+      "label": "BYD-PBX",
+      "hostname": "BYD-PBX",
+      "platform": "linux",
+      "arch": "amd64",
+      "online": true,
+      "approved": true,
+      "restored_from": null,
+      "last_seen": 1790092024.147902,
+      "created": 1789207200,
+      "remote_protocol": "ssh",
+      "remote_configured": true,
+      "preview": {
+        "enabled": false,
+        "available": false
+      },
+      "slide_agent_id": "demo-pbx",
+      "telemetry": {
+        "version": "0.2.0",
+        "capabilities": {
+          "managed_operations": true,
+          "screen_preview": true
+        },
+        "cpu_percent": 3,
+        "memory": {
+          "usedPercent": 22,
+          "used": 2899102924.8,
+          "total": 8589934592
+        },
+        "host": {
+          "platform": "Debian GNU/Linux",
+          "platformVersion": "13",
+          "kernelVersion": "6.12.0",
+          "uptime": 234010
+        },
+        "disks": [
+          {
+            "path": "/",
+            "total": 137438953472,
+            "used": 41231686041.6,
+            "usedPercent": 30
+          }
+        ],
+        "active_app": null,
+        "services": [
+          {
+            "name": "SpeckAgent",
+            "display_name": "Speck Agent",
+            "status": "running"
+          },
+          {
+            "name": "asterisk",
+            "display_name": "Asterisk phone system",
+            "status": "running"
+          },
+          {
+            "name": "ssh",
+            "display_name": "OpenSSH server",
+            "status": "running"
+          },
+          {
+            "name": "slide-agent",
+            "display_name": "Slide backup agent",
+            "status": "running"
+          },
+          {
+            "name": "systemd-resolved",
+            "display_name": "DNS resolver",
+            "status": "running"
+          },
+          {
+            "name": "cron",
+            "display_name": "Scheduled tasks",
+            "status": "stopped"
+          }
+        ],
+        "network": {
+          "interfaces": [
+            {
+              "name": "eth0",
+              "addrs": [
+                {
+                  "address": "192.0.2.24/24"
+                }
+              ],
+              "mac": "02:00:00:00:00:24",
+              "mtu": 1500,
+              "flags": [
+                "up",
+                "broadcast"
+              ]
+            }
+          ],
+          "routes": [
+            {
+              "destination": "0.0.0.0/0",
+              "gateway": "192.0.2.1",
+              "interface": "Ethernet"
+            }
+          ],
+          "dns_servers": [
+            "192.0.2.1"
+          ],
+          "counters": [
+            {
+              "name": "Ethernet",
+              "bytes_sent": 18454216,
+              "bytes_recv": 228609231
+            }
+          ],
+          "connections": [
+            {
+              "process": "speck-agent.exe",
+              "pid": 2412,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50142
+              },
+              "remote": {
+                "ip": "198.51.100.10",
+                "port": 443
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MolarOffice.exe",
+              "pid": 5080,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 51004
+              },
+              "remote": {
+                "ip": "192.0.2.20",
+                "port": 8080
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MicroSIP.exe",
+              "pid": 3160,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50201
+              },
+              "remote": {
+                "ip": "192.0.2.21",
+                "port": 5060
+              },
+              "status": "ESTABLISHED"
+            }
+          ]
+        }
+      },
+      "site": "Brace Yourself Dental",
+      "tags": [
+        "dental",
+        "lab"
+      ]
+    },
+    {
+      "id": "exam",
+      "label": "BYD-EXAM01",
+      "hostname": "BYD-EXAM01",
+      "platform": "windows",
+      "arch": "amd64",
+      "online": true,
+      "approved": true,
+      "restored_from": null,
+      "last_seen": 1790092024.147902,
+      "created": 1789207200,
+      "remote_protocol": "rdp",
+      "remote_configured": true,
+      "preview": {
+        "enabled": false,
+        "available": false
+      },
+      "slide_agent_id": "demo-exam",
+      "telemetry": {
+        "version": "0.2.0",
+        "capabilities": {
+          "managed_operations": true,
+          "screen_preview": true
+        },
+        "cpu_percent": 21,
+        "memory": {
+          "usedPercent": 37,
+          "used": 2899102924.8,
+          "total": 8589934592
+        },
+        "host": {
+          "platform": "Windows 11 Pro",
+          "platformVersion": "24H2",
+          "kernelVersion": "10.0.26100",
+          "uptime": 234010
+        },
+        "disks": [
+          {
+            "path": "C:\\",
+            "total": 137438953472,
+            "used": 41231686041.6,
+            "usedPercent": 30
+          }
+        ],
+        "active_app": {
+          "title": "Molar Office \u00b7 Appointment book",
+          "process": "MolarOffice.exe",
+          "user": "Reception"
+        },
+        "services": [
+          {
+            "name": "SpeckAgent",
+            "display_name": "Speck Agent",
+            "status": "running"
+          },
+          {
+            "name": "MolarOfficeService",
+            "display_name": "Molar Office scheduling",
+            "status": "running"
+          },
+          {
+            "name": "TermService",
+            "display_name": "Remote Desktop Services",
+            "status": "running"
+          },
+          {
+            "name": "SlideAgent",
+            "display_name": "Slide backup agent",
+            "status": "running"
+          },
+          {
+            "name": "Dnscache",
+            "display_name": "DNS resolver",
+            "status": "running"
+          },
+          {
+            "name": "Spooler",
+            "display_name": "Print Spooler",
+            "status": "stopped"
+          }
+        ],
+        "network": {
+          "interfaces": [
+            {
+              "name": "Ethernet",
+              "addrs": [
+                {
+                  "address": "192.0.2.24/24"
+                }
+              ],
+              "mac": "02:00:00:00:00:24",
+              "mtu": 1500,
+              "flags": [
+                "up",
+                "broadcast"
+              ]
+            }
+          ],
+          "routes": [
+            {
+              "destination": "0.0.0.0/0",
+              "gateway": "192.0.2.1",
+              "interface": "Ethernet"
+            }
+          ],
+          "dns_servers": [
+            "192.0.2.1"
+          ],
+          "counters": [
+            {
+              "name": "Ethernet",
+              "bytes_sent": 18454216,
+              "bytes_recv": 228609231
+            }
+          ],
+          "connections": [
+            {
+              "process": "speck-agent.exe",
+              "pid": 2412,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50142
+              },
+              "remote": {
+                "ip": "198.51.100.10",
+                "port": 443
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MolarOffice.exe",
+              "pid": 5080,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 51004
+              },
+              "remote": {
+                "ip": "192.0.2.20",
+                "port": 8080
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MicroSIP.exe",
+              "pid": 3160,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50201
+              },
+              "remote": {
+                "ip": "192.0.2.21",
+                "port": 5060
+              },
+              "status": "ESTABLISHED"
+            }
+          ]
+        }
+      },
+      "site": "Brace Yourself Dental",
+      "tags": [
+        "dental",
+        "lab"
+      ]
+    },
+    {
+      "id": "caller",
+      "label": "BYD-CALLER",
+      "hostname": "BYD-CALLER",
+      "platform": "linux",
+      "arch": "amd64",
+      "online": false,
+      "approved": true,
+      "restored_from": null,
+      "last_seen": 1790088424.147902,
+      "created": 1789207200,
+      "remote_protocol": "ssh",
+      "remote_configured": true,
+      "preview": {
+        "enabled": false,
+        "available": false
+      },
+      "slide_agent_id": "demo-caller",
+      "telemetry": {
+        "version": "0.2.0",
+        "capabilities": {
+          "managed_operations": true,
+          "screen_preview": true
+        },
+        "cpu_percent": 2,
+        "memory": {
+          "usedPercent": 18,
+          "used": 2899102924.8,
+          "total": 8589934592
+        },
+        "host": {
+          "platform": "Debian GNU/Linux",
+          "platformVersion": "13",
+          "kernelVersion": "6.12.0",
+          "uptime": 234010
+        },
+        "disks": [
+          {
+            "path": "/",
+            "total": 137438953472,
+            "used": 41231686041.6,
+            "usedPercent": 30
+          }
+        ],
+        "active_app": null,
+        "services": [
+          {
+            "name": "SpeckAgent",
+            "display_name": "Speck Agent",
+            "status": "running"
+          },
+          {
+            "name": "asterisk",
+            "display_name": "Asterisk phone system",
+            "status": "running"
+          },
+          {
+            "name": "ssh",
+            "display_name": "OpenSSH server",
+            "status": "running"
+          },
+          {
+            "name": "slide-agent",
+            "display_name": "Slide backup agent",
+            "status": "running"
+          },
+          {
+            "name": "systemd-resolved",
+            "display_name": "DNS resolver",
+            "status": "running"
+          },
+          {
+            "name": "cron",
+            "display_name": "Scheduled tasks",
+            "status": "stopped"
+          }
+        ],
+        "network": {
+          "interfaces": [
+            {
+              "name": "eth0",
+              "addrs": [
+                {
+                  "address": "192.0.2.24/24"
+                }
+              ],
+              "mac": "02:00:00:00:00:24",
+              "mtu": 1500,
+              "flags": [
+                "up",
+                "broadcast"
+              ]
+            }
+          ],
+          "routes": [
+            {
+              "destination": "0.0.0.0/0",
+              "gateway": "192.0.2.1",
+              "interface": "Ethernet"
+            }
+          ],
+          "dns_servers": [
+            "192.0.2.1"
+          ],
+          "counters": [
+            {
+              "name": "Ethernet",
+              "bytes_sent": 18454216,
+              "bytes_recv": 228609231
+            }
+          ],
+          "connections": [
+            {
+              "process": "speck-agent.exe",
+              "pid": 2412,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50142
+              },
+              "remote": {
+                "ip": "198.51.100.10",
+                "port": 443
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MolarOffice.exe",
+              "pid": 5080,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 51004
+              },
+              "remote": {
+                "ip": "192.0.2.20",
+                "port": 8080
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MicroSIP.exe",
+              "pid": 3160,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50201
+              },
+              "remote": {
+                "ip": "192.0.2.21",
+                "port": 5060
+              },
+              "status": "ESTABLISHED"
+            }
+          ]
+        }
+      },
+      "site": "Brace Yourself Dental",
+      "tags": [
+        "dental",
+        "lab"
+      ]
+    },
+    {
+      "id": "restored-server",
+      "label": "BYD-SERVER \u00b7 restored",
+      "hostname": "BYD-SERVER",
+      "platform": "windows",
+      "arch": "amd64",
+      "online": true,
+      "approved": true,
+      "restored_from": "original",
+      "last_seen": 1790092024.147902,
+      "created": 1789207200,
+      "remote_protocol": "rdp",
+      "remote_configured": true,
+      "preview": {
+        "enabled": false,
+        "available": false
+      },
+      "slide_agent_id": "demo-restored-server",
+      "telemetry": {
+        "version": "0.2.0",
+        "capabilities": {
+          "managed_operations": true,
+          "screen_preview": true
+        },
+        "cpu_percent": 10,
+        "memory": {
+          "usedPercent": 35,
+          "used": 2899102924.8,
+          "total": 8589934592
+        },
+        "host": {
+          "platform": "Windows Server 2025",
+          "platformVersion": "2025",
+          "kernelVersion": "10.0.26100",
+          "uptime": 234010
+        },
+        "disks": [
+          {
+            "path": "C:\\",
+            "total": 137438953472,
+            "used": 41231686041.6,
+            "usedPercent": 30
+          }
+        ],
+        "active_app": null,
+        "services": [
+          {
+            "name": "SpeckAgent",
+            "display_name": "Speck Agent",
+            "status": "running"
+          },
+          {
+            "name": "MolarOfficeService",
+            "display_name": "Molar Office scheduling",
+            "status": "running"
+          },
+          {
+            "name": "TermService",
+            "display_name": "Remote Desktop Services",
+            "status": "running"
+          },
+          {
+            "name": "SlideAgent",
+            "display_name": "Slide backup agent",
+            "status": "running"
+          },
+          {
+            "name": "Dnscache",
+            "display_name": "DNS resolver",
+            "status": "running"
+          },
+          {
+            "name": "Spooler",
+            "display_name": "Print Spooler",
+            "status": "stopped"
+          }
+        ],
+        "network": {
+          "interfaces": [
+            {
+              "name": "Ethernet",
+              "addrs": [
+                {
+                  "address": "192.0.2.24/24"
+                }
+              ],
+              "mac": "02:00:00:00:00:24",
+              "mtu": 1500,
+              "flags": [
+                "up",
+                "broadcast"
+              ]
+            }
+          ],
+          "routes": [
+            {
+              "destination": "0.0.0.0/0",
+              "gateway": "192.0.2.1",
+              "interface": "Ethernet"
+            }
+          ],
+          "dns_servers": [
+            "192.0.2.1"
+          ],
+          "counters": [
+            {
+              "name": "Ethernet",
+              "bytes_sent": 18454216,
+              "bytes_recv": 228609231
+            }
+          ],
+          "connections": [
+            {
+              "process": "speck-agent.exe",
+              "pid": 2412,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50142
+              },
+              "remote": {
+                "ip": "198.51.100.10",
+                "port": 443
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MolarOffice.exe",
+              "pid": 5080,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 51004
+              },
+              "remote": {
+                "ip": "192.0.2.20",
+                "port": 8080
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MicroSIP.exe",
+              "pid": 3160,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50201
+              },
+              "remote": {
+                "ip": "192.0.2.21",
+                "port": 5060
+              },
+              "status": "ESTABLISHED"
+            }
+          ]
+        }
+      },
+      "site": "Brace Yourself Dental",
+      "tags": [
+        "dental",
+        "lab"
+      ]
+    },
+    {
+      "id": "restored-pbx",
+      "label": "BYD-PBX \u00b7 restored",
+      "hostname": "BYD-PBX",
+      "platform": "linux",
+      "arch": "amd64",
+      "online": true,
+      "approved": true,
+      "restored_from": "original",
+      "last_seen": 1790092024.147902,
+      "created": 1789207200,
+      "remote_protocol": "ssh",
+      "remote_configured": true,
+      "preview": {
+        "enabled": false,
+        "available": false
+      },
+      "slide_agent_id": "demo-restored-pbx",
+      "telemetry": {
+        "version": "0.2.0",
+        "capabilities": {
+          "managed_operations": true,
+          "screen_preview": true
+        },
+        "cpu_percent": 4,
+        "memory": {
+          "usedPercent": 29,
+          "used": 2899102924.8,
+          "total": 8589934592
+        },
+        "host": {
+          "platform": "Debian GNU/Linux",
+          "platformVersion": "13",
+          "kernelVersion": "6.12.0",
+          "uptime": 234010
+        },
+        "disks": [
+          {
+            "path": "/",
+            "total": 137438953472,
+            "used": 41231686041.6,
+            "usedPercent": 30
+          }
+        ],
+        "active_app": null,
+        "services": [
+          {
+            "name": "SpeckAgent",
+            "display_name": "Speck Agent",
+            "status": "running"
+          },
+          {
+            "name": "asterisk",
+            "display_name": "Asterisk phone system",
+            "status": "running"
+          },
+          {
+            "name": "ssh",
+            "display_name": "OpenSSH server",
+            "status": "running"
+          },
+          {
+            "name": "slide-agent",
+            "display_name": "Slide backup agent",
+            "status": "running"
+          },
+          {
+            "name": "systemd-resolved",
+            "display_name": "DNS resolver",
+            "status": "running"
+          },
+          {
+            "name": "cron",
+            "display_name": "Scheduled tasks",
+            "status": "stopped"
+          }
+        ],
+        "network": {
+          "interfaces": [
+            {
+              "name": "eth0",
+              "addrs": [
+                {
+                  "address": "192.0.2.24/24"
+                }
+              ],
+              "mac": "02:00:00:00:00:24",
+              "mtu": 1500,
+              "flags": [
+                "up",
+                "broadcast"
+              ]
+            }
+          ],
+          "routes": [
+            {
+              "destination": "0.0.0.0/0",
+              "gateway": "192.0.2.1",
+              "interface": "Ethernet"
+            }
+          ],
+          "dns_servers": [
+            "192.0.2.1"
+          ],
+          "counters": [
+            {
+              "name": "Ethernet",
+              "bytes_sent": 18454216,
+              "bytes_recv": 228609231
+            }
+          ],
+          "connections": [
+            {
+              "process": "speck-agent.exe",
+              "pid": 2412,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50142
+              },
+              "remote": {
+                "ip": "198.51.100.10",
+                "port": 443
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MolarOffice.exe",
+              "pid": 5080,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 51004
+              },
+              "remote": {
+                "ip": "192.0.2.20",
+                "port": 8080
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MicroSIP.exe",
+              "pid": 3160,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50201
+              },
+              "remote": {
+                "ip": "192.0.2.21",
+                "port": 5060
+              },
+              "status": "ESTABLISHED"
+            }
+          ]
+        }
+      },
+      "site": "Brace Yourself Dental",
+      "tags": [
+        "dental",
+        "lab"
+      ]
+    },
+    {
+      "id": "restored-frontdesk",
+      "label": "BYD-FRONTDESK \u00b7 restored",
+      "hostname": "BYD-FRONTDESK",
+      "platform": "windows",
+      "arch": "amd64",
+      "online": true,
+      "approved": true,
+      "restored_from": "original",
+      "last_seen": 1790092024.147902,
+      "created": 1789207200,
+      "remote_protocol": "rdp",
+      "remote_configured": true,
+      "preview": {
+        "enabled": false,
+        "available": false
+      },
+      "slide_agent_id": "demo-restored-frontdesk",
+      "telemetry": {
+        "version": "0.2.0",
+        "capabilities": {
+          "managed_operations": true,
+          "screen_preview": true
+        },
+        "cpu_percent": 7,
+        "memory": {
+          "usedPercent": 44,
+          "used": 2899102924.8,
+          "total": 8589934592
+        },
+        "host": {
+          "platform": "Windows 11 Pro",
+          "platformVersion": "24H2",
+          "kernelVersion": "10.0.26100",
+          "uptime": 234010
+        },
+        "disks": [
+          {
+            "path": "C:\\",
+            "total": 137438953472,
+            "used": 41231686041.6,
+            "usedPercent": 30
+          }
+        ],
+        "active_app": {
+          "title": "Molar Office \u00b7 Appointment book",
+          "process": "MolarOffice.exe",
+          "user": "Reception"
+        },
+        "services": [
+          {
+            "name": "SpeckAgent",
+            "display_name": "Speck Agent",
+            "status": "running"
+          },
+          {
+            "name": "MolarOfficeService",
+            "display_name": "Molar Office scheduling",
+            "status": "running"
+          },
+          {
+            "name": "TermService",
+            "display_name": "Remote Desktop Services",
+            "status": "running"
+          },
+          {
+            "name": "SlideAgent",
+            "display_name": "Slide backup agent",
+            "status": "running"
+          },
+          {
+            "name": "Dnscache",
+            "display_name": "DNS resolver",
+            "status": "running"
+          },
+          {
+            "name": "Spooler",
+            "display_name": "Print Spooler",
+            "status": "stopped"
+          }
+        ],
+        "network": {
+          "interfaces": [
+            {
+              "name": "Ethernet",
+              "addrs": [
+                {
+                  "address": "192.0.2.24/24"
+                }
+              ],
+              "mac": "02:00:00:00:00:24",
+              "mtu": 1500,
+              "flags": [
+                "up",
+                "broadcast"
+              ]
+            }
+          ],
+          "routes": [
+            {
+              "destination": "0.0.0.0/0",
+              "gateway": "192.0.2.1",
+              "interface": "Ethernet"
+            }
+          ],
+          "dns_servers": [
+            "192.0.2.1"
+          ],
+          "counters": [
+            {
+              "name": "Ethernet",
+              "bytes_sent": 18454216,
+              "bytes_recv": 228609231
+            }
+          ],
+          "connections": [
+            {
+              "process": "speck-agent.exe",
+              "pid": 2412,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50142
+              },
+              "remote": {
+                "ip": "198.51.100.10",
+                "port": 443
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MolarOffice.exe",
+              "pid": 5080,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 51004
+              },
+              "remote": {
+                "ip": "192.0.2.20",
+                "port": 8080
+              },
+              "status": "ESTABLISHED"
+            },
+            {
+              "process": "MicroSIP.exe",
+              "pid": 3160,
+              "local": {
+                "ip": "192.0.2.24",
+                "port": 50201
+              },
+              "remote": {
+                "ip": "192.0.2.21",
+                "port": 5060
+              },
+              "status": "ESTABLISHED"
+            }
+          ]
+        }
+      },
+      "site": "Brace Yourself Dental",
+      "tags": [
+        "dental",
+        "lab"
+      ]
+    }
+  ],
+  "alerts": {
+    "items": [
+      {
+        "id": "demo-alert-1",
+        "device_id": "caller",
+        "label": "BYD-CALLER",
+        "message": "Machine is offline",
+        "severity": "warning",
+        "key": "offline",
+        "acknowledged": null,
+        "resolved": null,
+        "created": 1790088424.147902
+      },
+      {
+        "id": "demo-alert-2",
+        "device_id": "server",
+        "label": "BYD-SERVER",
+        "message": "Disk space below policy threshold",
+        "severity": "warning",
+        "key": "disk",
+        "acknowledged": 1790091964.147902,
+        "resolved": null,
+        "created": 1790091124.147902
+      }
+    ],
+    "counts": {
+      "active": 2,
+      "unacknowledged": 1
+    }
+  },
+  "jobs": [
+    {
+      "id": "demo-job-0",
+      "kind": "command",
+      "device_id": "frontdesk",
+      "status": "complete",
+      "created": 1790071200,
+      "result": {
+        "exit_code": 0,
+        "stdout": "Patient charts: 240\nAppointments: 660\nImaging studies: 105\nIntegrity: OK\n",
+        "truncated": false
+      }
+    },
+    {
+      "id": "demo-job-1",
+      "kind": "files.download",
+      "device_id": "server",
+      "status": "complete",
+      "created": 1790070880,
+      "result": {
+        "exit_code": 0,
+        "stdout": "SHA-256 verified. Transfer complete.\n",
+        "truncated": false
+      }
+    },
+    {
+      "id": "demo-job-2",
+      "kind": "network.probe",
+      "device_id": "pbx",
+      "status": "complete",
+      "created": 1790070560,
+      "result": {
+        "exit_code": 0,
+        "stdout": "192.0.2.21 reachable, 1.8 ms\n",
+        "truncated": false
+      }
+    },
+    {
+      "id": "demo-job-3",
+      "kind": "command",
+      "device_id": "restored-server",
+      "status": "complete",
+      "created": 1790070240,
+      "result": {
+        "exit_code": 0,
+        "stdout": "Recovery application checks matched.\n",
+        "truncated": false
+      }
+    }
+  ],
+  "plans": [
+    {
+      "id": "demo-plan",
+      "name": "Brace Yourself Dental",
+      "spec": {
+        "router_prefix": "192.0.2.1/24",
+        "members": [
+          {
+            "source_device_id": "server",
+            "restored_device_id": "restored-server",
+            "backup_status": "succeeded",
+            "virt_id": "demo-vm-server"
+          },
+          {
+            "source_device_id": "pbx",
+            "restored_device_id": "restored-pbx",
+            "backup_status": "succeeded",
+            "virt_id": "demo-vm-pbx"
+          },
+          {
+            "source_device_id": "frontdesk",
+            "restored_device_id": "restored-frontdesk",
+            "backup_status": "succeeded",
+            "virt_id": "demo-vm-frontdesk"
+          }
+        ]
+      }
+    }
+  ],
+  "runs": [
+    {
+      "id": "demo-run",
+      "status": "passed",
+      "phase": "complete",
+      "created": 1790070600,
+      "state": {
+        "name": "Brace Yourself Dental",
+        "members": [
+          {
+            "source_device_id": "server",
+            "restored_device_id": "restored-server",
+            "backup_status": "succeeded",
+            "virt_id": "demo-vm-server"
+          },
+          {
+            "source_device_id": "pbx",
+            "restored_device_id": "restored-pbx",
+            "backup_status": "succeeded",
+            "virt_id": "demo-vm-pbx"
+          },
+          {
+            "source_device_id": "frontdesk",
+            "restored_device_id": "restored-frontdesk",
+            "backup_status": "succeeded",
+            "virt_id": "demo-vm-frontdesk"
+          }
+        ]
+      },
+      "report": {
+        "passed": true,
+        "members": [
+          {
+            "source_device_id": "server",
+            "passed": true,
+            "compared": true
+          },
+          {
+            "source_device_id": "pbx",
+            "passed": true,
+            "compared": true
+          },
+          {
+            "source_device_id": "frontdesk",
+            "passed": true,
+            "compared": true
+          }
+        ]
+      }
+    }
+  ],
+  "templates": [
+    {
+      "id": "starter-windows-health",
+      "name": "Windows health check",
+      "platform": "windows",
+      "category": "script",
+      "description": "Uptime, free space and failed services.",
+      "timeout": 60,
+      "parameters": [],
+      "script": "Get-CimInstance Win32_OperatingSystem | Select-Object Caption,LastBootUpTime,FreePhysicalMemory\nGet-Volume | Select-Object DriveLetter,SizeRemaining,Size\nGet-Service | Where-Object {$_.StartType -eq 'Automatic' -and $_.Status -ne 'Running'} | Select-Object Name,Status"
+    },
+    {
+      "id": "starter-linux-health",
+      "name": "Linux health check",
+      "platform": "linux",
+      "category": "script",
+      "description": "Uptime, storage and failed systemd services.",
+      "timeout": 60,
+      "parameters": [],
+      "script": "set -eu\nuptime\ndf -h\nsystemctl --failed --no-pager\n"
+    },
+    {
+      "id": "starter-windows-msi",
+      "name": "Deploy a Windows MSI",
+      "platform": "windows",
+      "category": "software",
+      "description": "Download over HTTPS, verify SHA-256, install silently without rebooting.",
+      "timeout": 1800,
+      "parameters": [
+        {
+          "name": "URL",
+          "label": "HTTPS installer URL",
+          "default": "",
+          "required": true
+        },
+        {
+          "name": "SHA256",
+          "label": "Installer SHA-256",
+          "default": "",
+          "required": true
+        }
+      ],
+      "script": "$url=$env:SPECK_PARAM_URL\nif(-not $url.StartsWith('https://')){throw 'Use an HTTPS installer URL'}\nif($env:SPECK_PARAM_SHA256 -notmatch '^[a-fA-F0-9]{64}$'){throw 'Provide the installer SHA-256'}\n$file=Join-Path $env:TEMP ('speck-'+[Guid]::NewGuid()+'.msi')\ntry {\n Invoke-WebRequest -UseBasicParsing $url -OutFile $file\n if((Get-FileHash $file -Algorithm SHA256).Hash -ne $env:SPECK_PARAM_SHA256){throw 'Installer checksum mismatch'}\n $p=Start-Process msiexec.exe -ArgumentList \"/i `\"$file`\" /qn /norestart\" -Wait -PassThru\n if($p.ExitCode -notin @(0,3010)){throw \"Installer failed: $($p.ExitCode)\"}\n @{installed=$true;reboot_required=($p.ExitCode -eq 3010)} | ConvertTo-Json -Compress\n} finally {Remove-Item $file -ErrorAction SilentlyContinue}"
+    },
+    {
+      "id": "starter-linux-package",
+      "name": "Install a Linux package",
+      "platform": "linux",
+      "category": "software",
+      "description": "Install a named package from the configured apt or dnf repositories.",
+      "timeout": 1800,
+      "parameters": [
+        {
+          "name": "PACKAGE",
+          "label": "Package name",
+          "default": "",
+          "required": true
+        }
+      ],
+      "script": "set -eu\ncase \"$SPECK_PARAM_PACKAGE\" in ''|*[!a-zA-Z0-9+_.:-]*) echo 'Invalid package name' >&2; exit 1;; esac\ncase \"$SPECK_PARAM_PACKAGE\" in -*) exit 1;; esac\nexport DEBIAN_FRONTEND=noninteractive\nif command -v apt-get >/dev/null; then\n apt-get update -qq\n apt-get install -y --no-remove -- \"$SPECK_PARAM_PACKAGE\"\nelif command -v dnf >/dev/null; then\n dnf install -y -- \"$SPECK_PARAM_PACKAGE\"\nelse echo 'This template requires apt or dnf' >&2; exit 1; fi"
+    }
+  ],
+  "patches": [
+    {
+      "device_id": "frontdesk",
+      "scanned": 1790092024.147902,
+      "report": {
+        "updates": [
+          {
+            "id": "demo-update",
+            "title": "Security intelligence update",
+            "version": "1.0",
+            "severity": "Security"
+          }
+        ],
+        "reboot_required": false
+      }
+    },
+    {
+      "device_id": "server",
+      "scanned": 1790092024.147902,
+      "report": {
+        "updates": [
+          {
+            "id": "demo-update",
+            "title": "Security intelligence update",
+            "version": "1.0",
+            "severity": "Security"
+          }
+        ],
+        "reboot_required": false
+      }
+    },
+    {
+      "device_id": "pbx",
+      "scanned": 1790092024.147902,
+      "report": {
+        "updates": [
+          {
+            "id": "demo-update",
+            "title": "OpenSSL security update",
+            "version": "1.0",
+            "severity": "Security"
+          }
+        ],
+        "reboot_required": false
+      }
+    },
+    {
+      "device_id": "exam",
+      "scanned": 1790092024.147902,
+      "report": {
+        "updates": [
+          {
+            "id": "demo-update",
+            "title": "Security intelligence update",
+            "version": "1.0",
+            "severity": "Security"
+          }
+        ],
+        "reboot_required": false
+      }
+    },
+    {
+      "device_id": "caller",
+      "scanned": 1790092024.147902,
+      "report": {
+        "updates": [
+          {
+            "id": "demo-update",
+            "title": "OpenSSL security update",
+            "version": "1.0",
+            "severity": "Security"
+          }
+        ],
+        "reboot_required": false
+      }
+    },
+    {
+      "device_id": "restored-server",
+      "scanned": 1790092024.147902,
+      "report": {
+        "updates": [
+          {
+            "id": "demo-update",
+            "title": "Security intelligence update",
+            "version": "1.0",
+            "severity": "Security"
+          }
+        ],
+        "reboot_required": false
+      }
+    },
+    {
+      "device_id": "restored-pbx",
+      "scanned": 1790092024.147902,
+      "report": {
+        "updates": [
+          {
+            "id": "demo-update",
+            "title": "OpenSSL security update",
+            "version": "1.0",
+            "severity": "Security"
+          }
+        ],
+        "reboot_required": false
+      }
+    },
+    {
+      "device_id": "restored-frontdesk",
+      "scanned": 1790092024.147902,
+      "report": {
+        "updates": [
+          {
+            "id": "demo-update",
+            "title": "Security intelligence update",
+            "version": "1.0",
+            "severity": "Security"
+          }
+        ],
+        "reboot_required": false
+      }
+    }
+  ]
+}

@@ -1692,3 +1692,8 @@ td summary {
 #content > h2:not(:first-child) {
   margin-top: 28px;
 }
+
+/* Keep remote text-entry controls usable with a phone keyboard open. */
+.remote-keyboard-keys { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.remote-keyboard-keys button { min-height: 44px; justify-content: center; }
+#send-text { width: 100%; justify-content: center; }

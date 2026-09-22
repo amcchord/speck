@@ -1,0 +1,52 @@
+name: Speck
+options:
+  bundleIdPrefix: com.speckrmm
+  deploymentTarget:
+    iOS: '18.0'
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    DEVELOPMENT_TEAM: 7PTN7E8EDS
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 2
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    TARGETED_DEVICE_FAMILY: '1,2'
+targets:
+  Speck:
+    type: application
+    platform: iOS
+    sources: [Speck]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.speckrmm.ios
+        INFOPLIST_FILE: Speck/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+  SpeckTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [SpeckTests]
+    dependencies:
+      - target: Speck
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+  SpeckUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [SpeckUITests]
+    dependencies:
+      - target: Speck
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Speck:
+    build:
+      targets:
+        Speck: all
+    test:
+      targets: [SpeckTests, SpeckUITests]

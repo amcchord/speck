@@ -1,5 +1,7 @@
 # Speck screenshots
 
+**[iPhone & iPad](ios/README.md)**: native fleet, commands, recovery and adaptive layouts.
+
 **[Loading states](loading/README.md)**: immediate progress on desktop, mobile and machine details.
 
 **[Desktop downloads](downloads/README.md)**: installers in the console and on the sign-in page.

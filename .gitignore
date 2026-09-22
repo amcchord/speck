@@ -24,3 +24,12 @@ scratch/
 
 /worktrees/
 /desktop/dist/
+
+# Apple build output and local signing material.
+/ios/build/
+/ios/*.xcarchive/
+*.xcuserstate
+xcuserdata/
+*.p8
+*.p12
+*.mobileprovision
