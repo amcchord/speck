@@ -323,3 +323,24 @@ No backend restart, endpoint/preview-policy operation, agent update or recovery
 action occurred. Rollback and private evidence paths are in the machine-overview
 operations record. Source is retained locally; GitHub integration was not part
 of this deployment. The requested production rollout is complete.
+
+## 2026-09-22 — Preview persistence, capture recovery and desktop presence
+
+`codex/preview-reliability` / PR #10 fixes indefinitely loading previews, isolates
+native capture behind an eight-second process limit, and retains a single encrypted
+checkpoint every five minutes. Opt-out/archive/revoke delete the live and saved
+image; clone identities remain separate. Browser requests are bounded and recover
+without mistaking the loading logo for a screen. The open machine pane previously
+stopped Fleet polling: it now updates health/user/desktop/app in place. Agent 0.2.2
+reports Windows sessions and Linux logind users independently of the foreground
+window, with explicit historical app timestamps after disconnect.
+
+Deployed backed-up backend `adc694d`, static/agent `4089388`, and Linux discovery
+`c175646`. All five originals are online with unchanged enrollment identities,
+accounts, provider settings and recovery associations. All three Windows originals
+passed live current/disconnected presence checks; exam preview checkpoints advanced
+after five minutes and survived loss of live memory. Validation: 82 backend, 28 web,
+72 browser, seven Linux and four Windows tests plus builds/GitHub checks. Headless
+Linux has no graphical capture acceptance. See the preview operations note for
+rollback paths and exact qualification. No provider recovery, patch deployment,
+password change or resource cleanup was performed.

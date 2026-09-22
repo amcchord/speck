@@ -5,6 +5,11 @@ remote-session startup fixes and **passkey sign-in**. Enroll in Settings → Acc
 & access, or Account → Passkeys on iOS. Password/authenticator login remains
 available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
 
+- **Preview and desktop presence**: previews recover from timeouts and retain one
+  encrypted checkpoint every five minutes. All five original agents run 0.2.2.
+  The open pane refreshes user/desktop/app details; disconnected users and the last
+  app stay explicit. Live Windows capture, five-minute saving, saved fallback and
+  in-place presence changes passed. [Details](../operations/preview-reliability.md).
 - **Slide restore cleanup**: runtime `e5d37c6` tracks separate restored endpoints
   through Slide VM IDs and interface MACs. Repeated confirmed deletion, an
   offline endpoint and a five-minute grace period trigger reversible archiving.
@@ -57,7 +62,7 @@ the restore-cleanup release also updated and restarted the backend after a
 consistent database/runtime/configuration backup. Existing login, agents, installation tokens,
 original/restore identities, Slide bindings, provider secrets and recovery records
 were verified preserved. Private evidence and rollback records: `output/passkeys/`.
-Endpoint agents remain 0.2.0 and use unattended service credentials.
+Endpoint agents now run 0.2.2 and retain their unattended service credentials.
 
 Existing management/recovery capabilities and qualification limits are documented
 in [MVP review](../MVP-REVIEW.md), [management rollout](../operations/management-rollout.md),

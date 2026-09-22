@@ -328,3 +328,27 @@ device, installation and protected-agent identities. The live Slide controls and
 five-machine Fleet were checked; a subsequent **Check now** was a no-op.
 Private proof stays outside this public repository. Draft integration PR:
 https://github.com/amcchord/speck/pull/9.
+
+## Preview reliability and desktop presence — September 22, 2026
+
+PR #10 combines bounded capture/request recovery, an encrypted five-minute saved
+preview, and corrected user/desktop/app reporting. Server runtime `adc694d`, web
+runtime `4089388` and final Linux discovery `c175646` are deployed. All five
+original agents run 0.2.2 with their existing identities. The machine overview and
+restore-cleanup changes already in production are preserved in this integration.
+
+The open machine pane now continues inventory refreshes every 15 seconds without
+resetting its preview. Windows signed-in users come from session enumeration;
+Linux uses logind with a login-record fallback. Current and historical apps are
+separate, and a disconnected user remains visibly signed in. Live checks on all
+three Windows originals verified current desktop/user/app/preview and subsequent
+in-place disconnected/last-app updates. The exam machine passed a real five-minute
+save interval and saved fallback; all saved images loaded with empty process memory.
+
+82 backend, 28 web, 72 browser scenarios, seven Linux and four Windows agent tests
+pass. Linux graphical capture remains unverified on the headless lab hosts.
+Release/rollback details, privacy behavior and synthetic captures:
+`docs/operations/preview-reliability.md`. Private proof: the preview-reliability
+worktree's ignored `output/preview-reliability/`. Refresh the console once to load
+the new asset bundle; no operator desktop or iOS package update is required for
+the hosted console changes.

@@ -59,3 +59,43 @@ are preserved. The Fleet app column prefixes historical values with “Last:”.
 A missing foreground window does not imply there is no signed-in user or desktop.
 An unavailable connected desktop is labeled “locked or unavailable”, since session
 connection alone cannot distinguish every lock/display/helper condition.
+
+## Production rollout — September 22, 2026
+
+The server/checkpoint rollout used `adc694d`, with database, configuration, code,
+web and download backups at
+`/var/lib/speck-rollback/20260922T220446Z-preview-adc694d`.
+Preflight found no active jobs, recovery runs or remote sessions. Database
+integrity, device/installation identities, accounts, provider settings, recovery
+records, preview policies and environment fingerprints matched afterward.
+
+The user/desktop/app follow-up deployed static runtime `4089388` and agent 0.2.2;
+Linux session discovery follows `c175646`. The second web/download rollback is
+`/var/lib/speck-rollback/20260922T222329Z-presence-4089388`.
+This follow-up preserved the backend process and environment. All 33 published
+web/agent files matched their built bytes; Linux binaries/manifests were then
+updated for logind discovery. All five original agents are online on 0.2.2 and
+retain their enrollment identities. Endpoint rollback binaries remain in their
+private `preview-20260922` rollback directories.
+
+Live WebKit acceptance verified capture on all three Windows originals, signed-in
+users independent of foreground reporting, the current app, and a transition to
+disconnected users and a timestamped last app in the still-open pane. The exam
+machine passed a full five-minute checkpoint advance and saved fallback after
+disconnect. All three saved JPEGs could also be decrypted/read in an independent
+server process with empty live memory. Linux originals report no signed-in
+sessions instead of treating an absent utmp file as unknown. Linux graphical
+capture remains unverified on these headless hosts.
+
+Final checks: 82 backend tests, Ruff, 28 web unit tests, 72 Chromium/WebKit UI
+scenarios, seven Linux Go tests and four Windows Go tests, Windows/Linux builds
+and GitHub checks. One verification tunnel interrupted by an early agent upgrade
+was explicitly recorded as unknown after confirming no live remote session;
+no user session was terminated. Verification remote sessions were closed and
+verification logins signed out. Private evidence is in the task worktree's
+`output/preview-reliability/`; public screenshots use synthetic fixtures only.
+
+For rollback, restore the backed-up web/download tree and prior endpoint binaries.
+Rolling back the backend additionally requires its matching database/configuration
+snapshot and a maintenance preflight. Preserve the encryption key: saved previews
+use the same protected server key as existing private settings.
