@@ -13,7 +13,7 @@ struct ScreenPreviewView: View {
   var enabled: Bool { device.raw["preview"]["enabled"].bool }
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      Toggle("Live screen preview", isOn: Binding(get: { enabled }, set: updatePolicy))
+      Toggle("Live screen preview", isOn: Binding(get: { enabled }, set: { updatePolicy($0) }))
         .disabled(busy || !device.approved || device.revoked)
       if enabled {
         if let frame, phase == .active {
