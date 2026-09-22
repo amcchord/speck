@@ -47,7 +47,7 @@ and detailed status reports. The operator desktop app is a separate package.
 Agent 0.2.2 refreshes desktop metadata on each 15-second heartbeat rather than
 waiting for the slower inventory collection. Windows signed-in users come from
 Terminal Services session enumeration, independently of foreground-window capture;
-disconnected users remain signed in. Linux uses its login records. The helper
+disconnected users remain signed in. Linux uses logind sessions with login records as a fallback. The helper
 reports desktop availability independently and atomically writes app observations.
 A disconnected/locked or stale helper cannot label an old app current. The last
 observed app remains available with its original timestamp. Session telemetry is

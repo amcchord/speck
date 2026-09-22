@@ -117,6 +117,17 @@ func loggedInSessions() ([]DesktopSession, error) {
 	result := []DesktopSession{}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
+	// Modern systemd installations may omit utmp entirely. Ask logind first;
+	// retain utmp as a fallback on other supported Linux distributions.
+	if out, code, err := command(ctx, "loginctl", "list-sessions", "--no-legend", "--no-pager"); err == nil && code == 0 {
+		for _, line := range strings.Split(out, "\n") {
+			fields := strings.Fields(line)
+			if len(fields) >= 3 {
+				result = append(result, DesktopSession{User: fields[2], Session: fields[0], State: "signed_in"})
+			}
+		}
+		return result, nil
+	}
 	users, err := host.UsersWithContext(ctx)
 	for _, u := range users {
 		result = append(result, DesktopSession{User: u.User, Session: u.Terminal, State: "signed_in"})

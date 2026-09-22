@@ -35,7 +35,7 @@ already signed-in users; the logon task covers subsequent sessions.
 
 The machine pane and Fleet refresh every 15 seconds while the pane is open.
 Windows session enumeration reports signed-in users even when disconnected;
-Linux reports its login records. Desktop availability and the foreground app are
+Linux uses logind sessions, with login records as a fallback. Desktop availability and the foreground app are
 separate observations. When a session disconnects or its helper stops reporting,
 the last observed app remains timestamped and is labeled historical. “Last:” in
 the Fleet app column means it is not a current foreground app. Agent 0.2.2 is
