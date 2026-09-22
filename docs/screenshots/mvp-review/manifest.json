@@ -36,6 +36,13 @@
       "file": "schedules-mobile.png",
       "sha256": "be7f4acd74f4b62dc8301efb293e8a3243a87d16e45ce45df9d686848ed19a77",
       "bytes": 41640
+    },
+    {
+      "file": "safari-fleet.png",
+      "sha256": "e01d91ad30f7bb0e56601d92737fa1cdc4efe4ed043068e18a4fab7b24f4513d",
+      "bytes": 101454,
+      "dimensions": "4718592x4292935744",
+      "method": "Native Safari window capture; synthetic local fleet; original PNG bytes"
     }
   ]
 }

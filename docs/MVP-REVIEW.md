@@ -52,8 +52,8 @@ The desktop-quality branch owns native clients and remote interaction testing.
 
 Local validation: **35 Python tests passed**, Ruff passed, TypeScript/Vite build
 passed. The new tests use real temporary SQLite databases and synthetic Windows
-and Linux telemetry. They do not claim execution of new schedules on a live
-Windows/Linux agent. The existing agent binaries and protocols were not changed.
+and Linux telemetry. The existing agent binaries and protocols were not changed. Live deployment
+acceptance subsequently completed scheduled update scans on Windows and Linux.
 
 Browser review used an isolated local server and synthetic machines/accounts.
 Checked 1280×720 desktop and 390×844 mobile layouts, alert acknowledgement,
@@ -66,23 +66,29 @@ audit tables scroll inside their container. [Screenshots and provenance](screens
 ## MVP verdict and remaining gates
 
 This branch closes the main operational gaps for a **single-organization RMM MVP
-candidate**. It is not a production-release certification. No live backend or
-endpoint changes were made by this task. The parent desktop-quality task completed the Desktop 0.2.1 release; its main
+candidate**. The management release was deployed September 22, 2026 from `92831ae`
+with consistent private database/data/config/code backups. The parent desktop-quality
+task completed the Desktop 0.2.1 release; its main
 commit `2a4068a` is merged into this branch. Native platform limits remain in
 [desktop qualification](desktop-quality.md).
 
-Before calling the combined release ready:
+GitHub CI passed. Combined local validation passed 35 Python tests, 7 microphone
+lifecycle tests, 10 desktop tests, Ruff and TypeScript/Vite. Existing Safari login
+survived deployment. Scheduled native scans completed on the lab Windows exam PC
+and Linux caller. Disposable account/agent tests verified role and session boundaries,
+TOTP/recovery replay protection, alerts/acknowledgement/recovery, maintenance,
+archive/restore, credential revocation and audit. All QA schedules are inactive;
+test accounts are disabled and test installations revoked. Original and restored
+identities, credentials, Slide bindings and recovery state matched their preflight
+fingerprints. [Deployment evidence and rollback](operations/management-rollout.md).
 
-1. Complete GitHub CI and review this branch. Local combined validation passed
-   35 Python tests, 7 microphone lifecycle tests, 10 desktop tests, Ruff and the
-   TypeScript/Vite build after integrating `2a4068a`.
-2. Deploy with a consistent database/data/key backup, then validate the management
-   flows on disposable Windows and Linux endpoints, including restart behavior.
-3. Complete real Windows selected-patch and MSI installation acceptance; update
+Remaining release gates:
+
+1. Complete real Windows selected-patch and MSI installation acceptance; update
    inventory alone does not prove successful application.
-4. Complete the cloud Slide recovery/external connectivity matrix before claiming
+2. Complete the cloud Slide recovery/external connectivity matrix before claiming
    all recovery destinations work. Existing local recovery evidence remains valid.
-5. Enable two-factor for real operators and agree on account recovery/retention.
+3. Enable two-factor for real operators and agree on account recovery/retention.
    Organization-wide mandatory MFA, SSO and independent security review remain open.
 
 Next product increments: installed-software inventory, external alert escalation,

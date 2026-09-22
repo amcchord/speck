@@ -118,8 +118,10 @@ and a supported cleanup workflow are still release follow-ups.
 
 ## Deployment and rollback
 
-The integration owner coordinates deployment after the desktop-quality branch.
-This branch has not changed the live server or lab endpoints.
+Deployed September 22, 2026 from `92831ae`, after the Desktop 0.2.1 release.
+Live acceptance covered scheduled Windows/Linux update scans, role boundaries,
+TOTP/recovery codes, synthetic service alert recovery, retirement and audit.
+See the [deployment record](operations/management-rollout.md).
 
 1. Use one Uvicorn worker: the command/alert scheduler uses durable SQL claims,
    but existing remote sessions and preview frames are process-local. Multiple

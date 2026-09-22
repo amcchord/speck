@@ -123,3 +123,18 @@ Only static web assets were deployed for this update, with rollback retained.
 No backend restart, agent identity change or recovery cleanup occurred. Native
 artifacts and private evidence are under `output/desktop-quality/`. The separate
 MVP task owns backend feature work in its isolated worktree; coordinate releases.
+
+## Management MVP rollout — September 22, 2026
+
+`codex/mvp-review` / PR #1 deploys persistent monitoring, reviewed scheduled scans
+and templates, endpoint organization/retirement, admin/operator/viewer roles,
+optional TOTP and filtered audit. Source `92831ae` also fixes Safari select styling
+and the malformed Ctrl + Alt + Del option. Existing operator credentials are unchanged.
+
+Live Windows/Linux scheduled scans and disposable account/agent acceptance passed.
+All original/clone identities, Slide bindings and recovery resources were preserved;
+QA accounts/installations are disabled/revoked and QA schedules inactive. Matching
+code/data/config/dependency backups remain private on the server. See
+`docs/operations/management-rollout.md`, `docs/progress/CURRENT.md` and the public
+synthetic management/Safari screenshots. Windows patch/MSI installation, cloud
+recovery and remaining native runtime checks retain their documented limits.

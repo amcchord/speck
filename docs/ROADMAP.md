@@ -32,5 +32,6 @@
 - [ ] SSO, required organization-wide MFA, signed automatic agent updates and security review.
 - [ ] Installed-software inventory, external alert escalation and supported retention cleanup.
 
-The management additions are validated locally and await coordinated deployment;
+The management additions are deployed and passed live Windows/Linux scan and
+management acceptance on September 22, 2026;
 see [MVP review](MVP-REVIEW.md) and the [management guide](management.md).

@@ -22,3 +22,13 @@ schedule, filter audit history, open device policies and account controls, and s
 in as a viewer to verify management actions are absent. Two-factor cryptography,
 code replay/recovery, permissions and revocation were tested through the backend
 test suite; no real authenticator, operator credential or endpoint was changed.
+
+## Safari select verification
+
+[![Native Safari fleet filters](safari-fleet.png)](safari-fleet.png)
+
+Native Safari, September 22: branded closed controls, native option menus, mouse
+selection and keyboard selection verified against the local synthetic fleet. The
+live Windows remote toolbar was also visually checked after deployment; its select
+height, colors and arrow now match the adjacent buttons. Native menu inspection
+confirmed the repaired Ctrl + Alt + Del option. Remote screenshots remain private.

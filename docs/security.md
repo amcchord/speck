@@ -1,18 +1,20 @@
 # Security model
 
-Speck is a single-administrator control plane with privileged endpoint agents.
-An administrator can execute commands with the agent service's privileges,
+Speck is a single-organization control plane with privileged endpoint agents.
+Administrators and operators can execute commands with the agent service's privileges,
 read/write endpoint files, and access configured remote sessions. It is intended
 for a controlled lab or small trusted deployment, not as a multi-tenant MSP
-security boundary. MFA, per-device RBAC, SSO, approval queues, signed automatic
-agent updates and an external security review are not implemented yet.
+security boundary. Admin/operator/viewer roles and optional authenticator MFA are
+implemented; roles apply across the organization. Per-device RBAC, SSO, mandatory
+MFA, general approval queues, signed automatic agent updates and an external
+security review remain follow-ups. See [account controls](management.md).
 
 - Passwords are hashed with Argon2id. Bootstrap only creates the first account.
 - Browser sessions use random opaque tokens, stored hashed in SQLite, with a
   12-hour lifetime and HttpOnly/Secure/SameSite=Strict cookies under HTTPS.
 - State-changing browser requests require the configured Origin and CSRF token.
   Browser WebSocket sessions require the same Origin, cookie and session owner.
-- Login attempts are rate limited. Run behind a reverse proxy on loopback and
+- Login attempts are rate limited per IP and account. Run behind a reverse proxy on loopback and
   trust proxy headers only from that proxy.
 - Enrollment tokens expire in 15 minutes and can be used once. Agent tokens are
   random and stored hashed on the server. Endpoint configuration is restricted
@@ -27,7 +29,7 @@ agent updates and an external security review are not implemented yet.
   recovery candidate. Hardware identity is a collision-avoidance measure, not
   cryptographic attestation. An attacker controlling an enrolled machine can
   imitate that installation's hardware identifiers.
-- Remote sessions are bound to one administrator and one device, single-use at
+- Remote sessions are bound to one authorized operator account and one device, single-use at
   the browser side, and capped at two hours. Logging out closes that user's
   active sessions. Clipboard text is transferred only within the session.
 - The native RDP file contains no password. It connects directly and therefore
@@ -69,3 +71,23 @@ surface is bounded plain-text clipboard access and key-macro events, not shell o
 filesystem access. Shared clipboard is off until enabled in each session. The
 application has no password-bearing deep links and never skips TLS validation.
 See [operations](operations.md) for preview-build and platform verification limits.
+
+## Management authorization and rollback
+
+Viewer accounts can read inventory, alerts and audit, and manage their own account.
+They cannot access remote sessions, previews, files, scripts or command output.
+Only admins manage accounts and provider credentials. Disabling an account or
+changing its role revokes its sessions and closes remote connections.
+
+TOTP secrets are encrypted with the server key; recovery codes are hashed, single
+use and never audited in plaintext. MFA is opt-in; deployments must decide their
+operator enrollment and account-recovery policy. Accepted TOTP steps cannot replay.
+
+Archive stops management while retaining device/clone identities and history.
+Installation revocation requires confirmation of every shared original/restored
+instance. Schedules pin reviewed targets and template revisions, skip missed or
+unavailable targets, and never automatically replay uncertain work.
+
+Rollback to pre-role code requires its matching database snapshot: old code does
+not enforce these roles. Preserve data, transfers and encryption keys together,
+and account for any jobs/provider changes since the snapshot before restoration.
