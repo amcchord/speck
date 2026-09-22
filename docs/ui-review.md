@@ -130,3 +130,15 @@ Synthetic microphone recording also identified a false idle timeout; the UI now
 shows readiness while waiting for the remote app. Physical call quality remains
 unverified. The Windows setup wizard now shares Speck's wordmark and orbital art;
 the [native gallery](screenshots/v0.2.1/README.md) also records the remote workspace.
+
+## Compact Fleet — September 22, 2026
+
+The header now fits title, totals and actions together; the table starts 133 pixels
+sooner at a 1280-pixel viewport. Standard rows are 46 pixels tall (previously
+80.75), with recognizable Windows/Linux marks, one-line names, separate CPU/RAM
+values and labeled icon controls. Additional fields remain in the drawer.
+Native Safari and 320/390/1024/1280-pixel Chromium layouts passed visual review.
+Mobile cards retain 44-pixel controls. Returning to Fleet keeps cached inventory,
+filters, selection and scroll while refreshing; errors retain the previous table.
+See [validation](operations/compact-fleet.md) and the
+[unretouched gallery](screenshots/compact-fleet/README.md).

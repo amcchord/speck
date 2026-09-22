@@ -14,6 +14,7 @@ import { loadingState, createViewScope, StaleViewError } from "./loading";
 import { useReliableImageDecoder, hasVisiblePixels, watchRemoteStartup } from "./remote-startup";
 import "./loading.css";
 import "./ui.css";
+import "./fleet.css";
 import { remoteTextKeys } from "./remote-input";
 
 const viewScope = createViewScope();
@@ -34,6 +35,16 @@ let fleetPlatform = "all",
   fleetSort = "name",
   fleetPage = 0,
   showPreviews = false;
+let fleetCache: Item[] | null = null;
+let fleetScroll = { x: 0, y: 0, table: 0 };
+function clearFleetState() {
+  fleet = [];
+  fleetCache = null;
+  fleetSelection.clear();
+  fleetQuery = ""; fleetFilter = "all"; fleetPlatform = "all"; fleetSort = "name";
+  fleetPage = 0; showPreviews = false;
+  fleetScroll = { x: 0, y: 0, table: 0 };
+}
 let remoteCleanup = () => {};
 let remote: any = null,
   keyboard: any = null,
@@ -154,6 +165,7 @@ function disconnect() {
   keyboard = null;
 }
 function signedOut() {
+  clearFleetState();
   viewScope.reset();
   disconnect();
   csrf = "";
@@ -163,6 +175,7 @@ function signedOut() {
   app.innerHTML = `<main class="downloads-public"><header><a href="#signin" aria-label="Speck home">${wordmark()}</a><a class="secondary" href="#signin">Sign in ${icon("arrow")}</a></header><h1>Downloads</h1>${desktopDownloads(false)}</main>`;
 }
 function login() {
+  clearFleetState();
   viewScope.reset();
   disconnect();
   csrf = "";
@@ -287,7 +300,7 @@ function shell(title: string, subtitle: string) {
     )
     .join(
       "",
-    )}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace"><header><div><h1>${esc(title)}</h1>${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><button id="refresh" class="secondary" aria-label="Refresh">${icon("refresh")}<span>Refresh</span></button></div></header><section id="content" tabindex="-1"></section></main>`;
+    )}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : ""}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><button id="refresh" class="secondary" aria-label="Refresh" title="Refresh">${icon("refresh")}${page === "fleet" ? "" : "<span>Refresh</span>"}</button>${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div></header><section id="content" tabindex="-1"></section></main>`;
   document.querySelectorAll<HTMLElement>("[data-page]").forEach(
     (el) =>
       (el.onclick = () => {
@@ -308,6 +321,7 @@ function shell(title: string, subtitle: string) {
     login();
   });
   on("refresh", render);
+  if (page === "fleet") on("add", enrollmentDialog);
 }
 function content(html: string) {
   const el = document.getElementById("content");
@@ -324,6 +338,9 @@ function loading(label: string) {
   document.getElementById("content")?.setAttribute("aria-busy", "true");
 }
 async function render() {
+  if (page === "fleet" && document.getElementById("fleet-rows")) {
+    fleetScroll = { x: scrollX, y: scrollY, table: document.querySelector(".fleet-table-wrap")!.scrollLeft };
+  }
   viewScope.reset();
   disconnect();
   document
@@ -428,19 +445,38 @@ const management = createManagement({
   refresh: render,
 });
 async function renderFleet() {
-  loading("Loading fleet…");
+  if (!fleetCache) loading("Loading fleet…");
+  else viewScope.reset();
   if (role === "viewer") {
     showPreviews = false;
     fleetSelection.clear();
   }
-  fleet = await api("/devices");
-  fleetSelection.forEach((id) => {
-    if (!fleet.some((d) => d.id === id)) fleetSelection.delete(id);
-  });
-  content(`<div class="fleet-summary"><span><i class="status-dot"></i><b>${fleet.filter((d) => d.online).length}</b> online</span><span><b>${fleet.length}</b> machines</span><span><b>${fleet.filter((d) => !d.approved).length}</b> need review</span><button id="add" class="primary">${icon("plus")} Add a device</button></div>
-  <div class="fleet-toolbar"><div class="search-field">${icon("search")}<input id="fleet-search" aria-label="Search devices" placeholder="Search machines, sites, tags or apps" value="${esc(fleetQuery)}"></div><select id="fleet-filter" aria-label="Filter status"><option value="all">All statuses</option><option value="online">Online</option><option value="review">Needs review</option><option value="offline">Offline</option></select><select id="fleet-os" aria-label="Filter operating system"><option value="all">All systems</option><option value="windows">Windows</option><option value="linux">Linux</option></select><select id="fleet-sort" aria-label="Sort machines"><option value="name">Name A–Z</option><option value="cpu">CPU high–low</option><option value="memory">Memory high–low</option><option value="seen">Last seen</option></select><label class="check preview-toggle"><input id="fleet-previews" type="checkbox" ${showPreviews ? "checked" : ""}> Live previews</label></div>
-  <div id="bulk-actions" class="bulk-actions"></div><div class="fleet-table-wrap"><table class="fleet-table"><thead><tr><th><input id="select-page" type="checkbox" aria-label="Select machines on this page"></th><th>Machine</th><th>Status</th><th>Active app</th><th>CPU / RAM</th><th>Network</th><th class="preview-column" ${showPreviews ? "" : "hidden"}>Live screen</th><th class="fleet-actions-head">Connect</th></tr></thead><tbody id="fleet-rows"></tbody></table></div><div class="fleet-pagination"><span id="fleet-count"></span><div><button id="fleet-prev" class="secondary">Previous</button><button id="fleet-next" class="secondary">Next</button></div></div>`);
-  on("add", enrollmentDialog);
+  const hadCache = fleetCache !== null;
+  if (fleetCache) fleet = fleetCache;
+  const refresh = document.getElementById("refresh") as HTMLButtonElement;
+  refresh.disabled = true;
+  refresh.setAttribute("aria-busy", "true");
+  refresh.title = "Updating machines…";
+  if (hadCache) drawFleet();
+  try {
+    const updated = await api("/devices");
+    fleet = updated;
+    fleetCache = updated;
+    if (hadCache) renderFleetRows();
+    else drawFleet();
+  } catch (err) {
+    if (err instanceof StaleViewError || !hadCache) throw err;
+    const summary = document.getElementById("fleet-summary");
+    summary?.insertAdjacentHTML("beforeend", '<span class="fleet-stale" role="status" title="Showing cached machines. Use Refresh to try again.">Refresh unavailable</span>');
+  } finally {
+    refresh.disabled = false;
+    refresh.removeAttribute("aria-busy");
+    refresh.title = "Refresh";
+  }
+}
+function drawFleet() {
+  content(`<div class="fleet-toolbar"><div class="search-field">${icon("search")}<input id="fleet-search" aria-label="Search devices" placeholder="Search machines, sites, tags or apps" value="${esc(fleetQuery)}"></div><select id="fleet-filter" aria-label="Filter status"><option value="all">All statuses</option><option value="online">Online</option><option value="review">Needs review</option><option value="offline">Offline</option></select><select id="fleet-os" aria-label="Filter operating system"><option value="all">All systems</option><option value="windows">Windows</option><option value="linux">Linux</option></select><select id="fleet-sort" aria-label="Sort machines"><option value="name">Name A–Z</option><option value="cpu">CPU high–low</option><option value="memory">Memory high–low</option><option value="seen">Last seen</option></select><label class="check preview-toggle"><input id="fleet-previews" type="checkbox" ${showPreviews ? "checked" : ""}> Live previews</label></div>
+  <div id="bulk-actions" class="bulk-actions"></div><div class="fleet-table-wrap"><table class="fleet-table"><thead><tr><th><input id="select-page" type="checkbox" aria-label="Select machines on this page"></th><th class="machine-head" scope="col">Machine</th><th class="status-head" scope="col">Status</th><th class="app-head" scope="col">Active app</th><th class="util-head" scope="col">CPU</th><th class="util-head" scope="col">RAM</th><th class="network-head" scope="col">IP address</th><th class="preview-column" ${showPreviews ? "" : "hidden"}>Live screen</th><th class="fleet-actions-head">Connect</th></tr></thead><tbody id="fleet-rows"></tbody></table></div><div class="fleet-pagination"><span id="fleet-count"></span><div><button id="fleet-prev" class="secondary">Previous</button><button id="fleet-next" class="secondary">Next</button></div></div>`);
   (document.getElementById("fleet-filter") as HTMLSelectElement).value =
     fleetFilter;
   (document.getElementById("fleet-os") as HTMLSelectElement).value =
@@ -491,6 +527,10 @@ async function renderFleet() {
     renderFleetRows();
   });
   renderFleetRows();
+  const table = document.querySelector<HTMLElement>(".fleet-table-wrap")!;
+  table.scrollLeft = fleetScroll.table;
+  // Restore after layout, without a late callback scrolling a different page.
+  requestAnimationFrame(() => { if (table.isConnected) window.scrollTo(fleetScroll.x, fleetScroll.y); });
 }
 function primaryAddress(d: Item) {
   return (
@@ -527,17 +567,28 @@ function visibleFleet() {
     );
 }
 function renderFleetRows() {
+  fleetSelection.forEach((id) => {
+    if (!fleet.some((d) => d.id === id)) fleetSelection.delete(id);
+  });
+  const summary = document.getElementById("fleet-summary");
+  if (summary) summary.innerHTML = `<span><i class="status-dot"></i><b>${fleet.filter((d) => d.online).length}</b> online</span><span><b>${fleet.length}</b> machines</span><span><b>${fleet.filter((d) => !d.approved).length}</b> need review</span>`;
+  document.querySelector(".fleet-table")?.classList.toggle("with-previews", showPreviews);
   const rows = visibleFleet();
   fleetPage = Math.max(0, Math.min(fleetPage, Math.ceil(rows.length / 50) - 1));
   const shown = rows.slice(fleetPage * 50, fleetPage * 50 + 50);
   document.getElementById("fleet-rows")!.innerHTML =
     shown
-      .map(
-        (d) =>
-          `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name"><span><b>${esc(d.label)}</b><small>${esc(d.telemetry?.host?.platform || d.platform)}</small></span></button></td><td data-label="Status">${badge(!d.approved ? "Review" : d.online ? "Online" : "Offline")}<small>${d.online ? "Reporting now" : date(d.last_seen)}</small></td><td data-label="Active app" class="app-cell"><span title="${esc(d.telemetry?.active_app?.title || "")}">${esc(d.telemetry?.active_app?.process || "No desktop")}</span><small>${esc(d.telemetry?.active_app?.user || "")}</small></td><td data-label="CPU / RAM" class="util-cell"><span>${Number(d.telemetry?.cpu_percent || 0).toFixed(0)}% <small>CPU</small></span><span>${Number(d.telemetry?.memory?.usedPercent || 0).toFixed(0)}% <small>RAM</small></span></td><td data-label="Network" class="network-cell mono">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Live screen of ${esc(d.label)}"><span>${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "Waiting for desktop" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${d.remote_protocol === "ssh" ? "Open SSH" : "Screen control"}"><span>${d.remote_protocol === "ssh" ? "SSH" : "Screen"}</span></button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="Open ${d.platform === "windows" ? "PowerShell" : "shell"}"><span>Prompt</span></button></td></tr>`,
-      )
+      .map((d) => {
+        const os = d.telemetry?.host?.platform || d.platform;
+        const status = !d.approved ? "Review" : d.online ? "Online" : "Offline";
+        const active = d.telemetry?.active_app;
+        const screenAction = `${d.remote_protocol === "ssh" ? "Open SSH session" : "Screen control"} · ${d.label}`;
+        const shellAction = `Run ${d.platform === "windows" ? "PowerShell" : "shell command"} · ${d.label}`;
+        const usage = (value: any) => value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(0) + "%" : "—";
+        return `<tr data-row="${d.id}" class="${fleetSelection.has(d.id) ? "selected-row" : ""}"><td class="select-cell"><input type="checkbox" data-select="${d.id}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${d.approved ? "" : "disabled"}></td><td class="machine-cell"><button data-device="${d.id}" class="machine-name" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon" title="${esc(os)}">${icon(d.platform === "windows" ? "windows" : "linux")}</span><b>${esc(d.label)}</b></button></td><td data-label="Status" class="status-cell" title="Last report: ${date(d.last_seen)}">${badge(status)}</td><td data-label="App" class="app-cell"><span title="${esc(active ? [active.title, active.process, active.user].filter(Boolean).join(" · ") : "No interactive desktop reported")}">${esc(active?.process || "—")}</span></td><td data-label="CPU" class="util-cell cpu-cell">${usage(d.telemetry?.cpu_percent)}</td><td data-label="RAM" class="util-cell ram-cell">${usage(d.telemetry?.memory?.usedPercent)}</td><td data-label="IP address" class="network-cell mono" title="${esc(primaryAddress(d))}">${esc(primaryAddress(d))}</td>${showPreviews ? `<td class="screen-cell">${d.preview?.available ? `<button data-device="${d.id}" class="preview-thumb"><img loading="lazy" src="/api/devices/${d.id}/preview?t=${d.preview.captured_at}" alt="Live screen of ${esc(d.label)}"><span>${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${d.id}">${d.preview?.enabled ? "Waiting for desktop" : "Preview off"}</button>`}</td>` : ""}<td class="connect-cell"><button data-screen="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(d.remote_protocol === "ssh" ? "terminal" : "monitor")}</button><button data-terminal="${d.id}" class="quick-action" ${d.online && d.approved ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button></td></tr>`;
+      })
       .join("") ||
-    `<tr><td colspan="8"><div class="empty"><h3>No matching machines</h3><p>Try another search or filter.</p></div></td></tr>`;
+    `<tr class="fleet-empty-row"><td colspan="${showPreviews ? 9 : 8}"><div class="empty"><h3>No matching machines</h3><p>Try another search or filter.</p></div></td></tr>`;
   document.getElementById("fleet-count")!.textContent = rows.length
     ? `${fleetPage * 50 + 1}–${Math.min(rows.length, fleetPage * 50 + 50)} of ${rows.length} machines`
     : "0 machines";
@@ -906,6 +957,7 @@ async function renderRemotePage(id: string, attempt = 0) {
     `<main class="remote-workspace"><div class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a><h1>Remote workspace</h1></div><section class="remote-stage"><div class="remote-startup">${loadingState("Opening remote workspace…")}</div></section></main>`;
   try {
     fleet = await api("/devices");
+    fleetCache = fleet;
     const d = fleet.find((d) => d.id === id);
     if (!d) throw new Error("Machine not found");
     if (!d.remote_configured)
@@ -1593,6 +1645,7 @@ window.addEventListener("hashchange", () => {
 setInterval(async () => {
   if (
     !username ||
+    !fleetCache ||
     polling ||
     page !== "fleet" ||
     remote ||
@@ -1605,6 +1658,7 @@ setInterval(async () => {
   polling = true;
   try {
     fleet = await api("/devices");
+    fleetCache = fleet;
     if (document.getElementById("fleet-rows")) renderFleetRows();
   } catch {
   } finally {
