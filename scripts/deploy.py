@@ -52,7 +52,7 @@ caddy validate --config /etc/caddy/Caddyfile
 systemctl reload caddy
 nft -c -f /etc/nftables.conf
 nft -f /etc/nftables.conf
-systemctl enable nftables
+systemctl enable --now nftables
 printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\nPermitRootLogin prohibit-password\n' > /etc/ssh/sshd_config.d/00-speck.conf
 sshd -t
 systemctl reload ssh
