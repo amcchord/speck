@@ -30,6 +30,10 @@ def create_job(device_id, kind, payload, actor, timeout=60):
         state = conn.execute('SELECT d.approved,d.archived,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id WHERE d.id=?', (device_id,)).fetchone()
         if not state or not state['approved'] or state['archived'] or state['revoked']:
             raise HTTPException(409, 'This device is not manageable')
+        if kind in {'tunnel', 'shell'} and conn.execute(
+                'SELECT 1 FROM agent_updates WHERE device_id=? AND lease_until>?',
+                (device_id, time.time())).fetchone():
+            raise HTTPException(409, 'The agent is updating. Try connecting again shortly.')
         conn.execute('INSERT INTO jobs(id,device_id,kind,payload,status,created,deadline,actor) VALUES(?,?,?,?,?,?,?,?)',
                      (job_id, device_id, kind, seal(json.dumps(payload)), 'queued', time.time(), time.time() + timeout + 120, actor))
         audit(conn, actor, 'job.created', device_id, {'job_id': job_id, 'kind': kind})

@@ -55,8 +55,10 @@ SHA-256 manifest. Authenticode signing is not included in this initial release.
 
 Linux installs `SpeckAgent.service` and a desktop autostart helper. Windows
 installs `SpeckAgent` and an unprivileged logon task. The helper starts at the
-next sign-in. Headless servers need no helper. Binary updates are manual by
-rerunning the installer; the existing enrollment is preserved.
+next sign-in. Headless servers need no helper. Agents 0.3.1 and later automatically install signed releases while idle. Admins
+can pause this in Settings → Automatic updates. Older agents require one installer
+upgrade to bootstrap the updater; existing enrollment is preserved. See
+[agent releases and rollback](operations/agent-updates.md).
 
 ## Back up the server
 

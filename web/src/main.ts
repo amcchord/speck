@@ -1805,6 +1805,23 @@ async function renderSettings() {
     await renderSettings();
   });
   on("enrollment", enrollmentDialog);
+  if (role === "admin") {
+    const updates = await api("/agent-updates");
+    document
+      .querySelector(".settings-grid")!
+      .insertAdjacentHTML(
+        "beforeend",
+        `<article class="panel"><span class="eyebrow">AGENT UPDATES</span><h2>Automatic updates</h2><p>Keep Windows and Linux agents current with verified, signed releases. Updates wait for commands and remote sessions to finish.</p><label class="check"><input id="agent-updates-enabled" type="checkbox" ${updates.enabled ? "checked" : ""}> Automatically update agents</label><p>${updates.version ? `Published agent: <strong>${esc(updates.version)}</strong>` : "No agent release published yet."}</p><p>Agents reconnect after a brief service restart. If the new agent cannot reconnect, Speck attempts to restore the previous version.</p><button id="save-agent-updates" class="secondary">Save update policy</button><p>${(updates.devices || []).filter((d: Item) => d.status === "installing").length} updating · ${(updates.devices || []).filter((d: Item) => ["failed", "rollback_failed"].includes(d.status)).length} need attention</p></article>`,
+      );
+    on("save-agent-updates", async () => {
+      await api("/agent-updates", "PUT", {
+        enabled: (
+          document.getElementById("agent-updates-enabled") as HTMLInputElement
+        ).checked,
+      });
+      notify("Agent update policy saved");
+    });
+  }
   await ops.settingsPanel();
   await management.settingsPanel();
   if (role !== "admin") {

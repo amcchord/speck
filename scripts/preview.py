@@ -203,6 +203,7 @@ class Handler(BaseHTTPRequestHandler):
                     {"id": "preview-phone", "name": "Phone", "created": NOW - 3600, "last_used": None, "backed_up": True},
                 ],
                 "/api/devices": DEVICES,
+                "/api/agent-updates": {"enabled": True, "version": "0.3.1", "devices": []},
                 "/api/templates": [dict(t, builtin=True, revision=1) for t in STARTERS],
                 "/api/batches": [],
                 "/api/ai/settings": {"configured": True, "model": "gpt-5.4-mini"},

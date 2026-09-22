@@ -166,7 +166,8 @@ def enroll(body: Enroll):
                      'VALUES(?,?,?,?,?,?,?,?,?,1)', (device_id, installation_id, body.hardware_id, body.hostname,
                      row['label'], body.platform, body.arch, time.time(), time.time()))
         audit(conn, 'agent', 'device.enrolled', device_id)
-    return {'token': token, 'installation_id': installation_id, 'device_id': device_id}
+    from speck.agent_updates import public_key
+    return {'token': token, 'installation_id': installation_id, 'device_id': device_id, 'update_public_key': public_key()}
 
 
 class Checkin(BaseModel):
@@ -195,6 +196,8 @@ def checkin(body: Checkin, request: Request):
             device_id = device['id']
         conn.execute('UPDATE devices SET hostname=?,telemetry=?,last_seen=? WHERE id=?',
                      (body.hostname, telemetry, time.time(), device_id))
+        from speck.agent_updates import record_checkin
+        record_checkin(conn, device_id, body.telemetry)
     return {'ok': True, 'device_id': device_id, 'approved': bool(device and device['approved'] and not device['archived'])}
 
 
@@ -308,6 +311,9 @@ def next_job(device=Depends(require_agent)):
             return {'job': None}
         conn.execute("UPDATE jobs SET status=CASE WHEN status='queued' THEN 'expired' ELSE 'unknown' END,finished=? "
                      "WHERE device_id=? AND status IN ('queued','leased','running') AND deadline<?", (time.time(), device['id'], time.time()))
+        updating = conn.execute('SELECT 1 FROM agent_updates WHERE device_id=? AND lease_until>?', (device['id'], time.time())).fetchone()
+        if updating:
+            return {'job': None}
         row = conn.execute("SELECT * FROM jobs WHERE device_id=? AND status='queued' ORDER BY created LIMIT 1", (device['id'],)).fetchone()
         if not row:
             return {'job': None}
@@ -451,6 +457,9 @@ async def agent_upload(transfer_id: str, request: Request, device=Depends(requir
         raise
     return {'ok': True, 'sha256': checksum, 'size': total}
 
+
+from speck.agent_updates import router as agent_update_router  # noqa: E402
+app.include_router(agent_update_router)
 
 # Feature routers are registered before the console's fallback route.
 from speck.remote import router as remote_router  # noqa: E402
