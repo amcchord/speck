@@ -371,3 +371,16 @@ replacement with authenticated health confirmation, rollback and admin pause.
 The new 0.3.1 agent retains enrollment and includes the headless PTY shell.
 Local checks pass; a live remote session currently defers the coordinated release.
 See [publishing and recovery](docs/operations/agent-updates.md).
+
+## Headless shell and automatic-update rollout — September 22, 2026
+
+Both features are live. Runtime/agent `0a09f6b`, final web `5d1e39d`. After the user
+authorized disconnecting an active session, the backed-up server release preserved
+all identities and protected settings. Linux/Windows canaries and then all five
+originals upgraded themselves from updater bootstrap 0.3.0 to signed 0.3.1. Every
+service, executable hash, previous-binary backup and original enrollment hash
+passed verification. Both Linux shells and Windows RDP passed live acceptance.
+Unicode input required making xterm's accessibility mode optional; browser
+regressions and final mobile captures cover that fix. Automatic updates are on;
+Settings provides an admin pause. Local commits remain unpushed. See the
+[release record](docs/operations/agent-updates.md#september-22-rollout).
