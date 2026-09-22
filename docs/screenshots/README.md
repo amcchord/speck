@@ -1,5 +1,7 @@
 # Speck screenshots
 
+**[Visual audit](visual-audit/README.md)**: consistent controls, cleaner icons, responsive pages and full-width native sign-in.
+
 **[Fleet row and pane](fleet-row-pane/README.md)**: row-wide activation, persistent context and mobile details.
 
 **[Compact Fleet](compact-fleet/README.md)**: dense desktop rows, OS icons, Safari and mobile.

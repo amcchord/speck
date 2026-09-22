@@ -1,0 +1,87 @@
+{
+  "source": "979f1daedaf97e9cc2d265d1bfc79e090eed996c",
+  "native_source": "9170747",
+  "date": "2026-09-22",
+  "synthetic": true,
+  "unretouched": true,
+  "images": [
+    {
+      "file": "web-fleet.png",
+      "capture": "browsers/webkit/1440/fleet.png",
+      "caption": "Desktop Fleet and distinct navigation icons",
+      "sha256": "6e988adb9417968adde785fc290e63a7b5147078f11036af05af2d0fc2152b1d"
+    },
+    {
+      "file": "web-settings.png",
+      "capture": "browsers/webkit/1440/settings.png",
+      "caption": "Shared field and action sizing in Settings",
+      "sha256": "8c4a273eeb1dade618ea3fdbc778ca0f475a46e8eb8c43ec253228ea640947d3"
+    },
+    {
+      "file": "web-software.png",
+      "capture": "browsers/webkit/1440/software.png",
+      "caption": "Text-first software and script cards",
+      "sha256": "3cf2b1ff769d0fc5d451b60dbf5f81e81dd809c82e3866754c658bf4ef13d569"
+    },
+    {
+      "file": "web-recovery.png",
+      "capture": "browsers/webkit/1440/recovery.png",
+      "caption": "Recovery with restrained status and action hierarchy",
+      "sha256": "e98ed73b4b8ef8ae9467e88fe10717bc6aa8a68a1eccbe69d83916d8da2a652e"
+    },
+    {
+      "file": "web-account.png",
+      "capture": "browsers/webkit/834/account.png",
+      "caption": "Tablet account controls",
+      "sha256": "6baa2c0b35304b6212c6981f4f0313332aa34848b443bdc7fac8e18cd542404c"
+    },
+    {
+      "file": "web-mobile.png",
+      "capture": "browsers/webkit/390/fleet.png",
+      "caption": "Labeled mobile navigation and touch controls",
+      "sha256": "6b91665e48ccb7d35aa9ecec073254060d29cc5370bd1ef01fda9922ac9a87c6"
+    },
+    {
+      "file": "web-dialog.png",
+      "capture": "browsers/webkit/320/monitoring.png",
+      "caption": "Monitoring form at the narrowest tested width",
+      "sha256": "d57a4d2d72d2cfe320e75c0061e390d3becf9b8128f919dba853b769a0d196f8"
+    },
+    {
+      "file": "web-remote.png",
+      "capture": "browsers/webkit/390/remote-keyboard.png",
+      "caption": "Remote keyboard layout with a synthetic session",
+      "sha256": "aec036a302872490c1ce608605b18bb26cb3e3cae7196326357f9733ac58f2ad"
+    },
+    {
+      "file": "ipad-signin.png",
+      "capture": "native/ipad/sign-in.png",
+      "caption": "Native iPad full-width masthead",
+      "sha256": "811b30e4d3c279e5b722dd6270b0038d14fe45e8f37a62807a2f87c27fe75a29"
+    },
+    {
+      "file": "iphone-signin.png",
+      "capture": "native/iphone-signin/sign-in.png",
+      "caption": "Native iPhone sign-in",
+      "sha256": "cff6a370b8f737c9d31227cb2d67844892155980ee6a15848a0186a40b259d02"
+    },
+    {
+      "file": "iphone-machine.png",
+      "capture": "native/iphone/machine.png",
+      "caption": "Native machine actions and text-only metrics",
+      "sha256": "4c1d231d9d38a6cea0fa726d7e918eae6a54123481a821697a89d2f7603333c3"
+    },
+    {
+      "file": "iphone-large-text.png",
+      "capture": "native/iphone/machine-large-text.png",
+      "caption": "Native accessibility text sizing",
+      "sha256": "65973a9e4d690f6b5bb1b7aa63ff04a006c4fd7201ccfa0064704f1632ba29db"
+    },
+    {
+      "file": "iphone-dark.png",
+      "capture": "iphone-dark-final-captures/FF2137E5-C8F0-4DF8-88B2-D1F0605FBA11.png",
+      "caption": "Native dark appearance",
+      "sha256": "14b8d31608d72ab70c9ab38d87073db6b0bafcd11f3578720a9f5bf8cddd8f60"
+    }
+  ]
+}
