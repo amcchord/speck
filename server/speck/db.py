@@ -77,6 +77,8 @@ def initialize():
         migrate_connectors(conn)
         from speck.infrastructure import migrate as migrate_infrastructure
         migrate_infrastructure(conn)
+        from speck.fleet import migrate as migrate_fleet
+        migrate_fleet(conn)
         from speck.agent_updates import migrate as migrate_updates
         migrate_updates(conn)
         from speck.restore_lifecycle import migrate as migrate_restores

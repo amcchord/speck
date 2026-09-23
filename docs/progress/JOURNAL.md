@@ -544,3 +544,19 @@ and mobile infrastructure layouts were inspected. Production release is held
 until the concurrent dental rehearsal can tolerate the backend restart; the
 release owner is this infrastructure task. See the infrastructure operations guide
 for capability limits, enrollment, session security and rollback.
+
+## 2026-09-23 — Unified Fleet and client membership
+
+Branch `codex/unified-fleet` starts at `661edc4`. Fleet combines exact provider and
+endpoint identities into one machine view, adds client inheritance from Slide,
+agent coverage filters/highlighting and sortable configurable columns saved per
+user. Provider-only machines use the same pane and existing management controls.
+Encrypted provider snapshots preserve known machines during outages. Existing
+Sites and endpoint identity/enrollment records are not changed.
+
+Read-only live validation joined all ten Proxmox endpoint matches, with no identity
+or client conflicts. Synthetic Chromium/WebKit tests cover sorting, filtering,
+column persistence, shared machine panes and responsive layouts; identity/API
+tests cover collisions, restoration, clients, cache and authorization. Release
+owner: this infrastructure task. Exact baseline, checks and release/rollback
+records are private under `output/unified-fleet/`.

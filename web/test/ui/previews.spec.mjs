@@ -3,9 +3,9 @@ import { test, expect } from '@playwright/test';
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#DCECAB"/><text x="30" y="60" font-size="24">Saved desktop · test fixture</text></svg>';
 async function open(page, handler) {
   await page.context().addCookies([{ name: 'speck-gallery', value: '1', url: 'http://127.0.0.1:8761' }]);
-  await page.route('**/api/devices', async route => {
+  await page.route(/\/api\/fleet(?:\?.*)?$/, async route => {
     const response = await route.fetch();
-    await route.fulfill({ json: (await response.json()).map(d => ({ ...d, preview: { enabled: true } })) });
+    await route.fulfill({ json: {machines: (await response.json()).machines.map(d => ({ ...d, preview: { enabled: true } })), connections: []} });
   });
   await page.route('**/api/devices/frontdesk/preview-status', handler);
   await page.route('**/api/devices/frontdesk/preview?*', route => route.fulfill({ contentType: 'image/svg+xml', body: svg }));
@@ -71,11 +71,11 @@ test('no desktop explains recovery instead of waiting indefinitely', async ({ pa
 test('open machine refreshes user, desktop and app without resetting its preview', async ({ page }) => {
   let refreshed = false;
   await page.context().addCookies([{ name: 'speck-gallery', value: '1', url: 'http://127.0.0.1:8761' }]);
-  await page.route('**/api/devices', async route => {
+  await page.route(/\/api\/fleet(?:\?.*)?$/, async route => {
     const response = await route.fetch();
-    await route.fulfill({ json: (await response.json()).map(d => ({ ...d, preview: { enabled: true },
+    await route.fulfill({ json: {machines: (await response.json()).machines.map(d => ({ ...d, preview: { enabled: true },
       telemetry: {...d.telemetry,active_app:refreshed?{title:'Newly opened chart',process:'Chart.exe',user:'OFFICE\\Pat'}:null,
-        logged_in_users:refreshed?[{user:'OFFICE\\Pat',state:'active'}]:[], desktop:{state:refreshed?'active':'no_session',sessions_available:true}} })) });
+        logged_in_users:refreshed?[{user:'OFFICE\\Pat',state:'active'}]:[], desktop:{state:refreshed?'active':'no_session',sessions_available:true}} })), connections: []} });
   });
   await page.route('**/api/devices/frontdesk/preview-status', route => route.fulfill({json:saved}));
   await page.route('**/api/devices/frontdesk/preview?*', route => route.fulfill({contentType:'image/svg+xml',body:svg}));

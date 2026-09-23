@@ -6,14 +6,14 @@ for (const width of [1440, 390, 320]) {
     await page.context().addCookies([{ name: 'speck-gallery', value: '1', url: 'http://127.0.0.1:8761' }]);
     const inputs = [], requests = [], errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.route('**/api/devices', async route => {
+    await page.route(/\/api\/fleet(?:\?.*)?$/, async route => {
       const response = await route.fetch();
-      const devices = await response.json();
+      const devices = (await response.json()).machines;
       const device = devices.find(d => d.platform === 'linux');
       device.id = 'headless'; device.label = 'LINUX-SERVER';
       device.remote_protocol = 'shell'; device.remote_configured = true;
       device.configured_remote_protocol = 'ssh'; device.remote_shell_available = true;
-      await route.fulfill({ json: devices });
+      await route.fulfill({ json: {machines: devices, connections: []} });
     });
     let counter = 0;
     await page.route('**/api/devices/headless/remote/sessions', async route => {
@@ -91,11 +91,11 @@ for (const width of [1440, 390, 320]) {
 
 test('leaving during creation closes the late shell session', async ({ page }) => {
   await page.context().addCookies([{ name: 'speck-gallery', value: '1', url: 'http://127.0.0.1:8761' }]);
-  await page.route('**/api/devices', async route => {
+  await page.route(/\/api\/fleet(?:\?.*)?$/, async route => {
     const response = await route.fetch();
-    const devices = await response.json();
+    const devices = (await response.json()).machines;
     devices[0].remote_protocol = 'shell'; devices[0].remote_configured = true;
-    await route.fulfill({ json: devices });
+    await route.fulfill({ json: {machines: devices, connections: []} });
   });
   let release;
   const pending = new Promise(resolve => release = resolve);

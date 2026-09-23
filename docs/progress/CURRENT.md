@@ -1,3 +1,12 @@
+# Unified Fleet — release validation September 23, 2026
+
+Branch `codex/unified-fleet` unifies provider discoveries and Speck endpoints,
+adds exact identity joins, Slide client membership, agent coverage filters and
+per-user column configuration. Provider controls remain available from each
+machine pane. No endpoint or host agent update is required. The live baseline
+matches main `661edc4`; this task owns the server/web release.
+[Behavior, validation and rollback](../operations/unified-fleet.md).
+
 # Infrastructure — live September 23, 2026
 
 PR #14 is merged; web `45d02df` and backend/connector `848bbc5` are deployed. Seven outbound Proxmox

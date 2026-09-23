@@ -203,6 +203,8 @@ class Handler(BaseHTTPRequestHandler):
                     {"id": "preview-phone", "name": "Phone", "created": NOW - 3600, "last_used": None, "backed_up": True},
                 ],
                 "/api/devices": DEVICES,
+                "/api/fleet": {"machines": DEVICES, "connections": [], "checked_at": NOW},
+                "/api/fleet/preferences": {"order": ["name","status","client","agent","location","app","cpu","memory","address","provider","kind","site","seen","preview"], "visible": ["name","status","client","agent","location","app","cpu","memory","address"], "widths": {}, "sort": "name", "direction": "asc", "highlight_agents": False},
                 "/api/integrations/tokens": {"tokens": [], "sites": ["Demo Clinic"]},
                 "/api/agent-updates": {"enabled": True, "version": "0.3.1", "devices": []},
                 "/api/templates": [dict(t, builtin=True, revision=1) for t in STARTERS],
@@ -277,6 +279,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(file.read_bytes())
 
     def do_POST(self):
+        if self.path == "/api/fleet/preferences":
+            return self.send(json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)))))
         if self.path == "/api/auth/login":
             return self.send(
                 {"username": "demo", "csrf": "preview-only", "role": "admin"}, cookie="speck-gallery=1; Path=/; SameSite=Strict"

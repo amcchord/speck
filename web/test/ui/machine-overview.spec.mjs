@@ -3,9 +3,9 @@ import { test, expect } from '@playwright/test';
 async function signIn(page, transform = d => d, role = 'admin') {
   await page.context().addCookies([{ name: 'speck-gallery', value: '1', url: 'http://127.0.0.1:8761' }]);
   await page.route('**/api/auth/me', route => route.fulfill({ json: { username: 'demo', csrf: 'preview-only', role } }));
-  await page.route('**/api/devices', async route => {
+  await page.route(/\/api\/fleet(?:\?.*)?$/, async route => {
     const response = await route.fetch();
-    await route.fulfill({ json: (await response.json()).map(transform) });
+    await route.fulfill({ json: {machines: (await response.json()).machines.map(transform), connections: []} });
   });
   await page.goto('/');
   await page.locator('[data-device="frontdesk"]').first().click();
@@ -28,8 +28,12 @@ for (const width of [1440, 834, 760, 390, 320]) {
     await frameFits(page);
     const metrics = await page.locator('.meters').boundingBox();
     const storage = await page.locator('.machine-storage').boundingBox();
-    expect(metrics.y).toBeLessThan(400);
-    expect(storage.y + storage.height).toBeLessThan(650);
+    const inventory = await page.locator(".machine-inventory").boundingBox();
+    // Preserve the health/preview layout budget after the added client summary,
+    // including its outer spacing (font metrics differ on Linux WebKit).
+    const addedSummaryHeight = (await page.locator('.machine-summary').boundingBox()).y - inventory.y;
+    expect(metrics.y - addedSummaryHeight).toBeLessThan(400);
+    expect(storage.y + storage.height - addedSummaryHeight).toBeLessThan(650);
     if (width > 700) {
       const frame = await page.locator('.live-screen').boundingBox();
       expect(metrics.x).toBeGreaterThan(frame.x + frame.width);
