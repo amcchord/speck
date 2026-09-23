@@ -115,3 +115,8 @@ and the iPad portrait/landscape sign-in test), both passed on this combined sour
 Hosted CI remains enabled as a secondary check. Its iPad simulator launch timeout
 occurred before assertions; local Xcode 27/iOS 27 passed the same test target.
 No required GitHub branch check was bypassed. See [local checks](../deployment.md#local-release-checks).
+
+Desktop Downloads now serves 0.2.3 from static source `2b01150`; its live index is
+`383ed5a0…`. Served hashes, desktop/phone layout, service process and environment
+were checked. The preceding static tree is retained under
+`/var/lib/speck-rollback/20260923T004907Z-client-updates-2b01150/web`.
