@@ -557,3 +557,20 @@ all deployed changes and both release records are captured in local branch
 `codex/slide-client-backup-fix`. Private rollback:
 `/var/lib/speck-rollback/20260923T131146Z-slide-client-backup-fix-7141ea0`.
 See current state and journal for exact validation and evidence locations.
+
+## Fleet toolbar and saved coverage — September 23, 2026
+
+Runtime `1158014` is live from `worktrees/fleet-toolbar-headers`, preserving all
+previously deployed local fixes. Search and the saved Speck agents only switch
+stay visible; Filters and View contain secondary controls. Table headers support
+click sorting, drag ordering and keyboard movement. Coverage, sorting and column
+order persist per user. The [gallery](docs/screenshots/fleet-toolbar/README.md)
+uses synthetic inventory.
+
+Ruff/build, 157 backend tests, 28 web units and 141 browser checks pass (one existing
+platform-specific skip). Live desktop Chromium and phone WebKit verified saved
+coverage across reload, navigation and new sign-in; original preferences were
+restored. All five earlier client assignments and protected runtime state remain
+verified. Rollback: `/var/lib/speck-rollback/20260923T133704Z-fleet-toolbar-headers-1158014`.
+Source and release records are local; no GitHub push. See current state and journal
+for audit and deployment evidence. Future releases must preserve this runtime.

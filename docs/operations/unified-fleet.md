@@ -156,3 +156,14 @@ change sorting. The order saves immediately while preserving hidden column slots
 selection, search and scroll position. Selection and Connect stay fixed.
 
 [Synthetic desktop and phone gallery](../screenshots/fleet-toolbar/README.md).
+
+
+September 23 toolbar release `1158014` is live. Coverage is an additive field in
+existing preference JSON. Local and live desktop/mobile checks confirm persistence
+across reloads and fresh authentication; test preferences were restored afterward.
+All deployed application bytes match Git, and protected data/configuration passed
+preservation checks. Runtime rollback:
+`/var/lib/speck-rollback/20260923T133704Z-fleet-toolbar-headers-1158014`.
+Confirm this is still the active release, acquire the shared deployment lock,
+stop Speck, restore its saved server/web trees, then start and verify health.
+A code rollback does not require restoring or migrating the database.

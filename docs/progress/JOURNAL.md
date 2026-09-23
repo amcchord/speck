@@ -696,3 +696,54 @@ was triggered. Both browser runs had zero page errors, and test sessions were
 logged out. Source build/Ruff, 156 backend, 28 web units and 123 browser checks
 passed locally (one existing platform-specific skip). No endpoint binary upgrade,
 provider management action, credential or client-assignment change was needed.
+
+## 2026-09-23 — Compact Fleet toolbar, headers and persistent agent toggle
+
+Branch `codex/fleet-toolbar-headers`, contained worktree `worktrees/fleet-toolbar-headers`.
+Started from current main and fast-forwarded the preceding deployed source/release
+records through `0543cfd`. Runtime `1158014` groups advanced filters and display
+settings, adds icons, keeps a visible Speck agents only switch and saves its state
+in the existing per-user preference JSON. Old preferences default to all machines;
+viewer preferences remain supported. Header clicks sort, mouse dragging and
+Alt+Left/Right reorder, and Escape cancels without changing sorting. Insertion
+markers, auto-scroll, focus restoration and screen-reader feedback are included.
+Moving existing cells preserves search, selection, hidden slots and scroll.
+
+Local validation: TypeScript/Vite, Ruff, 157 backend tests, 28 web units and 141
+Chromium/WebKit browser scenarios pass. One existing Chromium-only touch-input test
+has its WebKit copy skipped; physical-device touch remains unverified. Synthetic
+screenshots at 1440, 390 and 320px were visually inspected and stored with hashes
+in `docs/screenshots/fleet-toolbar/`. Endpoint/native binaries are unchanged;
+those runtime suites were not rerun.
+
+Continued the user's explicit production deployment request in this task.
+Coordinated exclusive release ownership with active alerts and Proxmox UX tasks;
+both acknowledged local-only work and agreed to preserve this release. A fresh
+production audit found no uncaptured application drift: all 29 backend files and
+26 current web files matched committed `7141ea0`, with matching dependency manifest.
+Fetched main and checked ancestry before building and again before release.
+The locked live baseline check, idle jobs/recoveries/consoles and database integrity
+checks passed. Saved server/web/configuration/data and a consistent SQLite backup,
+installed staged server/web and restarted. Existing assets remain for open tabs.
+
+Release: `20260923T133704Z-fleet-toolbar-headers-1158014`.
+Commit: `115801413dcc5151a27832050b062c707018e25e`.
+Index: `345fd0a01d73991905b9d7d159db9280a18c65719b376cf132b91d7134025c69`.
+Rollback: `/var/lib/speck-rollback/20260923T133704Z-fleet-toolbar-headers-1158014`.
+Private audit/deployment/browser evidence: `output/fleet-toolbar-headers/`.
+
+Health, all backend/current web hashes and public index/JS/CSS responses pass.
+Identity/account/installation/settings/integration/connector/provider/recovery/
+policy/preference invariants and environment were preserved. Live Chromium1440px
+and WebKit390px verified 17 installed-agent machines, the visible toggle and its
+persistence after reload, navigation and fresh authentication. Desktop header
+sort/drag/save/reload and mobile View sorting passed. The first browser harness
+attempt raced a background WebKit read with an external logout; closing the old
+page before changing its session resolved the harness race. The completed runs
+have zero page errors. Original preferences were restored and test sessions closed.
+All five previously reported originals retain their correct Slide clients. No
+real backup, provider management action or agent upgrade was triggered.
+
+Source and records are committed locally; no shared-history push was requested.
+Release ownership is clear. Future releases must preserve `1158014` until its
+source reaches main; adjacent tasks received the exact runtime/index baseline.

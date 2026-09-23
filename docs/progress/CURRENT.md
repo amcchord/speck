@@ -1,3 +1,32 @@
+# Fleet toolbar and persistent agent toggle — live September 23
+
+Runtime `1158014` deployed at 13:37 UTC from `codex/fleet-toolbar-headers` in
+`worktrees/fleet-toolbar-headers`. It includes main `7a51f07` and all previously
+deployed local runtime through `7141ea0`. Search and the **Speck agents only**
+switch remain visible; Filters and View group secondary controls. Desktop headers
+support click sorting, drag ordering and Alt+Left/Right. Sorting, column order and
+agent coverage save per user; the coverage survives reloads and future sign-ins.
+
+Local Ruff, TypeScript/Vite, 157 backend tests, 28 web units and 141 browser
+scenarios passed, with one existing Chromium-only touch case skipped on WebKit.
+Live Chromium desktop and WebKit phone passed toggle/reload/navigation/new-session
+persistence, header sorting/dragging and mobile View controls. The original user
+preferences were restored and test sessions closed. All five reported Slide
+client assignments remain correct; no provider or endpoint action was performed.
+
+Audit matched all 29 backend files, 26 current web files and dependencies to the
+previous committed runtime. Deployed bytes/public assets now match `1158014`.
+Protected account/device/connector/settings/recovery state passed preservation
+checks. Index: `345fd0a01d73991905b9d7d159db9280a18c65719b376cf132b91d7134025c69`.
+Rollback: `/var/lib/speck-rollback/20260923T133704Z-fleet-toolbar-headers-1158014`.
+Private evidence: this worktree's ignored `output/fleet-toolbar-headers/`.
+[Synthetic gallery](../screenshots/fleet-toolbar/README.md).
+
+Source and release records are committed locally; no GitHub push was requested.
+Alerts and Proxmox UX tasks acknowledged release ownership. Next releases must
+include this runtime until it is integrated into main; deployment ownership is
+released after this verification.
+
 # Slide client display and one-click backup — live September 23
 
 User-authorized runtime `7141ea0` deployed at 13:11 UTC from
