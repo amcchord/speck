@@ -267,6 +267,22 @@ def test_connector_one_use_enrollment_identity_and_revocation(client):
     assert client.post("/api/infrastructure/agent/heartbeat", headers=headers).status_code == 401
 
 
+def test_connector_upgrade_reports_version_without_changing_identity(client):
+    cid = add(client, connector=True)
+    agent, headers = enroll_connector(client, cid)
+    with db() as conn:
+        before = dict(conn.execute("SELECT * FROM proxmox_connectors WHERE id=?", (agent["id"],)).fetchone())
+    path = "/api/infrastructure/agent/heartbeat"
+    assert client.post(path, headers=headers, json={"version": "0.1.2"}).status_code == 200
+    assert client.post(path, headers=headers).status_code == 200  # Legacy agents remain compatible.
+    assert client.post(path, headers=headers, json={"version": "bad\\nversion"}).status_code == 422
+    with db() as conn:
+        after = dict(conn.execute("SELECT * FROM proxmox_connectors WHERE id=?", (agent["id"],)).fetchone())
+    assert after["version"] == "0.1.2"
+    assert all(after[key] == before[key] for key in before if key not in ("version", "last_seen"))
+    assert client.get("/api/infrastructure/connectors").json()[0]["version"] == "0.1.2"
+
+
 def test_connector_request_roundtrip_lease_and_encryption(client):
     cid = add(client, connector=True)
     agent, headers = enroll_connector(client, cid)

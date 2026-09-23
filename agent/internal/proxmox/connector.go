@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const Version = "0.1.1"
+const Version = "0.1.2"
 const DefaultConfig = "/etc/speck-proxmox/agent.json"
 
 type Config struct {
@@ -353,7 +353,7 @@ func runLoop(ctx context.Context, path string, c *Client, run func(context.Conte
 		ticker := time.NewTicker(15 * time.Second)
 		defer ticker.Stop()
 		for {
-			_ = c.api(ctx, "POST", "/heartbeat", nil, nil)
+			_ = c.api(ctx, "POST", "/heartbeat", map[string]string{"version": Version}, nil)
 			select {
 			case <-ctx.Done():
 				return
