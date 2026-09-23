@@ -1,3 +1,10 @@
+# Infrastructure release in progress — September 23, 2026
+
+`codex/infrastructure` has passed local core checks. It adds outbound Proxmox host
+agents, provider consoles, guest/endpoint relationships, Slide/Linode and
+AustinLand management. Production rollout is coordinated with the active dental
+rehearsal. [Details](../operations/infrastructure.md).
+
 # Current state — September 22, 2026
 
 Speck is live at https://speckrmm.com with management MVP, native iPhone/iPad,

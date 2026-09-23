@@ -28,6 +28,8 @@ async def lifespan(app):
     with db(write=True) as conn:
         conn.execute("UPDATE jobs SET status='unknown',finished=? WHERE status IN ('leased','running')", (time.time(),))
         conn.execute("DELETE FROM monitor_states")
+        conn.execute("UPDATE proxmox_requests SET status='unknown' WHERE status IN ('queued','leased')")
+        conn.execute("UPDATE infrastructure_operations SET status='unknown',result='{\"message\":\"Server restarted; inspect provider activity before retrying.\"}' WHERE status='pending'")
         conn.execute("UPDATE recovery_runs SET status='needs_attention',phase='interrupted',updated=? WHERE status='running'", (time.time(),))
     from speck.scheduling import worker, stop_worker
     management_task = asyncio.create_task(worker())
@@ -484,6 +486,15 @@ app.include_router(management_router)
 app.include_router(monitoring_router)
 from speck.scheduling import router as scheduling_router  # noqa: E402
 app.include_router(scheduling_router)
+
+from speck.proxmox_connector import router as connector_router  # noqa: E402
+app.include_router(connector_router)
+
+from speck.infrastructure_console import router as infrastructure_console_router  # noqa: E402
+app.include_router(infrastructure_console_router)
+
+from speck.infrastructure import router as infrastructure_router  # noqa: E402
+app.include_router(infrastructure_router)
 
 from speck.integrations import router as integrations_router  # noqa: E402
 app.include_router(integrations_router)

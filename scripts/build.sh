@@ -12,6 +12,15 @@ mkdir -p output/downloads
 for arch in amd64 arm64; do
  (cd agent && GOOS=linux GOARCH="$arch" go build -trimpath -ldflags='-s -w' -o "../output/downloads/speck-agent-linux-$arch" ./cmd/speck-agent)
 done
+(cd agent && GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o ../output/downloads/speck-proxmox-linux-amd64 ./cmd/speck-proxmox)
+cp deploy/speck-proxmox.service output/downloads/
+python3 - <<'HASH'
+import hashlib
+from pathlib import Path
+root=Path('output/downloads')
+name='speck-proxmox-linux-amd64'
+(root/'PROXMOX-SHA256SUMS').write_text(hashlib.sha256((root/name).read_bytes()).hexdigest()+'  '+name+'\n')
+HASH
 cp installers/install-* output/downloads/
 cp brand/assets/speck-icon.svg brand/assets/speck.ico output/downloads/
 python3 - <<'PY'

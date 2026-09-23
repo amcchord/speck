@@ -11,10 +11,10 @@ if [[ "$mode" != ios ]]; then
   uv run ruff check server
   uv run pytest -q
   if [[ "$(uname -s)" == Linux ]]; then
-    (cd agent && GOWORK=off go test -race ./internal/agent)
+    (cd agent && GOWORK=off go test -race ./internal/agent ./internal/proxmox)
   else
     # The managed endpoint runtime is Linux/Windows, not macOS.
-    docker run --rm -v "$PWD/agent:/src" -w /src -e GOWORK=off golang:1.24 go test -race ./internal/agent
+    docker run --rm -v "$PWD/agent:/src" -w /src -e GOWORK=off golang:1.24 go test -race ./internal/agent ./internal/proxmox
   fi
   GOWORK=off ./scripts/build.sh
   node --experimental-strip-types --test web/test/*.test.mjs

@@ -1,0 +1,18 @@
+[Unit]
+Description=Speck Proxmox Agent (outbound infrastructure connector)
+After=network-online.target pve-cluster.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/speck-proxmox
+Restart=always
+RestartSec=5
+UMask=0077
+# pvesh uses root and Proxmox's existing local cluster identity.
+User=root
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

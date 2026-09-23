@@ -73,6 +73,10 @@ def initialize():
         CREATE TABLE IF NOT EXISTS patch_reports(device_id TEXT PRIMARY KEY REFERENCES devices(id),job_id TEXT NOT NULL,scanned REAL NOT NULL,report TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS ai_requests(id TEXT PRIMARY KEY,actor TEXT NOT NULL,created REAL NOT NULL);
         ''')
+        from speck.proxmox_connector import migrate as migrate_connectors
+        migrate_connectors(conn)
+        from speck.infrastructure import migrate as migrate_infrastructure
+        migrate_infrastructure(conn)
         from speck.agent_updates import migrate as migrate_updates
         migrate_updates(conn)
         from speck.restore_lifecycle import migrate as migrate_restores
