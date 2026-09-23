@@ -94,7 +94,15 @@ export function captureProviderPreview(
               return;
             // A black/blank guest screen is still a valid frame. Do not wake the VM.
             try {
-              void finish(undefined, display.flatten().toDataURL("image/png"));
+              const canvas: HTMLCanvasElement = display.flatten();
+              const pixels = canvas.getContext("2d")!.getImageData(
+                0, 0, canvas.width, canvas.height,
+              ).data;
+              // guacd first sends size + sync with a transparent canvas. Wait
+              // for painted pixels, accepting an opaque black guest screen.
+              if (!pixels.some((value, index) => index % 4 === 3 && value > 0))
+                return;
+              void finish(undefined, canvas.toDataURL("image/png"));
             } catch {
               void finish(
                 new Error("The console frame could not be captured."),
