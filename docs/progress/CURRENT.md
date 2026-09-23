@@ -245,3 +245,17 @@ reads and isolation/revocation acceptance. All QA access was cleaned up. Existin
 fleet assignments, identities, accounts, credentials, provider settings, updater
 policy and recovery resources were preserved. Rollback and detailed checks are in
 [Chat integration operations](../operations/chat-integration.md).
+
+
+## Proxmox machine experience — implemented locally, not deployed
+
+The contained `codex/proxmox-machine-experience` branch includes the latest
+communicated deployed Fleet source (`1158014`, release record `6faaf5c`). It adds
+rich VM/container views, guest inventory, performance charts, read-only screen
+captures, PNG downloads and API-token console support. Existing connectors and
+endpoint agents need no upgrade. All local core checks pass; final backend count
+is 164 and affected browser recheck is 41 passing with one existing skip. No
+production changes or pushes were made. Next step is review, then an explicitly
+authorized combined server/web release and real Proxmox acceptance. See the
+[implementation/runbook](../operations/proxmox-machine-experience.md) and
+[synthetic gallery](../screenshots/proxmox-machine/README.md).

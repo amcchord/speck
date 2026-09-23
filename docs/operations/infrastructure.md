@@ -27,13 +27,14 @@ pane, preserving approval and enrollment status.
 | AustinLand | DNS, public IPs/NAT, LAN clients, UniFi consoles, public SSH keys and template-based VM provisioning/migration |
 
 Provider consoles use the existing Guacamole gateway and support keyboard, mouse,
-touch, Ctrl+Alt+Del, scaling and fullscreen. Proxmox requires the host connector on
+touch, Ctrl+Alt+Del, scaling and fullscreen. Connector-backed Proxmox connections require the host connector on
 the guest's current node. Slide requires an enabled VNC console and a secure
 provider WebSocket endpoint. Provider passwords remain in server memory, never in
 the browser. Connections are scoped to the signed-in user, expire with the session,
 and close on disconnect, account revocation or connector removal. They do not
-require an endpoint agent or guest RDP service. Container consoles and direct-API
-Proxmox consoles without a host connector are not implemented.
+require an endpoint agent or guest RDP service. Container consoles are not implemented. Token-backed Proxmox connections now use
+the provider VNC API directly; see [machine views and screen previews](proxmox-machine-experience.md)
+for capabilities, privacy and release status.
 
 QEMU guest-agent operations require a working QEMU agent inside the guest; it is
 separate from Speck. They do not provide Speck's persistent monitoring, patching,

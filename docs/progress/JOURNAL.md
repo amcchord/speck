@@ -747,3 +747,27 @@ real backup, provider management action or agent upgrade was triggered.
 Source and records are committed locally; no shared-history push was requested.
 Release ownership is clear. Future releases must preserve `1158014` until its
 source reaches main; adjacent tasks received the exact runtime/index baseline.
+
+
+## 2026-09-23 — Proxmox machine details and screen access (local)
+
+`worktrees/proxmox-machine-experience`, branch `codex/proxmox-machine-experience`,
+adds a shared VM/container workspace in Fleet and Infrastructure: structured
+inventory, guest OS/IP/filesystems, hardware/network, charts, snapshots and tasks.
+Running VMs gain ephemeral read-only screen previews, PNG downloads and direct
+screen control. API-token connections now use Proxmox VNC tickets/WebSockets;
+existing host connectors need no update. Per-section failures and guest-agent
+requirements remain explicit. Provider credentials stay server-side; redirects
+are rejected and preview/control sessions are isolated and cleaned up.
+
+Implementation `0e0e143` preserves the separately deployed Fleet/Slide changes
+through merge `f1df14d` (runtime `1158014`, release record `6faaf5c`). Consolidated
+core checks passed (162 backend, agent race tests/builds, 31 web units, 153 browser
+checks, one existing skip). The final security regressions bring the backend to
+164 passing; affected browser recheck: 41 passing, one existing skip. Build and
+lint pass. The full core gate completed in 144 seconds.
+
+No push, deployment, production guest action, connector update or provider-setting
+change occurred. Live Proxmox acceptance is still pending an authorized server/web
+release. See [behavior, limits and release checklist](../operations/proxmox-machine-experience.md)
+and [synthetic review images](../screenshots/proxmox-machine/README.md).

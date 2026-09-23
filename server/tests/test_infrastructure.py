@@ -598,7 +598,7 @@ def test_direct_console_transport_closes_when_preview_ends_before_browser_connec
                 return self
             async def __aexit__(self, *args):
                 closed.set()
-        monkeypatch.setattr(console.websockets, 'connect', lambda *args, **kwargs: Socket())
+        monkeypatch.setattr(console, 'ProviderWebSocket', lambda *args, **kwargs: Socket())
         session = Session('id', None, 'user', 'secret', {'protocol': 'vnc'}, 800, 600)
         session.tcp = asyncio.get_running_loop().create_future()
         task = asyncio.create_task(console.slide_tunnel(session, 'wss://example.invalid'))
@@ -617,3 +617,61 @@ def test_only_protected_slide_backup_skips_target_confirmation(client, upstream)
         for spec in infra.catalog({'provider': 'slide'}, kind).values():
             assert spec.get('requires_confirmation', True)
     assert infra.catalog({'provider': 'slide'}, 'protected')['backup']['requires_confirmation'] is False
+
+
+
+def test_provider_websocket_rejects_redirects_with_credentials():
+    from speck.infrastructure_console import ProviderWebSocket
+    import websockets
+    from websockets.datastructures import Headers
+    from websockets.http11 import Response
+
+    async def check():
+        reached = []
+        async def target(socket):
+            reached.append(socket.request)
+        async with websockets.serve(target, '127.0.0.1', 0) as destination:
+            port = destination.sockets[0].getsockname()[1]
+            def redirect(connection, request):
+                return Response(302, 'Found', Headers({'Location': f'ws://127.0.0.1:{port}/elsewhere'}))
+            async with websockets.serve(target, '127.0.0.1', 0, process_request=redirect) as origin:
+                port = origin.sockets[0].getsockname()[1]
+                with pytest.raises(websockets.InvalidStatus):
+                    async with ProviderWebSocket(f'ws://127.0.0.1:{port}/ticket', additional_headers={'Authorization':'secret'}, proxy=None):
+                        pass
+        assert not reached
+    asyncio.run(check())
+
+
+def test_preview_read_only_is_enforced_in_gateway_handshake(client, monkeypatch):
+    from speck import remote
+    from fastapi import WebSocketDisconnect
+
+    async def check():
+        writes = []
+        reader = asyncio.StreamReader()
+        reader.feed_data(remote.instruction('args', 'read-only', 'disable-copy', 'disable-paste').encode())
+        class Writer:
+            def write(self, data): writes.append(data.decode())
+            async def drain(self): pass
+            def close(self): pass
+        class Listener:
+            sockets = [type('SocketAddress', (), {'getsockname': lambda self: ('127.0.0.1', 12345)})()]
+            def close(self): pass
+            async def wait_closed(self): pass
+        class Socket:
+            async def accept(self, **kw): pass
+            async def send_text(self, text): pass
+            async def receive_text(self): raise WebSocketDisconnect()
+            async def close(self, **kw): pass
+        session = remote.Session('preview', None, 'user', 'secret', {'protocol':'vnc', 'read_only':True}, 800, 600)
+        session.listener = Listener()
+        session.ready.set()
+        remote.sessions[session.id] = session
+        monkeypatch.setattr(remote, 'websocket_user', lambda socket: {'user_id':'user', 'username':'admin', 'expires':time.time()+300})
+        async def connection(*args): return reader, Writer()
+        monkeypatch.setattr(remote.asyncio, 'open_connection', connection)
+        await remote.browser_tunnel(Socket(), session.id)
+        assert remote.instruction('connect', 'true', 'true', 'true') in writes
+        assert session.id not in remote.sessions
+    asyncio.run(check())

@@ -24,6 +24,13 @@ workers = set()
 starting = set()
 
 
+class ProviderWebSocket(websockets.connect):
+    """Never forward provider authentication or VNC tickets to a redirect target."""
+
+    def process_redirect(self, exc):
+        return exc
+
+
 class Console(BaseModel):
     model_config = ConfigDict(extra="forbid")
     read_only: bool = False
@@ -91,11 +98,13 @@ async def start_console(connection_id, body, user):
             or not isinstance(ticket.get("port"), int)
             or not 5900 <= ticket["port"] <= 5999
             or not isinstance(ticket.get("ticket"), str)
-            or not ticket["ticket"]
+            or not 1 <= len(ticket["ticket"]) <= 512
         ):
             raise HTTPException(502, "Proxmox did not return a valid console ticket")
         # Older PVE versions return the protocol password prepended to the ticket.
         password = ticket.get("password") or ticket["ticket"].split(":", 1)[0]
+        if not isinstance(password, str) or not password or len(password) > 512:
+            raise HTTPException(502, "Proxmox did not return a valid console password")
         upstream = (
             "wss://"
             + urlsplit(cfg["url"]).netloc
@@ -209,7 +218,7 @@ async def expire_preview(session_id):
 async def slide_tunnel(session, upstream, **transport):
     tasks = []
     try:
-        async with websockets.connect(
+        async with ProviderWebSocket(
             upstream, open_timeout=20, max_size=8 * 1024 * 1024, proxy=None, subprotocols=["binary"], **transport
         ) as ws:
             session.ready.set()

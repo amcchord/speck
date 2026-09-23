@@ -199,7 +199,9 @@ export function mountProxmoxMachine(
       facts([
         [
           "Operating system",
-          osName ||
+          (osName
+            ? osName + (os["pretty-name"] || os.name ? "" : " (configured)")
+            : "") ||
             (guest.state === "loading"
               ? "Reading guest agent…"
               : "Not reported"),
@@ -212,8 +214,12 @@ export function mountProxmoxMachine(
           guest.state === "available"
             ? "Responding"
             : detail.capabilities?.guest_agent
-              ? "Enabled · awaiting guest data"
-              : "Not enabled",
+              ? guest.state === "loading"
+                ? "Enabled · reading guest data"
+                : "Enabled · guest unavailable"
+              : detail.capabilities?.guest_agent_config_known
+                ? "Not enabled"
+                : "Not reported",
         ],
         [
           "Boot firmware",
@@ -241,8 +247,8 @@ export function mountProxmoxMachine(
       fs = list(guestSection("filesystems"));
     const mounts = fs
       .map((f) => {
-        const used = f["used-bytes"],
-          total = f["total-bytes"],
+        const used = number(f["used-bytes"]),
+          total = number(f["total-bytes"]),
           p = percent(used, total);
         return `<div class="pve-filesystem"><div><b>${esc(f.mountpoint || f.name)}</b><span>${esc(f.type || "")}</span></div><span>${used == null ? "Not reported" : bytes(used)} / ${total == null ? "Not reported" : bytes(total)}</span>${p === null ? "" : `<progress aria-label="${esc(f.mountpoint || f.name)} usage" value="${p}" max="100"></progress>`}</div>`;
       })
@@ -377,7 +383,9 @@ export function mountProxmoxMachine(
                   s.vmstate ? "Included" : "Not included",
                   s.description || "—",
                 ]),
-              "No snapshots. Create one from More actions.",
+              ui.role() === "admin"
+                ? "No snapshots. Create one from More actions."
+                : "No snapshots reported.",
             ),
           );
         else {

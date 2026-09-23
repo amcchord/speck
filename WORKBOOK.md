@@ -574,3 +574,27 @@ restored. All five earlier client assignments and protected runtime state remain
 verified. Rollback: `/var/lib/speck-rollback/20260923T133704Z-fleet-toolbar-headers-1158014`.
 Source and release records are local; no GitHub push. See current state and journal
 for audit and deployment evidence. Future releases must preserve this runtime.
+
+
+## Proxmox machine experience — September 23, 2026 (local)
+
+`worktrees/proxmox-machine-experience`, branch `codex/proxmox-machine-experience`,
+adds a shared VM/container workspace in Fleet and Infrastructure: structured
+inventory, guest OS/IP/filesystems, hardware/network, charts, snapshots and tasks.
+Running VMs gain ephemeral read-only screen previews, PNG downloads and direct
+screen control. API-token connections now use Proxmox VNC tickets/WebSockets;
+existing host connectors need no update. Per-section failures and guest-agent
+requirements remain explicit. Provider credentials stay server-side; redirects
+are rejected and preview/control sessions are isolated and cleaned up.
+
+Implementation `0e0e143` preserves the separately deployed Fleet/Slide changes
+through merge `f1df14d` (runtime `1158014`, release record `6faaf5c`). Consolidated
+core checks passed (162 backend, agent race tests/builds, 31 web units, 153 browser
+checks, one existing skip). The final security regressions bring the backend to
+164 passing; affected browser recheck: 41 passing, one existing skip. Build and
+lint pass. The full core gate completed in 144 seconds.
+
+No push, deployment, production guest action, connector update or provider-setting
+change occurred. Live Proxmox acceptance is still pending an authorized server/web
+release. See [behavior, limits and release checklist](docs/operations/proxmox-machine-experience.md)
+and [synthetic review images](docs/screenshots/proxmox-machine/README.md).
