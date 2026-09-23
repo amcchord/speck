@@ -150,7 +150,8 @@ export function createNetwork(ui: Item) {
       domainQuery = input.value.trim();
       domainRows();
       window.clearTimeout(timer);
-      timer = window.setTimeout(recordHits, 350);
+      if (domainQuery.length < 3) recordHits();
+      else timer = window.setTimeout(recordHits, 350);
     });
     body.querySelector<HTMLSelectElement>("#net-domain-filter")!.addEventListener("change", (e) => {
       domainFilter = (e.target as HTMLSelectElement).value;
@@ -342,7 +343,7 @@ export function createNetwork(ui: Item) {
   function pointDialog(d: Item) {
     const d2 = dialog(
       "Point a name at an IP",
-      `<form class="net-form" id="net-point-form"><p>Creates or replaces the A record so the name resolves to one IPv4 address.</p><label>Name<input id="net-point-name" value="@" required spellcheck="false"><small>@ for ${esc(d.domain)}, or a subdomain label such as <span class="mono">www</span></small></label><label>IPv4 address<input id="net-point-ip" list="net-known-ips" required inputmode="decimal" spellcheck="false" placeholder="160.72.186.114"></label><datalist id="net-known-ips">${knownPublicIps()
+      `<form class="net-form" id="net-point-form"><p>Creates or replaces the A record so the name resolves to one IPv4 address.</p><label>Name<input id="net-point-name" value="@" required spellcheck="false" aria-describedby="net-point-help"></label><small class="net-help" id="net-point-help">@ for ${esc(d.domain)}, or a subdomain label such as <span class="mono">www</span></small><label>IPv4 address<input id="net-point-ip" list="net-known-ips" required inputmode="decimal" spellcheck="false" placeholder="160.72.186.114"></label><datalist id="net-known-ips">${knownPublicIps()
         .map(([ip, label]) => `<option value="${esc(ip)}">${esc(label)}</option>`)
         .join("")}</datalist><label>TTL (seconds)<input id="net-point-ttl" type="number" min="600" value="600"></label><div class="dialog-footer"><button type="button" class="secondary" id="net-point-cancel">Cancel</button><button class="primary">Review change</button></div></form>`, { className: "wide" });
     d2.querySelector("#net-point-cancel")!.addEventListener("click", () => d2.close());
@@ -376,7 +377,7 @@ export function createNetwork(ui: Item) {
       group ? `Edit ${first!.type} ${first!.name}` : "Add DNS record",
       `<form class="net-form"><div class="net-form-row"><label>Type<select id="net-rec-type" ${group ? "disabled" : ""}>${["A", "AAAA", "CNAME", "TXT", "MX", "NS", "SRV", "CAA"]
         .map((t) => `<option ${first?.type === t ? "selected" : ""}>${t}</option>`)
-        .join("")}</select></label><label>Name<input id="net-rec-name" value="${esc(first?.name || "")}" ${group ? "disabled" : ""} placeholder="@ or www" required spellcheck="false"></label></div><label>${group ? "Values (one per line)" : "Value"}<textarea id="net-rec-values" rows="${group ? Math.min(8, group.length + 1) : 2}" spellcheck="false" required>${esc((group || []).map((r) => r.data).join("\n"))}</textarea>${group ? "<small>Saving replaces every value in this set.</small>" : "<small>Adding keeps existing records with the same type and name.</small>"}</label><div class="net-form-row"><label>TTL (seconds)<input id="net-rec-ttl" type="number" min="600" value="${esc(first?.ttl || 600)}"></label><label>Priority (MX/SRV)<input id="net-rec-priority" type="number" min="0" value="${esc(first?.priority ?? "")}"></label></div><div class="dialog-footer"><button type="button" class="secondary" id="net-rec-cancel">Cancel</button><button class="primary">Review change</button></div></form>`, { className: "wide" });
+        .join("")}</select></label><label>Name<input id="net-rec-name" value="${esc(first?.name || "")}" ${group ? "disabled" : ""} placeholder="@ or www" required spellcheck="false"></label></div><label>${group ? "Values (one per line)" : "Value"}<textarea id="net-rec-values" rows="${group ? Math.min(8, group.length + 1) : 2}" spellcheck="false" required aria-describedby="net-rec-help">${esc((group || []).map((r) => r.data).join("\n"))}</textarea></label><small class="net-help" id="net-rec-help">${group ? "Saving replaces every value in this set." : "Adding keeps existing records with the same type and name."}</small><div class="net-form-row"><label>TTL (seconds)<input id="net-rec-ttl" type="number" min="600" value="${esc(first?.ttl || 600)}"></label><label>Priority (MX/SRV)<input id="net-rec-priority" type="number" min="0" value="${esc(first?.priority ?? "")}"></label></div><div class="dialog-footer"><button type="button" class="secondary" id="net-rec-cancel">Cancel</button><button class="primary">Review change</button></div></form>`, { className: "wide" });
     d2.querySelector("#net-rec-cancel")!.addEventListener("click", () => d2.close());
     d2.querySelector("form")!.addEventListener("submit", async (e) => {
       e.preventDefault();

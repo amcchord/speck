@@ -88,7 +88,7 @@ export function createApiAccess(ui: Item) {
         )
         .join("")}</fieldset><div class="net-form-row"><label>Expires after<select id="api-token-days">${[7, 30, 90, 180, 365]
         .map((n) => `<option value="${n}" ${n === 90 ? "selected" : ""}>${n} days</option>`)
-        .join("")}</select></label><label>Vault name prefixes (optional)<input id="api-token-prefixes" placeholder="Lucea, brace-yourself-dental" spellcheck="false"><small>Limit vault access to entries starting with these names.</small></label></div><div class="dialog-footer"><button type="button" class="secondary" id="api-token-cancel">Cancel</button><button class="primary">Create token</button></div></form>`, { className: "wide" });
+        .join("")}</select></label><label>Vault name prefixes (optional)<input id="api-token-prefixes" placeholder="Lucea, brace-yourself-dental" spellcheck="false" aria-describedby="api-token-prefixes-help"></label></div><small class="net-help" id="api-token-prefixes-help">Optional: limit vault access to entries whose names start with these prefixes.</small><div class="dialog-footer"><button type="button" class="secondary" id="api-token-cancel">Cancel</button><button class="primary">Create token</button></div></form>`, { className: "wide" });
     d.querySelector("#api-token-cancel")!.addEventListener("click", () => d.close());
     d.querySelector("form")!.addEventListener("submit", async (e) => {
       e.preventDefault();

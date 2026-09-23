@@ -27,8 +27,8 @@
 .net-scan .secondary { margin-left: auto; }
 .net-drawer { width: min(860px, 94vw); }
 .net-pane { padding: 4px 20px 28px; }
-.net-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 8px 0 14px; }
-.net-facts > div { background: var(--white); padding: 10px 12px; }
+.net-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); background: var(--white); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 8px 0 14px; }
+.net-facts > div { padding: 10px 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; }
 .net-facts span { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .net-facts b { display: block; margin-top: 3px; font-size: 14px; overflow-wrap: anywhere; }
 .net-reach { margin: 0 0 12px; font-size: 13px; }
@@ -37,7 +37,7 @@
 .net-value { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; margin: 1px 0; }
 .net-form, .net-confirm { display: flex; flex-direction: column; padding: 4px 0 0; }
 .net-form label, .net-confirm label { display: flex; flex-direction: column; }
-.net-form small { margin-top: 5px; color: var(--muted); font-size: 12px; }
+.net-form small, .net-help { display: block; margin: -10px 0 16px; color: var(--muted); font-size: 12px; }
 .net-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .net-form textarea { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
 .net-change { margin: 6px 0 12px; padding-left: 18px; }
