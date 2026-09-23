@@ -4,6 +4,9 @@ import { fleetToolbar, bindFleetPopovers, updateFilterChips } from "./fleet-tool
 import { bindFleetHeaders, reorderedColumns } from "./fleet-headers";
 import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
 import { createInfrastructure } from "./infrastructure";
+import { createNetwork } from "./network";
+import { createKeys } from "./keys";
+import { createApiAccess } from "./api-access";
 import { integrationSettings } from "./integrations";
 import { machinePresence } from "./presence";
 import Guacamole from "guacamole-common-js";
@@ -344,6 +347,9 @@ function shell(title: string, subtitle: string) {
     ["recovery", "recovery", "Recovery lab"],
     ["slide", "slide", "Slide"],
     ["infrastructure", "network", "Infrastructure"],
+    ["network", "globe", "Network & DNS"],
+    ["keys", "key", "Keys"],
+    ["api", "code", "API & agents"],
     ["activity", "history", "Activity"],
     ["downloads", "download", "Downloads"],
     ["settings", "settings", "Settings"],
@@ -427,6 +433,9 @@ async function render(manualRefresh = false) {
       "recovery",
       "slide",
       "infrastructure",
+      "network",
+      "keys",
+      "api",
       "activity",
       "settings",
       "downloads",
@@ -445,6 +454,9 @@ async function render(manualRefresh = false) {
     recovery: ["Recovery lab", ""],
     slide: ["Slide", ""],
     infrastructure: ["Infrastructure", ""],
+    network: ["Network & DNS", ""],
+    keys: ["Keys", ""],
+    api: ["API & agents", ""],
     activity: ["Activity", ""],
     settings: ["Settings", ""],
     downloads: ["Downloads", ""],
@@ -463,6 +475,9 @@ async function render(manualRefresh = false) {
       recovery: renderRecovery,
       slide: renderSlide,
       infrastructure: infrastructure.render,
+      network: network.render,
+      keys: keys.render,
+      api: apiAccess.render,
       activity: management.renderAudit,
       settings: renderSettings,
       downloads: () => content(desktopDownloads(true)),
@@ -497,6 +512,9 @@ const ops = createOperations({
   },
 });
 const infrastructure = createInfrastructure({api, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role});
+const network = createNetwork({ api, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
+const keys = createKeys({ api, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
+const apiAccess = createApiAccess({ api, esc, notify, dialog, content, loading, role: () => role, loadingState });
 const management = createManagement({
   api,
   esc,

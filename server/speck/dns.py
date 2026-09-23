@@ -124,8 +124,11 @@ def cached_domains():
     for row in rows:
         item = json.loads(row["data"])
         zone = zones.get(row["domain"])
+        records = json.loads(zone["records"]) if zone else None
         item["zone_cached_at"] = zone["fetched"] if zone else None
-        item["record_count"] = len(json.loads(zone["records"])) if zone else None
+        item["record_count"] = len(records) if records is not None else None
+        item["apex"] = [r.get("data") for r in records or [] if r.get("type") == "A" and r.get("name") == "@"]
+        item["nameservers"] = [r.get("data") for r in records or [] if r.get("type") == "NS" and r.get("name") == "@"]
         out.append(item)
     return out, max((r["fetched"] for r in rows), default=None)
 

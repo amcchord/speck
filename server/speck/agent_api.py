@@ -256,18 +256,14 @@ def openapi(request: Request):
     from fastapi.openapi.utils import get_openapi
 
     if not _schema:
-        app = request.app
-        routes = [
-            r for r in app.routes
-            if getattr(r, "path", "").startswith("/api/") and not r.path.startswith(INTERNAL)
-            and getattr(r, "include_in_schema", True)
-        ]
+        # FastAPI keeps included routers as nested objects, so filter the generated paths.
         schema = get_openapi(
             title="Speck API",
             version=VERSION,
             description="Authenticate with `Authorization: Bearer speck_pat_…`. See /agents.md for workflows.",
-            routes=routes,
+            routes=request.app.routes,
         )
+        schema["paths"] = {p: v for p, v in schema["paths"].items() if p.startswith("/api/") and not p.startswith(INTERNAL)}
         schema["servers"] = [{"url": origin()}]
         schema.setdefault("components", {})["securitySchemes"] = {"token": {"type": "http", "scheme": "bearer"}}
         schema["security"] = [{"token": []}]
