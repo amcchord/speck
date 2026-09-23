@@ -88,6 +88,14 @@ operators can use **Check now**. Archived entries remain available through the
 existing device-history controls/API. A restore already deleted before Speck
 first observed it requires ordinary manual archiving.
 
+Fleet's **Refresh** button also checks the connected Slide account for removed
+restores before reloading inventory for operators and administrators. This uses
+the same confirmation window and automatic-archiving policy as **Check now**;
+it does not shorten the five-minute grace period. Pending confirmations are
+reported, and a cleanup failure still allows inventory to refresh. Viewer refreshes,
+normal navigation and background Fleet updates do not trigger cleanup. Scheduled
+checks continue every five minutes.
+
 This process archives Speck entries only. It does not delete VMs, snapshots or
 recovery networks in Slide. Remove an unwanted test VM in Slide; its linked
 Speck entry is cleaned up after the confirmation window. Retain any evidence

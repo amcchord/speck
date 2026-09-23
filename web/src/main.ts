@@ -379,7 +379,7 @@ function shell(title: string, subtitle: string) {
     history.replaceState(null, "", "#signin");
     login();
   });
-  on("refresh", render);
+  on("refresh", () => render(true));
   if (page === "fleet") on("add", enrollmentDialog);
 }
 function content(html: string) {
@@ -397,7 +397,7 @@ function loading(label: string) {
   content(loadingState(label));
   document.getElementById("content")?.setAttribute("aria-busy", "true");
 }
-async function render() {
+async function render(manualRefresh = false) {
   if (page === "fleet" && document.getElementById("fleet-rows")) {
     fleetScroll = { x: scrollX, y: scrollY, table: document.querySelector(".fleet-table-wrap")!.scrollLeft };
   }
@@ -452,7 +452,7 @@ async function render() {
   shell(...(titles[page] as [string, string]));
   try {
     await {
-      fleet: renderFleet,
+      fleet: () => renderFleet(manualRefresh),
       alerts: management.renderAlerts,
       schedules: management.renderSchedules,
       account: management.renderAccount,
@@ -514,7 +514,7 @@ const management = createManagement({
   username: () => username,
   refresh: render,
 });
-async function renderFleet() {
+async function renderFleet(manualRefresh = false) {
   if (!fleetCache) loading("Loading fleet…");
   else viewScope.reset();
   if (role === "viewer") {
@@ -529,7 +529,24 @@ async function renderFleet() {
   refresh.title = "Updating machines…";
   if (hadCache) drawFleet();
   try {
-    await loadFleet(hadCache);
+    if (manualRefresh && role !== "viewer") {
+      try {
+        const connection = await api("/slide/connection");
+        if (connection.connected) {
+          refresh.title = "Checking removed Slide restores…";
+          const result = await api("/slide/restored-devices/sync", "POST");
+          if (result.errors.length) {
+            notify("Slide could not verify every restore. Unconfirmed machines remain in Fleet.", true);
+          } else if (result.archived.length || result.pending.length) {
+            notify(`${result.archived.length} removed Slide restore(s) archived; ${result.pending.length} awaiting confirmation.`);
+          }
+        }
+      } catch (error) {
+        if (error instanceof StaleViewError || !username) throw error;
+        notify("Slide cleanup could not be checked. Refreshing Fleet inventory anyway.", true);
+      }
+    }
+    await loadFleet(hadCache || manualRefresh);
     if (hadCache) renderFleetRows();
     else drawFleet();
   } catch (err) {
@@ -1953,6 +1970,7 @@ setInterval(async () => {
     !username ||
     !fleetCache ||
     polling ||
+    document.querySelector<HTMLButtonElement>("#refresh")?.disabled ||
     page !== "fleet" ||
     remote ||
     document.querySelector("dialog:modal") ||
