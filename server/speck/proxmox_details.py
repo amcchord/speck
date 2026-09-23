@@ -17,13 +17,19 @@ def guest_agent_enabled(config):
     return str(value).split(",")[0] in ("1", "enabled=1")
 
 
-def console_capability(cfg, row):
+def console_capability(cfg, row, config=None):
     if row["type"] != "qemu":
         return {"available": False, "reason": "Screen access is available for virtual machines."}
     if row.get("template"):
         return {"available": False, "reason": "Clone this template to use its screen."}
     if row.get("status") != "running":
         return {"available": False, "reason": "Start the virtual machine to view its screen."}
+    display = str((config or {}).get("vga", "std")).split(",")[0].removeprefix("type=")
+    if display == "none" or display.startswith("serial"):
+        return {
+            "available": False,
+            "reason": "This VM has no graphical display. Screen preview and control require a graphical display in Proxmox.",
+        }
     if cfg.get("connector"):
         with db() as conn:
             online = any(
@@ -79,7 +85,7 @@ async def machine_detail(cfg, row):
         **{name: section.get("data") for name, section in sections.items()},
         "availability": {name: {k: v for k, v in section.items() if k != "data"} for name, section in sections.items()},
         "capabilities": {
-            "console": console_capability(cfg, row),
+            "console": console_capability(cfg, row, config),
             "guest_agent": guest_agent_enabled(config),
             "guest_agent_config_known": sections.get("configuration", {}).get("state") == "available",
         },

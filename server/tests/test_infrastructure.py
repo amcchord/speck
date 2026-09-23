@@ -528,6 +528,28 @@ def test_disabled_guest_agent_never_issues_guest_commands(client, upstream, monk
     assert data['state'] == 'disabled'
 
 
+@pytest.mark.parametrize('display', ['serial0', 'type=serial1', 'none'])
+def test_machine_without_graphical_display_keeps_inventory_and_disables_preview(client, upstream, monkeypatch, display):
+    _, rows = upstream
+    rows[-1]['status'] = 'running'
+    cid = add(client)
+    original = infra.provider_request
+
+    async def request(cfg, method, path, body=None, params=None):
+        if path.endswith('/config'):
+            return {'vga': display, 'cores': 4, 'agent': '1'}
+        return await original(cfg, method, path, body, params)
+
+    monkeypatch.setattr(infra, 'provider_request', request)
+    response = client.get(f'/api/infrastructure/connections/{cid}/resources/qemu/101')
+    assert response.status_code == 200
+    detail = response.json()
+    assert detail['configuration']['cores'] == 4
+    assert detail['capabilities']['guest_agent']
+    assert not detail['capabilities']['console']['available']
+    assert 'no graphical display' in detail['capabilities']['console']['reason']
+
+
 def test_direct_api_console_uses_fresh_node_and_server_side_ticket(client, upstream, monkeypatch):
     from speck import infrastructure_console as console
     from speck.remote import sessions
