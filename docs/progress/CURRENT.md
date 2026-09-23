@@ -27,6 +27,22 @@ without changing enrollment. [Capabilities, validation and rollback](../operatio
 
 # Current state — September 22, 2026
 
+## Fleet UI polish — ready locally September 23
+
+`worktrees/fleet-ui-polish`, branch `codex/fleet-ui-polish`, starts from current
+main `7a51f07`. Machine identity/provider details now share the pane's 20px desktop
+and 16px mobile gutters. Columns use a compact scrollable selector with drag
+handles, keyboard ordering, optional widths and a persistent Save/Cancel footer.
+Existing saved preferences remain compatible; reset preserves sorting/highlighting.
+
+Build, 28 web units and 119 Chromium/WebKit scenarios pass. One WebKit touch test
+is intentionally skipped; Chromium touch gestures pass. Five synthetic captures
+are in the [gallery](../screenshots/fleet-ui-polish/README.md). No production or
+shared Git history changes. Next: review and explicit authorization for a static
+web deployment, with the current-main/live-baseline checks in AGENTS.md.
+
+## Deployed baseline
+
 Speck is live at https://speckrmm.com with management MVP, native iPhone/iPad,
 remote-session startup fixes and **passkey sign-in**. Enroll in Settings → Account
 & access, or Account → Passkeys on iOS. Password/authenticator login remains

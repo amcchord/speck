@@ -1,0 +1,37 @@
+[
+  {
+    "file": "columns-desktop.png",
+    "sha256": "eeb06eeb4129fe64620cfe905f56609538c0e2579baed3f1ac95d295761e5c2b",
+    "source": "unified-fleet-custom-columns-fit-at-1440px-webkit/columns-1440.png",
+    "browser": "WebKit",
+    "fixture": "scripts/preview.py plus unified-fleet.spec.mjs synthetic machine data"
+  },
+  {
+    "file": "columns-widths.png",
+    "sha256": "299cd5a75463274df80084ecdd1cfef723d625efd2b55b5210c6a8bd60cf781b",
+    "source": "unified-fleet-custom-columns-fit-at-1440px-webkit/columns-1440-widths.png",
+    "browser": "WebKit",
+    "fixture": "scripts/preview.py plus unified-fleet.spec.mjs synthetic machine data"
+  },
+  {
+    "file": "columns-mobile.png",
+    "sha256": "a3438f36107d63dea22b6ddf0ee382922d7bd8fff90e312e641fc63376d44926",
+    "source": "unified-fleet-custom-columns-fit-at-390px-webkit/columns-390.png",
+    "browser": "WebKit",
+    "fixture": "scripts/preview.py plus unified-fleet.spec.mjs synthetic machine data"
+  },
+  {
+    "file": "columns-320-widths.png",
+    "sha256": "d42468cc15096b13a23e4ffa7d7511b3baed13ff9254fd89f4e8fb749c4c5f69",
+    "source": "unified-fleet-custom-columns-fit-at-320px-webkit/columns-320-widths.png",
+    "browser": "WebKit",
+    "fixture": "scripts/preview.py plus unified-fleet.spec.mjs synthetic machine data"
+  },
+  {
+    "file": "machine-flyout.png",
+    "sha256": "32d53524c85ab64abdf2233d8885430ce5ba34051f0ec3d8fc249aff449c8d9f",
+    "source": "unified-fleet-provider-onl-7fa5e-rawer-and-provider-controls-webkit/machine-flyout.png",
+    "browser": "WebKit",
+    "fixture": "scripts/preview.py plus unified-fleet.spec.mjs synthetic machine data"
+  }
+]

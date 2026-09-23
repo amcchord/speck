@@ -575,3 +575,28 @@ platform builds, 28 web units, 110 browser cases). Final session-scoping and lay
 changes passed 12 Fleet and 22 overview browser cases; all hosted PR checks passed.
 Matching rollback: `/var/lib/speck-rollback/20260923T083900Z-unified-fleet-7148553`.
 Private release, invariant and live-browser evidence: `output/unified-fleet/`.
+
+## 2026-09-23 — Machine flyout gutters and drag-and-drop columns
+
+Implemented on `codex/fleet-ui-polish` in `worktrees/fleet-ui-polish`, based on
+current GitHub main `7a51f07`. Moved inventory-section styles into machine.css and
+shared desktop/mobile gutters with the title, facts and body. Replaced the large
+arrow-button column form with a compact scrollable editor in fleet-columns.ts:
+mouse/pen/touch handles, drop marker, auto-scroll, keyboard arrows/Home/End,
+Escape cancellation and status announcements. Width fields are opt-in; visibility
+and a required Machine label are explicit. Save/Cancel remain visible. Reset
+preserves unrelated sorting and highlighting; saved preference schema is unchanged.
+
+Validation: TypeScript/Vite build, 28 existing web units, and all 119 applicable
+browser scenarios pass in Chromium/WebKit. One WebKit copy of the Chromium input
+protocol touch test is intentionally skipped. The actual Chromium touch drag and
+ordinary touch scroll pass. Regression coverage includes save/reload, both drag
+directions, keyboard focus, drag cancellation, draft cancellation, reset, footer
+visibility at 320–1440px, and matching flyout gutters for endpoints/provider VMs.
+Five original synthetic screenshot captures and digests are retained under
+`docs/screenshots/fleet-ui-polish`; inspected desktop, mobile and width layouts.
+
+No production, backend, agent, provider, credential, shared Git history or
+endpoint actions. No new dependency. Physical iOS touch remains unverified.
+Next: user review and explicit static-deployment authorization; preserve current
+main and any newer live work during the required release preflight.
