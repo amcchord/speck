@@ -601,6 +601,35 @@ endpoint actions. No new dependency. Physical iOS touch remains unverified.
 Next: user review and explicit static-deployment authorization; preserve current
 main and any newer live work during the required release preflight.
 
+## 2026-09-23 — Authorized static Fleet UI production rollout
+
+User explicitly requested production deployment. Re-fetched origin/main `7a51f07`
+and confirmed it is an ancestor of runtime `8cd12c7`; the current live backend
+matched main, and live index `a880e86c…` matched unified-Fleet runtime `7148553`.
+Coordinated exclusive publication with the active client-display task, which
+confirmed no newer runtime was deployed and held publishing.
+
+Rebuilt the clean source (TypeScript/Vite passed with the previously tested bundle)
+and captured protected-state hashes. Staged assets, retained the complete old web
+and existing asset files, rechecked the index under the shared release lock, then
+atomically published the new index. Public index `0253cdc4…` and every top-level
+web JS/CSS file match local bytes. Backend code, service PID/start time, environment,
+60 device identities, 12 installations, four accounts, six connections and eight
+connector enrollments remained unchanged. Health passed throughout.
+
+Live Chromium 1440px and WebKit 390px verified the requested machine pane's aligned
+gutters, column dragging, saved order after reload, optional widths and visible
+footer with no page errors. Original preferences were restored and checked by API;
+QA sessions were logged out. Private screenshots/report/deployment evidence stay
+in ignored `output/fleet-ui-polish/`. No remote action, agent update or restart.
+Rollback: `/var/lib/speck-rollback/20260923T130226Z-fleet-ui-polish-8cd12c7/web`.
+
+Released deployment ownership and sent the exact commit/index to the concurrent
+client-display task so its next web publication preserves this change. Code and
+release notes remain local; no GitHub push/merge was requested. Reload the console
+for the new assets. Future deployment must include local runtime `8cd12c7` until
+that source is integrated into GitHub.
+
 ## 2026-09-23 — Settings Slide clients and one-click backups (local)
 
 Branch `codex/slide-client-backup-fix`, worktree `worktrees/slide-client-backup-fix`.
