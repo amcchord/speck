@@ -73,6 +73,8 @@ ordinary endpoint auto-update packages do not overwrite this connector.
 Version 0.1.1 uses a valid DMI hardware UUID when the host has an empty Linux
 machine-id. Enrollment pins that identity source; later creation of a machine-id
 does not invalidate the agent, and older enrollments retain their original identity.
+Version 0.1.2 reports the running version on authenticated heartbeats, so manual
+upgrades appear in Connections without reenrollment. Older agents remain compatible.
 
 ## Other providers and AustinLand
 
@@ -142,3 +144,17 @@ The pre-release server/web/data/config backup is
 `/var/lib/speck-rollback/20260923T071434Z-infrastructure-45d02df`.
 Private deployment records, target IDs and screenshots are in the infrastructure
 worktree's ignored `output/infrastructure/`; they are not public gallery assets.
+
+The final backend/connector update is `848bbc5` (connector 0.1.2); web assets are
+unchanged. All seven host enrollment files retained their exact hashes. Nineteen
+infrastructure tests, Go race checks and hosted checks passed. Live checks confirmed
+all connections/agents healthy, published artifact hashes, restored console settings
+and AustinLand DNS, public-IP, SSH-key and provisioning-metadata reads. The Mac and
+its AustinLand application must remain online for delegated AustinLand operations.
+
+The final follow-up backup is
+`/var/lib/speck-rollback/20260923T074120Z-infrastructure-848bbc5`.
+A conservative check rolled back an earlier attempt because `management_tick` and
+`slide_restore_sync` advanced normally. Those two transient state keys were then
+excluded; protected configuration, identities and recovery records still passed
+the invariant checks. The original pre-feature backup above remains available.
