@@ -574,3 +574,18 @@ restored. All five earlier client assignments and protected runtime state remain
 verified. Rollback: `/var/lib/speck-rollback/20260923T133704Z-fleet-toolbar-headers-1158014`.
 Source and release records are local; no GitHub push. See current state and journal
 for audit and deployment evidence. Future releases must preserve this runtime.
+
+
+## Compact alerts and AI — September 23, 2026 (local)
+
+Branch `codex/alerts-ai`, runtime `03dbdb8`, preserves current deployed Fleet
+`1158014` / record `6faaf5c`. Compact alert rows explain job outcomes, show expanded
+evidence and distinguish acknowledging/reviewing from recovery. AI diagnose/fix
+uses the selected alert and machine, optional job evidence, reviewed scripts and
+explicit command execution; cautions/verification stay visible in the terminal.
+
+Ruff, TypeScript/Vite, 166 backend and 28 web units pass. Browser validation totals
+159 passing scenarios after targeted fixture corrections/reruns, with one existing
+WebKit touch/CDP skip. [Details](docs/progress/JOURNAL.md),
+[operations](docs/operations/alerts-ai.md), [synthetic gallery](docs/screenshots/alerts-ai/README.md).
+No deployment or endpoint repair occurred; deployment approval is pending.

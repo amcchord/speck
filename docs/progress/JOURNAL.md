@@ -747,3 +747,39 @@ real backup, provider management action or agent upgrade was triggered.
 Source and records are committed locally; no shared-history push was requested.
 Release ownership is clear. Future releases must preserve `1158014` until its
 source reaches main; adjacent tasks received the exact runtime/index baseline.
+
+
+## 2026-09-23 — Compact alerts and contextual AI review
+
+User requested clearer, denser SpeckRMM alerts plus AI diagnosis and root-cause
+repair actions. Created `worktrees/alerts-ai` / `codex/alerts-ai` from main
+`7a51f07`, implemented `9b03400`, merged current deployed Fleet record `6faaf5c`
+into `2bcfd3d`, and preserved verification in terminal handoff with `03dbdb8`.
+No other task's worktree was modified.
+
+Server alert presentation enriches existing records without migration, uses batch
+names/job kinds, distinguishes unconfirmed completion from failure/expiration,
+and bounds evidence without exposing connection payloads. AI validates the
+alert/machine pair and role, rejects resolved repairs/retired targets, includes
+freshness and disk context, and sends script/output only when selected. Audit
+retains request metadata. Model scripts remain reviewed proposals; job execution
+uses the existing explicit command action and does not mark an alert fixed.
+
+Web rows are approximately 76px on desktop, with compact counts/filters,
+expandable evidence/review controls and responsive AI actions. Cautions and
+verification survive transfer to the target's command editor. Synthetic captures
+with original-byte hashes are in `docs/screenshots/alerts-ai/`.
+
+Validation: Ruff and TypeScript/Vite pass; 166 backend, 28 web units, and 159
+browser scenarios pass across the full run and targeted reruns. One existing
+WebKit touch/CDP case is skipped. The first full browser run had 156 passing cases,
+one port setup failure and one skip; fixed the existing touch test to honor the
+configured base URL and reran it successfully. The two added phone cases initially
+assumed an online fixture was offline, then passed with explicitly offline data.
+No application failure was hidden by those fixture corrections. Logs remain in
+ignored `output/alerts-ai/`. No agent/native builds were needed for this server/web
+change. Real AI quality and actual repair execution remain unverified.
+
+No source push, main merge, deployment, model call, production data write or endpoint
+operation occurred. Deployment approval is requested under the workspace rules;
+next step after approval is a newly checked and coordinated backend/web release.

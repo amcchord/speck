@@ -245,3 +245,27 @@ reads and isolation/revocation acceptance. All QA access was cleaned up. Existin
 fleet assignments, identities, accounts, credentials, provider settings, updater
 policy and recovery resources were preserved. Rollback and detailed checks are in
 [Chat integration operations](../operations/chat-integration.md).
+
+
+## Compact alerts and contextual AI — ready locally, September 23
+
+`worktrees/alerts-ai` / `codex/alerts-ai`, runtime `03dbdb8`, includes deployed
+Fleet runtime `1158014` and record `6faaf5c`. Alerts have compact rows, named
+operations, explicit unknown/expired/failed explanations, expandable command/output
+evidence and clear acknowledge/review semantics. AI diagnose/fix uses server-bound
+alert context and opt-in job evidence, then hands drafts to the existing terminal
+with cautions and verification preserved. No commands run when generating a draft.
+
+Ruff, TypeScript/Vite, 166 backend and 28 web unit tests pass. 159 browser scenarios
+pass across the full run and focused corrections/reruns; one existing WebKit CDP
+case is intentionally skipped. The initial touch test targeted a hardcoded preview
+port owned by another task; it now uses the configured base URL and passes. A new
+offline test initially used an online fixture, corrected before its passing rerun.
+Screenshots are synthetic; real provider diagnosis and endpoint repairs were not
+run. See [operations](../operations/alerts-ai.md) and
+[gallery](../screenshots/alerts-ai/README.md).
+
+No push, merge to main, production deployment or endpoint action occurred. User
+approval for deployment is pending. Next action: if authorized, re-check current
+main/live release and coordinate a combined backend/web rollout; otherwise retain
+this contained branch for review.
