@@ -204,7 +204,7 @@ class Handler(BaseHTTPRequestHandler):
                 ],
                 "/api/devices": DEVICES,
                 "/api/fleet": {"machines": DEVICES, "connections": [], "checked_at": NOW},
-                "/api/fleet/preferences": {"order": ["name","status","client","agent","location","app","cpu","memory","address","provider","kind","site","seen","preview"], "visible": ["name","status","client","agent","location","app","cpu","memory","address"], "widths": {}, "sort": "name", "direction": "asc", "highlight_agents": False},
+                "/api/fleet/preferences": {"order": ["name","status","client","agent","location","app","cpu","memory","address","provider","kind","site","seen","preview"], "visible": ["name","status","client","agent","location","app","cpu","memory","address"], "widths": {}, "sort": "name", "direction": "asc", "highlight_agents": False, "agent_filter": "all"},
                 "/api/integrations/tokens": {"tokens": [], "sites": ["Demo Clinic"]},
                 "/api/agent-updates": {"enabled": True, "version": "0.3.1", "devices": []},
                 "/api/templates": [dict(t, builtin=True, revision=1) for t in STARTERS],

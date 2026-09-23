@@ -1,0 +1,37 @@
+[
+  {
+    "file": "toolbar-desktop.png",
+    "sha256": "0920bba853bcb78c7c49acb8af9adf7ecfa55c9be455876f449d4bdfec97fd5b",
+    "source": "fleet-toolbar-compact-tool-c6fe3-er-chips-and-View-at-1440px-webkit/toolbar-1440.png",
+    "browser": "WebKit",
+    "fixture": "scripts/preview.py plus fleet-toolbar.spec.mjs synthetic machine data"
+  },
+  {
+    "file": "filters-desktop.png",
+    "sha256": "394559aa3b31565bbe71d0b9eeb5e35d2f71ec445764861deb92e3d727595c8d",
+    "source": "fleet-toolbar-compact-tool-c6fe3-er-chips-and-View-at-1440px-webkit/filters-1440.png",
+    "browser": "WebKit",
+    "fixture": "scripts/preview.py plus fleet-toolbar.spec.mjs synthetic machine data"
+  },
+  {
+    "file": "toolbar-phone.png",
+    "sha256": "97c5cdd4a251af21e5f83dd77f7dc7ffad76dc2034ff4a44f8893b900ee3274e",
+    "source": "fleet-toolbar-compact-toolbar-filter-chips-and-View-at-390px-webkit/toolbar-390.png",
+    "browser": "WebKit",
+    "fixture": "scripts/preview.py plus fleet-toolbar.spec.mjs synthetic machine data"
+  },
+  {
+    "file": "view-phone.png",
+    "sha256": "fc036b0f2cef51b40158a9311e341fee73a0e428ea8026714a17a82494d2c892",
+    "source": "fleet-toolbar-compact-toolbar-filter-chips-and-View-at-390px-webkit/view-390.png",
+    "browser": "WebKit",
+    "fixture": "scripts/preview.py plus fleet-toolbar.spec.mjs synthetic machine data"
+  },
+  {
+    "file": "toolbar-320.png",
+    "sha256": "fedc7232a86cc1581312c9dd5df8fdfea8be2ece227b52fb3e2bf26c13739e6f",
+    "source": "fleet-toolbar-compact-toolbar-filter-chips-and-View-at-320px-webkit/toolbar-320.png",
+    "browser": "WebKit",
+    "fixture": "scripts/preview.py plus fleet-toolbar.spec.mjs synthetic machine data"
+  }
+]

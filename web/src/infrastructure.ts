@@ -147,7 +147,7 @@ export function createInfrastructure(ui: Item) {
       body.innerHTML = `<div class="infra-connections">${inventory.connections
         .map(
           (c: Item, i: number) =>
-            `<article class="card"><div class="infra-card-heading"><h2>${esc(c.name)}</h2>${badge(c.status, c.status === "connected")}</div><p>${labels[c.provider]} · ${c.connector ? "Outbound agent" : esc(c.url)}</p>${c.error ? `<p class="infra-error">${esc(c.error)}</p>` : ""}<div class="infra-actions">${button("infra-tools-" + i, "Manage")}${admin() ? button("infra-edit-" + i, "Edit") + button("infra-remove-" + i, "Disconnect") : ""}${admin() && c.connector ? button("infra-enroll-" + i, "Enroll host") : ""}</div>${agents
+            `<article class="card"><div class="infra-card-heading"><h2>${esc(c.name)}</h2>${badge(c.status, c.status === "connected")}</div><p>${labels[c.provider]} · ${c.connector ? "Outbound agent" : esc(c.url)}</p>${c.error ? `<p class="infra-error">${esc(c.error)}</p>` : ""}<div class="infra-actions">${button("infra-tools-" + i, "Manage")}${admin() ? c.managed_in_settings ? '<a class="secondary" href="#settings">Manage in Settings</a>' : button("infra-edit-" + i, "Edit") + button("infra-remove-" + i, "Disconnect") : ""}${admin() && c.connector ? button("infra-enroll-" + i, "Enroll host") : ""}</div>${agents
               .filter((a) => a.connection_id === c.id)
               .map(
                 (a, j) =>
@@ -312,10 +312,12 @@ export function createInfrastructure(ui: Item) {
   }
   async function operationForm(c: Item, id: string, spec: Item, r?: Item) {
     const read = spec.method === "GET";
+    const confirmation = !read && spec.requires_confirmation !== false;
+    const immediate = !read && !confirmation && !spec.fields.length;
     const name = r?.name || c.name;
     const d = dialog(
       spec.label,
-      `<form class="infra-form"><p>${esc(c.name)}${r ? " · " + esc(r.name) : ""}</p>${spec.danger ? '<p class="infra-error">This changes a live resource and may interrupt service or permanently delete data.</p>' : ""}${spec.fields.map((f: Item) => `<label>${esc(f.label)}${!f.required ? " (optional)" : ""}${input(f)}</label>`).join("")}${!read ? `<label>Type ${esc(name)} to confirm<input name="confirmation" autocomplete="off" required></label>` : ""}<button class="primary" type="submit">${read ? "Load" : esc(spec.label)}</button><div class="infra-operation-result" role="status"></div></form>`,
+      `<form class="infra-form"><p>${esc(c.name)}${r ? " · " + esc(r.name) : ""}</p>${spec.danger ? '<p class="infra-error">This changes a live resource and may interrupt service or permanently delete data.</p>' : ""}${spec.fields.map((f: Item) => `<label>${esc(f.label)}${!f.required ? " (optional)" : ""}${input(f)}</label>`).join("")}${confirmation ? `<label>Type ${esc(name)} to confirm<input name="confirmation" autocomplete="off" required></label>` : ""}<button class="primary" type="submit">${read ? "Load" : esc(spec.label)}</button><div class="infra-operation-result" role="status"></div></form>`,
     );
     d.classList.add("infra-dialog");
     const form = d.querySelector("form")!;
@@ -328,6 +330,7 @@ export function createInfrastructure(ui: Item) {
       ) as HTMLButtonElement;
       submit.disabled = true;
       const result = form.querySelector(".infra-operation-result")!;
+      result.textContent = read ? "Loading…" : "Submitting request…";
       try {
         const fd = new FormData(form);
         const args: Item = {};
@@ -358,7 +361,7 @@ export function createInfrastructure(ui: Item) {
               resource_id: r?.id || "",
               operation: id,
               args,
-              confirmation: String(fd.get("confirmation")),
+              confirmation: String(fd.get("confirmation") || ""),
             });
         result.innerHTML = read
           ? dataView(response)
@@ -375,6 +378,7 @@ export function createInfrastructure(ui: Item) {
         submit.disabled = false;
       }
     };
+    if (immediate) form.requestSubmit();
   }
   async function connectionTools(c: Item) {
     const catalog = await api(`/infrastructure/connections/${c.id}/catalog`);
