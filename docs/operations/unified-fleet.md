@@ -70,3 +70,19 @@ verified the joined inventory, client membership, saved columns and agent filter
 all ten Proxmox endpoint matches and eight infrastructure connectors were healthy.
 The consistent data/configuration/runtime rollback snapshot is
 `/var/lib/speck-rollback/20260923T083900Z-unified-fleet-7148553`.
+
+## Settings account and immediate backups
+
+The pending client/backup fix includes the existing Slide account from Settings
+as `Slide (Settings)` alongside Infrastructure accounts. Credentials stay in their
+original encrypted setting; edit that account through Settings. An identical API
+origin and credential is fetched once, while different accounts on the same
+origin remain separate. Fleet joins the protected record through its existing
+Slide agent ID and reads its client membership from that account. It does not
+infer clients from machine names or change assignments in Slide.
+
+**Back up machine** on a protected machine submits immediately and shows the
+request receipt. No target-name entry is needed. The server still resolves the
+resource under its account and enforces administrator access, CSRF, audit logging
+and request deduplication. Retrying a lost response reuses the same request ID.
+Other provider management actions retain their existing confirmation behavior.

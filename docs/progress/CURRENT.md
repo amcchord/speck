@@ -1,3 +1,15 @@
+# Slide client display and one-click backup fix — ready locally
+
+`codex/slide-client-backup-fix` contains runtime `f1d96d0`, combined with deployed
+flyout/column runtime `8cd12c7` in merge `6acf61c`. Fleet now includes the Settings
+Slide account, and protected-machine backup starts on the button press without
+name entry. Read-only live-data replay confirms client membership for all five
+reported originals and retains all ten Proxmox/endpoint matches. Ruff, 156 backend
+and 28 web tests plus TypeScript/Vite pass; combined browser validation passed
+123 scenarios (one existing platform-specific skip). No production change from this task.
+Next action: explicit server/web deployment approval under the workspace rules.
+See the newest journal entry and [behavior](../operations/unified-fleet.md#settings-account-and-immediate-backups).
+
 # Unified Fleet — live September 23, 2026
 
 PR #17 is merged as `531ee39`; server/web release `7148553` is deployed. Fleet

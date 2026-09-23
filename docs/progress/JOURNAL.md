@@ -600,3 +600,34 @@ No production, backend, agent, provider, credential, shared Git history or
 endpoint actions. No new dependency. Physical iOS touch remains unverified.
 Next: user review and explicit static-deployment authorization; preserve current
 main and any newer live work during the required release preflight.
+
+## 2026-09-23 — Settings Slide clients and one-click backups (local)
+
+Branch `codex/slide-client-backup-fix`, worktree `worktrees/slide-client-backup-fix`.
+Runtime fix `f1d96d0`; merge `6acf61c` preserves the concurrently deployed flyout
+spacing/column-drag runtime `8cd12c7` over main `7a51f07`.
+
+Fleet omitted the Settings Slide account while including Infrastructure accounts,
+so linked originals lost their clients even though Slide held the assignments.
+The existing encrypted Settings credential now participates through a derived
+connection, with same-account deduplication and management routed to Settings.
+The protected-machine backup catalog permits immediate submission; other actions
+retain typed confirmation, and authorization, audit and retry deduplication remain.
+
+Read-only replay of current provider inventory correctly assigns all five reported
+originals to their Slide client and retains all ten Proxmox/endpoint joins.
+No live backup or provider action was triggered. Local Ruff, 156 backend tests,
+28 web units and TypeScript/Vite pass. Desktop/mobile Chromium and WebKit tests
+verify one-click submission, missing confirmation field and reuse of request IDs
+on a lost receipt, plus existing provider confirmations.
+
+No deployment, shared-history push, account/agent/client assignment changes or
+credential migration occurred in this task. The other task owns deployed static
+`8cd12c7`; live index `0253cdc4ea82ae07617afc9447b9b80cc1ec2cbe9b42adfd7471bff03dd3f855`.
+Next: obtain explicit deployment authorization, recheck live/main baselines, then
+release server/web together with a matching rollback and health/client checks.
+
+Combined final browser validation: 123 Chromium/WebKit scenarios pass; the existing
+WebKit variant of the Chromium-only touch-input protocol test is intentionally
+skipped. Backup receipt screenshots were inspected at desktop and phone widths.
+Agent/native binaries were unchanged and their runtime suites were not rerun.

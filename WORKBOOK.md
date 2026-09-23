@@ -514,3 +514,16 @@ case passes. Five synthetic screenshots were reviewed; see the
 [gallery](docs/screenshots/fleet-ui-polish/README.md). No production deployment,
 backend/agent action, GitHub push or merge. Next: review and explicitly authorize
 a static release after current-main and live-baseline preflight.
+
+## Settings Slide client membership and backup button — September 23, 2026
+
+Local `codex/slide-client-backup-fix` includes the existing Settings Slide account
+in Fleet and Infrastructure, without migrating credentials or changing provider
+assignments. Protected-machine backups submit on the first click, with existing
+account scoping, permissions, audit and retry deduplication. The fix is combined
+with deployed flyout/column runtime `8cd12c7`.
+
+Read-only provider replay verifies all five reported originals' clients and all
+ten Proxmox/endpoint joins. See `docs/progress/JOURNAL.md` for validation and
+`docs/operations/unified-fleet.md` for behavior. Production release remains pending
+explicit user authorization; no live backups were requested for testing.
