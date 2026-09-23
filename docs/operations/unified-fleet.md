@@ -11,6 +11,12 @@ each signed-in user choose visibility, order and pixel widths; Machine remains
 visible. Sorting and highlighting are saved with the user's preferences. On narrow
 screens the chosen columns appear in the same order within machine cards.
 
+The column editor supports drag handles (mouse or touch) and keyboard arrows,
+Home and End. Escape cancels an active drag. **Adjust widths** reveals pixel-width
+fields; the scrollable list keeps Save/Cancel visible. Changes apply only after
+**Save columns**. **Reset defaults** restores column order, visibility and widths
+while preserving sorting and agent highlighting.
+
 ## Identity and client membership
 
 `GET /api/fleet` builds the machine view; `/api/devices` retains its endpoint-only
@@ -70,3 +76,28 @@ verified the joined inventory, client membership, saved columns and agent filter
 all ten Proxmox endpoint matches and eight infrastructure connectors were healthy.
 The consistent data/configuration/runtime rollback snapshot is
 `/var/lib/speck-rollback/20260923T083900Z-unified-fleet-7148553`.
+
+### September 23 static UI refinement
+
+User-authorized runtime `8cd12c7` is live, preserving main `7a51f07` and the
+inspected unified-Fleet baseline. Client/provider details now share the machine
+pane's 20px desktop / 16px phone gutters. The column editor above replaces the
+large arrow-button form. [Synthetic screenshots](../screenshots/fleet-ui-polish/README.md).
+
+The release retained the previous complete web directory and existing assets,
+staged new assets, checked the live index under the shared deployment lock, and
+atomically replaced only the index. Public index SHA-256:
+`0253cdc4ea82ae07617afc9447b9b80cc1ec2cbe9b42adfd7471bff03dd3f855`.
+Backend/process/environment and protected identities/accounts/providers were
+unchanged. Live desktop Chromium and mobile WebKit verified padding, drag/save/
+reload and layouts with no page errors. Test preferences were restored and
+authentication sessions closed. There was no agent/provider operation or restart.
+
+Static rollback directory:
+`/var/lib/speck-rollback/20260923T130226Z-fleet-ui-polish-8cd12c7/web`.
+To reverse only this release, first confirm its index is still live, take the
+shared release lock, then atomically replace `/opt/speck/web/index.html` with the
+backup's index. All old assets remain present; no backend restart is required.
+Exact deployment and private browser evidence: `output/fleet-ui-polish/` in the
+task worktree. Source is local on `codex/fleet-ui-polish`; future releases must
+include it until GitHub integration is explicitly authorized.

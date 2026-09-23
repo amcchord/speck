@@ -514,3 +514,19 @@ case passes. Five synthetic screenshots were reviewed; see the
 [gallery](docs/screenshots/fleet-ui-polish/README.md). No production deployment,
 backend/agent action, GitHub push or merge. Next: review and explicitly authorize
 a static release after current-main and live-baseline preflight.
+
+## Fleet UI polish rollout — September 23, 2026
+
+At the user's request, static runtime `8cd12c7` deployed at 13:02 UTC with the
+latest main `7a51f07` included and the live unified-Fleet baseline verified.
+Public index `0253cdc4…` and JS/CSS assets match the local build. Real Chromium
+1440px and WebKit 390px checks passed flyout alignment, drag ordering, save/reload,
+width controls and footer layout. Original preferences were restored afterward;
+test sessions were logged out. No backend restart or agent/provider operation.
+Service/environment and protected identity/account/provider hashes were preserved.
+
+Rollback: `/var/lib/speck-rollback/20260923T130226Z-fleet-ui-polish-8cd12c7/web`.
+Private evidence: `worktrees/fleet-ui-polish/output/fleet-ui-polish/`. Source is
+local, not pushed or merged. The concurrent client-display task acknowledged the
+single deployment owner and was sent the verified runtime/index to preserve in its
+next release. See [release details](docs/operations/unified-fleet.md#september-23-static-ui-refinement).

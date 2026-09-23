@@ -27,7 +27,7 @@ without changing enrollment. [Capabilities, validation and rollback](../operatio
 
 # Current state — September 22, 2026
 
-## Fleet UI polish — ready locally September 23
+## Fleet UI polish — live September 23
 
 `worktrees/fleet-ui-polish`, branch `codex/fleet-ui-polish`, starts from current
 main `7a51f07`. Machine identity/provider details now share the pane's 20px desktop
@@ -37,9 +37,19 @@ Existing saved preferences remain compatible; reset preserves sorting/highlighti
 
 Build, 28 web units and 119 Chromium/WebKit scenarios pass. One WebKit touch test
 is intentionally skipped; Chromium touch gestures pass. Five synthetic captures
-are in the [gallery](../screenshots/fleet-ui-polish/README.md). No production or
-shared Git history changes. Next: review and explicit authorization for a static
-web deployment, with the current-main/live-baseline checks in AGENTS.md.
+are in the [gallery](../screenshots/fleet-ui-polish/README.md).
+
+User-authorized static runtime `8cd12c7` deployed at 13:02 UTC. Live index
+`0253cdc4…` and all web JS/CSS bytes match the tested build. Chromium desktop and
+WebKit phone checks verified flyout alignment, drag/save/reload, optional widths
+and footer visibility; the original preferences were restored and test sessions
+closed. Backend process, environment, device/enrollment/account/provider state
+are unchanged. Rollback:
+`/var/lib/speck-rollback/20260923T130226Z-fleet-ui-polish-8cd12c7/web`.
+Source and release records remain local on `codex/fleet-ui-polish`; no GitHub
+push/merge was requested. The concurrent client-display task was notified to
+preserve this release before its next web publication. Reload the console to use
+the new bundle. Private evidence: this worktree's `output/fleet-ui-polish/`.
 
 ## Deployed baseline
 
