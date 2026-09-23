@@ -119,3 +119,34 @@ func TestGuestCommandArgumentsRemainLiteral(t *testing.T) {
 		t.Fatalf("changed command %#v", args)
 	}
 }
+
+func TestHostIdentityFallbackRemainsPinned(t *testing.T) {
+	values := map[string]string{
+		"/etc/machine-id":                "",
+		"/sys/class/dmi/id/product_uuid": "A1234567-1234-1234-1234-123456789012\n",
+	}
+	read := func(path string) ([]byte, error) { return []byte(values[path]), nil }
+	id, source, err := hostIdentity("", read)
+	if err != nil || source != "dmi-uuid" || len(id) != 64 {
+		t.Fatalf("fallback: %q %v", source, err)
+	}
+	values["/etc/machine-id"] = "new-machine-id-123456789"
+	got, _, err := hostIdentity(source, read)
+	if err != nil || got != id {
+		t.Fatal("enrollment changed when machine-id appeared")
+	}
+	legacy, selected, err := hostIdentity("machine-id", read)
+	if err != nil || selected != "machine-id" || legacy == id {
+		t.Fatal("legacy identity changed")
+	}
+	values["/etc/machine-id"] = ""
+	if _, _, err := hostIdentity("machine-id", read); err == nil {
+		t.Fatal("silently changed pinned source")
+	}
+	for _, value := range []string{"", "00000000-0000-0000-0000-000000000000", "ffffffff-ffff-ffff-ffff-ffffffffffff", "not-a-valid-hardware-uuid"} {
+		values["/sys/class/dmi/id/product_uuid"] = value
+		if _, _, err := hostIdentity("", read); err == nil {
+			t.Fatal("accepted invalid identity")
+		}
+	}
+}

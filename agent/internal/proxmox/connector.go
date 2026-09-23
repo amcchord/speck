@@ -22,14 +22,15 @@ import (
 	"time"
 )
 
-const Version = "0.1.0"
+const Version = "0.1.1"
 const DefaultConfig = "/etc/speck-proxmox/agent.json"
 
 type Config struct {
-	Server   string `json:"server"`
-	Token    string `json:"token"`
-	ID       string `json:"id"`
-	Hardware string `json:"hardware"`
+	Server         string `json:"server"`
+	Token          string `json:"token"`
+	ID             string `json:"id"`
+	Hardware       string `json:"hardware"`
+	IdentitySource string `json:"identity_source,omitempty"`
 }
 type Job struct {
 	ID     string         `json:"id"`
@@ -125,6 +126,37 @@ func writeJSON(path string, value any) error {
 	defer d.Close()
 	return d.Sync()
 }
+
+// Pin the chosen source so generating a machine-id later cannot invalidate an
+// enrollment made on a Proxmox installation with an empty machine-id.
+func hostIdentity(source string, read func(string) ([]byte, error)) (string, string, error) {
+	paths := map[string]string{"machine-id": "/etc/machine-id", "dmi-uuid": "/sys/class/dmi/id/product_uuid"}
+	sources := []string{source}
+	if source == "" {
+		sources = []string{"machine-id", "dmi-uuid"}
+	}
+	for _, candidate := range sources {
+		path, ok := paths[candidate]
+		if !ok {
+			break
+		}
+		value, err := read(path)
+		value = bytes.TrimSpace(value)
+		if err != nil || len(value) < 16 {
+			continue
+		}
+		if candidate == "dmi-uuid" {
+			value = bytes.ToLower(value)
+			if !regexp.MustCompile(`^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$`).Match(value) || bytes.Equal(value, []byte("00000000-0000-0000-0000-000000000000")) || bytes.Equal(value, []byte("ffffffff-ffff-ffff-ffff-ffffffffffff")) {
+				continue
+			}
+		}
+		sum := sha256.Sum256(value)
+		return hex.EncodeToString(sum[:]), candidate, nil
+	}
+	return "", "", errors.New("host identity unavailable")
+}
+
 func Enroll(path, server, token string) error {
 	if !validServer(server) {
 		return errors.New("an HTTPS Speck server origin is required")
@@ -135,17 +167,15 @@ func Enroll(path, server, token string) error {
 	if _, e := os.Stat("/usr/bin/pvesh"); e != nil {
 		return errors.New("this is not a Proxmox host")
 	}
-	machine, e := os.ReadFile("/etc/machine-id")
-	if e != nil || len(bytes.TrimSpace(machine)) < 16 {
-		return errors.New("host identity unavailable")
+	hardware, source, e := hostIdentity("", os.ReadFile)
+	if e != nil {
+		return e
 	}
-	sum := sha256.Sum256(bytes.TrimSpace(machine))
-	hardware := hex.EncodeToString(sum[:])
 	host, e := os.Hostname()
 	if e != nil {
 		return e
 	}
-	c := client(Config{Server: strings.TrimRight(server, "/"), Hardware: hardware})
+	c := client(Config{Server: strings.TrimRight(server, "/"), Hardware: hardware, IdentitySource: source})
 	var response struct {
 		ID    string `json:"id"`
 		Token string `json:"token"`
@@ -301,12 +331,15 @@ func Run(ctx context.Context, path string) error {
 	if json.Unmarshal(b, &cfg) != nil || !validServer(cfg.Server) || cfg.Token == "" {
 		return errors.New("invalid enrollment")
 	}
-	machine, err := os.ReadFile("/etc/machine-id")
+	source := cfg.IdentitySource
+	if source == "" {
+		source = "machine-id"
+	} // Existing enrollments retain their identity.
+	hardware, _, err := hostIdentity(source, os.ReadFile)
 	if err != nil {
-		return errors.New("host identity unavailable")
+		return err
 	}
-	hash := sha256.Sum256(bytes.TrimSpace(machine))
-	if cfg.Hardware != hex.EncodeToString(hash[:]) {
+	if cfg.Hardware != hardware {
 		return errors.New("enrollment belongs to another host")
 	}
 	c := client(cfg)
