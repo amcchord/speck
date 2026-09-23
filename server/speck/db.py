@@ -89,6 +89,9 @@ def initialize():
         migrate_integrations(conn)
         from speck.passkeys import migrate as migrate_passkeys
         migrate_passkeys(conn)
+        from speck import api_tokens, contexts, dns, ssh_keys, unifi, vault
+        for module in (api_tokens, vault, dns, unifi, ssh_keys, contexts):
+            module.migrate(conn)
         if not conn.execute('SELECT 1 FROM users LIMIT 1').fetchone():
             password = os.environ.get('SPECK_BOOTSTRAP_PASSWORD', '')
             if len(password) < 16:
