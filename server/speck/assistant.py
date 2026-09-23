@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from speck.config import seal, unseal
+from speck.alert_context import alert_detail
 from speck.db import audit, db, ident
 from speck.jobs import get_device
 from speck.security import require_user
@@ -58,6 +59,9 @@ class Assist(BaseModel):
     device_id: str | None = None
     script: str = Field(default="", max_length=60000)
     include_health: bool = False
+    alert_id: str | None = Field(default=None, max_length=80)
+    alert_intent: Literal["diagnose", "fix"] = "diagnose"
+    include_job_evidence: bool = False
     image: str | None = Field(default=None, max_length=2500000)
     mode: Literal["assist", "computer"] = "assist"
     width: int = Field(default=1280, ge=320, le=3840)
@@ -123,18 +127,41 @@ async def assist(body: Assist, user=Depends(require_user)):
     if not cfg["key"]:
         raise HTTPException(409, "Connect OpenAI in Settings first")
     context = {"platform": body.platform, "request": body.prompt, "existing_script": body.script}
+    if body.alert_id:
+        if not body.device_id or body.mode != "assist":
+            raise HTTPException(422, "Alert assistance requires a machine and script assistance mode")
+        with db() as conn:
+            alert = alert_detail(conn, body.alert_id)
+        if alert["device_id"] != body.device_id:
+            raise HTTPException(422, "This alert belongs to a different machine")
+        if alert["resolved"] and body.alert_intent == "fix":
+            raise HTTPException(409, "This alert has already resolved. Refresh alerts before requesting a repair.")
+        context["alert"] = {k: alert[k] for k in ("id", "key", "title", "explanation", "opened", "updated", "resolved")}
+        if alert.get("job"):
+            context["job"] = dict(alert["job"])
+            if not body.include_job_evidence:
+                for key in ("result", "script", "script_truncated"):
+                    context["job"].pop(key, None)
+        context["intent"] = body.alert_intent
     if body.device_id:
         device = get_device(body.device_id, approved=True)
         context["platform"] = device["platform"]
         if body.include_health:
             telemetry = json.loads(device["telemetry"])
             context["health"] = {
+                "last_check_in": device["last_seen"],
+                "collected_at": telemetry.get("collected_at"),
                 "cpu_percent": telemetry.get("cpu_percent"),
-                "memory_percent": telemetry.get("memory", {}).get("usedPercent"),
-                "os": telemetry.get("host", {}).get("platform"),
+                "memory_percent": (telemetry.get("memory") or {}).get("usedPercent"),
+                "os": (telemetry.get("host") or {}).get("platform"),
                 "version": telemetry.get("version"),
+                "disks": [
+                    {"path": d.get("path"), "used_percent": d.get("usedPercent")}
+                    for d in (telemetry.get("disks") or [])[:100] if isinstance(d, dict)
+                ],
                 "services": [
-                    {"name": s.get("name"), "status": s.get("status")} for s in telemetry.get("services", [])[:100]
+                    {"name": s.get("name"), "status": s.get("status")}
+                    for s in (telemetry.get("services") or [])[:100] if isinstance(s, dict)
                 ],
             }
     content = [{"type": "input_text", "text": json.dumps(context)}]
@@ -163,6 +190,9 @@ async def assist(body: Assist, user=Depends(require_user)):
                 "mode": body.mode,
                 "image_included": bool(body.image),
                 "health_included": body.include_health,
+                "alert_id": body.alert_id,
+                "alert_intent": body.alert_intent if body.alert_id else None,
+                "job_evidence_included": bool(body.alert_id and body.include_job_evidence),
                 "model": cfg["model"],
             },
         )
@@ -173,6 +203,20 @@ async def assist(body: Assist, user=Depends(require_user)):
         "instructions": GUIDANCE,
         "input": [{"role": "user", "content": content}],
     }
+    if body.alert_id:
+        payload["instructions"] += (
+            "\nFocus on the selected alert. Distinguish observed facts, likely causes and missing evidence. "
+            "Respect collection timestamps: current inventory is not evidence of health when a historical job failed. "
+            "An unknown job may have made changes: never blindly replay it. "
+            "A successful script exit does not prove the root cause is fixed; give explicit verification checks. "
+            + (
+                "DIAGNOSE mode: provide only read-only diagnostic scripts, with no repairs or state changes."
+                if body.alert_intent == "diagnose"
+                else "FIX mode: propose a minimal, bounded repair only when evidence supports it. Explain changes, "
+                "preconditions, risks and rollback. If the cause is uncertain, return a read-only investigation "
+                "or no script and explain what is needed before a repair. The operator must review and run the draft."
+            )
+        )
     if body.mode == "computer":
         payload["tools"] = [{"type": "computer"}]
         payload["tool_choice"] = "required"

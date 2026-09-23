@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
 
 from speck.db import audit, db, ident
+from speck.alert_context import alert_detail, present_alert
 from speck.jobs import get_device
 from speck.security import require_admin, require_user
 
@@ -254,16 +255,23 @@ def alerts(
             f"SELECT a.*,d.label,d.maintenance_until FROM alerts a LEFT JOIN devices d ON d.id=a.device_id WHERE {clause} AND (? IS NULL OR a.device_id=?) AND (? IS NULL OR a.rowid<(SELECT rowid FROM alerts WHERE id=?)) ORDER BY a.rowid DESC LIMIT ?",
             (device_id, device_id, before_id, before_id, limit + 1),
         ).fetchall()
+        items = [present_alert(conn, r) for r in rows[:limit]]
         counts = dict(
             conn.execute(
                 "SELECT count(*) AS active,sum(acknowledged IS NULL) AS unacknowledged FROM alerts WHERE resolved IS NULL"
             ).fetchone()
         )
     return {
-        "items": [dict(r) for r in rows[:limit]],
+        "items": items,
         "counts": counts,
         "next_cursor": rows[limit - 1]["id"] if len(rows) > limit else None,
     }
+
+
+@router.get("/alerts/{alert_id}")
+def detail(alert_id: str, user=Depends(require_user)):
+    with db() as conn:
+        return alert_detail(conn, alert_id)
 
 
 class AlertAction(BaseModel):

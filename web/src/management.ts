@@ -37,8 +37,11 @@ export function createManagement(ui: Item) {
       api("/devices"),
       api("/monitoring"),
     ]);
+    const machineOptions = new Map(devices.map((d: Item) => [d.id, d.label]));
+    data.items.forEach((a: Item) => machineOptions.set(a.device_id, a.label || "Retired machine"));
+    if (alertDevice && !machineOptions.has(alertDevice)) machineOptions.set(alertDevice, "Selected machine");
     content(
-      `<div class="management-summary"><div><span class="eyebrow">NEEDS ATTENTION</span><strong>${data.counts.unacknowledged || 0}</strong><span>unacknowledged</span></div><div><span class="eyebrow">OPEN CONDITIONS</span><strong>${data.counts.active || 0}</strong><span>across your fleet</span></div><div class="management-summary-action">${isAdmin() ? button("monitor-defaults", "Monitoring policy") : ""}<small>${monitoring.healthy ? "Checks every 15 seconds" : "Waiting for monitoring worker"}</small></div></div><div class="management-toolbar"><label>Status<select id="alert-state"><option value="active">Open alerts</option><option value="unacknowledged">Unacknowledged</option><option value="resolved">Resolved</option><option value="all">All history</option></select></label><label>Machine<select id="alert-machine"><option value="">All machines</option>${devices.map((d: Item) => `<option value="${d.id}">${esc(d.label)}</option>`).join("")}</select></label></div><div id="alert-list"></div>`,
+      `<section class="alerts-workspace" aria-label="Fleet alerts"><div class="alerts-summary"><span><strong>${data.counts.active || 0}</strong> open <span class="alerts-summary-divider">/</span> <strong>${data.counts.unacknowledged || 0}</strong> need attention <small>across the fleet</small></span><small class="monitor-status">${monitoring.healthy ? "Monitoring every 15s" : "Monitoring worker delayed"}</small></div><div class="alerts-toolbar"><label>Status<select id="alert-state"><option value="active">Open alerts</option><option value="unacknowledged">Needs attention</option><option value="resolved">Resolved</option><option value="all">All history</option></select></label><label>Machine<select id="alert-machine"><option value="">All machines</option>${Array.from(machineOptions, ([id, label]) => `<option value="${esc(id)}">${esc(label)}</option>`).join("")}</select></label>${isAdmin() ? button("monitor-defaults", "Monitoring policy") : ""}</div><div id="alert-list"></div></section>`,
     );
     (document.getElementById("alert-state") as HTMLSelectElement).value =
       alertState;
@@ -65,9 +68,16 @@ export function createManagement(ui: Item) {
     on("monitor-defaults", () => editPolicy());
     const list = document.getElementById("alert-list")!;
     list.innerHTML = data.items.length
-      ? `<div class="alert-list">${data.items.map((a: Item, i: number) => `<article class="alert-row"><span class="alert-marker ${a.resolved ? "resolved" : esc(a.severity)}" aria-label="${a.resolved ? "Resolved" : esc(a.severity)}"></span><div class="alert-main"><h2>${esc(a.title)}</h2><div class="alert-meta"><button id="alert-device-${i}" class="text-link">${esc(a.label || "Retired machine")}</button><span>Opened ${date(a.opened)}</span>${a.maintenance_until > Date.now() / 1000 ? '<span class="badge neutral">In maintenance</span>' : ""}</div>${a.resolved ? `<small>Resolved ${date(a.resolved)} · ${esc(a.resolve_actor)}</small>` : a.acknowledged ? `<small>Acknowledged by ${esc(a.ack_actor)} · ${date(a.acknowledged)}</small>` : ""}</div><div class="alert-actions">${a.resolved ? badge("Resolved", true) : canManage() ? `${!a.acknowledged ? button("ack-" + i, "Acknowledge") : badge("Acknowledged")}${a.key.startsWith("job:") ? button("resolve-" + i, "Resolve") : button("manage-" + i, "Investigate")}` : badge(a.severity)}</div></article>`).join("")}</div><small class="management-footnote">Showing ${data.items.length} matching alerts. Health alerts resolve on recovery; job outcomes can be resolved after review.</small>`
+      ? `<div class="alert-columns" aria-hidden="true"><span>Alert</span><span>Machine / status</span><span>Opened</span><span>AI actions</span></div><div class="alert-list">${data.items.map((a: Item, i: number) => {
+          const device = devices.find((d: Item) => d.id === a.device_id);
+          const manageable = device && device.approved && !device.archived;
+          const state = a.resolved ? "Resolved" : a.acknowledged ? "Acknowledged" : "Needs attention";
+          const age = Math.max(0, Date.now() / 1000 - a.opened);
+          const when = age < 60 ? "Just now" : age < 3600 ? Math.floor(age / 60) + "m ago" : age < 86400 ? Math.floor(age / 3600) + "h ago" : Math.floor(age / 86400) + "d ago";
+          return `<article class="alert-item"><div class="alert-row"><div class="alert-main"><button id="alert-details-${i}" class="alert-title" aria-expanded="false" aria-controls="alert-evidence-${i}"><span class="alert-marker ${a.resolved ? "resolved" : esc(a.severity)}" title="${esc(a.severity)}" aria-label="${esc(a.severity)}"></span><span>${esc(a.title)}</span><span class="alert-chevron" aria-hidden="true">›</span></button><p class="alert-description" title="${esc(a.explanation || "Expand for alert details")}">${esc(a.explanation || "Expand for alert details")}</p></div><div class="alert-machine"><button id="alert-device-${i}" class="text-link">${esc(a.label || "Retired machine")}</button><small class="alert-state">${state}${a.maintenance_until > Date.now() / 1000 ? " · Maintenance" : ""}</small></div><time class="alert-age" datetime="${new Date(a.opened * 1000).toISOString()}" title="${date(a.opened)}">${when}</time><div class="alert-actions">${canManage() && manageable ? `${button("diagnose-" + i, "AI diagnose")}${!a.resolved ? button("fix-" + i, "AI fix") : ""}` : `<small>${canManage() ? "Machine unavailable" : esc(a.severity)}</small>`}</div></div><div id="alert-evidence-${i}" class="alert-evidence" hidden><p>${esc(a.explanation || a.title)}</p><div class="alert-evidence-meta"><span>Opened ${date(a.opened)}</span>${a.acknowledged ? `<span>Acknowledged by ${esc(a.ack_actor)} · ${date(a.acknowledged)}</span>` : ""}${a.resolved ? `<span>Resolved by ${esc(a.resolve_actor)} · ${date(a.resolved)}</span>` : ""}</div>${a.job ? `<div class="alert-evidence-meta"><span>Job <code>${esc(a.job.id)}</code></span><span>${esc(a.job.kind)} · ${esc(a.job.status)}</span><span>Requested by ${esc(a.job.actor)}</span></div>` : ""}<div id="alert-job-${i}"></div><div class="alert-review-actions">${!a.resolved && canManage() ? `${!a.acknowledged ? button("ack-" + i, "Acknowledge") : ""}${a.key.startsWith("job:") ? button("resolve-" + i, "Mark reviewed") : ""}` : ""}<small>${esc(a.resolution_hint || "Health alerts clear after recovery. Closing a job alert does not fix the machine.")}</small></div></div></article>`;
+        }).join("")}</div><small class="management-footnote">${data.items.length} matching alert${data.items.length === 1 ? "" : "s"}. Expand an alert for evidence and review actions. AI drafts are reviewed before execution.</small>`
       : empty(
-          alertState === "resolved" ? "No resolved alerts yet" : "All clear",
+          alertState === "active" && !alertDevice ? "All clear" : "No matching alerts",
           "No conditions match this view. Monitoring continues in the background.",
         );
     list.insertAdjacentHTML(
@@ -92,7 +102,29 @@ export function createManagement(ui: Item) {
         await api("/alerts/" + a.id, "POST", { action: "resolve" });
         await renderAlerts();
       });
-      on("manage-" + i, () => ui.openDevice(a.device_id));
+      const device = devices.find((d: Item) => d.id === a.device_id);
+      on("diagnose-" + i, () => ui.assistAlert(device, a, "diagnose"));
+      on("fix-" + i, () => ui.assistAlert(device, a, "fix"));
+      let evidenceLoaded = false;
+      on("alert-details-" + i, async () => {
+        const panel = document.getElementById("alert-evidence-" + i)!;
+        panel.hidden = !panel.hidden;
+        document.getElementById("alert-details-" + i)!.setAttribute("aria-expanded", String(!panel.hidden));
+        if (panel.hidden || evidenceLoaded || !a.job || !canManage()) return;
+        const output = document.getElementById("alert-job-" + i)!;
+        output.innerHTML = loadingState("Loading job evidence…");
+        try {
+          const detail = await api("/alerts/" + encodeURIComponent(a.id));
+          if (!output.isConnected) return;
+          const j = detail.job;
+          const result = j?.result;
+          output.innerHTML = `${j?.script ? `<details><summary>Original script${j.script_truncated ? " (excerpt)" : ""}</summary><pre>${esc(j.script)}</pre></details>` : ""}<details open><summary>Job output${result?.exit_code != null ? " · exit " + esc(result.exit_code) : ""}${result?.truncated ? " (excerpt)" : ""}</summary><pre>${esc([result?.stdout, result?.stderr, result?.error].filter(Boolean).join("\n") || "No output was returned by the agent.")}</pre></details>`;
+          evidenceLoaded = true;
+        } catch (error) {
+          output.textContent = "Could not load job evidence. Collapse and expand to retry.";
+          throw error;
+        }
+      });
     });
   }
 

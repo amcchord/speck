@@ -1,3 +1,58 @@
+# Fleet toolbar and persistent agent toggle — live September 23
+
+Runtime `1158014` deployed at 13:37 UTC from `codex/fleet-toolbar-headers` in
+`worktrees/fleet-toolbar-headers`. It includes main `7a51f07` and all previously
+deployed local runtime through `7141ea0`. Search and the **Speck agents only**
+switch remain visible; Filters and View group secondary controls. Desktop headers
+support click sorting, drag ordering and Alt+Left/Right. Sorting, column order and
+agent coverage save per user; the coverage survives reloads and future sign-ins.
+
+Local Ruff, TypeScript/Vite, 157 backend tests, 28 web units and 141 browser
+scenarios passed, with one existing Chromium-only touch case skipped on WebKit.
+Live Chromium desktop and WebKit phone passed toggle/reload/navigation/new-session
+persistence, header sorting/dragging and mobile View controls. The original user
+preferences were restored and test sessions closed. All five reported Slide
+client assignments remain correct; no provider or endpoint action was performed.
+
+Audit matched all 29 backend files, 26 current web files and dependencies to the
+previous committed runtime. Deployed bytes/public assets now match `1158014`.
+Protected account/device/connector/settings/recovery state passed preservation
+checks. Index: `345fd0a01d73991905b9d7d159db9280a18c65719b376cf132b91d7134025c69`.
+Rollback: `/var/lib/speck-rollback/20260923T133704Z-fleet-toolbar-headers-1158014`.
+Private evidence: this worktree's ignored `output/fleet-toolbar-headers/`.
+[Synthetic gallery](../screenshots/fleet-toolbar/README.md).
+
+Source and release records are committed locally; no GitHub push was requested.
+Alerts and Proxmox UX tasks acknowledged release ownership. Next releases must
+include this runtime until it is integrated into main; deployment ownership is
+released after this verification.
+
+# Slide client display and one-click backup — live September 23
+
+User-authorized runtime `7141ea0` deployed at 13:11 UTC from
+`codex/slide-client-backup-fix`, including deployed flyout/column runtime `8cd12c7`
+and its release record `d61bab4`. Fleet includes the Settings Slide account;
+protected-machine backup submits on the button press without name entry.
+
+Live Chromium desktop and WebKit phone checks verified all five reported
+originals' clients, all ten Proxmox/endpoint joins, healthy provider sources,
+matching served assets and immediate backup requests without a confirmation
+field. The backup POST was intercepted during UI acceptance; no real backup was
+started. Local validation remains 156 backend tests, 28 web units and 123 browser
+scenarios (one existing platform-specific skip), Ruff and TypeScript/Vite.
+
+Pre-release audit matched all 29 backend files to main `7a51f07`, all 26 current
+web files to committed `8cd12c7`, and the dependency manifest to Git. No uncaptured
+application edits were found. Post-release bytes match committed `7141ea0`.
+Accounts, credentials, device/connector identities, Slide associations, settings,
+recovery data, policies and saved columns passed preservation checks.
+
+Rollback: `/var/lib/speck-rollback/20260923T131146Z-slide-client-backup-fix-7141ea0`.
+Private source audit, deployment and browser evidence:
+`worktrees/slide-client-backup-fix/output/slide-client-backup-fix/`.
+The source and records are committed locally; this task has not pushed to GitHub.
+See the newest journal entry and [behavior](../operations/unified-fleet.md#settings-account-and-immediate-backups).
+
 # Unified Fleet — live September 23, 2026
 
 PR #17 is merged as `531ee39`; server/web release `7148553` is deployed. Fleet
@@ -26,6 +81,32 @@ hosted checks passed. Connector 0.1.2 reports its running version after upgrades
 without changing enrollment. [Capabilities, validation and rollback](../operations/infrastructure.md).
 
 # Current state — September 22, 2026
+
+## Fleet UI polish — live September 23
+
+`worktrees/fleet-ui-polish`, branch `codex/fleet-ui-polish`, starts from current
+main `7a51f07`. Machine identity/provider details now share the pane's 20px desktop
+and 16px mobile gutters. Columns use a compact scrollable selector with drag
+handles, keyboard ordering, optional widths and a persistent Save/Cancel footer.
+Existing saved preferences remain compatible; reset preserves sorting/highlighting.
+
+Build, 28 web units and 119 Chromium/WebKit scenarios pass. One WebKit touch test
+is intentionally skipped; Chromium touch gestures pass. Five synthetic captures
+are in the [gallery](../screenshots/fleet-ui-polish/README.md).
+
+User-authorized static runtime `8cd12c7` deployed at 13:02 UTC. Live index
+`0253cdc4…` and all web JS/CSS bytes match the tested build. Chromium desktop and
+WebKit phone checks verified flyout alignment, drag/save/reload, optional widths
+and footer visibility; the original preferences were restored and test sessions
+closed. Backend process, environment, device/enrollment/account/provider state
+are unchanged. Rollback:
+`/var/lib/speck-rollback/20260923T130226Z-fleet-ui-polish-8cd12c7/web`.
+Source and release records remain local on `codex/fleet-ui-polish`; no GitHub
+push/merge was requested. The concurrent client-display task was notified to
+preserve this release before its next web publication. Reload the console to use
+the new bundle. Private evidence: this worktree's `output/fleet-ui-polish/`.
+
+## Deployed baseline
 
 Speck is live at https://speckrmm.com with management MVP, native iPhone/iPad,
 remote-session startup fixes and **passkey sign-in**. Enroll in Settings → Account
@@ -164,3 +245,43 @@ reads and isolation/revocation acceptance. All QA access was cleaned up. Existin
 fleet assignments, identities, accounts, credentials, provider settings, updater
 policy and recovery resources were preserved. Rollback and detailed checks are in
 [Chat integration operations](../operations/chat-integration.md).
+
+
+## Proxmox machine experience — implemented locally, not deployed
+
+The contained `codex/proxmox-machine-experience` branch includes the latest
+communicated deployed Fleet source (`1158014`, release record `6faaf5c`). It adds
+rich VM/container views, guest inventory, performance charts, read-only screen
+captures, PNG downloads and API-token console support. Existing connectors and
+endpoint agents need no upgrade. All local core checks pass; final backend count
+is 164 and affected browser recheck is 41 passing with one existing skip. No
+production changes or pushes were made. Next step is review, then an explicitly
+authorized combined server/web release and real Proxmox acceptance. See the
+[implementation/runbook](../operations/proxmox-machine-experience.md) and
+[synthetic gallery](../screenshots/proxmox-machine/README.md).
+
+
+## Compact alerts and contextual AI — live September 23
+
+Runtime `65f668d` on `codex/alerts-ai` is deployed, preserving Fleet `1158014` /
+record `6faaf5c`. Alerts use compact rows, named operations, explicit
+unknown/expired/failed explanations, expandable evidence and clear acknowledge /
+review semantics. AI diagnose/fix is bound to the selected alert and machine,
+with opt-in script/output evidence and an explicit terminal run. Cautions and
+verification stay visible; generating a draft never executes it or closes an alert.
+
+Ruff, TypeScript/Vite, 166 backend, 28 web units and 159 browser scenarios pass
+(across full and focused runs; one existing WebKit CDP skip). Live Chromium /
+WebKit desktop/phone checks and one real diagnosis with minimal metadata passed.
+The draft reached the correct machine's terminal; no endpoint jobs or alert
+state changes were made. Actual repair success remains unverified.
+
+Backend/web/database/configuration backups are retained at
+`/var/lib/speck-rollback/20260923T135104Z-alerts-ai-65f668d`. The live index and source files match the release;
+service health, identity/accounts/settings/preferences/integrations/recovery
+fingerprints and database integrity pass. Ten enrolled agents had fresh check-ins.
+[Operations and rollback](../operations/alerts-ai.md),
+[synthetic gallery](../screenshots/alerts-ai/README.md).
+
+No GitHub push or merge to main occurred. Next action: preserve `65f668d` and this
+release record before any other task publishes; release ownership is now clear.

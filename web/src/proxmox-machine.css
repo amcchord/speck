@@ -1,0 +1,329 @@
+.pve-machine {
+  min-width: 0;
+  container-type: inline-size;
+}
+.pve-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pve-heading p {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.pve-heading p span {
+  margin: 0 5px;
+}
+.pve-state {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+.pve-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.pve-controls button,
+.pve-preview button {
+  font-size: 12px;
+  padding: 8px 12px;
+  min-height: 36px;
+}
+.pve-more {
+  position: relative;
+  margin: 0 !important;
+}
+.pve-more summary {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  margin: 0 !important;
+}
+.pve-action-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 4;
+  width: 240px;
+  max-height: 340px;
+  overflow: auto;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  box-shadow: 0 8px 30px #0002;
+}
+.pve-action-menu button {
+  text-align: left;
+}
+.pve-preview {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.pve-preview-screen {
+  width: 100%;
+  aspect-ratio: 16/9;
+  max-height: 280px;
+  background: #162820;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.pve-preview-screen .pve-note {
+  color: #c1d1c8;
+  padding: 28px;
+  text-align: center;
+}
+.pve-preview-screen img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.pve-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+}
+.pve-preview-footer > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pve-preview-footer > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.pve-tabs {
+  display: flex;
+  overflow: auto;
+  border-bottom: 1px solid var(--line);
+  margin-top: 20px;
+  gap: 4px;
+}
+.pve-tabs button {
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.pve-tabs button.active {
+  color: var(--ink);
+  border-bottom-color: var(--fern);
+  font-weight: 650;
+}
+.pve-meters {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.pve-meter {
+  min-width: 0;
+}
+.pve-meter > small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.pve-meter strong {
+  display: block;
+  font-size: 28px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.pve-meter strong em {
+  font-size: 14px;
+  font-weight: 400;
+  font-style: normal;
+  margin-left: 2px;
+}
+.pve-meter strong.pve-uptime {
+  font-size: 22px;
+}
+.pve-machine progress {
+  width: 100%;
+  height: 5px;
+  accent-color: var(--fern);
+}
+.pve-section {
+  margin: 20px 0;
+  min-width: 0;
+}
+.pve-section h3,
+.pve-chart h3 {
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+.pve-section h4 {
+  font-size: 12px;
+  margin: 16px 0 8px;
+}
+.pve-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+  margin: 0;
+}
+.pve-facts > div {
+  min-width: 0;
+}
+.pve-facts dt {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.pve-facts dd {
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.pve-note {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 12px 0;
+}
+.pve-table {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.pve-table table {
+  width: 100%;
+  font-size: 12px;
+}
+.pve-table th,
+.pve-table td {
+  padding: 10px 12px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  min-width: 80px;
+  max-width: 230px;
+}
+.pve-table th {
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--paper);
+}
+.pve-filesystem {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  font-size: 12px;
+  padding: 10px 0;
+}
+.pve-filesystem div span {
+  color: var(--muted);
+  margin-left: 8px;
+}
+.pve-filesystem progress {
+  grid-column: 1/-1;
+}
+.pve-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.pve-chart {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  min-width: 0;
+}
+.pve-chart strong {
+  font-size: 20px;
+}
+.pve-chart svg {
+  display: block;
+  width: 100%;
+  color: var(--fern);
+  margin: 14px 0 6px;
+}
+.pve-chart small,
+.pve-footer {
+  font-size: 11px;
+  color: var(--muted);
+}
+.pve-footer {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 20px;
+}
+@container (max-width: 520px) {
+  .pve-preview-footer {
+    align-items: start;
+    flex-direction: column;
+  }
+  .pve-meters {
+    gap: 12px;
+  }
+  .pve-meter strong {
+    font-size: 23px;
+  }
+  .pve-meter strong.pve-uptime {
+    font-size: 17px;
+  }
+  .pve-facts {
+    gap: 14px;
+  }
+  .pve-action-menu {
+    right: auto;
+    left: 0;
+  }
+}
+@container (max-width: 360px) {
+  .pve-meters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pve-charts {
+    grid-template-columns: 1fr;
+  }
+  .pve-facts {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pve-preview[hidden] {
+  display: none;
+}
+.pve-provider-pane > .machine-inventory {
+  padding: 0 20px 12px;
+  margin-bottom: 0;
+}
+.pve-provider-pane > .machine-inventory dl {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 600px) {
+  .pve-provider-pane > .machine-inventory {
+    padding: 0 16px 12px;
+  }
+  .pve-provider-pane > .machine-inventory dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
