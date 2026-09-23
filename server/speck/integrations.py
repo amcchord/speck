@@ -23,10 +23,14 @@ def migrate(conn):
       owner_id TEXT NOT NULL REFERENCES users(id),created REAL NOT NULL,expires REAL NOT NULL,
       revoked REAL,last_used REAL,rate_minute INTEGER NOT NULL DEFAULT 0,rate_count INTEGER NOT NULL DEFAULT 0);
     """)
+    if "topology_connections" not in {r[1] for r in conn.execute("PRAGMA table_info(integration_tokens)")}:
+        conn.execute("ALTER TABLE integration_tokens ADD COLUMN topology_connections TEXT NOT NULL DEFAULT '[]'")
 
 
 def public_token(row):
-    return {key: row[key] for key in ("id", "name", "site", "created", "expires", "revoked", "last_used")}
+    return {key: row[key] for key in ("id", "name", "site", "created", "expires", "revoked", "last_used")} | {
+        "topology_connection_ids": json.loads(row["topology_connections"])
+    }
 
 
 @router.get("/integrations/tokens")
@@ -36,6 +40,12 @@ def list_tokens(user=Depends(require_admin)):
             "tokens": [
                 public_token(r)
                 for r in conn.execute("SELECT * FROM integration_tokens ORDER BY created DESC LIMIT 200")
+            ],
+            "topology_connections": [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT id,name FROM infrastructure_connections WHERE provider='proxmox' ORDER BY name"
+                )
             ],
             "sites": [
                 r[0]
@@ -48,6 +58,7 @@ class NewToken(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     site: str = Field(min_length=1, max_length=80)
     expires_days: int = Field(default=30, ge=1, le=365)
+    topology_connection_ids: list[str] = Field(default_factory=list, max_length=10)
 
     @field_validator("name", "site")
     @classmethod
@@ -63,8 +74,15 @@ def create_token(body: NewToken, user=Depends(require_admin)):
     token = "speck_ro_" + secrets.token_urlsafe(32)
     token_id, now = ident(), time.time()
     with db(write=True) as conn:
-        if not conn.execute("SELECT 1 FROM devices WHERE site=? AND archived=0 LIMIT 1", (body.site,)).fetchone():
+        if (
+            body.site != "*"
+            and not conn.execute("SELECT 1 FROM devices WHERE site=? AND archived=0 LIMIT 1", (body.site,)).fetchone()
+        ):
             raise HTTPException(422, "Choose an existing site with active fleet devices")
+        grants = sorted(set(body.topology_connection_ids))
+        allowed = {r[0] for r in conn.execute("SELECT id FROM infrastructure_connections WHERE provider='proxmox'")}
+        if not set(grants) <= allowed:
+            raise HTTPException(422, "Choose existing Proxmox connections for topology access")
         if (
             conn.execute(
                 "SELECT count(*) FROM integration_tokens WHERE revoked IS NULL AND expires>?", (now,)
@@ -76,6 +94,7 @@ def create_token(body: NewToken, user=Depends(require_admin)):
             "INSERT INTO integration_tokens(id,token_hash,name,site,owner_id,created,expires) VALUES(?,?,?,?,?,?,?)",
             (token_id, digest(token), body.name, body.site, user["user_id"], now, now + body.expires_days * 86400),
         )
+        conn.execute("UPDATE integration_tokens SET topology_connections=? WHERE id=?", (json.dumps(grants), token_id))
         row = conn.execute("SELECT * FROM integration_tokens WHERE id=?", (token_id,)).fetchone()
         audit(
             conn, user["username"], "integration.created", detail={"id": token_id, "name": body.name, "site": body.site}
@@ -181,8 +200,8 @@ def inventory(
     with db() as conn:
         rows = conn.execute(
             "SELECT d.*,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id "
-            "WHERE d.site=? AND d.archived=0 AND d.id>? ORDER BY d.id LIMIT ?",
-            (token["site"], after, limit + 1),
+            "WHERE (?='*' OR d.site=?) AND d.archived=0 AND d.id>? ORDER BY d.id LIMIT ?",
+            (token["site"], token["site"], after, limit + 1),
         ).fetchall()
     page = rows[:limit]
     return {
@@ -203,8 +222,8 @@ def device(
     with db() as conn:
         row = conn.execute(
             "SELECT d.*,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id "
-            "WHERE d.id=? AND d.site=? AND d.archived=0",
-            (device_id, token["site"]),
+            "WHERE d.id=? AND (?='*' OR d.site=?) AND d.archived=0",
+            (device_id, token["site"], token["site"]),
         ).fetchone()
         if not row:
             raise HTTPException(404, "Device not found in this integration site")
@@ -237,9 +256,9 @@ def alerts(
     with db() as conn:
         rows = conn.execute(
             "SELECT a.id,a.device_id,a.key,a.title,a.severity,a.opened,a.updated,a.acknowledged,d.label,d.hostname "
-            "FROM alerts a JOIN devices d ON d.id=a.device_id WHERE d.site=? AND d.archived=0 AND a.resolved IS NULL "
+            "FROM alerts a JOIN devices d ON d.id=a.device_id WHERE (?='*' OR d.site=?) AND d.archived=0 AND a.resolved IS NULL "
             "AND a.id>? ORDER BY a.id LIMIT ?",
-            (token["site"], after, limit + 1),
+            (token["site"], token["site"], after, limit + 1),
         ).fetchall()
     page = rows[:limit]
     return {
@@ -249,3 +268,10 @@ def alerts(
         "next_cursor": page[-1]["id"] if len(rows) > limit else None,
         "state": "active",
     }
+
+
+@router.get("/integrations/v1/topology")
+async def topology(token=Depends(require_integration)):
+    from speck.integration_topology import topology_snapshot
+
+    return await topology_snapshot(token)
