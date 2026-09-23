@@ -124,3 +124,43 @@
   .fleet-workspace .fleet-table tr.active-machine { box-shadow: inset 3px 0 var(--fern); }
   .fleet-workspace .fleet-table tr.active-machine > td:first-child { box-shadow: none; }
 }
+
+/* User-selected columns retain their order at every viewport size. */
+.fleet-workspace .unified-fleet th button { border: 0; background: none; padding: 0; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.fleet-workspace .unified-fleet td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fleet-workspace .unified-fleet tr.agent-highlight { background: #f0f5e6; }
+.fleet-workspace .unified-fleet tr.agent-highlight > td:first-child { box-shadow: inset 3px 0 var(--fern); }
+.agent-indicator { color: var(--muted); font-size: 11px; }
+.agent-indicator.installed { color: var(--forest); font-weight: 600; }
+.fleet-workspace .fleet-toolbar { flex-wrap: wrap; }
+.fleet-workspace .fleet-toolbar .check { font-size: 11px; white-space: nowrap; }
+.fleet-stale { color: var(--warning); font-size: 12px; }
+.columns-dialog { max-width: 630px; }
+.column-option { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.column-option > label:first-child { display: flex; align-items: center; gap: 8px; flex: 1; }
+.column-option input[type=checkbox] { width: 16px; }
+.column-width { display: flex; gap: 6px; align-items: center; font-size: 11px; }
+.column-width input { width: 68px; padding: 6px; }
+.column-option button { min-width: 32px; padding: 6px; }
+.machine-inventory { border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 12px; }
+.machine-inventory dl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.machine-inventory dt { color: var(--muted); font-size: 11px; }
+.machine-inventory dd { margin: 3px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+.machine-inventory small { display: block; }
+.machine-inventory p { font-size: 11px; }
+.machine-inventory .drawer-actions { flex-wrap: wrap; }
+@media (min-width: 761px) {
+  .fleet-workspace .unified-fleet .app-cell { display: table-cell; }
+}
+@media (max-width: 760px) {
+  .fleet-workspace .unified-fleet { width: 100% !important; min-width: 0 !important; }
+  .fleet-workspace .unified-fleet tr { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .fleet-workspace .unified-fleet td[data-column] { grid-column: auto; grid-row: auto; display: block; white-space: normal; overflow-wrap: anywhere; }
+  .fleet-workspace .unified-fleet td.machine-cell { grid-column: 1/-1; }
+  .fleet-workspace .unified-fleet .status-cell::before { display: block !important; }
+  .fleet-workspace .unified-fleet .connect-cell { grid-column: 1/-1; grid-row: auto; }
+  .fleet-workspace .unified-fleet td.screen-cell { grid-column: 1/-1; }
+  .column-width { font-size: 0; }
+  .column-width input { font-size: 12px; width: 56px; }
+  .column-option { gap: 4px; font-size: 12px; }
+}

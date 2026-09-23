@@ -17,6 +17,7 @@ export function createInfrastructure(ui: Item) {
     qemu: "VM",
     lxc: "Container",
     box: "Slide box",
+    protected: "Protected machine",
     virt: "Slide VM",
     instance: "Linode",
   };
@@ -294,7 +295,7 @@ export function createInfrastructure(ui: Item) {
     Object.entries(catalog).forEach(([id, spec]) =>
       on("infra-action-" + id, () =>
         operationForm(
-          inventory.connections.find((c: Item) => c.id === r.connection_id),
+          inventory.connections.find((c: Item) => c.id === r.connection_id) || {id:r.connection_id,name:r.connection_name,provider:r.provider},
           id,
           spec as Item,
           r,
@@ -515,5 +516,5 @@ export function createInfrastructure(ui: Item) {
       }
     };
   }
-  return { render };
+  return { render, resourceDetail };
 }

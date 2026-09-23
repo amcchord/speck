@@ -434,7 +434,7 @@ def test_slide_virtual_machine_actions_are_scoped(client, monkeypatch):
             self.cfg = cfg
 
         async def listing(self, resource, params=None):
-            if resource == "agent":
+            if resource in ("agent", "client"):
                 return []
             if resource == "device":
                 return [{"device_id": "d_123456789012", "display_name": "Box"}]

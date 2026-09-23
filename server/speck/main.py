@@ -499,6 +499,9 @@ app.include_router(infrastructure_router)
 from speck.integrations import router as integrations_router  # noqa: E402
 app.include_router(integrations_router)
 
+from speck.fleet import router as fleet_router  # noqa: E402
+app.include_router(fleet_router)
+
 downloads = Path(os.environ.get('SPECK_DOWNLOAD_DIR', 'output/downloads'))
 if downloads.exists():
     app.mount('/downloads', StaticFiles(directory=downloads), name='downloads')

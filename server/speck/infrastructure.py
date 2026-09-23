@@ -164,15 +164,20 @@ async def raw_inventory(cfg):
         return await linode_list(cfg, "/linode/instances")
     if cfg["provider"] == "slide":
         slide = Slide(cfg)
-        boxes = await slide.listing("device")
-        vms = await slide.listing("restore/virt")
-        agents = await slide.listing("agent") if vms else []
-        names = {a["agent_id"]: a.get("display_name") or a.get("hostname") or a["agent_id"] for a in agents}
-        box_names = {b["device_id"]: b.get("display_name") or b.get("hostname") or b["device_id"] for b in boxes}
-        for vm in vms:
-            vm["speck_name"] = names.get(vm.get("agent_id"), vm["virt_id"]) + " · VM"
-            vm["speck_parent_name"] = box_names.get(vm["device_id"], vm["device_id"])
-        return boxes + vms
+        boxes, agents, vms, clients = await asyncio.gather(
+            slide.listing("device"), slide.listing("agent"), slide.listing("restore/virt"), slide.listing("client"))
+        by_box = {b["device_id"]: b for b in boxes}
+        by_agent = {a["agent_id"]: a for a in agents}
+        by_client = {c["client_id"]: c.get("name") or c["client_id"] for c in clients}
+        for row in boxes + agents + vms:
+            source = by_agent.get(row.get("agent_id"), {}) if row.get("virt_id") else row
+            box = by_box.get(source.get("device_id"), {})
+            client_id = source.get("client_id") or box.get("client_id")
+            row["speck_client"] = {"id": client_id, "key": cfg["url"] + ":" + client_id, "name": by_client.get(client_id, client_id)} if client_id else None
+            row["speck_parent_name"] = box.get("display_name") or box.get("hostname") or source.get("device_id", "")
+            if row.get("virt_id"):
+                row["speck_name"] = (source.get("display_name") or source.get("hostname") or row["virt_id"]) + " · VM"
+        return boxes + agents + vms
     return []
 
 
@@ -225,25 +230,29 @@ def resources(cfg, rows):
                 status=r.get("state", "unknown"),
                 node=r.get("speck_parent_name") or r.get("device_id", ""),
                 addresses=[r["ip_address"]] if r.get("ip_address") else [],
-                max_memory=r.get("memory_in_mb", 0) * 1048576,
+                max_memory=(r.get("memory_in_mb") or 0) * 1048576,
                 console_enabled=bool(r.get("vnc_enabled")),
                 source_agent_id=r.get("agent_id"),
             )
         else:
             try:
-                seen = datetime.fromisoformat(r.get("last_seen_at", "").replace("Z", "+00:00")).timestamp()
+                seen = datetime.fromisoformat((r.get("last_seen_at") or "").replace("Z", "+00:00")).timestamp()
             except (ValueError, TypeError):
                 seen = 0
             item = dict(
-                id=r["device_id"],
-                kind="box",
-                name=r.get("display_name") or r.get("hostname") or r["device_id"],
+                id=r.get("agent_id") or r["device_id"],
+                kind="protected" if r.get("agent_id") else "box",
+                name=r.get("display_name") or r.get("hostname") or r.get("agent_id") or r["device_id"],
                 status="online" if seen > time.time() - 300 else "offline" if seen else "unknown",
                 max_disk=r.get("storage_total_bytes"),
                 disk=r.get("storage_used_bytes"),
-                node=r.get("serial_number", ""),
-                addresses=[a for a in r.get("ip_addresses", []) if isinstance(a, str)],
+                node=r.get("speck_parent_name", "") if r.get("agent_id") else r.get("serial_number", ""),
+                addresses=[a for a in (r.get("ip_addresses") or []) if isinstance(a, str)],
             )
+        if cfg["provider"] == "slide":
+            item.update(client=r.get("speck_client"), platform=r.get("platform", "unknown"),
+                        identity={"macs": [r["mac_address"]] if r.get("virt_id") and r.get("mac_address") else [a["mac"] for a in (r.get("addresses") or []) if a.get("mac")]},
+                        device_id=r.get("device_id"))
         item.update(connection_id=cfg["id"], connection_name=cfg["name"], provider=cfg["provider"])
         result.append(item)
     return result
@@ -347,7 +356,9 @@ async def resolve(cfg, kind, rid):
             return row
         if cfg["provider"] == "linode" and kind == "instance" and str(row["id"]) == rid:
             return row
-        if cfg["provider"] == "slide" and kind == "box" and row.get("device_id") == rid and not row.get("virt_id"):
+        if cfg["provider"] == "slide" and kind == "box" and row.get("device_id") == rid and not row.get("virt_id") and not row.get("agent_id"):
+            return row
+        if cfg["provider"] == "slide" and kind == "protected" and row.get("agent_id") == rid and not row.get("virt_id"):
             return row
         if cfg["provider"] == "slide" and kind == "virt" and row.get("virt_id") == rid:
             return row
@@ -385,6 +396,8 @@ async def detail(connection_id: str, kind: str, rid: str, user=Depends(require_u
     elif cfg["provider"] == "linode":
         result["configuration"] = row
         result["backups"] = await provider_request(cfg, "GET", "/linode/instances/" + segment(rid) + "/backups")
+    elif kind == "protected":
+        result["configuration"] = {k: row[k] for k in ("agent_id", "device_id", "hostname", "display_name", "platform", "os", "os_version", "last_seen_at", "ip_addresses", "speck_client") if k in row}
     elif kind == "virt":
         result["configuration"] = public_data(await Slide(cfg).request("GET", "restore/virt/" + segment(rid)))
     else:
@@ -512,6 +525,8 @@ def catalog(cfg, kind):
                 danger=True,
             ),
         }
+    if kind == "protected":
+        return {"backup": operation("Back up machine")}
     return SLIDE_OPS if kind == "box" else {}
 
 
@@ -576,7 +591,7 @@ async def read_operation(
 class Action(BaseModel):
     model_config = ConfigDict(extra="forbid")
     request_id: str = Field(pattern=r"^[a-f0-9-]{32,36}$")
-    kind: Literal["connection", "node", "qemu", "lxc", "instance", "box", "virt"]
+    kind: Literal["connection", "node", "qemu", "lxc", "instance", "box", "virt", "protected"]
     resource_id: str = Field(default="", max_length=128)
     operation: str = Field(max_length=64)
     args: dict = Field(default_factory=dict)
@@ -664,6 +679,8 @@ async def execute(cfg, row, body, args):
             else {"state": "running" if op == "start" else "stopped"}
         )
         return await slide.request("PATCH", "restore/virt/" + segment(body.resource_id), payload)
+    if body.kind == "protected" and op == "backup":
+        return await slide.request("POST", "backup", {"agent_id": body.resource_id})
     path = "device/" + segment(body.resource_id)
     if op == "rename":
         return await slide.request("PATCH", path, args)
