@@ -1,3 +1,36 @@
+# Combined Proxmox release — live September 23, 2026
+
+Runtime `84eb09e` is deployed from `worktrees/proxmox-machine-experience` and
+published in [PR #19](https://github.com/amcchord/speck/pull/19). It includes main
+`7a51f07`, every previously deployed Fleet/Slide change and Alerts/AI `65f668d`
+through record `f0836b3`. This top entry supersedes the older deployment and
+local-only status notes below.
+
+Proxmox guests now have structured Fleet/Infrastructure views, guest inventory,
+performance, snapshots/activity, ephemeral read-only previews, PNG download and
+explicit screen control. Serial-only/disabled displays retain inventory and
+explain why graphical access is unavailable. Both connector-backed clusters passed
+real preview/download/guest-data/tab/keyboard/mouse acceptance in Chromium/WebKit.
+Direct API-token transport has automated coverage but is not configured in
+production, so its live acceptance remains open.
+
+The combined core gate passed (173 backend, Go race tests and builds, 31 web
+units, 171 browser scenarios; one existing skip). The display-capability follow-up
+brings the final backend count to 176. The capture follow-up waits for painted
+pixels after the transparent startup frame; 24 affected browser cases and the
+final build pass. Hosted backend/build and browser checks
+also passed on `6787c42`. All 31 deployed backend files and 26 current build files
+match source. Protected state, database integrity and health checks passed.
+
+Index: `360648be5d27fec9e68d4394f6ee7efde82c22a3566f5e7ab311872939f0ece3`.
+Pre-feature rollback: `/var/lib/speck-rollback/20260923T135859Z-proxmox-machine-7227267`.
+Latest follow-up rollback: `/var/lib/speck-rollback/20260923T141400Z-proxmox-machine-84eb09e`.
+Private evidence: this worktree's ignored `output/proxmox-release/`.
+[Release details and limits](../operations/proxmox-machine-experience.md).
+Next release must preserve this source and recheck the live baseline.
+
+---
+
 # Fleet toolbar and persistent agent toggle — live September 23
 
 Runtime `1158014` deployed at 13:37 UTC from `codex/fleet-toolbar-headers` in
@@ -245,20 +278,6 @@ reads and isolation/revocation acceptance. All QA access was cleaned up. Existin
 fleet assignments, identities, accounts, credentials, provider settings, updater
 policy and recovery resources were preserved. Rollback and detailed checks are in
 [Chat integration operations](../operations/chat-integration.md).
-
-
-## Proxmox machine experience — implemented locally, not deployed
-
-The contained `codex/proxmox-machine-experience` branch includes the latest
-communicated deployed Fleet source (`1158014`, release record `6faaf5c`). It adds
-rich VM/container views, guest inventory, performance charts, read-only screen
-captures, PNG downloads and API-token console support. Existing connectors and
-endpoint agents need no upgrade. All local core checks pass; final backend count
-is 164 and affected browser recheck is 41 passing with one existing skip. No
-production changes or pushes were made. Next step is review, then an explicitly
-authorized combined server/web release and real Proxmox acceptance. See the
-[implementation/runbook](../operations/proxmox-machine-experience.md) and
-[synthetic gallery](../screenshots/proxmox-machine/README.md).
 
 
 ## Compact alerts and contextual AI — live September 23

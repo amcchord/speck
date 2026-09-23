@@ -113,7 +113,7 @@ async function setup(page, options = {}) {
     .addCookies([
       { name: "speck-gallery", value: "1", url: "http://127.0.0.1:8761" },
     ]);
-  const png = await page.evaluate(() => {
+  const png = await page.evaluate((blackFrame) => {
     const c = document.createElement("canvas");
     c.width = 960;
     c.height = 540;
@@ -140,8 +140,12 @@ async function setup(page, options = {}) {
       "",
       "192.0.2.10  ·  eth0",
     ].forEach((s, i) => g.fillText(s, 130, 152 + i * 42));
+    if (blackFrame) {
+      g.fillStyle = "#000";
+      g.fillRect(0, 0, c.width, c.height);
+    }
     return c.toDataURL("image/png").split(",")[1];
-  });
+  }, options.blackFrame);
   await page.route(/\/api\/fleet(?:\?.*)?$/, (r) =>
     r.fulfill({ json: { machines: [machine], connections: [] } }),
   );
@@ -239,16 +243,40 @@ async function setup(page, options = {}) {
       if (options.hung) return;
       ws.send(instruction("", "test"));
       ws.send(instruction("size", 0, 960, 540));
-      ws.send(instruction("img", 1, 14, 0, "image/png", 0, 0));
-      ws.send(instruction("blob", 1, png));
-      ws.send(instruction("end", 1));
-      ws.send(instruction("sync", 1234));
+      const frame = () => {
+        ws.send(instruction("img", 1, 14, 0, "image/png", 0, 0));
+        ws.send(instruction("blob", 1, png));
+        ws.send(instruction("end", 1));
+        ws.send(instruction("sync", 1234));
+      };
+      if (options.initialSync) {
+        ws.send(instruction("sync", 1233));
+        setTimeout(frame, 500);
+      } else frame();
     },
   );
   await page.goto("/");
   await page.locator('[data-row="provider-101"] .machine-name').click();
   return { calls, input, deleted };
 }
+for (const blackFrame of [false, true])
+  test(`preview waits for painted pixels after the initial size/sync (black=${blackFrame})`, async ({ page }) => {
+    const state = await setup(page, { initialSync: true, blackFrame });
+    const preview = page.locator(".pve-preview-screen img");
+    await expect(preview).toBeVisible();
+    const pixel = await preview.evaluate(async (img) => {
+      await img.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      return [...ctx.getImageData(100, 100, 1, 1).data];
+    });
+    expect(pixel).toEqual(blackFrame ? [0, 0, 0, 255] : [21, 45, 68, 255]);
+    await expect.poll(() => state.deleted.length).toBe(1);
+    expect(state.input.some((m) => m.startsWith("3.key") || m.startsWith("5.mouse"))).toBe(false);
+  });
 for (const width of [1440, 390])
   test(`Proxmox overview, capture, inventory tabs and control at ${width}`, async ({
     page,
