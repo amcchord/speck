@@ -63,3 +63,10 @@ Release evidence and the matching rollback location are retained privately under
 binaries, credentials, Sites, recovery policies and provider VM state are preserved.
 Rollback restores the saved server and web directories, then restarts Speck. The
 new cache/preferences tables are additive and may remain when rolling back code.
+
+Production release `7148553` is live and included in merged PR #17 (`531ee39`).
+The full local core gate and hosted PR checks passed. Live Chromium and WebKit
+verified the joined inventory, client membership, saved columns and agent filters;
+all ten Proxmox endpoint matches and eight infrastructure connectors were healthy.
+The consistent data/configuration/runtime rollback snapshot is
+`/var/lib/speck-rollback/20260923T083900Z-unified-fleet-7148553`.
