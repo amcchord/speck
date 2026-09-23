@@ -895,3 +895,7 @@ attempts. The operator's saved preferences remained identical. Final audit verif
 SQLite/service, and zero gateway connections after cleanup. Release ownership
 passes to the network-topology task, which must include `84eb09e` and recheck this
 baseline before its next authorized publication.
+
+## September 23 — read-only Chat topology
+
+Deployed runtime `1e5404b` from `codex/chat-topology` after the Proxmox task's release handoff. Optional token grants expose bounded Proxmox placement and safe identities; named sites return only matched guests and their parent hosts. All-sites access is explicit. The rollout preserved current main and live Proxmox/alerts changes. 178 backend tests, 31 web units, Ruff and web build pass, as do live client/full-network Chat requests and scope rejection. No endpoint/host operations. See `docs/operations/chat-topology.md` for deployment, protected-state checks and guarded rollback. No remaining task work.
