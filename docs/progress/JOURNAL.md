@@ -516,3 +516,14 @@ validation includes 120 backend, 28 web unit and six new Chromium/WebKit token
 lifecycle checks, TypeScript/Vite and Ruff. Production release and live cross-app
 acceptance are being coordinated with the Chat deployment owner. Exact private
 baseline/deployment evidence remains under `output/chat-integration/`.
+
+
+Production release `682fc0d` completed at 01:46 UTC September 23, with full private
+rollback `/var/lib/speck-rollback/20260923T014640Z-chat-integration-682fc0d`.
+All 90 browser checks passed, and the final deployment preserved device/account/
+MFA/provider/recovery/preview/environment invariants. Public asset bytes and health
+match the release. Positive public Chat connection and companion reads, Site and
+client isolation, and revocation propagation passed against Speck. The isolated
+QA workspace/source/companion token and transient Speck access were cleaned up;
+no fleet Site assignments or customer mappings were changed. User setup through
+Speck Settings and Chat Connections is the next action for each desired client.

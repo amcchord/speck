@@ -120,3 +120,20 @@ Desktop Downloads now serves 0.2.3 from static source `2b01150`; its live index 
 `383ed5a0…`. Served hashes, desktop/phone layout, service process and environment
 were checked. The preceding static tree is retained under
 `/var/lib/speck-rollback/20260923T004907Z-client-updates-2b01150/web`.
+
+
+## Slide Chat integration — live September 23
+
+Runtime `682fc0d` adds Settings → Slide Chat and an expiring, revocable, hashed
+read-only token limited to one named Site. Connect it in Chat → Connections →
+Speck RMM and explicitly select the matching Slide client. Inventory/health,
+volumes, services, open alerts and existing patch reports are available; commands,
+remote sessions and recovery writes are not. Site changes/archive, expiry,
+revocation and creator-account restrictions are enforced by Speck on every read.
+
+120 backend, 28 web unit and 90 Chromium/WebKit scenarios, Ruff and the web build
+pass. Both public applications passed temporary end-to-end connector/companion
+reads and isolation/revocation acceptance. All QA access was cleaned up. Existing
+fleet assignments, identities, accounts, credentials, provider settings, updater
+policy and recovery resources were preserved. Rollback and detailed checks are in
+[Chat integration operations](../operations/chat-integration.md).

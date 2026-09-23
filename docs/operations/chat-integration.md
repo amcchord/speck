@@ -43,9 +43,9 @@ mismatched Site. The first version supports the hosted Speck origin in Slide Cha
 
 Seven server regressions cover scope, pagination, secret exclusion, expiry,
 revocation, creator roles, CSRF, token/session/agent isolation and rate limits.
-Six Chromium/WebKit cases cover desktop/mobile creation, one-time token display,
-revocation and empty-site setup. The complete backend (120 tests), web units
-(28 tests), TypeScript/Vite build and Ruff pass locally.
+Six new Chromium/WebKit cases cover desktop/mobile creation, one-time token display,
+revocation and empty-site setup. All 90 browser scenarios, the complete backend
+(120 tests), web units (28 tests), TypeScript/Vite build and Ruff pass locally.
 
 Deployment requires the current main ancestor and a matching live baseline,
 no active jobs/recoveries, a consistent private database and server/web backup,
@@ -53,3 +53,21 @@ then a backend restart. This is an additive table migration; existing devices,
 accounts, secrets, settings, updater policy and recovery records remain unchanged.
 Exact release and rollback evidence is retained privately under
 `output/chat-integration/`; update the progress journal after live acceptance.
+
+
+### September 23 rollout
+
+Runtime `682fc0d` is deployed and pushed to main. HTTPS and public asset hashes
+match the build; identity/account/MFA/provider/recovery/preview-policy/environment
+invariants and SQLite integrity passed. No jobs, remote tunnels or recovery runs
+were active at the restart. Rollback is
+`/var/lib/speck-rollback/20260923T014640Z-chat-integration-682fc0d`.
+
+Production acceptance through both public applications verified token creation,
+scoped reads, Chat connection validation/save, companion inventory/alert/detail
+reads, wrong-Site and wrong-client rejection, and revocation propagated through
+Chat. The explicitly labeled temporary QA mapping, isolated Chat workspace,
+companion credential and Speck integration access were removed/revoked afterward.
+No customer mapping, Site assignments, endpoint commands or recovery changes were
+made. Users configure their own Site/client connection through the two Settings
+screens; unnamed machines must first be assigned to the appropriate Site.
