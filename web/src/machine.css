@@ -1,5 +1,6 @@
 /* Machine pane layout. Shared control geometry remains in ui.css. */
 .device-drawer {
+  --machine-gutter: 20px;
   position: fixed;
   inset: 0 0 0 auto;
   margin: 0;
@@ -18,7 +19,7 @@
   top: 0;
   z-index: 2;
   background: var(--white);
-  padding: 14px 20px 10px;
+  padding: 14px var(--machine-gutter) 10px;
   margin: 0;
   gap: 12px;
 }
@@ -33,7 +34,15 @@
 }
 .machine-title { overflow-wrap: anywhere; }
 .device-drawer .dialog-head .badge { flex-shrink: 0; font-size: 11px; font-weight: 550; letter-spacing: 0; }
-.machine-summary { padding: 0 20px 14px; }
+.machine-inventory { border-bottom: 1px solid var(--line); padding: 4px var(--machine-gutter) 16px; margin-bottom: 16px; }
+.machine-inventory dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin: 0; }
+.machine-inventory dt { color: var(--muted); font-size: 11px; }
+.machine-inventory dd { margin: 4px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+.machine-inventory small { display: block; }
+.machine-inventory p { margin: 12px 0 0; font-size: 11px; overflow-wrap: anywhere; }
+.machine-inventory .drawer-actions:not(:empty) { margin-top: 12px; }
+.machine-inventory .drawer-actions button { max-width: 100%; }
+.machine-summary { padding: 0 var(--machine-gutter) 14px; }
 .machine-facts { display: grid; grid-template-columns: 1.15fr 1.25fr .7fr 1fr; gap: 12px; margin: 0 0 14px; }
 .machine-facts > div { min-width: 0; }
 .machine-facts dt { margin-bottom: 5px; color: var(--muted); font-size: 11px; }
@@ -48,7 +57,7 @@
 .drawer-actions #device-edit { margin-left: auto; }
 .device-drawer .tabs { padding: 0 14px; }
 .device-drawer .tabs button { padding-top: 11px; padding-bottom: 11px; }
-.device-drawer #device-body { padding: 20px; }
+.device-drawer #device-body { padding: var(--machine-gutter); }
 .device-drawer .scroll { max-height: 440px; }
 .device-drawer #detail > .callout { margin: 0 20px 14px; }
 .machine-overview { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start; }
@@ -90,17 +99,16 @@
 .preview-help summary { padding: 0; min-height: 24px; display: list-item; font-size: 11px; font-weight: 400; }
 .preview-help p { margin: 8px 0 0; font-size: 11px; line-height: 1.6; }
 @media (max-width: 700px) {
-  .device-drawer { width: 100%; max-width: 100%; border-radius: 0; }
-  .device-drawer > .dialog-head { padding: 12px 16px 10px; }
+  .device-drawer { --machine-gutter: 16px; width: 100%; max-width: 100%; border-radius: 0; }
+  .device-drawer > .dialog-head { padding-top: 12px; }
   .device-drawer > .dialog-head h2 { font-size: 20px; }
-  .machine-summary { padding: 0 16px 12px; }
+  .machine-summary { padding-bottom: 12px; }
   .machine-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
   .machine-facts .machine-address { font-size: 13px; }
   .machine-address .quick-action { margin-top: -10px; margin-bottom: -10px; }
   .drawer-actions button { flex: 1 1 auto; }
   .drawer-actions button > .icon { display: none; }
   .drawer-actions #device-edit { flex: 0 0 auto; }
-  .device-drawer #device-body { padding: 16px; }
   .device-drawer .tabs { padding: 0 10px; }
   .device-drawer #detail > .callout { margin-left: 16px; margin-right: 16px; }
   .machine-overview { grid-template-columns: 1fr; gap: 18px; }

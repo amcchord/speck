@@ -1,4 +1,5 @@
-import { columns, defaultPreferences, type FleetPreferences, hasEndpoint, hasAgent, selectableMachine, machineState, agentLabel, kindLabel, cpu, memory, sortMachines } from "./fleet-model";
+import { columns, defaultPreferences, hasEndpoint, hasAgent, selectableMachine, machineState, agentLabel, kindLabel, cpu, memory, sortMachines } from "./fleet-model";
+import { editColumns } from "./fleet-columns";
 import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
 import { createInfrastructure } from "./infrastructure";
 import { integrationSettings } from "./integrations";
@@ -64,18 +65,14 @@ function fleetHeaders() {
   return `<th><input id="select-page" type="checkbox" aria-label="Select machines on this page"></th>${activeColumns().map(k => `<th data-column="${k}" class="${k === "name" ? "machine-head" : ""}" style="width:${fleetPrefs.widths[k] || columns[k].width}px" aria-sort="${fleetPrefs.sort === k ? fleetPrefs.direction === "asc" ? "ascending" : "descending" : "none"}"><button data-sort-column="${k}">${columns[k].label}${fleetPrefs.sort === k ? fleetPrefs.direction === "asc" ? " ↑" : " ↓" : ""}</button></th>`).join("")}<th class="fleet-actions-head">Connect</th>`;
 }
 function editFleetColumns() {
-  const draft: FleetPreferences = structuredClone(fleetPrefs);
-  const d = dialog("Customize columns", '<div id="column-options"></div><div class="drawer-actions"><button id="columns-reset" class="secondary">Reset defaults</button><button id="columns-save" class="primary">Save columns</button></div>');
-  d.classList.add("columns-dialog");
-  function draw() {
-    d.querySelector("#column-options")!.innerHTML = draft.order.map((key,i) => `<div class="column-option"><label><input type="checkbox" data-column-toggle="${key}" ${draft.visible.includes(key) ? "checked" : ""} ${key === "name" ? "disabled" : ""}>${columns[key].label}</label><label class="column-width">Width<input type="number" min="64" max="640" value="${draft.widths[key] || columns[key].width}" data-column-width="${key}" aria-label="${columns[key].label} width"></label><button class="secondary" data-column-up="${i}" ${!i ? "disabled" : ""} aria-label="Move ${columns[key].label} up">↑</button><button class="secondary" data-column-down="${i}" ${i === draft.order.length-1 ? "disabled" : ""} aria-label="Move ${columns[key].label} down">↓</button></div>`).join("");
-    d.querySelectorAll<HTMLInputElement>("[data-column-toggle]").forEach(el => el.onchange = () => { draft.visible = el.checked ? [...draft.visible, el.dataset.columnToggle!] : draft.visible.filter(k => k !== el.dataset.columnToggle); });
-    d.querySelectorAll<HTMLInputElement>("[data-column-width]").forEach(el => el.onchange = () => { draft.widths[el.dataset.columnWidth!] = Math.min(640, Math.max(64, Number(el.value) || 64)); el.value = String(draft.widths[el.dataset.columnWidth!]); });
-    for (const [attr,step] of [["columnUp",-1],["columnDown",1]] as const) d.querySelectorAll<HTMLButtonElement>(`[data-column-${step === -1 ? "up" : "down"}]`).forEach(el => el.onclick = () => { const i=Number(el.dataset[attr]); [draft.order[i],draft.order[i+step]]=[draft.order[i+step],draft.order[i]]; draw(); });
-  }
-  draw();
-  on("columns-reset", () => { Object.assign(draft,defaultPreferences()); draw(); });
-  on("columns-save", () => { fleetPrefs=draft; fleetSort=draft.sort; showPreviews=draft.visible.includes("preview"); saveFleetPreferences(); d.close(); drawFleet(); });
+  editColumns(fleetPrefs, dialog, draft => {
+    fleetPrefs = draft;
+    fleetSort = draft.sort;
+    showPreviews = draft.visible.includes("preview");
+    saveFleetPreferences();
+    drawFleet();
+    document.getElementById("fleet-columns")?.focus({ preventScroll: true });
+  });
 }
 let activeDevicePanel: HTMLDialogElement | null = null;
 let fleetScroll = { x: 0, y: 0, table: 0 };

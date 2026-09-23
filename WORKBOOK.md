@@ -498,3 +498,19 @@ excluded before retrying. All protected settings and existing identities remain
 verified. AustinLand continues using its existing application and credentials;
 its outbound worker runs under the Mac user service manager. AustinLand itself
 must remain running with LAN access for those delegated workflows.
+
+## Fleet flyout and column editor — September 23, 2026
+
+Local `codex/fleet-ui-polish` in `worktrees/fleet-ui-polish` starts from main
+`7a51f07`. The machine identity section now aligns with the pane heading, facts
+and content on desktop/mobile. A compact column editor adds mouse/touch dragging,
+keyboard ordering, auto-scroll, optional width fields, explicit visibility and a
+persistent Save/Cancel footer. Drafts and existing saved preferences are retained;
+reset changes columns without resetting sorting or highlighting.
+
+TypeScript/Vite, 28 web units and 119 Chromium/WebKit UI tests pass. One WebKit
+copy of the Chromium-specific touch test is skipped; the actual Chromium touch
+case passes. Five synthetic screenshots were reviewed; see the
+[gallery](docs/screenshots/fleet-ui-polish/README.md). No production deployment,
+backend/agent action, GitHub push or merge. Next: review and explicitly authorize
+a static release after current-main and live-baseline preflight.

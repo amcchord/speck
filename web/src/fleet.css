@@ -135,20 +135,39 @@
 .fleet-workspace .fleet-toolbar { flex-wrap: wrap; }
 .fleet-workspace .fleet-toolbar .check { font-size: 11px; white-space: nowrap; }
 .fleet-stale { color: var(--warning); font-size: 12px; }
-.columns-dialog { max-width: 630px; }
-.column-option { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); }
-.column-option > label:first-child { display: flex; align-items: center; gap: 8px; flex: 1; }
-.column-option input[type=checkbox] { width: 16px; }
-.column-width { display: flex; gap: 6px; align-items: center; font-size: 11px; }
-.column-width input { width: 68px; padding: 6px; }
-.column-option button { min-width: 32px; padding: 6px; }
-.machine-inventory { border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 12px; }
-.machine-inventory dl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
-.machine-inventory dt { color: var(--muted); font-size: 11px; }
-.machine-inventory dd { margin: 3px 0 0; font-size: 13px; overflow-wrap: anywhere; }
-.machine-inventory small { display: block; }
-.machine-inventory p { font-size: 11px; }
-.machine-inventory .drawer-actions { flex-wrap: wrap; }
+.columns-dialog { width: min(560px, calc(100vw - 32px)); max-width: none; max-height: min(860px, calc(100dvh - 48px)); padding: 0; overflow: hidden; }
+.columns-dialog[open] { display: flex; flex-direction: column; }
+.columns-dialog > .dialog-head { padding: 20px 24px 8px; margin: 0; flex-shrink: 0; }
+.columns-dialog .columns-intro { margin: 0; padding: 0 24px 20px; font-size: 13px; line-height: 1.6; color: var(--muted); flex-shrink: 0; }
+.columns-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 24px; background: var(--paper); border-block: 1px solid var(--line); font-size: 12px; flex-shrink: 0; }
+.columns-toolbar > span { font-weight: 600; }
+.columns-toolbar label { display: flex; align-items: center; gap: 8px; font-size: 12px; margin: 0; }
+.columns-toolbar input, .column-option input { margin: 0; }
+.columns-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 16px; scrollbar-gutter: stable; }
+#column-options { list-style: none; margin: 0; padding: 0; }
+.column-option { position: relative; display: flex; align-items: center; gap: 8px; min-height: 48px; margin: 4px 0; padding: 4px 8px 4px 4px; border: 1px solid transparent; border-radius: 8px; }
+.column-option.is-visible { background: var(--paper); border-color: var(--line); }
+.column-option:hover { background: var(--surface-hover); }
+.column-choice { display: flex; align-items: center; gap: 10px; flex: 1; align-self: stretch; min-width: 0; margin: 0; cursor: pointer; }
+.is-visible .column-choice { color: var(--ink); font-weight: 550; }
+.column-choice > span { overflow-wrap: anywhere; }
+.column-choice small { margin-left: auto; color: var(--muted); font-size: 11px; font-weight: 400; }
+.column-handle { display: grid; place-items: center; flex-shrink: 0; width: 32px; min-height: 36px; padding: 0; border: 0; border-radius: var(--control-radius); color: var(--muted); background: transparent; cursor: grab; touch-action: none; }
+.column-handle:hover { color: var(--fern); background: var(--white); }
+.column-handle:focus-visible { outline: 2px solid var(--fern); outline-offset: 1px; }
+.column-handle .icon, .column-drag-preview .icon { width: 18px; height: 18px; }
+.column-width { display: none; align-items: center; gap: 6px; margin: 0 0 0 8px; color: var(--muted); font-size: 11px; }
+.show-widths .column-width { display: flex; }
+.column-width input { width: 72px; padding: 6px 8px; font-variant-numeric: tabular-nums; }
+.columns-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--line); background: var(--white); flex-shrink: 0; }
+.columns-footer > div { display: flex; gap: 8px; }
+.columns-announcement { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.column-option.is-dragging { opacity: .35; }
+.column-option.drop-before::before, .column-option.drop-after::after { content: ""; position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px; background: var(--fern); }
+.column-option.drop-before::before { top: -4px; }
+.column-option.drop-after::after { bottom: -4px; }
+.columns-dialog.is-reordering, .is-reordering .column-handle { cursor: grabbing; user-select: none; }
+.column-drag-preview { position: fixed; z-index: 5; display: flex; align-items: center; gap: 18px; padding: 0 12px; background: var(--white); border: 1px solid var(--fern); border-radius: 8px; box-shadow: 0 6px 20px #192e2426; color: var(--ink); font-size: 13px; font-weight: 600; pointer-events: none; }
 @media (min-width: 761px) {
   .fleet-workspace .unified-fleet .app-cell { display: table-cell; }
 }
@@ -160,7 +179,21 @@
   .fleet-workspace .unified-fleet .status-cell::before { display: block !important; }
   .fleet-workspace .unified-fleet .connect-cell { grid-column: 1/-1; grid-row: auto; }
   .fleet-workspace .unified-fleet td.screen-cell { grid-column: 1/-1; }
-  .column-width { font-size: 0; }
-  .column-width input { font-size: 12px; width: 56px; }
-  .column-option { gap: 4px; font-size: 12px; }
+}
+@media (max-width: 600px) {
+  .columns-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 24px); }
+  .columns-dialog > .dialog-head { padding: 16px 16px 8px; }
+  .columns-dialog .columns-intro { padding: 0 16px 16px; }
+  .columns-toolbar { padding: 10px 16px; }
+  .columns-toolbar label { min-height: 44px; }
+  .columns-list { padding: 6px 8px; }
+  .column-option { min-height: 54px; gap: 4px; padding-right: 8px; }
+  .column-handle { width: 44px; min-height: 44px; }
+  .column-choice { gap: 8px; font-size: 12px; }
+  .show-widths .column-choice small { display: none; }
+  .column-width { margin-left: 4px; }
+  .column-width input { width: 64px; padding: 6px; }
+  .column-width > span { display: none; }
+  .columns-footer { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+  .columns-footer > div { margin-left: auto; }
 }
