@@ -915,3 +915,29 @@ No production deployment, remote change, push, merge or commit occurred. The
 primary checkout's existing revision was intentionally preserved. Migration
 records are in `output/project-relocation-20260923/`; the next action is to add
 `~/Development/SpeckRMM` as its own Codex project.
+
+## 2026-09-23 — SpeckRMM workspace setup verification
+
+Completed the workspace migration in the new project folder. The project virtual
+environment was recreated from `uv.lock`; its console script shebangs had still
+named `~/Development/Speck/.venv/bin/python` and worked only through the
+compatibility symlink. All 43 locked packages reinstalled with no stale path
+references and no editable or unlocked packages to preserve.
+
+Reloaded the infrastructure bridge LaunchAgent with `bootout`/`bootstrap` rather
+than `kickstart`, because the loaded job still held the pre-move paths in memory
+even though the plist on disk was already canonical. The first bootstrap returned
+error 5 during teardown; the retry succeeded. The bridge now runs as PID 94067
+from the canonical program and config paths with empty error and worker logs.
+The desktop client was quit and relaunched from the canonical bundle path. No
+process remains running from `~/Development/Speck`.
+
+`./scripts/check-local.sh core` passed in 110 seconds: Ruff, 113 backend tests,
+Dockerized Linux agent race tests, platform builds, web units and 84 Chromium and
+WebKit browser cases. Note that `go test ./internal/agent` cannot build natively
+on macOS, since the agent provides only Linux and Windows platform files; the
+check script routes it through Docker.
+
+Rebased `codex/claude-md` onto `origin/main` at `d6538cb`, resolving an append
+conflict in this journal. No production deployment, remote change or push
+occurred.

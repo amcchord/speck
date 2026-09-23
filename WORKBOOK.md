@@ -5,13 +5,14 @@
 The canonical project folder is now `~/Development/SpeckRMM`. Open that folder
 as the SpeckRMM project in Codex. The primary checkout, all 22 linked worktrees,
 Git history, pending work, build outputs and private operator artifacts moved
-together from `~/Development/Speck`. Branches and commits were preserved;
-the primary checkout remains on its existing `main` commit.
+together from `~/Development/Speck`. Branches and commits were preserved.
 
-`~/Development/Speck` is a compatibility symlink for existing task paths,
-Python environments and the running local infrastructure bridge. Its LaunchAgent
-configuration now uses the canonical path on its next start; the current process
-was not restarted. Keep the compatibility link until those consumers migrate.
+`~/Development/Speck` remains a compatibility symlink for existing task paths and
+local environments. The infrastructure bridge LaunchAgent and the desktop client
+were reloaded from the canonical path; no process runs from the old path. The
+project virtual environment was rebuilt from `uv.lock` because its console script
+shebangs still resolved through the symlink. Keep the compatibility link until
+remaining task paths migrate.
 
 Speck cleanup evidence formerly in SlideDev is now in
 `output/speck-restore-cleanup-20260923/`. SlideChat and dental-demo integrations
