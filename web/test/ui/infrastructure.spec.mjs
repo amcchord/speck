@@ -8,7 +8,7 @@ async function setup(page){
   if(url.pathname.endsWith('/inventory'))data={connections:[connection,{id:'c2',name:'Offline cluster',provider:'proxmox',connector:true,status:'unavailable',error:'No Proxmox agent is online for this cluster',resources:[]}],checked_at:1790120000};
   else if(url.pathname.endsWith('/connectors'))data=[{id:'agent1',connection_id:'c1',hostname:'pve-1',version:'0.1.0',online:true,last_seen:1790120000}];
   else if(url.pathname.endsWith('/catalog'))data={reboot:{label:'Reboot',method:'POST',danger:true,fields:[]}};
-  else if(url.pathname.includes('/resources/'))data={resource:connection.resources[0],configuration:{cores:4,memory:8192},recent_tasks:[]};
+  else if(url.pathname.includes('/resources/'))data={resource:connection.resources[0],status:{status:'running',maxmem:8589934592,mem:2147483648},configuration:{cores:4,memory:8192},recent_tasks:[]};
   else if(url.pathname.endsWith('/actions'))data={status:'submitted',result:'UPID:example'};
   else if(url.pathname.endsWith('/operations'))data=[];
   await route.fulfill({json:data});
@@ -24,8 +24,8 @@ for(const width of [1440,390]){
   await expect(page.getByText('Proxmox only',{exact:true})).toBeVisible();
   await page.screenshot({path:`../output/infrastructure/inventory-${width}-${test.info().project.name}.png`,fullPage:true});
   await page.getByRole('button',{name:'Clinic server',exact:true}).click();
-  await expect(page.getByText('8192',{exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Open provider console',exact:true})).toBeVisible();
+  await expect(page.getByText('2.0 GB / 8.0 GB',{exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Screen control',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Reboot',exact:true}).click();
   const d=page.getByRole('dialog',{name:'Reboot',exact:true});
   await expect(d.getByText('This changes a live resource', {exact:false})).toBeVisible();

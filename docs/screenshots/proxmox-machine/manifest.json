@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-23",
+  "source": "web/test/ui/proxmox-machine.spec.mjs",
+  "images": [
+    {
+      "file": "desktop.png",
+      "sha256": "a09977d30391c3af3d5d975aebaec7825a6fd71ae915f12829d203e03c9d9157",
+      "browser": "WebKit",
+      "data": "synthetic fixture; no live customer screen"
+    },
+    {
+      "file": "phone.png",
+      "sha256": "e4e0214e46b8c8cdaba5c8891a3e954a09dd85cbaa89c66073947c27bff3ebd1",
+      "browser": "WebKit",
+      "data": "synthetic fixture; no live customer screen"
+    }
+  ]
+}

@@ -1,10 +1,11 @@
 import Guacamole from "guacamole-common-js";
 import { useReliableImageDecoder } from "./remote-startup";
+import { downloadScreen } from "./provider-preview";
 type Item = Record<string, any>;
 export async function openProviderConsole(ui: Item, resource: Item) {
   const d: HTMLDialogElement = ui.dialog(
     resource.name + " · provider console",
-    `<div class="infra-console-toolbar"><span role="status">Connecting…</span><button class="secondary" data-cad>Ctrl + Alt + Del</button><button class="secondary" data-fit>View at 100%</button><button class="secondary" data-full>Full screen</button><button class="secondary" data-reconnect>Reconnect</button></div><div class="infra-console-stage" tabindex="0" aria-label="Virtual machine console"></div><small class="muted">Provider console · Works without a Speck agent inside the guest · Click the screen to send keyboard input</small>`,
+    `<div class="infra-console-toolbar"><span role="status">Connecting…</span><button class="secondary" data-screenshot disabled>Save screenshot</button><button class="secondary" data-cad>Ctrl + Alt + Del</button><button class="secondary" data-fit>View at 100%</button><button class="secondary" data-full>Full screen</button><button class="secondary" data-reconnect>Reconnect</button></div><div class="infra-console-stage" tabindex="0" aria-label="Virtual machine console"></div><small class="muted">Provider console · Works without a Speck agent inside the guest · Click the screen to send keyboard input</small>`,
   );
   d.classList.add("infra-console");
   const stage = d.querySelector<HTMLElement>(".infra-console-stage")!;
@@ -25,18 +26,35 @@ export async function openProviderConsole(ui: Item, resource: Item) {
     observer?.disconnect();
     client?.disconnect();
     if (sessionID)
-      void ui.api("/remote/sessions/" + sessionID, "DELETE").catch(() => {});
+      void (ui.sessionApi || ui.api)(
+        "/remote/sessions/" + sessionID,
+        "DELETE",
+      ).catch(() => {});
     if (document.fullscreenElement === d) void document.exitFullscreen();
   });
+  (d.querySelector("[data-reconnect]") as HTMLButtonElement).onclick =
+    async () => {
+      client?.disconnect();
+      if (sessionID)
+        await (ui.sessionApi || ui.api)(
+          "/remote/sessions/" + sessionID,
+          "DELETE",
+        ).catch(() => {});
+      d.close();
+      await openProviderConsole(ui, resource);
+    };
   try {
-    const session = await ui.api(
+    const session = await (ui.sessionApi || ui.api)(
       "/infrastructure/connections/" + resource.connection_id + "/console",
       "POST",
       { kind: resource.kind, resource_id: resource.id },
     );
     sessionID = session.id;
     if (closed) {
-      await ui.api("/remote/sessions/" + sessionID, "DELETE");
+      await (ui.sessionApi || ui.api)(
+        "/remote/sessions/" + sessionID,
+        "DELETE",
+      );
       return;
     }
     const tunnel = new Guacamole.WebSocketTunnel(
@@ -58,6 +76,23 @@ export async function openProviderConsole(ui: Item, resource: Item) {
     display.onresize = resize;
     observer = new ResizeObserver(resize);
     observer.observe(stage);
+    client.onsync = () =>
+      display.flush(() => {
+        (d.querySelector("[data-screenshot]") as HTMLButtonElement).disabled =
+          !display.getWidth() || !display.getHeight();
+      });
+    (d.querySelector("[data-screenshot]") as HTMLButtonElement).onclick =
+      () => {
+        try {
+          downloadScreen(
+            display.flatten().toDataURL("image/png"),
+            resource.name,
+          );
+        } catch {
+          status.textContent =
+            "The screen could not be saved. Try again after the next frame.";
+        }
+      };
     client.onerror = (error: Item) => {
       status.textContent =
         error.message || "Console connection ended. Reconnect to try again.";
@@ -100,13 +135,6 @@ export async function openProviderConsole(ui: Item, resource: Item) {
           : d.requestFullscreen()
       ).catch(() => {});
     };
-    (d.querySelector("[data-reconnect]") as HTMLButtonElement).onclick =
-      async () => {
-        client?.disconnect();
-        await ui.api("/remote/sessions/" + sessionID, "DELETE");
-        d.close();
-        await openProviderConsole(ui, resource);
-      };
     client.connect();
   } catch (e) {
     status.textContent = (e as Error).message;

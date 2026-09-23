@@ -498,3 +498,144 @@ excluded before retrying. All protected settings and existing identities remain
 verified. AustinLand continues using its existing application and credentials;
 its outbound worker runs under the Mac user service manager. AustinLand itself
 must remain running with LAN access for those delegated workflows.
+
+## Fleet flyout and column editor — September 23, 2026
+
+Local `codex/fleet-ui-polish` in `worktrees/fleet-ui-polish` starts from main
+`7a51f07`. The machine identity section now aligns with the pane heading, facts
+and content on desktop/mobile. A compact column editor adds mouse/touch dragging,
+keyboard ordering, auto-scroll, optional width fields, explicit visibility and a
+persistent Save/Cancel footer. Drafts and existing saved preferences are retained;
+reset changes columns without resetting sorting or highlighting.
+
+TypeScript/Vite, 28 web units and 119 Chromium/WebKit UI tests pass. One WebKit
+copy of the Chromium-specific touch test is skipped; the actual Chromium touch
+case passes. Five synthetic screenshots were reviewed; see the
+[gallery](docs/screenshots/fleet-ui-polish/README.md). No production deployment,
+backend/agent action, GitHub push or merge. Next: review and explicitly authorize
+a static release after current-main and live-baseline preflight.
+
+## Fleet UI polish rollout — September 23, 2026
+
+At the user's request, static runtime `8cd12c7` deployed at 13:02 UTC with the
+latest main `7a51f07` included and the live unified-Fleet baseline verified.
+Public index `0253cdc4…` and JS/CSS assets match the local build. Real Chromium
+1440px and WebKit 390px checks passed flyout alignment, drag ordering, save/reload,
+width controls and footer layout. Original preferences were restored afterward;
+test sessions were logged out. No backend restart or agent/provider operation.
+Service/environment and protected identity/account/provider hashes were preserved.
+
+Rollback: `/var/lib/speck-rollback/20260923T130226Z-fleet-ui-polish-8cd12c7/web`.
+Private evidence: `worktrees/fleet-ui-polish/output/fleet-ui-polish/`. Source is
+local, not pushed or merged. The concurrent client-display task acknowledged the
+single deployment owner and was sent the verified runtime/index to preserve in its
+next release. See [release details](docs/operations/unified-fleet.md#september-23-static-ui-refinement).
+
+## Settings Slide client membership and backup button — September 23, 2026
+
+Local `codex/slide-client-backup-fix` includes the existing Settings Slide account
+in Fleet and Infrastructure, without migrating credentials or changing provider
+assignments. Protected-machine backups submit on the first click, with existing
+account scoping, permissions, audit and retry deduplication. The fix is combined
+with deployed flyout/column runtime `8cd12c7`.
+
+Read-only provider replay verifies all five reported originals' clients and all
+ten Proxmox/endpoint joins. See `docs/progress/JOURNAL.md` for validation and
+`docs/operations/unified-fleet.md` for behavior. Production release remains pending
+explicit user authorization; no live backups were requested for testing.
+
+## Client membership/backup production rollout — September 23, 2026
+
+User-authorized server/web runtime `7141ea0` is live, preserving `8cd12c7`'s flyout
+spacing and column editor. Live desktop Chromium and phone WebKit verify all five
+reported originals' clients and immediate backup requests without name entry;
+backup POSTs were intercepted during acceptance. Source/asset hashes, health and
+protected state checks pass. No real backup or endpoint upgrade was performed.
+
+The pre-release audit found no production application edits missing from Git;
+all deployed changes and both release records are captured in local branch
+`codex/slide-client-backup-fix`. Private rollback:
+`/var/lib/speck-rollback/20260923T131146Z-slide-client-backup-fix-7141ea0`.
+See current state and journal for exact validation and evidence locations.
+
+## Fleet toolbar and saved coverage — September 23, 2026
+
+Runtime `1158014` is live from `worktrees/fleet-toolbar-headers`, preserving all
+previously deployed local fixes. Search and the saved Speck agents only switch
+stay visible; Filters and View contain secondary controls. Table headers support
+click sorting, drag ordering and keyboard movement. Coverage, sorting and column
+order persist per user. The [gallery](docs/screenshots/fleet-toolbar/README.md)
+uses synthetic inventory.
+
+Ruff/build, 157 backend tests, 28 web units and 141 browser checks pass (one existing
+platform-specific skip). Live desktop Chromium and phone WebKit verified saved
+coverage across reload, navigation and new sign-in; original preferences were
+restored. All five earlier client assignments and protected runtime state remain
+verified. Rollback: `/var/lib/speck-rollback/20260923T133704Z-fleet-toolbar-headers-1158014`.
+Source and release records are local; no GitHub push. See current state and journal
+for audit and deployment evidence. Future releases must preserve this runtime.
+
+
+## Proxmox machine experience — September 23, 2026 (local)
+
+`worktrees/proxmox-machine-experience`, branch `codex/proxmox-machine-experience`,
+adds a shared VM/container workspace in Fleet and Infrastructure: structured
+inventory, guest OS/IP/filesystems, hardware/network, charts, snapshots and tasks.
+Running VMs gain ephemeral read-only screen previews, PNG downloads and direct
+screen control. API-token connections now use Proxmox VNC tickets/WebSockets;
+existing host connectors need no update. Per-section failures and guest-agent
+requirements remain explicit. Provider credentials stay server-side; redirects
+are rejected and preview/control sessions are isolated and cleaned up.
+
+Implementation `0e0e143` preserves the separately deployed Fleet/Slide changes
+through merge `f1df14d` (runtime `1158014`, release record `6faaf5c`). Consolidated
+core checks passed (162 backend, agent race tests/builds, 31 web units, 153 browser
+checks, one existing skip). The final security regressions bring the backend to
+164 passing; affected browser recheck: 41 passing, one existing skip. Build and
+lint pass. The full core gate completed in 144 seconds.
+
+No push, deployment, production guest action, connector update or provider-setting
+change occurred. Live Proxmox acceptance is still pending an authorized server/web
+release. See [behavior, limits and release checklist](docs/operations/proxmox-machine-experience.md)
+and [synthetic review images](docs/screenshots/proxmox-machine/README.md).
+
+
+## Compact alerts and AI — September 23, 2026 (live)
+
+Deployed runtime `65f668d` on `codex/alerts-ai` preserves Fleet `1158014` /
+record `6faaf5c`. Compact rows explain job outcomes, expand evidence and separate
+acknowledging/reviewing from recovery. AI diagnose/fix uses selected alert/machine
+context, optional job evidence and an explicit command review/run; cautions and
+verification survive terminal handoff.
+
+Ruff, TypeScript/Vite, 166 backend, 28 web units and 159 browser scenarios pass
+with one existing WebKit CDP skip. Live Chromium/WebKit layouts, evidence, AI setup
+and a real metadata-only diagnosis/terminal handoff passed. No endpoint commands
+were executed. Source/assets, service/database health and protected state were
+verified; matching rollback is retained. [Release/rollback](docs/operations/alerts-ai.md),
+[journal](docs/progress/JOURNAL.md), [synthetic gallery](docs/screenshots/alerts-ai/README.md).
+No GitHub push or main merge occurred. Preserve this release before publishing
+other in-flight work.
+
+
+## Proxmox production release and GitHub publication — September 23, 2026
+
+User-authorized server/web runtime `84eb09e` is live. Combined integration
+`7227267` preserves previously deployed Fleet/Slide and Alerts/AI changes and
+publishes them with the richer Proxmox workspace in
+[PR #19](https://github.com/amcchord/speck/pull/19). This supersedes the earlier
+local-only Proxmox and unpushed Fleet/Alerts status notes.
+
+Live graphical VMs on both Proxmox clusters passed read-only screen capture,
+PNG download, guest OS/network/filesystems, all tabs and explicit keyboard/mouse
+console transport in Chromium and WebKit. Serial-only VMs now explain unavailable
+graphical access while keeping their inventory. Endpoint/host agents and provider
+configuration were preserved. Direct-token transport has automated coverage; live
+acceptance is still unverified because both clusters use outbound host connectors.
+
+Combined local core: 173 backend, race tests/builds, 31 web units, 171 browser
+cases and one existing skip. The display follow-up passes 176 backend tests.
+Hosted backend/build and browser checks passed on the display-capability runtime. Protected
+state, database integrity, served bytes and service health pass; matching rollback
+and private evidence are retained. See
+[release record](docs/operations/proxmox-machine-experience.md) and current state.

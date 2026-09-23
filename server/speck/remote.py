@@ -220,6 +220,7 @@ async def browser_tunnel(socket: WebSocket, session_id: str):
         await browser_shell(socket, session, user)
         return
     await socket.accept(subprotocol='guacamole')
+    session.browser = socket
     writer = None
     tasks = []
     try:
@@ -232,6 +233,9 @@ async def browser_tunnel(socket: WebSocket, session_id: str):
         if args[0] != 'args':
             raise ValueError('Remote gateway handshake failed')
         params = {'VERSION_1_5_0': 'VERSION_1_5_0', 'VERSION_1_6_0': 'VERSION_1_6_0',
+                  'read-only': str(cfg.get('read_only', False)).lower(),
+                  'disable-copy': str(cfg.get('read_only', False)).lower(),
+                  'disable-paste': str(cfg.get('read_only', False)).lower(),
                   'hostname': '127.0.0.1', 'port': session.listener.sockets[0].getsockname()[1],
                   'username': cfg.get('username', ''), 'password': cfg.get('password', ''), 'domain': cfg.get('domain', ''),
                   'private-key': cfg.get('private_key', ''), 'passphrase': cfg.get('passphrase', ''),
