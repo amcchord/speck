@@ -134,3 +134,25 @@ private configuration):
 `/var/lib/speck-rollback/20260923T131146Z-slide-client-backup-fix-7141ea0`.
 For a code rollback, stop Speck, restore the saved server/web trees and restart;
 this release does not require database or dependency changes.
+
+## Compact toolbar, header controls and saved agent coverage
+
+The toolbar keeps search and **Speck agents only** visible. The switch saves to
+the signed-in user's Fleet preferences and survives page reloads, navigation,
+sign-out and later sign-in. It includes both installed endpoint agents and
+specialized host agents, including offline agents. Existing users default to all
+machines until they choose a coverage filter. No database migration is needed.
+
+**Filters** groups status, operating system and additional agent coverage choices.
+Active advanced filters appear as removable chips with a count on the button.
+Clearing these filters retains an enabled agent-only switch. **View** groups
+column settings, agent highlighting, screen previews and sort controls, including
+sorting on phone layouts where table headers are hidden.
+
+Click a desktop header to sort; click again to reverse the direction. Drag it to
+move the entire column, or focus it and press Alt+Left/Right. A visible insertion
+marker and floating label show the destination; Escape cancels. Dragging does not
+change sorting. The order saves immediately while preserving hidden column slots,
+selection, search and scroll position. Selection and Connect stay fixed.
+
+[Synthetic desktop and phone gallery](../screenshots/fleet-toolbar/README.md).

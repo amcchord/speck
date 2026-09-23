@@ -1,5 +1,13 @@
 // A small, consistent icon set. Stroke geometry is independent of installed fonts.
 const paths = {
+  filter: '<path d="M4 7h16M7 12h10M10 17h4"/>',
+  columns: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 4v16M16 4v16"/>',
+  chevron: '<path d="m7 10 5 5 5-5"/>',
+  close: '<path d="m6 6 12 12M6 18 18 6"/>',
+  sort: '<path d="M8 4v16m-4-4 4 4 4-4M16 20V4m-4 4 4-4 4 4"/>',
+  sortUp: '<path d="M12 20V4m-6 6 6-6 6 6"/>',
+  sortDown: '<path d="M12 4v16m-6-6 6 6 6-6"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
   grip: '<path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3"/>',
   network: '<rect x="3" y="3" width="18" height="6" rx="1"/><rect x="3" y="15" width="18" height="6" rx="1"/><path d="M7 6h.01M7 18h.01M12 9v6"/>',
   copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>',

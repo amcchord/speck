@@ -18,15 +18,22 @@ async function setup(page) {
   await expect(page.locator('#fleet-rows tr')).toHaveCount(2);
 }
 
+async function openColumns(page) {
+  if (!await page.locator('#fleet-view-panel').isVisible()) await page.getByRole('button',{name:'View',exact:true}).click();
+  await page.getByRole('button',{name:'Columns',exact:true}).click();
+}
+
 test('all machines share fleet, clients sort, coverage filters and highlights', async ({page}) => {
   await setup(page);
   await expect(page.locator('[data-row="provider-102"] [data-select]')).toBeDisabled();
   await page.getByRole('button',{name:'Client',exact:true}).click();
   await expect(page.locator('#fleet-rows tr').first()).toHaveAttribute('data-row','provider-102');
-  await page.getByRole('button',{name:'Client ↑',exact:true}).click();
+  await page.getByRole('button',{name:'Client',exact:true}).click();
   await expect(page.locator('#fleet-rows tr').first()).toHaveAttribute('data-row','frontdesk');
+  await page.getByRole('button',{name:'View',exact:true}).click();
   await page.locator('#fleet-highlight').check();
   await expect(page.locator('[data-row="frontdesk"]')).toHaveClass(/agent-highlight/);
+  await page.getByRole('button',{name:'Filters',exact:true}).click();
   await page.getByLabel('Filter Speck agent').selectOption('missing');
   await expect(page.locator('#fleet-rows tr')).toHaveCount(1);
   await expect(page.locator('#fleet-rows')).toContainText('Agentless VM');
@@ -37,7 +44,7 @@ test('all machines share fleet, clients sort, coverage filters and highlights', 
 
 test('column visibility, order, width and sorting survive reload', async ({page}) => {
   await setup(page);
-  await page.getByRole('button',{name:'Columns',exact:true}).click();
+  await openColumns(page);
   await page.locator('[data-column-toggle="app"]').uncheck();
   await page.locator('[data-column-toggle="provider"]').check();
   await page.getByLabel('Adjust widths').check();
@@ -81,7 +88,7 @@ for (const width of [320,390,834,1440]) test(`custom columns fit at ${width}px`,
   await page.setViewportSize({width,height}); await setup(page);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   await page.screenshot({path:info.outputPath(`unified-${width}.png`),fullPage:true});
-  await page.getByRole('button',{name:'Columns',exact:true}).click();
+  await openColumns(page);
   expect(await page.locator('.columns-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBeTruthy();
   for (const widths of [false, true]) {
     await page.getByLabel('Adjust widths').setChecked(widths);
@@ -110,7 +117,7 @@ async function dragColumn(page, key, targetKey, after = false) {
 
 test('drag handles reorder upward and downward, save, and retain the required machine column', async ({page}) => {
   await setup(page);
-  await page.getByRole('button',{name:'Columns',exact:true}).click();
+  await openColumns(page);
   await expect(page.locator('[data-column-toggle="name"]')).toBeDisabled();
   await dragColumn(page, 'location', 'status');
   await expect(page.locator('[data-column-key]').nth(1)).toHaveAttribute('data-column-key', 'location');
@@ -119,7 +126,7 @@ test('drag handles reorder upward and downward, save, and retain the required ma
   await dragColumn(page, 'location', 'app', true);
   await expect(page.locator('[data-column-key]').nth(5)).toHaveAttribute('data-column-key', 'location');
   await page.getByRole('button',{name:'Save columns',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Columns',exact:true})).toBeFocused();
+  await expect(page.getByRole('button',{name:'View',exact:true})).toBeFocused();
   await page.reload();
   await expect(page.locator('th[data-column]').nth(5)).toHaveAttribute('data-column', 'location');
 });
@@ -127,7 +134,7 @@ test('drag handles reorder upward and downward, save, and retain the required ma
 test('drag autoscroll reaches the end of a short viewport and Escape cancels a drag', async ({page}) => {
   await page.setViewportSize({width:390,height:640});
   await setup(page);
-  await page.getByRole('button',{name:'Columns',exact:true}).click();
+  await openColumns(page);
   const handle = await page.locator('[data-column-handle="status"]').boundingBox();
   const list = await page.locator('.columns-list').boundingBox();
   await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
@@ -150,8 +157,9 @@ test('drag autoscroll reaches the end of a short viewport and Escape cancels a d
 test('cancel discards drafts; reset restores only columns and widths', async ({page}) => {
   await setup(page);
   await page.getByRole('button',{name:'Client',exact:true}).click();
+  await page.getByRole('button',{name:'View',exact:true}).click();
   await page.locator('#fleet-highlight').check();
-  await page.getByRole('button',{name:'Columns',exact:true}).click();
+  await openColumns(page);
   await page.locator('[data-column-toggle="app"]').uncheck();
   await page.getByRole('button',{name:'Reorder Client',exact:true}).focus();
   await page.keyboard.press('Home');
@@ -159,7 +167,7 @@ test('cancel discards drafts; reset restores only columns and widths', async ({p
   await page.getByRole('button',{name:'Cancel',exact:true}).click();
   await expect(page.locator('th[data-column="app"]')).toHaveCount(1);
   await expect(page.locator('th[data-column]').first()).toHaveAttribute('data-column', 'name');
-  await page.getByRole('button',{name:'Columns',exact:true}).click();
+  await openColumns(page);
   await page.getByLabel('Adjust widths').check();
   await page.getByLabel('Client width',{exact:true}).fill('400');
   await page.getByRole('button',{name:'Reset defaults',exact:true}).click();
@@ -175,7 +183,7 @@ test('touch dragging uses the handle while the list remains scrollable', async (
   try {
     const page = await context.newPage();
     await setup(page);
-    await page.getByRole('button',{name:'Columns',exact:true}).click();
+    await openColumns(page);
     const input = await context.newCDPSession(page);
     const handle = await page.locator('[data-column-handle="client"]').boundingBox();
     const target = await page.locator('[data-column-key="name"]').boundingBox();

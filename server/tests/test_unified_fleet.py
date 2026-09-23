@@ -287,3 +287,24 @@ def test_settings_slide_account_is_in_fleet_alongside_other_accounts(client, mon
     with db(write=True) as conn:
         conn.execute("DELETE FROM settings WHERE key='slide'")
     assert client.get('/api/infrastructure/connections/slide-settings/catalog?kind=protected').status_code == 404
+
+
+def test_agent_coverage_preference_persists_and_legacy_preferences_default_to_all(client):
+    prefs = client.get('/api/fleet/preferences').json()
+    assert prefs['agent_filter'] == 'all'
+    prefs['agent_filter'] = 'installed'
+    assert client.put('/api/fleet/preferences', json=prefs).status_code == 200
+    assert client.get('/api/fleet/preferences').json()['agent_filter'] == 'installed'
+    assert client.put('/api/fleet/preferences', json=prefs | {'agent_filter': 'unknown'}).status_code == 422
+    from speck.fleet import preferences
+
+    assert preferences({'user_id': 'another-user'})['agent_filter'] == 'all'
+    legacy = prefs.copy()
+    legacy.pop('agent_filter')
+    with db(write=True) as conn:
+        conn.execute('UPDATE fleet_preferences SET value=?', (json.dumps(legacy),))
+    assert client.get('/api/fleet/preferences').json()['agent_filter'] == 'all'
+    with db(write=True) as conn:
+        conn.execute("UPDATE users SET role='viewer'")
+    assert client.put('/api/fleet/preferences', json=prefs).status_code == 200
+    assert client.get('/api/fleet/preferences').json()['agent_filter'] == 'installed'

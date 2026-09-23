@@ -13,8 +13,8 @@ export const columns: Record<string, {label: string; width: number; className?: 
   site: {label: 'Site', width: 150}, seen: {label: 'Last report', width: 170},
   preview: {label: 'Screen preview', width: 130, className: 'screen-cell'},
 };
-export type FleetPreferences = {order: string[]; visible: string[]; widths: Record<string, number>; sort: string; direction: string; highlight_agents: boolean};
-export const defaultPreferences = (): FleetPreferences => ({order: Object.keys(columns), visible: ['name','status','client','agent','location','app','cpu','memory','address'], widths: {}, sort: 'name', direction: 'asc', highlight_agents: false});
+export type FleetPreferences = {order: string[]; visible: string[]; widths: Record<string, number>; sort: string; direction: string; highlight_agents: boolean; agent_filter: string};
+export const defaultPreferences = (): FleetPreferences => ({order: Object.keys(columns), visible: ['name','status','client','agent','location','app','cpu','memory','address'], widths: {}, sort: 'name', direction: 'asc', highlight_agents: false, agent_filter: 'all'});
 export const hasEndpoint = (d: Item) => d.has_endpoint_agent !== false;
 export const hasAgent = (d: Item) => d.has_speck_agent ?? hasEndpoint(d);
 export const selectableMachine = (d: Item) => hasEndpoint(d) && d.approved && !d.archived && !d.revoked;
