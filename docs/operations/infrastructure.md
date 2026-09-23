@@ -70,6 +70,9 @@ Connections view; its active provider consoles close immediately.
 The specialized connector is versioned separately from ordinary endpoint agents.
 Upgrades currently require replacing the binary and restarting only its service;
 ordinary endpoint auto-update packages do not overwrite this connector.
+Version 0.1.1 uses a valid DMI hardware UUID when the host has an empty Linux
+machine-id. Enrollment pins that identity source; later creation of a machine-id
+does not invalidate the agent, and older enrollments retain their original identity.
 
 ## Other providers and AustinLand
 
@@ -116,3 +119,26 @@ back the server/web code leaves additive infrastructure tables unused; preserve
 the current database to retain subsequent endpoint activity. Disable connector
 services first if rolling back to a server without connector endpoints. Provider
 resources are never removed by rollback or disconnecting a connection.
+
+### September 23 production acceptance
+
+PR #14 deployed server/web `45d02df`; connector `2651859` runs as version 0.1.1.
+The local core gate passed 138 backend tests, Linux race/runtime checks, platform
+builds, 28 web units and 98 Chromium/WebKit scenarios. Hosted checks also passed.
+The connector identity correction passed its additional regression/race tests.
+
+Live acceptance covered inventory and node/guest placement on two Proxmox clusters,
+ten exact endpoint matches, both Slide accounts and Linode. Seven host agents plus
+the AustinLand worker call home. Provider details, QEMU guest OS/network, metrics,
+snapshot listing and a harmless guest command passed. Proxmox consoles rendered on
+both clusters, including WebKit, and a Slide VM console rendered in Chromium.
+The Slide console setting was restored after testing. Destructive provider actions,
+full provisioning/migration and host power were validated with guarded protocol
+tests, not executed against existing production workloads.
+
+The backed-up release preserved identities, approvals, archived state, Slide links,
+accounts, recovery records, settings and existing signed endpoint-update artifacts.
+The pre-release server/web/data/config backup is
+`/var/lib/speck-rollback/20260923T071434Z-infrastructure-45d02df`.
+Private deployment records, target IDs and screenshots are in the infrastructure
+worktree's ignored `output/infrastructure/`; they are not public gallery assets.

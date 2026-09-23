@@ -1,9 +1,11 @@
-# Infrastructure release in progress — September 23, 2026
+# Infrastructure — live September 23, 2026
 
-`codex/infrastructure` has passed local core checks. It adds outbound Proxmox host
-agents, provider consoles, guest/endpoint relationships, Slide/Linode and
-AustinLand management. Production rollout is coordinated with the active dental
-rehearsal. [Details](../operations/infrastructure.md).
+PR #14 is merged and server/web `45d02df` is deployed. Seven outbound Proxmox
+host agents cover both clusters; Infrastructure distinguishes host connectors,
+matched endpoint agents and provider-only guests. Slide and Linode connections
+and the outbound AustinLand worker are configured. Live Proxmox consoles on both
+clusters, a Slide VM console and QEMU guest-agent commands passed. Local core and
+hosted checks passed. [Capabilities, validation and rollback](../operations/infrastructure.md).
 
 # Current state — September 22, 2026
 

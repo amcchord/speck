@@ -463,7 +463,22 @@ remain server-side. See [operations](docs/operations/infrastructure.md).
 
 Local core validation passed: 138 backend tests, Linux race/runtime tests, all
 platform builds, 28 web units and 98 Chromium/WebKit scenarios. Additional targeted
-checks cover the final Slide naming and infrastructure forms. Live rollout and
-host enrollment are coordinated around the active dental recovery rehearsal;
-private baseline, build logs and rollback tooling are in ignored
-`worktrees/infrastructure/output/infrastructure/`.
+checks cover the final Slide naming and infrastructure forms. PR #14 is merged;
+server/web `45d02df` is live after the dental rehearsal cleared the restart.
+Connector `2651859` (0.1.1) adds a pinned hardware-UUID fallback for hosts whose
+Linux machine-id is empty; its regression and race tests pass.
+
+Seven Proxmox host agents and the outbound AustinLand worker are enrolled. The
+inventory covers two clusters, both Slide connections and Linode; ten existing
+endpoint agents matched by exact hardware identity. Live Proxmox consoles on
+both clusters and a Slide VM rendered through Guacamole. Chromium and WebKit
+passed; the temporary Slide console-enable setting was restored. Provider detail,
+guest OS/network, metrics/snapshots and a harmless QEMU guest-agent command passed.
+No guest power, recovery, snapshot or deletion operation was needed for acceptance.
+
+The release preserves all prior endpoint identities, approval/archive state,
+Slide associations, accounts, schedules, recovery data, provider settings and signed
+endpoint-update artifacts. Rollback:
+`/var/lib/speck-rollback/20260923T071434Z-infrastructure-45d02df`.
+Private baseline, build logs, screenshots and deployment/enrollment evidence remain
+in ignored `worktrees/infrastructure/output/infrastructure/`.
