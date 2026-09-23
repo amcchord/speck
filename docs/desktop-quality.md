@@ -74,3 +74,16 @@ and browser-opening IPC; all three platform CI packaging jobs pass. Windows/Linu
 installers are rebuilt, but new passkey runtime ceremonies on those platforms and
 physical Mac Touch ID/provider acceptance remain open. The previous remote-media
 qualification and its limits above still apply. Windows remains unsigned.
+
+## Automatic updates — Desktop 0.2.3
+
+All seven packages were rebuilt from runtime `68de4bd` and published with the
+three update manifests and blockmaps. Both Mac apps pass strict codesign,
+notarization/staple validation and Gatekeeper. Nineteen native desktop tests and
+all platform packaging jobs pass. An isolated signed bootstrap version downloaded
+the final Apple silicon ZIP, passed native Squirrel verification, installed it on
+normal quit and relaunched as 0.2.3. The real packaged app reported current against
+the public GitHub release. Feed checks covered Windows and Linux x64 as well.
+
+Windows/Linux update installation and Intel Mac execution are not yet qualified.
+Windows remains unsigned. See [updater operations](operations/desktop-updates.md).

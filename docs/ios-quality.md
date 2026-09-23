@@ -130,3 +130,11 @@ Twenty-five unit tests and eight iPad UI scenarios passed. Corrected iPhone
 portrait/landscape sign-in and dark appearance passed targeted checks. The iPad
 masthead assertions now run in CI. Broader physical-device and remote-media
 qualification above remains unchanged. [Release evidence](operations/visual-audit.md).
+
+## Current-main refresh — 0.1.3 (6)
+
+Build 6 is VALID and IN_BETA_TESTING in the existing Speck testing group. It
+includes current main's native headless Linux web-shell routing. Local Xcode 27
+validation passed 25 iPhone unit tests and the iPad portrait/landscape sign-in
+check. The Release archive/export and App Store Connect upload passed. Physical
+device and media limitations from earlier qualification remain unchanged.
