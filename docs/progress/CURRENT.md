@@ -1,11 +1,12 @@
 # Infrastructure — live September 23, 2026
 
-PR #14 is merged and server/web `45d02df` is deployed. Seven outbound Proxmox
+PR #14 is merged; web `45d02df` and backend/connector `848bbc5` are deployed. Seven outbound Proxmox
 host agents cover both clusters; Infrastructure distinguishes host connectors,
 matched endpoint agents and provider-only guests. Slide and Linode connections
 and the outbound AustinLand worker are configured. Live Proxmox consoles on both
 clusters, a Slide VM console and QEMU guest-agent commands passed. Local core and
-hosted checks passed. [Capabilities, validation and rollback](../operations/infrastructure.md).
+hosted checks passed. Connector 0.1.2 reports its running version after upgrades
+without changing enrollment. [Capabilities, validation and rollback](../operations/infrastructure.md).
 
 # Current state — September 22, 2026
 

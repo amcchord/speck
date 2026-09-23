@@ -482,3 +482,19 @@ endpoint-update artifacts. Rollback:
 `/var/lib/speck-rollback/20260923T071434Z-infrastructure-45d02df`.
 Private baseline, build logs, screenshots and deployment/enrollment evidence remain
 in ignored `worktrees/infrastructure/output/infrastructure/`.
+
+Follow-up backend/connector `848bbc5` reports upgraded agent versions on authenticated
+heartbeats while retaining older heartbeat compatibility. All seven hosts now run
+and report 0.1.2, with identical enrollment-file hashes. The 19 infrastructure
+regressions, Go race checks and hosted checks pass. Final live checks confirm all
+six connections and eight connectors, served code/artifact hashes, provider reads,
+AustinLand provisioning metadata and the restored Slide console setting.
+
+The follow-up backup is
+`/var/lib/speck-rollback/20260923T074120Z-infrastructure-848bbc5`.
+An earlier attempt exercised code rollback when the invariant checker included
+two naturally changing worker timestamps; only those transient state keys were
+excluded before retrying. All protected settings and existing identities remain
+verified. AustinLand continues using its existing application and credentials;
+its outbound worker runs under the Mac user service manager. AustinLand itself
+must remain running with LAN access for those delegated workflows.

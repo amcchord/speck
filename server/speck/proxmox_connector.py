@@ -135,8 +135,15 @@ async def revoke(connector_id: str, user=Depends(require_admin)):
     return {"ok": True}
 
 
+class Heartbeat(BaseModel):
+    version: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$")
+
+
 @router.post("/agent/heartbeat")
-def heartbeat(connector=Depends(authenticate)):
+def heartbeat(body: Heartbeat | None = None, connector=Depends(authenticate)):
+    if body:
+        with db(write=True) as conn:
+            conn.execute("UPDATE proxmox_connectors SET version=? WHERE id=?", (body.version, connector["id"]))
     return {"ok": True}
 
 
