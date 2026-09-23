@@ -932,11 +932,13 @@ from the canonical program and config paths with empty error and worker logs.
 The desktop client was quit and relaunched from the canonical bundle path. No
 process remains running from `~/Development/Speck`.
 
-`./scripts/check-local.sh core` passed in 110 seconds: Ruff, 113 backend tests,
-Dockerized Linux agent race tests, platform builds, web units and 84 Chromium and
-WebKit browser cases. Note that `go test ./internal/agent` cannot build natively
-on macOS, since the agent provides only Linux and Windows platform files; the
-check script routes it through Docker.
+On the rebased tree, `./scripts/check-local.sh core` passed in 142 seconds: Ruff,
+176 backend tests, Dockerized agent and Proxmox race tests, platform builds, web
+units and 175 Chromium and WebKit browser cases. `./scripts/check-local.sh ios`
+passed in 33 seconds: 25 iPhone unit tests and the iPad sign-in layout case.
+Note that `go test ./internal/agent` cannot build natively on macOS, since the
+agent provides only Linux and Windows platform files; the check script routes it
+through Docker. CLAUDE.md now records that constraint.
 
 Rebased `codex/claude-md` onto `origin/main` at `d6538cb`, resolving an append
 conflict in this journal. No production deployment, remote change or push

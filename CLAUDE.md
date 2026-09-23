@@ -38,7 +38,9 @@ Local results are the release gate; hosted CI is a secondary check.
 ```
 
 Narrower loops: `uv run pytest`, `uv run ruff check server`,
-`(cd agent && go test ./internal/agent)`, `npm run test:ui --prefix web`.
+`npm run test:ui --prefix web`. The agent has only Linux and Windows platform
+files, so `go test ./internal/agent` builds on Linux but not on macOS; the check
+script runs it in Docker, which must be running.
 
 ## Constraints
 
