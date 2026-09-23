@@ -206,3 +206,84 @@ def test_preferences_are_validated_isolated_and_viewer_can_only_edit_own(client)
 @pytest.mark.parametrize("value", ["00:00:00:00:00:00", "ff:ff:ff:ff:ff:ff", "52xx54xx00xx12xx34xx56", "not a MAC"])
 def test_invalid_mac_cannot_be_evidence(value):
     assert not fleet.mac(value)
+
+
+def test_settings_slide_account_is_in_fleet_alongside_other_accounts(client, monkeypatch):
+    from speck import main
+
+    calls = []
+
+    class Slide:
+        def __init__(self, cfg):
+            self.cfg = cfg
+
+        async def listing(self, path, params=None):
+            primary = self.cfg['token'] == 'primary-secret-12345'
+            suffix = 'primary' if primary else 'other'
+            return {
+                'client': [{'client_id': 'c_' + suffix, 'name': 'Primary Clinic' if primary else 'Other Clinic'}],
+                'device': [{'device_id': 'd_' + suffix, 'client_id': 'c_' + suffix}],
+                'agent': [{'agent_id': 'a_' + suffix, 'device_id': 'd_' + suffix, 'hostname': 'Workstation'}],
+                'restore/virt': [],
+            }[path]
+
+        async def request(self, method, path, body=None, params=None):
+            calls.append((self.cfg['token'], method, path, body))
+            return {'backup_id': 'b_requested'}
+
+    monkeypatch.setattr(infra, 'Slide', Slide)
+    monkeypatch.setattr(main, 'devices', lambda user: [endpoint(slide_agent_id='a_primary')])
+    from speck.config import seal
+
+    def save_primary(token):
+        with db(write=True) as conn:
+            conn.execute("INSERT OR REPLACE INTO settings VALUES('slide',?)", (seal(json.dumps({
+                'url': 'https://slide.example', 'token': token,
+            })),))
+
+    save_primary('primary-secret-12345')
+    response = client.post('/api/infrastructure/connections', json={
+        'name': 'Other account', 'provider': 'slide', 'url': 'https://slide.example', 'token': 'other-secret-12345',
+    })
+    assert response.status_code == 200
+    other_id = response.json()['id']
+    result = client.get('/api/fleet').json()
+    machine = next(m for m in result['machines'] if m['id'] == 'agent')
+    assert machine['client_name'] == 'Primary Clinic'
+    assert machine['resources'][0]['connection_id'] == infra.SLIDE_SETTINGS_ID
+    assert {c['id'] for c in result['connections']} == {infra.SLIDE_SETTINGS_ID, other_id}
+    assert 'secret' not in json.dumps(result)
+    assert len(client.get('/api/infrastructure/inventory').json()['connections']) == 2
+    assert client.get('/api/infrastructure/connections/slide-settings/resources/protected/a_primary').status_code == 200
+
+    # The same account supplies the backup target, even when another account uses the same origin.
+    url = '/api/infrastructure/connections/slide-settings/actions'
+    body = {'request_id': '1' * 32, 'kind': 'protected', 'resource_id': 'a_primary', 'operation': 'backup'}
+    receipt = client.post(url, json=body)
+    assert receipt.status_code == 200 and receipt.json()['status'] == 'submitted'
+    assert client.post(url, json=body).json() == receipt.json()
+    assert calls == [('primary-secret-12345', 'POST', 'backup', {'agent_id': 'a_primary'})]
+    with db() as conn:
+        assert conn.execute('SELECT count(*) FROM infrastructure_operations').fetchone()[0] == 1
+    assert client.post(url, json=body | {'request_id': '2' * 32, 'resource_id': 'a_other'}).status_code == 404
+    assert client.post(url, json=body | {'request_id': '3' * 32}, headers={'X-CSRF-Token': 'bad'}).status_code == 403
+    with db(write=True) as conn:
+        conn.execute("UPDATE users SET role='viewer'")
+    assert client.get('/api/fleet').status_code == 200
+    assert client.post(url, json=body | {'request_id': '4' * 32}).status_code == 403
+    with db(write=True) as conn:
+        conn.execute("UPDATE users SET role='admin'")
+    assert client.delete('/api/infrastructure/connections/slide-settings').status_code == 409
+    assert client.put('/api/infrastructure/connections/slide-settings', json={
+        'name': 'Changed', 'provider': 'slide', 'url': 'https://slide.example', 'token': 'changed-secret-12345',
+    }).status_code == 409
+
+    # Credential rotation cannot use the old snapshot; identical configured accounts are not fetched twice.
+    save_primary('other-secret-12345')
+    result = client.get('/api/fleet').json()
+    assert [c['id'] for c in result['connections']] == [other_id]
+    assert next(m for m in result['machines'] if m['id'] == 'agent')['client_name'] == 'Unassigned'
+    assert infra.get_connection(infra.SLIDE_SETTINGS_ID)['token'] == 'other-secret-12345'
+    with db(write=True) as conn:
+        conn.execute("DELETE FROM settings WHERE key='slide'")
+    assert client.get('/api/infrastructure/connections/slide-settings/catalog?kind=protected').status_code == 404

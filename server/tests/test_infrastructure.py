@@ -469,3 +469,13 @@ def test_slide_virtual_machine_actions_are_scoped(client, monkeypatch):
     assert response.json()["status"] == "submitted"
     assert calls[-1] == ("PATCH", "restore/virt/virt_123456789012", {"state": "stopped"})
     assert "never-return" not in response.text and "secret-ticket" not in response.text
+
+
+def test_only_protected_slide_backup_skips_target_confirmation(client, upstream):
+    cid = add(client)
+    assert action(client, cid, confirmation='').status_code == 422
+    assert action(client, cid, operation='backup', confirmation='').status_code == 422
+    for kind in ('box', 'virt'):
+        for spec in infra.catalog({'provider': 'slide'}, kind).values():
+            assert spec.get('requires_confirmation', True)
+    assert infra.catalog({'provider': 'slide'}, 'protected')['backup']['requires_confirmation'] is False
