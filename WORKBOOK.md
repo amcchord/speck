@@ -639,3 +639,14 @@ Hosted backend/build and browser checks passed on the display-capability runtime
 state, database integrity, served bytes and service health pass; matching rollback
 and private evidence are retained. See
 [release record](docs/operations/proxmox-machine-experience.md) and current state.
+
+## Fleet Refresh and removed Slide VMs — September 23, 2026
+
+Web `141b126` is deployed from `worktrees/slide-cleanup-refresh`. Explicit Fleet
+Refresh now checks Slide restore cleanup before fetching fresh inventory, using
+the existing five-minute confirmation window and policy. Scheduled checks remain
+unchanged. Source preserves main and the deployed Chat topology update. All 20
+lifecycle tests, 31 web units and 53 browser cases passed; live Chromium/WebKit
+confirmed request ordering. The original five stale copies were automatically
+archived by the worker. See the current-state entry for hashes, rollback and
+private evidence. Source is committed locally and has not been pushed.

@@ -899,3 +899,26 @@ baseline before its next authorized publication.
 ## September 23 — read-only Chat topology
 
 Deployed runtime `1e5404b` from `codex/chat-topology` after the Proxmox task's release handoff. Optional token grants expose bounded Proxmox placement and safe identities; named sites return only matched guests and their parent hosts. All-sites access is explicit. The rollout preserved current main and live Proxmox/alerts changes. 178 backend tests, 31 web units, Ruff and web build pass, as do live client/full-network Chat requests and scope rejection. No endpoint/host operations. See `docs/operations/chat-topology.md` for deployment, protected-state checks and guarded rollback. No remaining task work.
+
+## 2026-09-23 — Fleet Refresh triggers Slide restore cleanup
+
+User requested automatic removal of deleted test restores, then chose an explicit
+Fleet Refresh check instead of increasing the scheduled polling frequency. Live
+inspection found five correctly linked copies within the existing confirmation
+window. The unattended worker archived all five at 15:56:20 UTC, verified in the
+audit ledger and both endpoint/unified Fleet inventories. No manual archive was
+needed; all ten original endpoint records and identities remain.
+
+Implemented and deployed web `141b126` on `codex/slide-cleanup-refresh`, including
+current main and the newer deployed Chat topology source. Refresh awaits cleanup
+before reading Fleet, reports pending/error states, retains read-only viewer
+behavior and excludes navigation/background polling. Existing cadence, grace,
+policy, identity validation and backend remain unchanged.
+
+TypeScript/Vite, 31 web units, 20 lifecycle regressions and 53 browser cases pass;
+one pre-existing WebKit-only touch skip remains. Live Chromium/WebKit checks
+confirmed the POST cleanup → GET fresh Fleet sequence and healthy responses.
+Served hashes (26 files), backend process and environment preservation pass.
+Rollback: `/var/lib/speck-rollback/20260923T160107Z-slide-cleanup-refresh-141b126/web`.
+No guest/provider write, endpoint upgrade or server restart occurred. Source is
+local; preserve this runtime until integrated. Release ownership is clear.

@@ -1,3 +1,33 @@
+# Fleet Refresh checks Slide cleanup — live September 23, 2026
+
+Web runtime `141b126` from `worktrees/slide-cleanup-refresh` is live. An explicit
+Fleet Refresh by an operator or admin now runs the existing Slide restore sync
+before loading fresh Fleet inventory. It reports pending confirmations and still
+refreshes inventory when cleanup fails. Viewers, navigation and background Fleet
+polling do not initiate cleanup. The five-minute worker and grace period remain.
+
+This source includes main `d6538cb` and the deployed Chat topology release
+`1e5404b` / record `cd7dc94`. Preflight matched all 32 backend source files and
+26 current web files. Publication changed static assets only; backend PID and
+environment hashes were preserved. All 26 served files match the build.
+
+Validation: TypeScript/Vite, 31 web units, 20 restore-lifecycle backend tests,
+and 53 Chromium/WebKit browser cases passed (one existing WebKit touch case
+skipped). Live Refresh returned 200 for cleanup, then 200 for fresh Fleet, in
+both browsers; neither check had errors or pending copies. The scheduled worker
+also independently archived the five reported deleted test copies at 15:56:20
+UTC, preserving all ten original endpoint identities.
+
+Rollback web tree:
+`/var/lib/speck-rollback/20260923T160107Z-slide-cleanup-refresh-141b126/web`.
+Index: `45f90aa577192d381e82288dc471c5fd6b1d49e220cf0f349f5296ccee68ff86`.
+Private release evidence: `output/slide-cleanup-refresh/` in the worktree;
+initial deletion checks: `SlideDev/output/speck-restore-cleanup-20260923/`.
+Source is committed locally; no GitHub push was requested. Preserve this runtime
+in future web releases until it is integrated. Deployment ownership is released.
+
+---
+
 # Combined Proxmox release — live September 23, 2026
 
 Runtime `84eb09e` is deployed from `worktrees/proxmox-machine-experience` and
