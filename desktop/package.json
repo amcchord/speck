@@ -1,7 +1,7 @@
 {
   "name": "speck-desktop",
   "productName": "Speck Desktop",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A little lightweight RMM \u2014 desktop remote workspace",
   "author": {
     "name": "Speck contributors",
@@ -30,7 +30,8 @@
       "assets/*",
       "LICENSE",
       "THIRD_PARTY_NOTICES.md",
-      "passkeys.cjs"
+      "passkeys.cjs",
+      "updates.cjs"
     ],
     "directories": {
       "output": "dist"
@@ -96,8 +97,17 @@
       "syncDesktopName": true
     },
     "artifactName": "Speck-Desktop-${version}-${os}-${arch}.${ext}",
-    "afterSign": "after-sign.cjs"
+    "afterSign": "after-sign.cjs",
+    "publish": {
+      "provider": "github",
+      "owner": "amcchord",
+      "repo": "speck",
+      "releaseType": "release"
+    }
   },
   "homepage": "https://speckrmm.com",
-  "desktopName": "speck-desktop.desktop"
+  "desktopName": "speck-desktop.desktop",
+  "dependencies": {
+    "electron-updater": "6.8.9"
+  }
 }
