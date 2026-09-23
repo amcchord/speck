@@ -771,3 +771,72 @@ No push, deployment, production guest action, connector update or provider-setti
 change occurred. Live Proxmox acceptance is still pending an authorized server/web
 release. See [behavior, limits and release checklist](../operations/proxmox-machine-experience.md)
 and [synthetic review images](../screenshots/proxmox-machine/README.md).
+
+
+## 2026-09-23 — Compact alerts and contextual AI review
+
+User requested clearer, denser SpeckRMM alerts plus AI diagnosis and root-cause
+repair actions. Created `worktrees/alerts-ai` / `codex/alerts-ai` from main
+`7a51f07`, implemented `9b03400`, merged current deployed Fleet record `6faaf5c`
+into `2bcfd3d`, and preserved verification in terminal handoff with `03dbdb8`.
+No other task's worktree was modified.
+
+Server alert presentation enriches existing records without migration, uses batch
+names/job kinds, distinguishes unconfirmed completion from failure/expiration,
+and bounds evidence without exposing connection payloads. AI validates the
+alert/machine pair and role, rejects resolved repairs/retired targets, includes
+freshness and disk context, and sends script/output only when selected. Audit
+retains request metadata. Model scripts remain reviewed proposals; job execution
+uses the existing explicit command action and does not mark an alert fixed.
+
+Web rows are approximately 76px on desktop, with compact counts/filters,
+expandable evidence/review controls and responsive AI actions. Cautions and
+verification survive transfer to the target's command editor. Synthetic captures
+with original-byte hashes are in `docs/screenshots/alerts-ai/`.
+
+Validation: Ruff and TypeScript/Vite pass; 166 backend, 28 web units, and 159
+browser scenarios pass across the full run and targeted reruns. One existing
+WebKit touch/CDP case is skipped. The first full browser run had 156 passing cases,
+one port setup failure and one skip; fixed the existing touch test to honor the
+configured base URL and reran it successfully. The two added phone cases initially
+assumed an online fixture was offline, then passed with explicitly offline data.
+No application failure was hidden by those fixture corrections. Logs remain in
+ignored `output/alerts-ai/`. No agent/native builds were needed for this server/web
+change. Real AI quality and actual repair execution remain unverified.
+
+No source push, main merge, deployment, model call, production data write or endpoint
+operation occurred. Deployment approval is requested under the workspace rules;
+next step after approval is a newly checked and coordinated backend/web release.
+
+
+## 2026-09-23 — Deploy compact alerts after explicit approval
+
+The user selected “Deploy to speckrmm.com.” Coordinated release ownership with
+`Add Proxmox machine integration`, which confirmed no newer live changes and held
+publication. Fetched main `7a51f07`, verified ancestry, rebuilt and deployed
+`65f668d` as `20260923T135104Z-alerts-ai-65f668d`.
+
+Fresh source audit matched all 29 prior backend files and 26 current build files
+against Fleet `1158014`; no unknown application changes existed. Preflight found
+no active commands, recoveries or gateway connections. Took matching server/web,
+configuration and stopped-service data backups with a consistent SQLite snapshot.
+The locked publish rechecked the live index. No schema, dependencies, agent,
+provider, proxy or enrollment changes were required. Protected state fingerprints,
+service health, integrity and foreign keys passed after restart.
+
+Live Chromium 1440px and WebKit 390px validated five readable alerts, expanded
+evidence, AI dialogs and preserved Fleet controls with zero page errors or
+overflow. A real OpenAI diagnosis used only selected alert/job metadata (health,
+original script and output excluded), returned an explanation/checks, and opened
+its draft in the correct machine terminal with verification. No command was run,
+alert resolved/acknowledged or preference altered. All source files and public
+asset bytes match. Ten enrolled agents resumed fresh telemetry. A private live
+check initially used textContent for a textarea; corrected it to assert input
+value before running the actual provider check.
+
+Index SHA-256: `4cf1d5c3ad2126b7aaa5a0d9e95fa531c18152fea03b48109ae58fcd7e5121c3`.
+Rollback: `/var/lib/speck-rollback/20260923T135104Z-alerts-ai-65f668d`.
+Private scripts, audit reports and screenshots: ignored `output/alerts-ai/`.
+No GitHub push or main merge occurred. Next action: preserve the deployed source
+in future releases. Repair execution itself was intentionally not exercised on
+live endpoints; the reviewed command path is covered by synthetic browser tests.

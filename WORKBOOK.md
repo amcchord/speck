@@ -598,3 +598,21 @@ No push, deployment, production guest action, connector update or provider-setti
 change occurred. Live Proxmox acceptance is still pending an authorized server/web
 release. See [behavior, limits and release checklist](docs/operations/proxmox-machine-experience.md)
 and [synthetic review images](docs/screenshots/proxmox-machine/README.md).
+
+
+## Compact alerts and AI — September 23, 2026 (live)
+
+Deployed runtime `65f668d` on `codex/alerts-ai` preserves Fleet `1158014` /
+record `6faaf5c`. Compact rows explain job outcomes, expand evidence and separate
+acknowledging/reviewing from recovery. AI diagnose/fix uses selected alert/machine
+context, optional job evidence and an explicit command review/run; cautions and
+verification survive terminal handoff.
+
+Ruff, TypeScript/Vite, 166 backend, 28 web units and 159 browser scenarios pass
+with one existing WebKit CDP skip. Live Chromium/WebKit layouts, evidence, AI setup
+and a real metadata-only diagnosis/terminal handoff passed. No endpoint commands
+were executed. Source/assets, service/database health and protected state were
+verified; matching rollback is retained. [Release/rollback](docs/operations/alerts-ai.md),
+[journal](docs/progress/JOURNAL.md), [synthetic gallery](docs/screenshots/alerts-ai/README.md).
+No GitHub push or main merge occurred. Preserve this release before publishing
+other in-flight work.

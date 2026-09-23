@@ -1,0 +1,34 @@
+[
+  {
+    "file": "alerts-desktop.png",
+    "width": 1440,
+    "height": 960,
+    "sha256": "78f941090fbdb4a4b3a9bf58cc11764ae686455bb98adb883e0b6bb3a3984c22",
+    "source_commit": "03dbdb84cb35f73d576f6a61e0bef0a043e1e65c",
+    "provenance": "Unretouched Chromium capture of local built frontend with synthetic alert fixtures and stubbed AI responses from web/test/ui/alerts.spec.mjs. No real endpoint or OpenAI request."
+  },
+  {
+    "file": "alerts-phone.png",
+    "width": 390,
+    "height": 1303,
+    "sha256": "956dfddc85efa65d401dc929647d08ca491534ea60548ece1b0ab7fb708ef3ad",
+    "source_commit": "03dbdb84cb35f73d576f6a61e0bef0a043e1e65c",
+    "provenance": "Unretouched Chromium capture of local built frontend with synthetic alert fixtures and stubbed AI responses from web/test/ui/alerts.spec.mjs. No real endpoint or OpenAI request."
+  },
+  {
+    "file": "ai-diagnose.png",
+    "width": 1440,
+    "height": 1000,
+    "sha256": "020fc8683f01c66a6a53767da4aea3f5a47ff8cf2a2c24f98d050b4ebd581dac",
+    "source_commit": "03dbdb84cb35f73d576f6a61e0bef0a043e1e65c",
+    "provenance": "Unretouched Chromium capture of local built frontend with synthetic alert fixtures and stubbed AI responses from web/test/ui/alerts.spec.mjs. No real endpoint or OpenAI request."
+  },
+  {
+    "file": "ai-fix.png",
+    "width": 1440,
+    "height": 1000,
+    "sha256": "bcf38503f2251146e06058596ef9da824571f6e97da17723cf5ba7d90a6ba7d1",
+    "source_commit": "03dbdb84cb35f73d576f6a61e0bef0a043e1e65c",
+    "provenance": "Unretouched Chromium capture of local built frontend with synthetic alert fixtures and stubbed AI responses from web/test/ui/alerts.spec.mjs. No real endpoint or OpenAI request."
+  }
+]

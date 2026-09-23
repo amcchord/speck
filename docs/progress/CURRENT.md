@@ -259,3 +259,29 @@ production changes or pushes were made. Next step is review, then an explicitly
 authorized combined server/web release and real Proxmox acceptance. See the
 [implementation/runbook](../operations/proxmox-machine-experience.md) and
 [synthetic gallery](../screenshots/proxmox-machine/README.md).
+
+
+## Compact alerts and contextual AI — live September 23
+
+Runtime `65f668d` on `codex/alerts-ai` is deployed, preserving Fleet `1158014` /
+record `6faaf5c`. Alerts use compact rows, named operations, explicit
+unknown/expired/failed explanations, expandable evidence and clear acknowledge /
+review semantics. AI diagnose/fix is bound to the selected alert and machine,
+with opt-in script/output evidence and an explicit terminal run. Cautions and
+verification stay visible; generating a draft never executes it or closes an alert.
+
+Ruff, TypeScript/Vite, 166 backend, 28 web units and 159 browser scenarios pass
+(across full and focused runs; one existing WebKit CDP skip). Live Chromium /
+WebKit desktop/phone checks and one real diagnosis with minimal metadata passed.
+The draft reached the correct machine's terminal; no endpoint jobs or alert
+state changes were made. Actual repair success remains unverified.
+
+Backend/web/database/configuration backups are retained at
+`/var/lib/speck-rollback/20260923T135104Z-alerts-ai-65f668d`. The live index and source files match the release;
+service health, identity/accounts/settings/preferences/integrations/recovery
+fingerprints and database integrity pass. Ten enrolled agents had fresh check-ins.
+[Operations and rollback](../operations/alerts-ai.md),
+[synthetic gallery](../screenshots/alerts-ai/README.md).
+
+No GitHub push or merge to main occurred. Next action: preserve `65f668d` and this
+release record before any other task publishes; release ownership is now clear.

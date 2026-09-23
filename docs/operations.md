@@ -79,9 +79,15 @@ model is `gpt-5.4-mini`, configurable through Settings or `SPECK_AI_MODEL`.
 The key never reaches the browser. Stored settings and template scripts are
 encrypted with the server's existing encryption key.
 
-Ask for scripts or help diagnosing an issue. Health context is opt-in and limited
-to OS, utilization and service names/status. Review a draft, then copy it into
+Ask for scripts or help diagnosing an issue. Health context is selectable and limited
+to OS, utilization, disks, collection timestamps and service names/status. Review a draft, then copy it into
 the terminal or a template. AI has no job-execution tool.
+
+On **Alerts**, select **AI diagnose** or **AI fix** for assistance tied to the
+selected condition and machine. Review the proposed script and verification, then
+use **Review in terminal** and explicitly **Run command**. Original job scripts
+and output are opt-in context; generating a draft never executes it or closes the
+alert. See [Alerts and AI assistance](operations/alerts-ai.md).
 
 The remote workspace's **Screen assistant** sends the displayed screen and your
 request to OpenAI when invoked. It can explain the screen or propose a small
