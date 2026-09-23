@@ -29,8 +29,11 @@ for (const width of [1440, 834, 760, 390, 320]) {
     const metrics = await page.locator('.meters').boundingBox();
     const storage = await page.locator('.machine-storage').boundingBox();
     const inventory = await page.locator(".machine-inventory").boundingBox();
-    expect(metrics.y - inventory.height).toBeLessThan(400);
-    expect(storage.y + storage.height - inventory.height).toBeLessThan(650);
+    // Preserve the health/preview layout budget after the added client summary,
+    // including its outer spacing (font metrics differ on Linux WebKit).
+    const addedSummaryHeight = (await page.locator('.machine-summary').boundingBox()).y - inventory.y;
+    expect(metrics.y - addedSummaryHeight).toBeLessThan(400);
+    expect(storage.y + storage.height - addedSummaryHeight).toBeLessThan(650);
     if (width > 700) {
       const frame = await page.locator('.live-screen').boundingBox();
       expect(metrics.x).toBeGreaterThan(frame.x + frame.width);

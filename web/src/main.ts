@@ -45,8 +45,12 @@ let fleetPrefs = defaultPreferences(), fleetPrefsLoaded = false, fleetCoverage =
 let fleetSources: Item[] = [];
 let preferencesSave = Promise.resolve();
 function saveFleetPreferences() {
-  const snapshot = structuredClone(fleetPrefs);
-  preferencesSave = preferencesSave.catch(() => {}).then(() => api("/fleet/preferences", "PUT", snapshot)).catch(() => { notify("Could not save column preferences. Try again."); });
+  const snapshot = structuredClone(fleetPrefs), owner = username, session = csrf;
+  preferencesSave = preferencesSave.catch(() => {}).then(() => {
+    if (username === owner && csrf === session) return api("/fleet/preferences", "PUT", snapshot);
+  }).catch((error) => {
+    if (!(error instanceof StaleViewError) && username === owner && csrf === session) notify("Could not save column preferences. Try again.");
+  });
 }
 async function loadFleet(force = false) {
   const [result, prefs] = await Promise.all([api("/fleet" + (force ? "?refresh=true" : "")), fleetPrefsLoaded ? Promise.resolve(null) : api("/fleet/preferences")]);
