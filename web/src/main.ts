@@ -498,6 +498,7 @@ const management = createManagement({
   content,
   loading,
   openDevice,
+  assistAlert: (device: Item, alert: Item, intent: "diagnose" | "fix") => ops.assistDialog(device, "", undefined, { alert, intent }),
   role: () => role,
   username: () => username,
   refresh: render,

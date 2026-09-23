@@ -444,12 +444,21 @@ export function createOperations(ui: Item) {
     d: Item,
     script = "",
     accept?: (script: string) => void,
+    alertTask?: { alert: Item; intent: "diagnose" | "fix" },
   ) {
+    const cfg = alertTask ? await api("/ai/settings") : null;
+    const fixing = alertTask?.intent === "fix";
     const modal = dialog(
-      "Ask Speck AI",
-      `<p>${d.label ? esc(d.label) + " · " : ""}${d.platform === "linux" ? "Linux shell" : "Windows PowerShell"}</p><label>What do you need?<textarea id="ai-prompt" rows="4" placeholder="Find out why this application cannot reach the server"></textarea></label>${d.id ? '<label class="check"><input id="ai-health" type="checkbox" checked> Include OS, CPU, memory and service status</label>' : ""}<small>Your request and selected context are sent to OpenAI. Suggestions stay here until you choose to use them.</small><div class="toolbar">${button("ai-ask", "Get help", true)}</div><div id="ai-result"></div>`,
+      alertTask ? (fixing ? "AI fix · review a repair" : "AI diagnose · investigate the cause") : "Ask Speck AI",
+      `<p>${d.label ? esc(d.label) + " · " : ""}${d.platform === "linux" ? "Linux shell" : "Windows PowerShell"}</p>${alertTask ? `<div class="ai-alert-context"><strong>${esc(alertTask.alert.title)}</strong><p>${esc(alertTask.alert.explanation || "Investigate the selected alert.")}</p></div>${!d.online ? '<p class="callout">This machine is offline. AI can review recorded evidence; reconnect it before running a script.</p>' : ""}${cfg?.configured ? "" : '<p class="callout">Connect OpenAI in Settings to use AI assistance.</p>'}` : ""}<label>What do you need?<textarea id="ai-prompt" rows="3" placeholder="Find out why this application cannot reach the server"></textarea></label>${d.id ? '<label class="check"><input id="ai-health" type="checkbox" checked> Include current OS, CPU, memory, disks and service status</label>' : ""}${alertTask?.alert.job ? '<label class="check"><input id="ai-job-evidence" type="checkbox"> Include original script and job output (may contain sensitive data)</label>' : ""}<small>Your request${alertTask ? ", alert and job metadata" : ""} and selected context are sent to OpenAI. ${fixing ? "Review the proposed changes and verification before running a repair." : "AI suggests diagnostic checks; review any script before running it."}</small><div class="toolbar">${button("ai-ask", alertTask ? (fixing ? "Propose a fix" : "Diagnose this alert") : "Get help", true)}</div><div id="ai-result" aria-live="polite"></div>`,
     );
     modal.classList.add("assistant-dialog");
+    if (alertTask) {
+      (modal.querySelector("#ai-prompt") as HTMLTextAreaElement).value = fixing
+        ? "Find the root cause of this alert and propose a targeted repair with verification and rollback. If evidence is insufficient, explain what to check first."
+        : "Diagnose the root cause of this alert. Explain the evidence, likely causes and any missing information. Suggest read-only checks to confirm the cause.";
+      (modal.querySelector("#ai-ask") as HTMLButtonElement).disabled = !cfg?.configured;
+    }
     on("ai-ask", async () => {
       modal.querySelector("#ai-result")!.innerHTML =
         '<p class="working">Working on your request…</p>';
@@ -458,6 +467,11 @@ export function createOperations(ui: Item) {
         platform: d.platform || "windows",
         device_id: d.id || null,
         script,
+        ...(alertTask ? {
+          alert_id: alertTask.alert.id,
+          alert_intent: alertTask.intent,
+          include_job_evidence: !!(modal.querySelector("#ai-job-evidence") as HTMLInputElement)?.checked,
+        } : {}),
         include_health: !!(
           document.getElementById("ai-health") as HTMLInputElement
         )?.checked,
@@ -465,8 +479,9 @@ export function createOperations(ui: Item) {
         modal.querySelector("#ai-result")?.replaceChildren();
         throw error;
       });
+      if (!modal.isConnected) return;
       const out = modal.querySelector("#ai-result")!;
-      out.innerHTML = `<div class="ai-answer"><p>${esc(result.summary)}</p>${result.script ? `<h3>Suggested script</h3><pre>${esc(result.script)}</pre>` : ""}${result.caution ? `<p class="callout">${esc(result.caution)}</p>` : ""}<h3>Verify</h3><p>${esc(result.verification)}</p>${result.script ? `<div class="toolbar">${button("ai-use", "Use this script", true)}${button("ai-template", "Save as template")}</div>` : ""}</div>`;
+      out.innerHTML = `<div class="ai-answer"><p>${esc(result.summary)}</p>${result.script ? `<h3>Suggested script</h3><pre>${esc(result.script)}</pre>` : ""}${result.caution ? `<p class="callout">${esc(result.caution)}</p>` : ""}<h3>Verify</h3><p>${esc(result.verification)}</p>${result.script ? `<div class="toolbar">${button("ai-use", alertTask ? "Review in terminal →" : "Use this script", true)}${button("ai-template", "Save as template")}</div>` : ""}</div>`;
       on("ai-use", async () => {
         modal.close();
         if (accept) accept(result.script);
