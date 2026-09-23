@@ -895,3 +895,51 @@ attempts. The operator's saved preferences remained identical. Final audit verif
 SQLite/service, and zero gateway connections after cleanup. Release ownership
 passes to the network-topology task, which must include `84eb09e` and recheck this
 baseline before its next authorized publication.
+
+## 2026-09-23 — Separate SpeckRMM project folder
+
+Moved the primary checkout from `~/Development/Speck` to
+`~/Development/SpeckRMM` and relocated all 22 linked worktrees using Git's
+worktree move/repair commands. Preserved branch tips, remotes and the untracked
+`web/src/orbits.css` in the orbit-animation worktree. Moved the Speck restore
+cleanup evidence from SlideDev into this project's ignored output directory.
+
+Verified 175,707 existing filesystem entries retained their identities, sizes,
+permissions and symlink targets; all 23 checkouts retained their HEAD, branch
+and pending changes. Cleanup evidence SHA-256 hashes and all Git refs matched.
+The local infrastructure bridge retained PID 10920 without restart. Its saved
+LaunchAgent paths now point to SpeckRMM; the old Speck path remains a compatibility
+symlink for the running bridge, existing tasks and local environments.
+
+No production deployment, remote change, push, merge or commit occurred. The
+primary checkout's existing revision was intentionally preserved. Migration
+records are in `output/project-relocation-20260923/`; the next action is to add
+`~/Development/SpeckRMM` as its own Codex project.
+
+## 2026-09-23 — SpeckRMM workspace setup verification
+
+Completed the workspace migration in the new project folder. The project virtual
+environment was recreated from `uv.lock`; its console script shebangs had still
+named `~/Development/Speck/.venv/bin/python` and worked only through the
+compatibility symlink. All 43 locked packages reinstalled with no stale path
+references and no editable or unlocked packages to preserve.
+
+Reloaded the infrastructure bridge LaunchAgent with `bootout`/`bootstrap` rather
+than `kickstart`, because the loaded job still held the pre-move paths in memory
+even though the plist on disk was already canonical. The first bootstrap returned
+error 5 during teardown; the retry succeeded. The bridge now runs as PID 94067
+from the canonical program and config paths with empty error and worker logs.
+The desktop client was quit and relaunched from the canonical bundle path. No
+process remains running from `~/Development/Speck`.
+
+On the rebased tree, `./scripts/check-local.sh core` passed in 142 seconds: Ruff,
+176 backend tests, Dockerized agent and Proxmox race tests, platform builds, web
+units and 175 Chromium and WebKit browser cases. `./scripts/check-local.sh ios`
+passed in 33 seconds: 25 iPhone unit tests and the iPad sign-in layout case.
+Note that `go test ./internal/agent` cannot build natively on macOS, since the
+agent provides only Linux and Windows platform files; the check script routes it
+through Docker. CLAUDE.md now records that constraint.
+
+Rebased `codex/claude-md` onto `origin/main` at `d6538cb`, resolving an append
+conflict in this journal. No production deployment, remote change or push
+occurred.
