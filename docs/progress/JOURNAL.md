@@ -895,3 +895,23 @@ attempts. The operator's saved preferences remained identical. Final audit verif
 SQLite/service, and zero gateway connections after cleanup. Release ownership
 passes to the network-topology task, which must include `84eb09e` and recheck this
 baseline before its next authorized publication.
+
+## 2026-09-23 — Separate SpeckRMM project folder
+
+Moved the primary checkout from `~/Development/Speck` to
+`~/Development/SpeckRMM` and relocated all 22 linked worktrees using Git's
+worktree move/repair commands. Preserved branch tips, remotes and the untracked
+`web/src/orbits.css` in the orbit-animation worktree. Moved the Speck restore
+cleanup evidence from SlideDev into this project's ignored output directory.
+
+Verified 175,707 existing filesystem entries retained their identities, sizes,
+permissions and symlink targets; all 23 checkouts retained their HEAD, branch
+and pending changes. Cleanup evidence SHA-256 hashes and all Git refs matched.
+The local infrastructure bridge retained PID 10920 without restart. Its saved
+LaunchAgent paths now point to SpeckRMM; the old Speck path remains a compatibility
+symlink for the running bridge, existing tasks and local environments.
+
+No production deployment, remote change, push, merge or commit occurred. The
+primary checkout's existing revision was intentionally preserved. Migration
+records are in `output/project-relocation-20260923/`; the next action is to add
+`~/Development/SpeckRMM` as its own Codex project.
