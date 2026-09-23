@@ -1,7 +1,7 @@
 import { icon } from "./icons";
 
 // Advance this only after all platform artifacts and SHA256SUMS are published.
-const version = "0.2.2";
+const version = "0.2.3";
 const release = `https://github.com/amcchord/speck/releases/tag/v${version}`;
 const assets = `https://github.com/amcchord/speck/releases/download/v${version}`;
 const installer = (file: string, label: string, primary = false) =>
@@ -33,7 +33,7 @@ export function desktopDownloads(signedIn: boolean) {
       </article>
     </div>
     <section class="download-setup" aria-labelledby="download-setup-title">
-      <div><h3 id="download-setup-title">Get started</h3><p>Install Speck Desktop, open it, and sign in. To launch remote sessions in the app, choose <strong>Speck Desktop</strong> in ${signedIn ? '<a href="#settings">Settings → Remote workspace</a>' : "Settings → Remote workspace"}.</p></div>
+      <div><h3 id="download-setup-title">Get started</h3><p>Install Speck Desktop, open it, and sign in. Future updates download automatically and install when you quit. Use Help → Check for updates for a manual check. To launch remote sessions in the app, choose <strong>Speck Desktop</strong> in ${signedIn ? '<a href="#settings">Settings → Remote workspace</a>' : "Settings → Remote workspace"}.</p></div>
       <div class="download-resources"><a href="${release}" target="_blank" rel="noopener">Release notes ${icon("arrow")}</a><a target="_blank" rel="noopener" href="${assets}/SHA256SUMS">SHA256 checksums ${icon("arrow")}</a></div>
     </section>
     <p class="download-agent-note">Setting up a managed machine? ${signedIn ? '<a href="#fleet">Add a device from Fleet</a>' : '<a href="#signin">Sign in to add a device</a>'} to install the Speck Agent.</p>

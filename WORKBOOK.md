@@ -422,3 +422,31 @@ Hosted iPhone tests passed, but hosted iPad execution failed before assertions
 because Xcode timed out launching the app after an 11m34s job. That hosted failure
 is retained as distinct evidence; no required branch checks were configured or
 bypassed. Logs and simulator test results remain in ignored `output/local-checks/`.
+
+## Native client updates — September 22, 2026
+
+Desktop 0.2.3 introduces background stable-release checks, automatic downloads and
+installation on normal quit for Windows NSIS, both Mac architectures, Linux
+AppImage and deb. Help provides a manual check and an explicit restart choice.
+Older clients need one installer upgrade. The packaged feed is fixed to Speck's
+GitHub releases, with no renderer-controlled update IPC. See
+`docs/operations/desktop-updates.md` for publication, integrity checks and rollback.
+
+The universal iPhone/iPad 0.1.3 (6), built from main plus this release, is VALID and
+IN_BETA_TESTING in the existing Speck testing group. It includes the native
+headless-web-shell change missing from build 5. Desktop release runtime is
+`68de4bd`; all seven packages and update metadata are published at `v0.2.3`.
+Both Mac apps are Developer ID signed, provisioned, notarized and stapled.
+
+19 desktop regressions, 25 native units and the iPad portrait/landscape sign-in
+check pass locally; all three desktop platform packaging jobs pass. An isolated
+signed Mac bootstrap installed 0.2.3 on normal quit and relaunched successfully;
+the packaged app then queried the live GitHub feed and confirmed it was current.
+The Windows, Mac and Linux release feeds match 0.2.3 and final package hashes.
+Windows remains unsigned; full Windows/Linux update-install runtime acceptance
+and Intel Mac execution remain open. No such results are inferred from packaging.
+
+The Mac now has 0.2.3 in `/Applications/Speck Desktop.app`. The older desktop
+process used by the active demo was deliberately left running; open the new app
+from Applications after that session finishes. Private artifacts, TestFlight
+responses and updater evidence are in `worktrees/client-updates/output/client-updates/`.

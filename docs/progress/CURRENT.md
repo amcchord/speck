@@ -42,15 +42,17 @@ available. See [passkeys](../passkeys.md) for recovery and self-hosted setup.
   process/environment were preserved. [Pane details](../operations/fleet-row-pane.md).
   Prior Safari, responsive layouts and slow/error refresh remain verified. [Details](../operations/compact-fleet.md) and
   [screenshots](../screenshots/compact-fleet/README.md).
-- **Desktop 0.2.2**: published Mac, Windows and Linux downloads. Mac builds include
-  their required provisioning profile, Developer ID signature, notarization and
-  staples. Apple silicon launch, retained login, browser handoff and cancellation
-  passed. Windows remains unsigned; Linux desktop and Intel Mac runtime checks,
-  and physical passkey provider ceremonies, remain open.
-- **iPhone/iPad 0.1.2 (5)**: VALID and IN_BETA_TESTING for the existing Speck testing
-  group. Twenty-five native unit tests pass. Associated domains and server/RP
-  binding are verified. Physical Face ID/Touch ID/provider sync, audio and older
-  iOS qualification remain device acceptance work. Build 3 is withdrawn/expired.
+- **Desktop 0.2.3**: all seven Windows, Mac and Linux packages are published with
+  automatic update feeds. Checks run after launch/every six hours; downloads
+  install on quit. Help offers a manual check/restart. Existing 0.2.2 clients
+  require one installer upgrade. Both Mac architectures are signed, provisioned,
+  notarized and stapled. A real isolated Mac upgrade/relaunch passed. Windows is
+  unsigned; full Windows/Linux updater installation and Intel execution remain
+  unverified. [Update operations](../operations/desktop-updates.md).
+- **iPhone/iPad 0.1.3 (6)**: VALID and IN_BETA_TESTING for the existing Speck testing
+  group, including current main's headless Linux web-shell routing. Twenty-five
+  native units and iPad portrait/landscape sign-in pass locally. Physical
+  biometric/provider sync, audio and older OS qualification remain open.
 - **Server/web**: 77 Python and 24 web tests pass for the cleanup release, plus
   server Ruff and TypeScript/Vite. The previous 14 desktop checks remain recorded.
   Live disposable
@@ -113,3 +115,8 @@ and the iPad portrait/landscape sign-in test), both passed on this combined sour
 Hosted CI remains enabled as a secondary check. Its iPad simulator launch timeout
 occurred before assertions; local Xcode 27/iOS 27 passed the same test target.
 No required GitHub branch check was bypassed. See [local checks](../deployment.md#local-release-checks).
+
+Desktop Downloads now serves 0.2.3 from static source `2b01150`; its live index is
+`383ed5a0…`. Served hashes, desktop/phone layout, service process and environment
+were checked. The preceding static tree is retained under
+`/var/lib/speck-rollback/20260923T004907Z-client-updates-2b01150/web`.

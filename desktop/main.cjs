@@ -11,6 +11,7 @@ const {
 const path = require("node:path");
 const { installPasskeys } = require("./passkeys.cjs");
 let passkeysInstalled = false;
+let updates = null;
 const { ORIGIN, trusted, destination, remotePage } = require("./policy.cjs");
 let window = null,
   pendingURL = null,
@@ -28,7 +29,19 @@ if (!app.requestSingleInstanceLock()) {
     if (link) openLink(link);
     else focus();
   });
-  app.whenReady().then(createWindow);
+  app.whenReady().then(() => {
+    createWindow();
+    if (app.isPackaged) {
+      const { installUpdates } = require("./updates.cjs");
+      const { autoUpdater } = require("electron-updater");
+      updates = installUpdates({ app, autoUpdater, dialog, getWindow: () => window,
+        onState: ({ state, version }) => {
+          const item = Menu.getApplicationMenu()?.getMenuItemById("speck-update");
+          if (item) item.label = state === "ready" ? `Install update ${version}…`
+            : state === "downloading" ? `Downloading update ${version}…` : "Check for updates…";
+        } });
+    }
+  });
 }
 function focus() {
   if (window) {
@@ -266,6 +279,13 @@ function createWindow() {
     {
       label: "Help",
       submenu: [
+        {
+          id: "speck-update",
+          label: updates?.getState().state === "ready"
+            ? `Install update ${updates.getState().version}…` : "Check for updates…",
+          enabled: !!app.isPackaged,
+          click: () => { void updates?.manualCheck(); },
+        },
         {
           label: "Speck on GitHub",
           click: () => shell.openExternal("https://github.com/amcchord/speck/"),

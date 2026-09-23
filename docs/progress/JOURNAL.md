@@ -462,3 +462,42 @@ Hosted iPhone units passed; hosted iPad failed before assertions because the run
 timed out launching Speck. Preserved that separate result in the PR record rather
 than relabeling it success. No required branch checks are configured. Logs and
 xcresults are in ignored `output/local-checks/` in the integration worktree.
+
+## 2026-09-22 — Current TestFlight and desktop auto-updates
+
+Worktree `worktrees/client-updates`, branch `codex/client-updates`, PR #13. Runtime
+`68de4bd` adds the fixed GitHub updater, stable-only checks after launch/every six
+hours, background downloads and install-on-quit. Manual restart is explicit;
+remote content cannot supply feeds or trigger native updates. Updated CI retains
+update manifests/blockmaps, and the release verifier checks all final packages.
+
+Published desktop 0.2.3 with all seven platform packages, three manifests,
+blockmaps and checksums (16 files; GitHub digests match local files). Both Mac apps
+pass strict signing, Apple notarization/stapling and Gatekeeper. A signed isolated
+bootstrap downloaded and installed the actual 0.2.3 ZIP on quit, then relaunched
+and reported current against the public GitHub feed. Windows/Linux x64 feeds were
+also checked with the real updater library. Full Windows/Linux updater-install
+runtime and Intel execution remain unverified; Windows remains unsigned.
+
+Universal TestFlight 0.1.3 (6) is VALID/IN_BETA_TESTING in the existing Speck
+internal group. It includes the native headless Linux routing from current main.
+Local validation passed 19 desktop regressions, 25 iPhone units, one iPad
+portrait/landscape UI test, 28 web units, TypeScript/Vite and 84 Chromium/WebKit
+cases. Three-platform packaging and core GitHub checks passed for runtime source.
+The hosted iOS job was still running when this release record was written; local
+Xcode 27 results are the release gate, not a claim that hosted iOS passed.
+
+Static Downloads runtime `2b01150` is live, preserving all previously deployed
+features. The index and served asset hashes match; service PID/start time and
+server environment are unchanged. Desktop/phone live checks show 0.2.3 and all
+current links without overflow. Rollback:
+`/var/lib/speck-rollback/20260923T004907Z-client-updates-2b01150/web`.
+No backend restart, agent operation, recovery change or credential change occurred.
+
+Installed 0.2.3 in `/Applications/Speck Desktop.app`. The old running app used by
+the concurrent demo was preserved and needs to be closed before opening that
+new installation. Existing desktop 0.2.2 users need one bootstrap installer
+upgrade; future updates are automatic. No claim is made that every remote
+operator's installation was discovered or replaced. Temporary QA processes/feed
+were stopped and signing key files removed. Private evidence and artifacts:
+`worktrees/client-updates/output/client-updates/`.
