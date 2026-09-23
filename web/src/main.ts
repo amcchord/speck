@@ -488,9 +488,12 @@ const ops = createOperations({
   devices: () => api("/devices"),
   selected: () => [...fleetSelection],
   openDevice,
-  setScript: (script: string) => {
+  setScript: (script: string, context?: Item) => {
     const editor = document.getElementById("script") as HTMLTextAreaElement;
-    if (editor) editor.value = script;
+    if (editor) {
+      editor.value = script;
+      if (context) editor.insertAdjacentHTML("beforebegin", `<aside class="callout ai-command-context"><strong>${esc(context.title)}</strong>${context.caution ? `<p>${esc(context.caution)}</p>` : ""}<p><b>Verify after running:</b> ${esc(context.verification)}</p><small>The alert stays open until recovery is observed or the job outcome is marked reviewed.</small></aside>`);
+    }
   },
 });
 const infrastructure = createInfrastructure({api, esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role});

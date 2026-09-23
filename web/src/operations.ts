@@ -487,7 +487,11 @@ export function createOperations(ui: Item) {
         if (accept) accept(result.script);
         else if (d.id) {
           await ui.openDevice(d.id, "terminal");
-          ui.setScript(result.script);
+          ui.setScript(result.script, alertTask ? {
+            title: alertTask.alert.title,
+            caution: result.caution,
+            verification: result.verification,
+          } : undefined);
         } else
           templateEditor({
             name: "AI draft",

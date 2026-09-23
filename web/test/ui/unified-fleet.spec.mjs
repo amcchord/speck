@@ -177,9 +177,9 @@ test('cancel discards drafts; reset restores only columns and widths', async ({p
   await expect(page.locator('#fleet-highlight')).toBeChecked();
 });
 
-test('touch dragging uses the handle while the list remains scrollable', async ({browser, browserName}) => {
+test('touch dragging uses the handle while the list remains scrollable', async ({browser, browserName, baseURL}) => {
   test.skip(browserName !== 'chromium', 'Real touch gestures use the Chromium input protocol.');
-  const context = await browser.newContext({viewport:{width:390,height:640},hasTouch:true,baseURL:'http://127.0.0.1:8761'});
+  const context = await browser.newContext({viewport:{width:390,height:640},hasTouch:true,baseURL});
   try {
     const page = await context.newPage();
     await setup(page);

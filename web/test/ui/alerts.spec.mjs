@@ -57,8 +57,8 @@ for (const width of [1440, 834, 390, 320]) {
       expect(firstRow.y).toBeLessThan(300);
       expect((await page.locator('.alert-item').last().boundingBox()).y).toBeLessThan(750);
     }
-    if (process.env.SPECK_UI_SCREENSHOTS && [1440, 390].includes(width)) {
-      const folder = path.resolve(process.env.SPECK_UI_SCREENSHOTS);
+    if (process.env.SPECK_ALERT_SCREENSHOTS && [1440, 390].includes(width)) {
+      const folder = path.resolve(process.env.SPECK_ALERT_SCREENSHOTS);
       await fs.mkdir(folder, { recursive: true });
       await page.screenshot({ path: path.join(folder, `${info.project.name}-alerts-${width}.png`), fullPage: true });
     }
@@ -82,7 +82,8 @@ for (const width of [1440, 834, 390, 320]) {
 }
 
 for (const intent of ['diagnose', 'fix']) {
-  test(`AI ${intent} scopes evidence and hands reviewed script to the correct terminal`, async ({ page }) => {
+  test(`AI ${intent} scopes evidence and hands reviewed script to the correct terminal`, async ({ page }, info) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await setup(page);
     const requests = [], jobs = [];
     await page.route('**/api/ai/assist', route => {
@@ -99,6 +100,11 @@ for (const intent of ['diagnose', 'fix']) {
     await expect(page.locator('#ai-use')).toBeVisible();
     expect(requests[0]).toMatchObject({ device_id: 'frontdesk', alert_id: 'alert-1', alert_intent: intent, include_health: true, include_job_evidence: false });
     expect(jobs).toHaveLength(0);
+    if (process.env.SPECK_ALERT_SCREENSHOTS) {
+      const folder = path.resolve(process.env.SPECK_ALERT_SCREENSHOTS);
+      await fs.mkdir(folder, { recursive: true });
+      await page.screenshot({ path: path.join(folder, `${info.project.name}-ai-${intent}.png`), fullPage: true });
+    }
     await page.locator('#ai-job-evidence').check();
     await page.locator('#ai-ask').click();
     await expect(page.locator('#ai-use')).toBeVisible();
@@ -106,6 +112,7 @@ for (const intent of ['diagnose', 'fix']) {
     await page.locator('#ai-use').click();
     await expect(page.locator('#script')).toHaveValue('Get-Service Spooler');
     await expect(page.locator('#execute')).toBeVisible();
+    await expect(page.locator('.ai-command-context')).toContainText('Confirm the service status.');
     expect(jobs).toHaveLength(0);
     await page.locator('#execute').click();
     await expect.poll(() => jobs.length).toBe(1);
@@ -138,4 +145,21 @@ test('unconfigured AI and provider failure stay actionable without running a com
   await expect(page.locator('#ai-ask')).toBeEnabled();
   await expect(page.locator('#ai-result .working')).toHaveCount(0);
   await expect(page.locator('#ai-use')).toHaveCount(0);
+});
+
+test('alert repair review fits a narrow phone and explains an offline target', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await setup(page);
+  await page.route('**/api/devices', async route => {
+    const response = await route.fetch();
+    const devices = await response.json();
+    await route.fulfill({ json: devices.map(d => d.id === 'caller' ? { ...d, online: false } : d) });
+  });
+  await page.route('**/api/ai/assist', route => route.fulfill({ json: { summary: 'Check connectivity first.', script: 'Get-Service SpeckAgent', caution: 'Reconnect the machine before running checks.', verification: 'Confirm a fresh check-in.', request_id: 'ai-phone' } }));
+  await page.goto('/#alerts');
+  await page.locator('#fix-1').click();
+  await expect(page.getByText('This machine is offline.', { exact: false })).toBeVisible();
+  await page.locator('#ai-ask').click();
+  await expect(page.locator('#ai-use')).toBeVisible();
+  await geometry(page, 320);
 });
