@@ -47,42 +47,73 @@ network access from Speck to the configured API origin and Proxmox `VM.Console`
 permission. Provider credentials/tickets remain server-side, certificate policy
 comes from the saved connection, and WebSocket redirects are rejected. Generated
 password responses and older password-prefixed VNC tickets are supported.
-Containers do not expose a graphical console in this implementation.
+Containers do not expose a graphical console in this implementation. VMs configured
+with a serial-only or disabled display explain that a graphical display is needed;
+opening their inventory does not attempt a screen session.
 
 API references: [Proxmox QEMU API source](https://github.com/proxmox/qemu-server/blob/master/src/PVE/API2/Qemu.pm),
 [Guacamole VNC configuration](https://guacamole.apache.org/doc/gug/configuring-guacamole.html#vnc).
 
-## Validation and release status
+## Validation and production release — September 23, 2026
 
-Implementation branch: `codex/proxmox-machine-experience`, in
-`worktrees/proxmox-machine-experience`. The branch includes the deployed Fleet
-runtime `1158014` and its release record `6faaf5c`, merged as `f1df14d`, so the
-new header controls, agent-only switch, layout and Slide fixes are preserved.
-No production system, VM, connector binary or provider setting was changed by
-this task. No commits were pushed.
+The user authorized production deployment and GitHub publication. Runtime
+`84eb09e` is live from `codex/proxmox-machine-experience`. Integration `7227267`
+includes current main `7a51f07`, the deployed Fleet/Slide improvements and Alerts/AI
+runtime `65f668d` / record `f0836b3`. Those previously local changes are included
+in [PR #19](https://github.com/amcchord/speck/pull/19).
 
-The consolidated local core gate passes: 162 backend tests, Go agent/connector race
-checks, all agent builds, 31 web unit tests and 153 Chromium/WebKit browser cases,
-with one existing skip. Two additional backend regressions then verify real local
-WebSocket redirect rejection and the read-only gateway handshake. The final
-backend suite passes 164 tests; the affected browser suite passes 41 cases with
-one existing skip, and the final web build passes. Logs are recorded in ignored
-`output/proxmox-machine/`. Browser fixtures include synthetic console images,
-protocol frames, keyboard input, screenshot downloads, stopped/guest-agent/busy
-states and late-session cleanup. They are not live Proxmox acceptance evidence.
+The combined local core gate passed in 141 seconds: 173 backend tests, Go agent
+and connector race checks, platform builds, 31 web units and 171 Chromium/WebKit
+cases, with one existing platform-specific skip. Live acceptance found a VM using
+`vga=serial0`; the follow-up explains unavailable graphical access while retaining
+its useful inventory. Three additional regressions cover serial/disabled displays,
+and the final full backend suite passes 176 tests. Ruff passes. The web bundle
+is unchanged by that follow-up.
 
-Before publishing: follow AGENTS.md's current-main ancestry and live-baseline
-checks, obtain deployment authorization, coordinate the release owner, and back
-up server/web/data/configuration using the existing runbook. Publish server and
-web together; leave host/endpoint binaries and provider configuration intact.
-The last communicated live index was
-`345fd0a01d73991905b9d7d159db9280a18c65719b376cf132b91d7134025c69`;
-inspect it again immediately before a release, rather than treating it as current.
+Visual inspection also caught captures completing on the initial transparent
+size/sync frame. Runtime `84eb09e` waits for painted pixels and still accepts opaque
+black guest screens without waking the VM. Four new Chromium/WebKit cases verify
+delayed image data and black screens; all 24 affected browser cases and the final
+TypeScript/Vite build pass. Final live capture checks require painted, visible
+pixels and include inspection of the actual downloaded PNGs.
 
-Live acceptance remains: open a running VM on each connector-backed cluster in
-Chromium and WebKit, confirm a real screen preview and explicit console input,
-then verify a token-backed connection against the installed Proxmox version and
-permissions. Confirm that a stopped VM and a VM without a guest agent retain
-useful inventory. Do not infer that these cases passed from mocked browser or API
-tests. Roll back by restoring the matching server and web trees and restarting
-Speck; this feature adds no database migration or agent update.
+Both configured Proxmox clusters use outbound host connectors. Actual graphical
+VMs on each cluster passed in Chromium and WebKit: 1280×800 previews, PNG downloads,
+OS/network/filesystem reads, hardware/network/performance/snapshot/activity tabs,
+explicit console connection, harmless Shift key and mouse-movement transport.
+Preview sessions closed after their frame; no input was emitted during capture.
+Desktop Chromium and 390px WebKit Fleet panes rendered directly with working
+previews and no horizontal overflow. Stopped and serial-only VMs kept inventory,
+explained their screen state and created no console session. The operator's saved
+coverage preference was preserved (the test browser alone displayed all machines).
+All test consoles and authentication sessions were closed afterward. No guest
+power, snapshot, migration, recovery, command execution or installation action
+was performed. Private captures remain in ignored `output/proxmox-release/`;
+public gallery captures remain synthetic.
+
+API-token console transport has automated protocol, ticket, redirect and cleanup
+coverage. Neither production cluster has a saved API token, so direct-token live
+acceptance remains unverified. Missing guest-agent and partial-provider failure
+paths are covered locally; installed guest agents responded on the live graphical
+VMs tested. No connector or endpoint binary update was needed.
+
+The initial release audited the previous live backend and every current web file
+against committed source, then backed up server/web/data/configuration before a
+coordinated restart. It preserved accounts, credentials, endpoint/connector
+identities, Slide associations, settings, policies, saved Fleet preferences and
+recovery records. Database integrity and foreign keys passed. The final release
+matches all 31 backend files and all 26 publicly served build files. The final
+audit found no remaining gateway connections. No dependency or schema change.
+
+Live index SHA256:
+`360648be5d27fec9e68d4394f6ee7efde82c22a3566f5e7ab311872939f0ece3`.
+Full rollback to the pre-feature release:
+`/var/lib/speck-rollback/20260923T135859Z-proxmox-machine-7227267`.
+The display-capability and first-frame follow-ups also retained:
+`/var/lib/speck-rollback/20260923T140558Z-proxmox-machine-6787c42` and
+`/var/lib/speck-rollback/20260923T141400Z-proxmox-machine-84eb09e`.
+Restore the matching `server` and `web` trees and restart Speck after checking for
+active work. Keep the current database; this feature has no migration to reverse.
+Use AGENTS.md's current-main, live-baseline and single-owner checks for the next
+release. Detailed local logs, deployment records and audits are retained in the
+worktree's ignored `output/proxmox-release/`.

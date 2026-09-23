@@ -616,3 +616,26 @@ verified; matching rollback is retained. [Release/rollback](docs/operations/aler
 [journal](docs/progress/JOURNAL.md), [synthetic gallery](docs/screenshots/alerts-ai/README.md).
 No GitHub push or main merge occurred. Preserve this release before publishing
 other in-flight work.
+
+
+## Proxmox production release and GitHub publication — September 23, 2026
+
+User-authorized server/web runtime `84eb09e` is live. Combined integration
+`7227267` preserves previously deployed Fleet/Slide and Alerts/AI changes and
+publishes them with the richer Proxmox workspace in
+[PR #19](https://github.com/amcchord/speck/pull/19). This supersedes the earlier
+local-only Proxmox and unpushed Fleet/Alerts status notes.
+
+Live graphical VMs on both Proxmox clusters passed read-only screen capture,
+PNG download, guest OS/network/filesystems, all tabs and explicit keyboard/mouse
+console transport in Chromium and WebKit. Serial-only VMs now explain unavailable
+graphical access while keeping their inventory. Endpoint/host agents and provider
+configuration were preserved. Direct-token transport has automated coverage; live
+acceptance is still unverified because both clusters use outbound host connectors.
+
+Combined local core: 173 backend, race tests/builds, 31 web units, 171 browser
+cases and one existing skip. The display follow-up passes 176 backend tests.
+Hosted backend/build and browser checks passed on the display-capability runtime. Protected
+state, database integrity, served bytes and service health pass; matching rollback
+and private evidence are retained. See
+[release record](docs/operations/proxmox-machine-experience.md) and current state.

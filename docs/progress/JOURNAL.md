@@ -840,3 +840,58 @@ Private scripts, audit reports and screenshots: ignored `output/alerts-ai/`.
 No GitHub push or main merge occurred. Next action: preserve the deployed source
 in future releases. Repair execution itself was intentionally not exercised on
 live endpoints; the reviewed command path is covered by synthetic browser tests.
+
+## 2026-09-23 — Proxmox workspace production release and GitHub integration
+
+The user explicitly authorized deployment and GitHub publication. This task took
+release ownership after Alerts/AI completed, merged its `f0836b3` record/runtime
+`65f668d` as `7227267`, and preserved the prior Fleet/Slide improvements plus
+current main `7a51f07`. Opened PR #19 on `codex/proxmox-machine-experience`.
+
+The combined local core gate passed in 141 seconds: 173 backend tests, Go race
+checks and platform builds, 31 web units and 171 Chromium/WebKit browser cases,
+with one existing platform-specific skip. Live acceptance found that a serial-only
+VM cannot provide a graphical screen: `6787c42` exposes that limitation without
+starting a doomed preview, retaining useful inventory. Three added regressions
+bring the final backend count to 176; Ruff passes.
+
+Visual review then found initial size/sync frames could produce transparent PNGs.
+`84eb09e` waits for painted pixels while accepting opaque black screens and never
+injecting wake-up input. Four new browser cases cover delayed images and black
+screens; all 24 affected browser cases and the final TypeScript/Vite build pass.
+The private acceptance harness was corrected to scope Activity to the VM tabs,
+move the mouse over the rendered display rather than its letterbox, and distinguish
+the non-modal Fleet dialog from a modal. These were harness errors, not product
+failures. The serial-display and premature-frame issues were actual product fixes.
+
+Final runtime `84eb09e` deployed at 14:14 UTC. Every publish fetched current main,
+checked ancestry, audited the live committed baseline and rechecked it under the
+release lock. Preflights found no active jobs, recoveries or console connections.
+Matching server/web/configuration/data backups and consistent SQLite snapshots
+were retained. Every restart passed protected account/device/connector/settings/
+preferences/recovery fingerprints, database integrity, foreign keys and health.
+No schema, dependency, provider-setting, host-agent or endpoint-agent change.
+
+Graphical VMs on both configured Proxmox clusters passed Chromium and WebKit
+acceptance: painted 1280×800 captures, PNG downloads, independent OS/network/
+filesystem reads, all detail tabs, explicit console connection and harmless Shift
+key/mouse movement. Actual PNGs were inspected. Read-only previews sent no input
+and closed after capture. All test sessions were closed; no VM power, snapshots,
+migration, recovery, guest commands or installation actions were performed.
+Neither cluster has a saved API token; direct-token console live acceptance remains
+unverified despite automated protocol, redirect, ticket and cleanup coverage.
+
+Final index: `360648be5d27fec9e68d4394f6ee7efde82c22a3566f5e7ab311872939f0ece3`.
+Pre-feature rollback: `/var/lib/speck-rollback/20260923T135859Z-proxmox-machine-7227267`.
+Latest follow-up rollback: `/var/lib/speck-rollback/20260923T141400Z-proxmox-machine-84eb09e`.
+Detailed private scripts, logs, reports and captures remain in this worktree's
+ignored `output/proxmox-release/`. Public screenshots use synthetic fixtures.
+See `docs/operations/proxmox-machine-experience.md` for behavior and rollback.
+
+Final desktop Chromium and 390px WebKit Fleet views passed direct-panel preview,
+responsive layout, stopped/serial state explanations and no unavailable-console
+attempts. The operator's saved preferences remained identical. Final audit verified
+31 backend files, all 26 publicly served build files, protected state, healthy
+SQLite/service, and zero gateway connections after cleanup. Release ownership
+passes to the network-topology task, which must include `84eb09e` and recheck this
+baseline before its next authorized publication.
