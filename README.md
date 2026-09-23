@@ -23,6 +23,7 @@ backup and recovery workflows. Speck is an early release for a single organizati
 Gallery data is synthetic. See the [capture notes](docs/screenshots/README.md)
 for provenance and the local preview workflow.
 
+- [Infrastructure management](docs/operations/infrastructure.md): outbound Proxmox host agents, clustered guest inventory, provider consoles, Slide appliances/VMs, Linode and AustinLand.
 - Wide fleet table, right-side details drawer, direct screen and prompt actions.
 - Services, CPU, memory, disks, active application, and host inventory.
 - Persistent health/service/job alerts, acknowledgement and per-machine maintenance.

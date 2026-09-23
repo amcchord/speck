@@ -1,4 +1,5 @@
 import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
+import { createInfrastructure } from "./infrastructure";
 import { integrationSettings } from "./integrations";
 import { machinePresence } from "./presence";
 import Guacamole from "guacamole-common-js";
@@ -297,6 +298,7 @@ function shell(title: string, subtitle: string) {
     ["assistant", "spark", "AI assistant"],
     ["recovery", "recovery", "Recovery lab"],
     ["slide", "slide", "Slide"],
+    ["infrastructure", "network", "Infrastructure"],
     ["activity", "history", "Activity"],
     ["downloads", "download", "Downloads"],
     ["settings", "settings", "Settings"],
@@ -378,6 +380,7 @@ async function render() {
       "assistant",
       "recovery",
       "slide",
+      "infrastructure",
       "activity",
       "settings",
       "downloads",
@@ -395,6 +398,7 @@ async function render() {
     assistant: ["AI assistant", ""],
     recovery: ["Recovery lab", ""],
     slide: ["Slide", ""],
+    infrastructure: ["Infrastructure", ""],
     activity: ["Activity", ""],
     settings: ["Settings", ""],
     downloads: ["Downloads", ""],
@@ -412,6 +416,7 @@ async function render() {
       assistant: ops.renderAssistant,
       recovery: renderRecovery,
       slide: renderSlide,
+      infrastructure: infrastructure.render,
       activity: management.renderAudit,
       settings: renderSettings,
       downloads: () => content(desktopDownloads(true)),
@@ -442,6 +447,7 @@ const ops = createOperations({
     if (editor) editor.value = script;
   },
 });
+const infrastructure = createInfrastructure({api, esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role});
 const management = createManagement({
   api,
   esc,

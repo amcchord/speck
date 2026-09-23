@@ -450,3 +450,20 @@ The Mac now has 0.2.3 in `/Applications/Speck Desktop.app`. The older desktop
 process used by the active demo was deliberately left running; open the new app
 from Applications after that session finishes. Private artifacts, TestFlight
 responses and updater evidence are in `worktrees/client-updates/output/client-updates/`.
+
+## Infrastructure and outbound Proxmox agents — September 23, 2026
+
+`codex/infrastructure` adds encrypted multi-provider connections, clustered host /
+guest inventory, exact endpoint UUID matching, Linode, Slide boxes/VMs, and an
+allowlisted outbound AustinLand bridge. The specialized root Proxmox connector
+calls home and journals leased requests before execution. Guest management
+includes snapshots, migration, resources, QEMU-agent commands/text files and
+provider consoles through the existing Guacamole gateway. Provider credentials
+remain server-side. See [operations](docs/operations/infrastructure.md).
+
+Local core validation passed: 138 backend tests, Linux race/runtime tests, all
+platform builds, 28 web units and 98 Chromium/WebKit scenarios. Additional targeted
+checks cover the final Slide naming and infrastructure forms. Live rollout and
+host enrollment are coordinated around the active dental recovery rehearsal;
+private baseline, build logs and rollback tooling are in ignored
+`worktrees/infrastructure/output/infrastructure/`.

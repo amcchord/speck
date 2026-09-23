@@ -527,3 +527,20 @@ client isolation, and revocation propagation passed against Speck. The isolated
 QA workspace/source/companion token and transient Speck access were cleaned up;
 no fleet Site assignments or customer mappings were changed. User setup through
 Speck Settings and Chat Connections is the next action for each desired client.
+
+## 2026-09-23 — Infrastructure management implementation
+
+Branch `codex/infrastructure` starts at current main `50c191a`, whose backend
+matches the inspected live deployment. Added an Infrastructure page, encrypted
+connections, audited/idempotent writes, Proxmox host/guest hierarchy and exact
+hardware matching. The outbound host connector manages Proxmox without storing a
+host API password, and relays provider screen consoles through the existing
+remote gateway. Slide box/VM and Linode management plus an outbound AustinLand
+operations bridge are included. Existing Slide recovery settings are preserved.
+
+Local core checks passed in 122 seconds: 138 backend, Linux agent/connector race
+tests, platform builds, 28 web units and 98 browser cases. Chrome/Safari desktop
+and mobile infrastructure layouts were inspected. Production release is held
+until the concurrent dental rehearsal can tolerate the backend restart; the
+release owner is this infrastructure task. See the infrastructure operations guide
+for capability limits, enrollment, session security and rollback.
