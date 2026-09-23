@@ -576,16 +576,19 @@ Source and release records are local; no GitHub push. See current state and jour
 for audit and deployment evidence. Future releases must preserve this runtime.
 
 
-## Compact alerts and AI — September 23, 2026 (local)
+## Compact alerts and AI — September 23, 2026 (live)
 
-Branch `codex/alerts-ai`, runtime `03dbdb8`, preserves current deployed Fleet
-`1158014` / record `6faaf5c`. Compact alert rows explain job outcomes, show expanded
-evidence and distinguish acknowledging/reviewing from recovery. AI diagnose/fix
-uses the selected alert and machine, optional job evidence, reviewed scripts and
-explicit command execution; cautions/verification stay visible in the terminal.
+Deployed runtime `65f668d` on `codex/alerts-ai` preserves Fleet `1158014` /
+record `6faaf5c`. Compact rows explain job outcomes, expand evidence and separate
+acknowledging/reviewing from recovery. AI diagnose/fix uses selected alert/machine
+context, optional job evidence and an explicit command review/run; cautions and
+verification survive terminal handoff.
 
-Ruff, TypeScript/Vite, 166 backend and 28 web units pass. Browser validation totals
-159 passing scenarios after targeted fixture corrections/reruns, with one existing
-WebKit touch/CDP skip. [Details](docs/progress/JOURNAL.md),
-[operations](docs/operations/alerts-ai.md), [synthetic gallery](docs/screenshots/alerts-ai/README.md).
-No deployment or endpoint repair occurred; deployment approval is pending.
+Ruff, TypeScript/Vite, 166 backend, 28 web units and 159 browser scenarios pass
+with one existing WebKit CDP skip. Live Chromium/WebKit layouts, evidence, AI setup
+and a real metadata-only diagnosis/terminal handoff passed. No endpoint commands
+were executed. Source/assets, service/database health and protected state were
+verified; matching rollback is retained. [Release/rollback](docs/operations/alerts-ai.md),
+[journal](docs/progress/JOURNAL.md), [synthetic gallery](docs/screenshots/alerts-ai/README.md).
+No GitHub push or main merge occurred. Preserve this release before publishing
+other in-flight work.

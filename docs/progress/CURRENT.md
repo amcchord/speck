@@ -247,25 +247,27 @@ policy and recovery resources were preserved. Rollback and detailed checks are i
 [Chat integration operations](../operations/chat-integration.md).
 
 
-## Compact alerts and contextual AI — ready locally, September 23
+## Compact alerts and contextual AI — live September 23
 
-`worktrees/alerts-ai` / `codex/alerts-ai`, runtime `03dbdb8`, includes deployed
-Fleet runtime `1158014` and record `6faaf5c`. Alerts have compact rows, named
-operations, explicit unknown/expired/failed explanations, expandable command/output
-evidence and clear acknowledge/review semantics. AI diagnose/fix uses server-bound
-alert context and opt-in job evidence, then hands drafts to the existing terminal
-with cautions and verification preserved. No commands run when generating a draft.
+Runtime `65f668d` on `codex/alerts-ai` is deployed, preserving Fleet `1158014` /
+record `6faaf5c`. Alerts use compact rows, named operations, explicit
+unknown/expired/failed explanations, expandable evidence and clear acknowledge /
+review semantics. AI diagnose/fix is bound to the selected alert and machine,
+with opt-in script/output evidence and an explicit terminal run. Cautions and
+verification stay visible; generating a draft never executes it or closes an alert.
 
-Ruff, TypeScript/Vite, 166 backend and 28 web unit tests pass. 159 browser scenarios
-pass across the full run and focused corrections/reruns; one existing WebKit CDP
-case is intentionally skipped. The initial touch test targeted a hardcoded preview
-port owned by another task; it now uses the configured base URL and passes. A new
-offline test initially used an online fixture, corrected before its passing rerun.
-Screenshots are synthetic; real provider diagnosis and endpoint repairs were not
-run. See [operations](../operations/alerts-ai.md) and
-[gallery](../screenshots/alerts-ai/README.md).
+Ruff, TypeScript/Vite, 166 backend, 28 web units and 159 browser scenarios pass
+(across full and focused runs; one existing WebKit CDP skip). Live Chromium /
+WebKit desktop/phone checks and one real diagnosis with minimal metadata passed.
+The draft reached the correct machine's terminal; no endpoint jobs or alert
+state changes were made. Actual repair success remains unverified.
 
-No push, merge to main, production deployment or endpoint action occurred. User
-approval for deployment is pending. Next action: if authorized, re-check current
-main/live release and coordinate a combined backend/web rollout; otherwise retain
-this contained branch for review.
+Backend/web/database/configuration backups are retained at
+`/var/lib/speck-rollback/20260923T135104Z-alerts-ai-65f668d`. The live index and source files match the release;
+service health, identity/accounts/settings/preferences/integrations/recovery
+fingerprints and database integrity pass. Ten enrolled agents had fresh check-ins.
+[Operations and rollback](../operations/alerts-ai.md),
+[synthetic gallery](../screenshots/alerts-ai/README.md).
+
+No GitHub push or merge to main occurred. Next action: preserve `65f668d` and this
+release record before any other task publishes; release ownership is now clear.

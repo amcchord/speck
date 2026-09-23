@@ -1,6 +1,6 @@
 # Compact alerts and AI assistance — September 23, 2026
 
-Local implementation; not deployed. Runtime source `03dbdb8`, preserving the live
+Synthetic local captures of the now-deployed `65f668d` implementation. UI source `03dbdb8`, preserving the live
 Fleet toolbar release `1158014` / record `6faaf5c`. These are unretouched browser
 captures of the real built frontend with synthetic alert fixtures and stubbed AI
 responses. They demonstrate layout and review flow, not real diagnosis quality.

@@ -1,6 +1,6 @@
 # Speck screenshots
 
-**[Alerts and AI](alerts-ai/README.md)**: compact triage, understandable outcomes and reviewed diagnosis/repair drafts (local, not deployed).
+**[Alerts and AI](alerts-ai/README.md)**: compact triage, understandable outcomes and reviewed diagnosis/repair drafts.
 
 **[Machine overview](machine-overview/README.md)**: compact machine facts, a 16:9 preview and health information above the fold.
 

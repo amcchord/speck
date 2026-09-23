@@ -783,3 +783,36 @@ change. Real AI quality and actual repair execution remain unverified.
 No source push, main merge, deployment, model call, production data write or endpoint
 operation occurred. Deployment approval is requested under the workspace rules;
 next step after approval is a newly checked and coordinated backend/web release.
+
+
+## 2026-09-23 — Deploy compact alerts after explicit approval
+
+The user selected “Deploy to speckrmm.com.” Coordinated release ownership with
+`Add Proxmox machine integration`, which confirmed no newer live changes and held
+publication. Fetched main `7a51f07`, verified ancestry, rebuilt and deployed
+`65f668d` as `20260923T135104Z-alerts-ai-65f668d`.
+
+Fresh source audit matched all 29 prior backend files and 26 current build files
+against Fleet `1158014`; no unknown application changes existed. Preflight found
+no active commands, recoveries or gateway connections. Took matching server/web,
+configuration and stopped-service data backups with a consistent SQLite snapshot.
+The locked publish rechecked the live index. No schema, dependencies, agent,
+provider, proxy or enrollment changes were required. Protected state fingerprints,
+service health, integrity and foreign keys passed after restart.
+
+Live Chromium 1440px and WebKit 390px validated five readable alerts, expanded
+evidence, AI dialogs and preserved Fleet controls with zero page errors or
+overflow. A real OpenAI diagnosis used only selected alert/job metadata (health,
+original script and output excluded), returned an explanation/checks, and opened
+its draft in the correct machine terminal with verification. No command was run,
+alert resolved/acknowledged or preference altered. All source files and public
+asset bytes match. Ten enrolled agents resumed fresh telemetry. A private live
+check initially used textContent for a textarea; corrected it to assert input
+value before running the actual provider check.
+
+Index SHA-256: `4cf1d5c3ad2126b7aaa5a0d9e95fa531c18152fea03b48109ae58fcd7e5121c3`.
+Rollback: `/var/lib/speck-rollback/20260923T135104Z-alerts-ai-65f668d`.
+Private scripts, audit reports and screenshots: ignored `output/alerts-ai/`.
+No GitHub push or main merge occurred. Next action: preserve the deployed source
+in future releases. Repair execution itself was intentionally not exercised on
+live endpoints; the reviewed command path is covered by synthetic browser tests.

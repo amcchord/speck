@@ -51,18 +51,37 @@ viewer accounts cannot use the workflow.
 
 ## Validation and release status
 
-Implemented in `worktrees/alerts-ai`, branch `codex/alerts-ai`. This branch includes
-the deployed Fleet toolbar release `1158014` and its record `6faaf5c`.
-No production deployment, provider AI request or endpoint repair was performed by
-this task. Synthetic model responses validate the API and review flow; diagnosis
-quality on a real alert remains unverified.
+Deployed September 23, 2026 from `65f668d` on `codex/alerts-ai`, preserving
+Fleet toolbar runtime `1158014` and release record `6faaf5c`. Local Ruff,
+TypeScript/Vite, 166 backend and 28 web unit tests passed. Browser validation
+finished with 159 passing scenarios across the full run and focused reruns, and
+one existing WebKit touch/CDP skip.
 
-The backend and web bundle must be released together. No schema migration or agent
-upgrade is required. Before a future authorized release, follow `AGENTS.md`: fetch
-main, preserve all newer live changes, coordinate the deployment owner, inspect the
-live index, and back up matching backend/web/database/configuration state. Keep the
-current web/backend pair for rollback and verify alert list/detail and AI setup
-without automatically queuing endpoint commands.
+Preflight verified all 29 previous backend files, all 26 current web build files,
+the dependency manifest, SQLite integrity, no active jobs/recoveries and no gateway
+connections. The live index was checked again under the release lock immediately
+before publishing. Backend/web/configuration and stopped-service data were backed
+up, including an integrity-checked SQLite snapshot. No schema migration, dependency
+change or agent upgrade was required. Service health and protected identity,
+account, settings, preferences, integration and recovery fingerprints matched.
+
+Live Chromium desktop and WebKit phone checks passed: all five alert outcomes,
+expanded job evidence, diagnosis/repair dialogs, responsive layout and preserved
+Fleet toolbar. One real diagnosis used alert metadata with health and original
+script/output sharing disabled; its response and correct-machine terminal handoff
+passed. No endpoint job was queued, and no alert was acknowledged or closed.
+This verifies the provider connection/review workflow, not actual repair success.
+
+Exact release: `20260923T135104Z-alerts-ai-65f668d`. Current index SHA-256:
+`4cf1d5c3ad2126b7aaa5a0d9e95fa531c18152fea03b48109ae58fcd7e5121c3`.
+Rollback: `/var/lib/speck-rollback/20260923T135104Z-alerts-ai-65f668d`.
+
+Before rollback, inspect current jobs/sessions and back up present state. Restore
+the matching previous `server/` and `web/`, restart Speck, then verify health,
+login and source hashes. This release made no schema/configuration changes; retain
+the latest database rather than discarding subsequent user activity. The matching
+data/configuration snapshot remains available for an explicitly reviewed recovery.
+Private scripts, source audits and live evidence are in ignored `output/alerts-ai/`.
 
 See the [synthetic screenshots](../screenshots/alerts-ai/README.md) and
 `server/tests/test_alert_context.py`, `web/test/ui/alerts.spec.mjs` for the specific
