@@ -560,3 +560,18 @@ column persistence, shared machine panes and responsive layouts; identity/API
 tests cover collisions, restoration, clients, cache and authorization. Release
 owner: this infrastructure task. Exact baseline, checks and release/rollback
 records are private under `output/unified-fleet/`.
+
+Unified Fleet production release `7148553` completed at 08:39 UTC; PR #17 merged
+as `531ee39`. The release waited for the dental task's normal remote-session
+cleanup, then passed pre/post identity, account, provider, lifecycle/recovery,
+Site, connector credential and environment invariants. All provider sources and
+eight infrastructure workers are healthy. Live Chromium desktop and WebKit mobile
+checks verified all ten Proxmox endpoint joins, client display, agent filters,
+column persistence and shared panes without browser errors. Test preferences
+were restored. No provider VM actions or agent binary upgrades were performed.
+
+The core gate passed in 123 seconds (154 backend, Linux agent/connector races,
+platform builds, 28 web units, 110 browser cases). Final session-scoping and layout
+changes passed 12 Fleet and 22 overview browser cases; all hosted PR checks passed.
+Matching rollback: `/var/lib/speck-rollback/20260923T083900Z-unified-fleet-7148553`.
+Private release, invariant and live-browser evidence: `output/unified-fleet/`.
