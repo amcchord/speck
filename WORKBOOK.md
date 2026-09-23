@@ -1,5 +1,27 @@
 # Speck working record
 
+## Local project home — September 23, 2026
+
+The canonical project folder is now `~/Development/SpeckRMM`. Open that folder
+as the SpeckRMM project in Codex. The primary checkout, all 22 linked worktrees,
+Git history, pending work, build outputs and private operator artifacts moved
+together from `~/Development/Speck`. Branches and commits were preserved.
+
+`~/Development/Speck` remains a compatibility symlink for existing task paths and
+local environments. The infrastructure bridge LaunchAgent and the desktop client
+were reloaded from the canonical path; no process runs from the old path. The
+project virtual environment was rebuilt from `uv.lock` because its console script
+shebangs still resolved through the symlink. Keep the compatibility link until
+remaining task paths migrate.
+
+Speck cleanup evidence formerly in SlideDev is now in
+`output/speck-restore-cleanup-20260923/`. SlideChat and dental-demo integrations
+remain in SlideDev with their owning repositories. Migration inventory and
+verification are in ignored `output/project-relocation-20260923/`: all 175,707
+pre-existing filesystem entries, 23 checkout states, refs, remotes and cleanup
+evidence hashes matched after relocation. No production changes, pushes or
+commits were made as part of the move.
+
 Branch: `codex/fleet-operations`. Independent Windows/Linux RMM repository.
 
 ## Implemented
