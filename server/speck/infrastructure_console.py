@@ -3,16 +3,17 @@
 import asyncio
 import json
 import secrets
+import ssl
 import time
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 
 import websockets
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from speck.config import seal
 from speck.db import audit, db, ident
-from speck.infrastructure import get_connection, resolve
+from speck.infrastructure import get_connection, pve_path, provider_request, resolve
 from speck.proxmox_connector import authenticate
 from speck.remote import Session, close_session, expire_session, sessions
 from speck.security import require_user
@@ -20,9 +21,12 @@ from speck.slide import Slide
 
 router = APIRouter(prefix="/api/infrastructure")
 workers = set()
+starting = set()
 
 
 class Console(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    read_only: bool = False
     kind: str
     resource_id: str
 
@@ -35,6 +39,18 @@ def spawn(coro):
 
 @router.post("/connections/{connection_id}/console")
 async def start(connection_id: str, body: Console, user=Depends(require_user)):
+    target = (connection_id, body.kind, body.resource_id)
+    # Reserve across upstream awaits, including concurrent preview/control requests.
+    if target in starting:
+        raise HTTPException(409, "This provider console is connecting. Try again shortly.")
+    starting.add(target)
+    try:
+        return await start_console(connection_id, body, user)
+    finally:
+        starting.discard(target)
+
+
+async def start_console(connection_id, body, user):
     cfg = get_connection(connection_id)
     row = await resolve(cfg, body.kind, body.resource_id)
     if sum(s.user_id == user["user_id"] for s in sessions.values()) >= 4:
@@ -44,6 +60,7 @@ async def start(connection_id: str, body: Console, user=Depends(require_user)):
     password = ""
     upstream = None
     connector = None
+    transport = {}
     if cfg["provider"] == "proxmox" and body.kind == "qemu" and cfg.get("connector"):
         if row.get("status") != "running":
             raise HTTPException(409, "Start the VM before opening its console")
@@ -62,6 +79,35 @@ async def start(connection_id: str, body: Console, user=Depends(require_user)):
         if not connector:
             raise HTTPException(409, "Enroll an online Proxmox host agent on this VM’s current host to use its console")
         password = secrets.token_hex(4)
+    elif cfg["provider"] == "proxmox" and body.kind == "qemu":
+        if row.get("status") != "running" or row.get("template"):
+            raise HTTPException(409, "Start the VM before opening its console")
+        # Both requests use the saved origin and freshly resolved node. Neither the
+        # browser nor the provider response can choose a new upstream host.
+        path = pve_path(row)
+        ticket = await provider_request(cfg, "POST", path + "/vncproxy", {"websocket": 1, "generate-password": 1})
+        if (
+            not isinstance(ticket, dict)
+            or not isinstance(ticket.get("port"), int)
+            or not 5900 <= ticket["port"] <= 5999
+            or not isinstance(ticket.get("ticket"), str)
+            or not ticket["ticket"]
+        ):
+            raise HTTPException(502, "Proxmox did not return a valid console ticket")
+        # Older PVE versions return the protocol password prepended to the ticket.
+        password = ticket.get("password") or ticket["ticket"].split(":", 1)[0]
+        upstream = (
+            "wss://"
+            + urlsplit(cfg["url"]).netloc
+            + "/api2/json"
+            + path
+            + "/vncwebsocket?"
+            + urlencode({"port": ticket["port"], "vncticket": ticket["ticket"]})
+        )
+        transport = {
+            "additional_headers": {"Authorization": "PVEAPIToken=" + cfg["token_id"] + "=" + cfg["token"]},
+            "ssl": ssl.create_default_context() if cfg["verify_tls"] else ssl._create_unverified_context(),
+        }
     elif cfg["provider"] == "slide" and body.kind == "virt":
         row = await Slide(cfg).request("GET", "restore/virt/" + body.resource_id)
         if row.get("state") != "running":
@@ -76,7 +122,7 @@ async def start(connection_id: str, body: Console, user=Depends(require_user)):
             raise HTTPException(409, "Slide has not published a secure WebSocket console for this VM")
         password = row.get("vnc_password", "")
     else:
-        raise HTTPException(409, "Provider consoles support Proxmox VMs with a host agent and Slide virtual machines")
+        raise HTTPException(409, "Provider consoles support Proxmox VMs and Slide virtual machines")
     session = Session(
         ident(),
         None,
@@ -84,6 +130,7 @@ async def start(connection_id: str, body: Console, user=Depends(require_user)):
         secrets.token_urlsafe(32),
         {
             "protocol": "vnc",
+            "read_only": body.read_only,
             "password": password,
             "infra_target": (connection_id, body.kind, body.resource_id),
             "connector_id": connector["id"] if connector else None,
@@ -105,6 +152,8 @@ async def start(connection_id: str, body: Console, user=Depends(require_user)):
     session.listener = await asyncio.start_server(connected, "127.0.0.1", 0)
     sessions[session.id] = session
     spawn(expire_session(session.id))
+    if body.read_only:
+        spawn(expire_preview(session.id))
     try:
         if connector:
             with db(write=True) as conn:
@@ -132,7 +181,7 @@ async def start(connection_id: str, body: Console, user=Depends(require_user)):
                     ),
                 )
         else:
-            spawn(slide_tunnel(session, upstream))
+            spawn(slide_tunnel(session, upstream, **transport))
         with db(write=True) as conn:
             audit(
                 conn,
@@ -143,6 +192,7 @@ async def start(connection_id: str, body: Console, user=Depends(require_user)):
                     "kind": body.kind,
                     "resource_id": body.resource_id,
                     "session_id": session.id,
+                    "read_only": body.read_only,
                 },
             )
     except Exception:
@@ -151,14 +201,29 @@ async def start(connection_id: str, body: Console, user=Depends(require_user)):
     return {"id": session.id, "protocol": "vnc"}
 
 
-async def slide_tunnel(session, upstream):
+async def expire_preview(session_id):
+    await asyncio.sleep(65)
+    await close_session(session_id)
+
+
+async def slide_tunnel(session, upstream, **transport):
     tasks = []
     try:
         async with websockets.connect(
-            upstream, open_timeout=20, max_size=8 * 1024 * 1024, proxy=None, subprotocols=["binary"]
+            upstream, open_timeout=20, max_size=8 * 1024 * 1024, proxy=None, subprotocols=["binary"], **transport
         ) as ws:
             session.ready.set()
-            reader, writer = await asyncio.wait_for(asyncio.shield(session.tcp), 120)
+            connected = asyncio.ensure_future(asyncio.shield(session.tcp))
+            ended = asyncio.create_task(session.finished.wait())
+            try:
+                await asyncio.wait([connected, ended], timeout=120, return_when=asyncio.FIRST_COMPLETED)
+                if ended.done() or not connected.done():
+                    return
+                reader, writer = connected.result()
+            finally:
+                connected.cancel()
+                ended.cancel()
+                await asyncio.gather(connected, ended, return_exceptions=True)
 
             async def receive():
                 async for message in ws:

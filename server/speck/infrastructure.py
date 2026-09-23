@@ -378,21 +378,9 @@ async def detail(connection_id: str, kind: str, rid: str, user=Depends(require_u
     row = await resolve(cfg, kind, rid)
     result = {"resource": resources(cfg, [row])[0]}
     if cfg["provider"] == "proxmox":
-        path = pve_path(row)
-        result["status"] = await provider_request(
-            cfg, "GET", path + ("/status" if kind == "node" else "/status/current")
-        )
-        if kind == "node":
-            result["storage"] = await provider_request(cfg, "GET", path + "/storage")
-            result["network"] = await provider_request(cfg, "GET", path + "/network")
-        else:
-            result["configuration"] = await provider_request(cfg, "GET", path + "/config")
-        result["recent_tasks"] = await provider_request(
-            cfg,
-            "GET",
-            "/nodes/" + segment(row["node"]) + "/tasks",
-            params={"limit": 20, **({"vmid": rid} if kind != "node" else {})},
-        )
+        from speck.proxmox_details import machine_detail
+
+        return public_data(await machine_detail(cfg, row))
     elif cfg["provider"] == "linode":
         result["configuration"] = row
         result["backups"] = await provider_request(cfg, "GET", "/linode/instances/" + segment(rid) + "/backups")
@@ -406,6 +394,16 @@ async def detail(connection_id: str, kind: str, rid: str, user=Depends(require_u
         result["agents"] = await slide.listing("agent", {"device_id": rid})
         result["network"] = await slide.request("GET", "device/" + segment(rid) + "/network")
     return public_data(result)
+
+
+@router.get("/connections/{connection_id}/resources/{kind}/{rid}/guest")
+async def guest_detail(connection_id: str, kind: str, rid: str, user=Depends(require_user)):
+    from speck.proxmox_details import guest_details
+
+    cfg = get_connection(connection_id)
+    if cfg["provider"] != "proxmox" or kind != "qemu":
+        raise HTTPException(404, "Guest information is available for Proxmox VMs")
+    return public_data(await guest_details(cfg, await resolve(cfg, kind, rid)))
 
 
 POWER = {

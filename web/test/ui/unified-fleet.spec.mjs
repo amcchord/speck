@@ -60,7 +60,7 @@ test('provider-only and merged machines use the same drawer and provider control
   await expect(page.locator('#machine-details')).toContainText('No Speck agent');
   await expect(page.locator('#machine-details #drawer-terminal')).toHaveCount(0);
   await page.getByRole('button',{name:'proxmox · qemu 102'}).click();
-  await expect(page.getByRole('button',{name:'Open provider console'})).toBeVisible();
+  await expect(page.locator('dialog.infra-dialog').getByRole('button',{name:'Screen control'})).toBeVisible();
   await page.locator('dialog.infra-dialog .close').click();
   await page.locator('[data-row="frontdesk"] .machine-name').click();
   await expect(page.locator('#machine-details')).toContainText('Joined by Hardware UUID');

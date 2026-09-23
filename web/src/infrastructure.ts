@@ -1,5 +1,6 @@
 import "./infrastructure.css";
 import { openProviderConsole } from "./provider-console";
+import { mountProxmoxMachine } from "./proxmox-machine";
 type Item = Record<string, any>;
 export function createInfrastructure(ui: Item) {
   const { api, esc, on, value, notify, content, loading, badge, bytes, date } =
@@ -245,7 +246,17 @@ export function createInfrastructure(ui: Item) {
       on("infra-endpoint-" + i, () => ui.openDevice(r.agent.id));
     });
   }
+  function machinePanel(r: Item, root: HTMLElement) {
+    return mountProxmoxMachine(ui, r, root, (id, spec, current) => operationForm(
+      {id: current.connection_id, name: current.connection_name, provider: current.provider}, id, spec, current));
+  }
   async function resourceDetail(r: Item) {
+    if (r.provider === "proxmox" && ["qemu", "lxc"].includes(r.kind)) {
+      const d = dialog(r.name, '<div class="pve-root"></div>');
+      d.classList.add("infra-dialog");
+      machinePanel(r, d.querySelector<HTMLElement>(".pve-root")!);
+      return;
+    }
     const d = dialog(r.name, '<p role="status">Loading resource…</p>');
     d.classList.add("infra-dialog");
     let detail: Item, catalog: Item;
@@ -516,5 +527,5 @@ export function createInfrastructure(ui: Item) {
       }
     };
   }
-  return { render, resourceDetail };
+  return { render, resourceDetail, machinePanel };
 }

@@ -469,3 +469,141 @@ def test_slide_virtual_machine_actions_are_scoped(client, monkeypatch):
     assert response.json()["status"] == "submitted"
     assert calls[-1] == ("PATCH", "restore/virt/virt_123456789012", {"state": "stopped"})
     assert "never-return" not in response.text and "secret-ticket" not in response.text
+
+
+def test_machine_details_preserve_partial_sections_and_guest_states(client, upstream, monkeypatch):
+    calls, rows = upstream
+    rows[-1].update(status="running", mem=0, maxmem=8 * 1024**3)
+    cid = add(client)
+    original = infra.provider_request
+
+    async def request(cfg, method, path, body=None, params=None):
+        if path.endswith('/config'):
+            return {'cores': 4, 'memory': 8192, 'agent': 'enabled=1,fstrim_cloned_disks=1'}
+        if path.endswith('/status/current'):
+            return {'status': 'running', 'cpu': 0, 'mem': 0, 'maxmem': 8 * 1024**3}
+        if path.endswith('/tasks') or path.endswith('/get-fsinfo'):
+            raise HTTPException(502, 'private upstream secret')
+        if path.endswith('/get-osinfo'):
+            return {'result': {'pretty-name': 'Debian GNU/Linux 13', 'token': 'must-not-leak'}}
+        if path.endswith('/network-get-interfaces'):
+            return {'result': [{'name': 'eth0', 'ip-addresses': [{'ip-address': '192.0.2.10', 'prefix': 24}]}]}
+        return await original(cfg, method, path, body, params)
+    monkeypatch.setattr(infra, 'provider_request', request)
+    path = f'/api/infrastructure/connections/{cid}/resources/qemu/101'
+    response = client.get(path)
+    assert response.status_code == 200
+    detail = response.json()
+    assert detail['status']['cpu'] == 0
+    assert detail['configuration']['memory'] == 8192
+    assert detail['availability']['recent_tasks']['state'] == 'unavailable'
+    assert detail['capabilities']['console']['available']
+    assert detail['capabilities']['guest_agent']
+    assert 'private upstream secret' not in response.text
+    guest = client.get(path + '/guest')
+    assert guest.json()['sections']['os']['data']['result']['pretty-name'] == 'Debian GNU/Linux 13'
+    assert guest.json()['sections']['filesystems']['state'] == 'unavailable'
+    assert 'must-not-leak' not in guest.text
+    rows[-1]['status'] = 'stopped'
+    assert not client.get(path).json()['capabilities']['console']['available']
+    assert client.get(path + '/guest').json()['state'] == 'unavailable'
+    role('viewer')
+    assert client.get(path).status_code == 403
+    assert client.get(path + '/guest').status_code == 403
+
+
+def test_disabled_guest_agent_never_issues_guest_commands(client, upstream, monkeypatch):
+    calls, rows = upstream
+    rows[-1]['status'] = 'running'
+    cid = add(client)
+    original = infra.provider_request
+
+    async def request(cfg, method, path, body=None, params=None):
+        if path.endswith('/config'):
+            return {'agent': '0,fstrim_cloned_disks=1'}
+        assert '/agent/' not in path
+        return await original(cfg, method, path, body, params)
+    monkeypatch.setattr(infra, 'provider_request', request)
+    data = client.get(f'/api/infrastructure/connections/{cid}/resources/qemu/101/guest').json()
+    assert data['state'] == 'disabled'
+
+
+def test_direct_api_console_uses_fresh_node_and_server_side_ticket(client, upstream, monkeypatch):
+    from speck import infrastructure_console as console
+    from speck.remote import sessions
+    from urllib.parse import parse_qs, urlsplit
+
+    _, rows = upstream
+    rows[-1].update(status='running', node='migrated-host')
+    cid = add(client)
+    captured = []
+
+    async def request(cfg, method, path, body):
+        assert path == '/nodes/migrated-host/qemu/101/vncproxy'
+        assert method == 'POST' and body == {'websocket': 1, 'generate-password': 1}
+        return {'port': 5902, 'ticket': 'password:PVEVNC:ticket+/=', 'password': 'protocol-secret'}
+
+    async def tunnel(session, upstream, **transport):
+        captured.append((session, upstream, transport))
+    monkeypatch.setattr(console, 'provider_request', request)
+    monkeypatch.setattr(console, 'slide_tunnel', tunnel)
+    response = client.post(f'/api/infrastructure/connections/{cid}/console', json={'kind': 'qemu', 'resource_id': '101', 'read_only': True})
+    assert response.status_code == 200, response.text
+    assert set(response.json()) == {'id', 'protocol'}
+    sid = response.json()['id']
+    assert sessions[sid].config['read_only'] is True
+    assert sessions[sid].config['password'] == 'protocol-secret'
+    assert len(captured) == 1
+    _, url, transport = captured[0]
+    assert urlsplit(url).netloc == 'pve.example'
+    assert urlsplit(url).path == '/api2/json/nodes/migrated-host/qemu/101/vncwebsocket'
+    assert parse_qs(urlsplit(url).query)['vncticket'] == ['password:PVEVNC:ticket+/=']
+    assert transport['additional_headers']['Authorization'].startswith('PVEAPIToken=speck@pve!api=')
+    assert transport['ssl'].check_hostname
+    assert client.delete('/api/remote/sessions/' + sid).status_code == 200
+    assert sid not in sessions
+
+
+def test_console_start_reservation_rejects_concurrent_opens(monkeypatch):
+    from speck import infrastructure_console as console
+
+    async def check():
+        entered, release = asyncio.Event(), asyncio.Event()
+        async def start(*args):
+            entered.set()
+            await release.wait()
+            return {'id': 'first'}
+        monkeypatch.setattr(console, 'start_console', start)
+        body = console.Console(kind='qemu', resource_id='101')
+        first = asyncio.create_task(console.start('cluster', body, {}))
+        await entered.wait()
+        with pytest.raises(HTTPException) as exc:
+            await console.start('cluster', body, {})
+        assert exc.value.status_code == 409
+        release.set()
+        assert await first == {'id': 'first'}
+        assert not console.starting
+    asyncio.run(check())
+
+
+def test_direct_console_transport_closes_when_preview_ends_before_browser_connects(monkeypatch):
+    from speck import infrastructure_console as console
+    from speck.remote import Session
+
+    async def check():
+        opened, closed = asyncio.Event(), asyncio.Event()
+        class Socket:
+            async def __aenter__(self):
+                opened.set()
+                return self
+            async def __aexit__(self, *args):
+                closed.set()
+        monkeypatch.setattr(console.websockets, 'connect', lambda *args, **kwargs: Socket())
+        session = Session('id', None, 'user', 'secret', {'protocol': 'vnc'}, 800, 600)
+        session.tcp = asyncio.get_running_loop().create_future()
+        task = asyncio.create_task(console.slide_tunnel(session, 'wss://example.invalid'))
+        await opened.wait()
+        session.finished.set()
+        await asyncio.wait_for(task, 1)
+        assert closed.is_set() and not session.tcp.cancelled()
+    asyncio.run(check())

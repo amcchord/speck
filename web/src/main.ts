@@ -143,8 +143,8 @@ const badge = (s: string, good = false) => {
   return `<span class="badge ${tone}">${esc(s)}</span>`;
 };
 
-async function api(path: string, method = "GET", body?: any, signal?: AbortSignal): Promise<any> {
-  const current = viewScope.checkpoint();
+async function api(path: string, method = "GET", body?: any, signal?: AbortSignal, scoped = true): Promise<any> {
+  const current = scoped ? viewScope.checkpoint() : () => {};
   const headers: Record<string, string> = { "X-CSRF-Token": csrf };
   if (body !== undefined && !(body instanceof FormData))
     headers["Content-Type"] = "application/json";
@@ -485,7 +485,7 @@ const ops = createOperations({
     if (editor) editor.value = script;
   },
 });
-const infrastructure = createInfrastructure({api, esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role});
+const infrastructure = createInfrastructure({api, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role});
 const management = createManagement({
   api,
   esc,
@@ -847,6 +847,13 @@ function renderProviderMachine(d: Item) {
   if (heading) heading.innerHTML=`<span class="machine-title">${esc(d.label)}</span>${badge(machineState(d))}`;
   activeDevicePanel?.setAttribute("aria-label",`Machine details: ${d.label}`);
   document.getElementById("detail")!.innerHTML = `${machineInventorySummary(d)}<div id="device-body"><div class="mini-grid machine-system"><div><small>Type</small>${esc(kindLabel(d))}</div><div><small>IP address</small>${esc(primaryAddress(d))}</div><div><small>CPU</small>${cpu(d) == null ? "Not reported" : Number(cpu(d)).toFixed(0)+"%"}</div><div><small>Memory</small>${memory(d) == null ? "Not reported" : Number(memory(d)).toFixed(0)+"%"}</div></div><p class="muted">Select a provider above for its management tools${d.resources?.some((r: Item) => ["qemu","virt"].includes(r.kind)) ? ", including the screen console" : ""}. A Speck endpoint agent adds commands, file transfer, patching and endpoint telemetry.</p></div>`;
+  const proxmox = d.resources?.find((r: Item) => r.provider === "proxmox" && ["qemu", "lxc"].includes(r.kind));
+  document.getElementById("detail")!.classList.toggle("pve-provider-pane", !!proxmox);
+  if (proxmox && role !== "viewer") {
+    const body = document.getElementById("device-body")!;
+    body.innerHTML = '<div class="pve-root"></div>';
+    infrastructure.machinePanel(proxmox, body.querySelector<HTMLElement>(".pve-root")!);
+  }
   bindProviderButtons(d);
 }
 async function renderDeviceContent() {
