@@ -1,13 +1,27 @@
-# Slide client display and one-click backup fix — ready locally
+# Slide client display and one-click backup — live September 23
 
-`codex/slide-client-backup-fix` contains runtime `f1d96d0`, combined with deployed
-flyout/column runtime `8cd12c7` in merge `6acf61c`. Fleet now includes the Settings
-Slide account, and protected-machine backup starts on the button press without
-name entry. Read-only live-data replay confirms client membership for all five
-reported originals and retains all ten Proxmox/endpoint matches. Ruff, 156 backend
-and 28 web tests plus TypeScript/Vite pass; combined browser validation passed
-123 scenarios (one existing platform-specific skip). No production change from this task.
-Next action: explicit server/web deployment approval under the workspace rules.
+User-authorized runtime `7141ea0` deployed at 13:11 UTC from
+`codex/slide-client-backup-fix`, including deployed flyout/column runtime `8cd12c7`
+and its release record `d61bab4`. Fleet includes the Settings Slide account;
+protected-machine backup submits on the button press without name entry.
+
+Live Chromium desktop and WebKit phone checks verified all five reported
+originals' clients, all ten Proxmox/endpoint joins, healthy provider sources,
+matching served assets and immediate backup requests without a confirmation
+field. The backup POST was intercepted during UI acceptance; no real backup was
+started. Local validation remains 156 backend tests, 28 web units and 123 browser
+scenarios (one existing platform-specific skip), Ruff and TypeScript/Vite.
+
+Pre-release audit matched all 29 backend files to main `7a51f07`, all 26 current
+web files to committed `8cd12c7`, and the dependency manifest to Git. No uncaptured
+application edits were found. Post-release bytes match committed `7141ea0`.
+Accounts, credentials, device/connector identities, Slide associations, settings,
+recovery data, policies and saved columns passed preservation checks.
+
+Rollback: `/var/lib/speck-rollback/20260923T131146Z-slide-client-backup-fix-7141ea0`.
+Private source audit, deployment and browser evidence:
+`worktrees/slide-client-backup-fix/output/slide-client-backup-fix/`.
+The source and records are committed locally; this task has not pushed to GitHub.
 See the newest journal entry and [behavior](../operations/unified-fleet.md#settings-account-and-immediate-backups).
 
 # Unified Fleet — live September 23, 2026

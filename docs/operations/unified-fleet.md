@@ -104,7 +104,7 @@ include it until GitHub integration is explicitly authorized.
 
 ## Settings account and immediate backups
 
-The pending client/backup fix includes the existing Slide account from Settings
+Runtime `7141ea0` includes the existing Slide account from Settings
 as `Slide (Settings)` alongside Infrastructure accounts. Credentials stay in their
 original encrypted setting; edit that account through Settings. An identical API
 origin and credential is fetched once, while different accounts on the same
@@ -117,3 +117,20 @@ request receipt. No target-name entry is needed. The server still resolves the
 resource under its account and enforces administrator access, CSRF, audit logging
 and request deduplication. Retrying a lost response reuses the same request ID.
 Other provider management actions retain their existing confirmation behavior.
+
+
+September 23 client/backup release `7141ea0` is live, with the earlier flyout and
+column changes preserved. Before release, 29 live backend files matched main and
+26 current web files matched committed `8cd12c7`; the runtime dependency manifest
+also matched Git. Retained historical hashed web assets are rollback compatibility
+files, not uncaptured source edits. After release, every backend/current web file
+and public JS/CSS response matched the committed build.
+
+Live desktop Chromium and phone WebKit verified client membership, the correct
+Slide account, no target-name field and an immediate backup POST. That POST was
+intercepted for acceptance; no real backup was requested. Preserved-state checks
+include saved Fleet columns. Full rollback (server, web, consistent database and
+private configuration):
+`/var/lib/speck-rollback/20260923T131146Z-slide-client-backup-fix-7141ea0`.
+For a code rollback, stop Speck, restore the saved server/web trees and restart;
+this release does not require database or dependency changes.

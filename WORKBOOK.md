@@ -543,3 +543,17 @@ Read-only provider replay verifies all five reported originals' clients and all
 ten Proxmox/endpoint joins. See `docs/progress/JOURNAL.md` for validation and
 `docs/operations/unified-fleet.md` for behavior. Production release remains pending
 explicit user authorization; no live backups were requested for testing.
+
+## Client membership/backup production rollout — September 23, 2026
+
+User-authorized server/web runtime `7141ea0` is live, preserving `8cd12c7`'s flyout
+spacing and column editor. Live desktop Chromium and phone WebKit verify all five
+reported originals' clients and immediate backup requests without name entry;
+backup POSTs were intercepted during acceptance. Source/asset hashes, health and
+protected state checks pass. No real backup or endpoint upgrade was performed.
+
+The pre-release audit found no production application edits missing from Git;
+all deployed changes and both release records are captured in local branch
+`codex/slide-client-backup-fix`. Private rollback:
+`/var/lib/speck-rollback/20260923T131146Z-slide-client-backup-fix-7141ea0`.
+See current state and journal for exact validation and evidence locations.

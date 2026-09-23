@@ -660,3 +660,39 @@ Combined final browser validation: 123 Chromium/WebKit scenarios pass; the exist
 WebKit variant of the Chromium-only touch-input protocol test is intentionally
 skipped. Backup receipt screenshots were inspected at desktop and phone widths.
 Agent/native binaries were unchanged and their runtime suites were not rerun.
+
+## 2026-09-23 — Settings client/backup production rollout and Git audit
+
+The user explicitly authorized deployment and requested capture of any production
+changes not in Git. Took release ownership, coordinated with the preceding UI and
+infrastructure tasks, and merged the UI release record `d61bab4`. Runtime commit
+`7141ea0` includes both requested fixes and deployed flyout/column runtime `8cd12c7`.
+
+A byte audit found no uncaptured application edits: all 29 backend source files
+matched main `7a51f07`, all 26 current web files matched the build of committed
+`8cd12c7`, and the dependency manifest matched Git. Historical web bundles remain
+for existing sessions and rollback. No credentials, configuration, databases or
+customer inventory were added to source control. All deployed application changes
+are now in this branch's local Git history; no remote push was requested.
+
+Fetched main and verified ancestry before the production build and again before
+release. Live backend/index preconditions, zero active jobs/recoveries/consoles,
+database integrity and the release lock passed. Retained matching private
+server/web/config/data backups, installed the staged server/web, then restarted.
+HTTPS health, all served JS/CSS hashes and all deployed source hashes passed.
+Identity/account/settings/integration/provider/recovery/policy/column-preference
+invariants and the environment were preserved.
+
+Release: `20260923T131146Z-slide-client-backup-fix-7141ea0`.
+Index: `969be3d3461f2a79ae4dba90fa94b15f98fc59eaf21813c93d21c26b00ee9752`.
+Rollback: `/var/lib/speck-rollback/20260923T131146Z-slide-client-backup-fix-7141ea0`.
+Private evidence: `output/slide-client-backup-fix/` in this task's worktree.
+
+Live Chromium 1440px and WebKit 390px verified all five reported originals'
+client assignments, ten Proxmox/endpoint joins, healthy sources, current assets,
+client display in the row and pane, and immediate backup POST without name entry.
+The backup POST was intercepted before reaching production; no provider backup
+was triggered. Both browser runs had zero page errors, and test sessions were
+logged out. Source build/Ruff, 156 backend, 28 web units and 123 browser checks
+passed locally (one existing platform-specific skip). No endpoint binary upgrade,
+provider management action, credential or client-assignment change was needed.
