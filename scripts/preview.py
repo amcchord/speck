@@ -203,6 +203,7 @@ class Handler(BaseHTTPRequestHandler):
                     {"id": "preview-phone", "name": "Phone", "created": NOW - 3600, "last_used": None, "backed_up": True},
                 ],
                 "/api/devices": DEVICES,
+                "/api/integrations/tokens": {"tokens": [], "sites": ["Demo Clinic"]},
                 "/api/agent-updates": {"enabled": True, "version": "0.3.1", "devices": []},
                 "/api/templates": [dict(t, builtin=True, revision=1) for t in STARTERS],
                 "/api/batches": [],

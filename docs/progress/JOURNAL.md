@@ -501,3 +501,18 @@ upgrade; future updates are automatic. No claim is made that every remote
 operator's installation was discovered or replaced. Temporary QA processes/feed
 were stopped and signing key files removed. Private evidence and artifacts:
 `worktrees/client-updates/output/client-updates/`.
+
+## 2026-09-23 — Site-scoped Slide Chat integration
+
+Branch `codex/chat-integration` adds administrator-issued, hashed, expiring and
+revocable integration tokens, scoped to one exact named Site. The API reads
+existing inventory/health, volumes, services, open alerts and patch reports;
+normal session/agent endpoints reject its credentials. Chat maps the exact Site
+to one Slide client and independently checks scope. No agent build is required.
+
+The current production backend matches main `9b33085` and the latest Downloads
+web baseline (`383ed5a0…`); no unpublished runtime work is being replaced. Local
+validation includes 120 backend, 28 web unit and six new Chromium/WebKit token
+lifecycle checks, TypeScript/Vite and Ruff. Production release and live cross-app
+acceptance are being coordinated with the Chat deployment owner. Exact private
+baseline/deployment evidence remains under `output/chat-integration/`.

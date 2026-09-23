@@ -1,4 +1,5 @@
 import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
+import { integrationSettings } from "./integrations";
 import { machinePresence } from "./presence";
 import Guacamole from "guacamole-common-js";
 import "../../brand/tokens.css";
@@ -1822,6 +1823,7 @@ async function renderSettings() {
       notify("Agent update policy saved");
     });
   }
+  if (role === "admin") await integrationSettings({ api, esc, date, on, value, notify, dialog });
   await ops.settingsPanel();
   await management.settingsPanel();
   if (role !== "admin") {

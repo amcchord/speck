@@ -79,6 +79,8 @@ def initialize():
         migrate_restores(conn)
         from speck.management_schema import migrate
         migrate(conn)
+        from speck.integrations import migrate as migrate_integrations
+        migrate_integrations(conn)
         from speck.passkeys import migrate as migrate_passkeys
         migrate_passkeys(conn)
         if not conn.execute('SELECT 1 FROM users LIMIT 1').fetchone():
