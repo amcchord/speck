@@ -1,4 +1,7 @@
-import { columns, defaultPreferences, type FleetPreferences, hasEndpoint, hasAgent, selectableMachine, machineState, agentLabel, kindLabel, cpu, memory, sortMachines } from "./fleet-model";
+import { columns, defaultPreferences, hasEndpoint, hasAgent, selectableMachine, machineState, agentLabel, kindLabel, cpu, memory, sortMachines } from "./fleet-model";
+import { editColumns } from "./fleet-columns";
+import { fleetToolbar, bindFleetPopovers, updateFilterChips } from "./fleet-toolbar";
+import { bindFleetHeaders, reorderedColumns } from "./fleet-headers";
 import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
 import { createInfrastructure } from "./infrastructure";
 import { integrationSettings } from "./integrations";
@@ -43,43 +46,46 @@ let fleetPlatform = "all",
 let fleetCache: Item[] | null = null;
 let fleetPrefs = defaultPreferences(), fleetPrefsLoaded = false, fleetCoverage = "all";
 let fleetSources: Item[] = [];
+let fleetInteractionsCleanup = () => {};
 let preferencesSave = Promise.resolve();
 function saveFleetPreferences() {
   const snapshot = structuredClone(fleetPrefs), owner = username, session = csrf;
   preferencesSave = preferencesSave.catch(() => {}).then(() => {
     if (username === owner && csrf === session) return api("/fleet/preferences", "PUT", snapshot);
   }).catch((error) => {
-    if (!(error instanceof StaleViewError) && username === owner && csrf === session) notify("Could not save column preferences. Try again.");
+    if (!(error instanceof StaleViewError) && username === owner && csrf === session) notify("Could not save Fleet preferences. Try again.");
   });
 }
 async function loadFleet(force = false) {
   const [result, prefs] = await Promise.all([api("/fleet" + (force ? "?refresh=true" : "")), fleetPrefsLoaded ? Promise.resolve(null) : api("/fleet/preferences")]);
-  if (prefs) { fleetPrefs = prefs; fleetPrefsLoaded = true; fleetSort = prefs.sort; showPreviews = prefs.visible.includes("preview"); }
+  if (prefs) { fleetPrefs = { ...defaultPreferences(), ...prefs }; fleetPrefsLoaded = true; fleetCoverage = fleetPrefs.agent_filter; fleetSort = prefs.sort; showPreviews = prefs.visible.includes("preview"); }
   fleetSources = result.connections;
   fleet = result.machines;
   fleetCache = fleet;
 }
 function activeColumns() { return fleetPrefs.order.filter(k => fleetPrefs.visible.includes(k) && (k !== "preview" || role !== "viewer")); }
 function fleetHeaders() {
-  return `<th><input id="select-page" type="checkbox" aria-label="Select machines on this page"></th>${activeColumns().map(k => `<th data-column="${k}" class="${k === "name" ? "machine-head" : ""}" style="width:${fleetPrefs.widths[k] || columns[k].width}px" aria-sort="${fleetPrefs.sort === k ? fleetPrefs.direction === "asc" ? "ascending" : "descending" : "none"}"><button data-sort-column="${k}">${columns[k].label}${fleetPrefs.sort === k ? fleetPrefs.direction === "asc" ? " ↑" : " ↓" : ""}</button></th>`).join("")}<th class="fleet-actions-head">Connect</th>`;
+  return `<th><input id="select-page" type="checkbox" aria-label="Select machines on this page"></th>${activeColumns().map(k => `<th scope="col" data-column="${k}" class="${k === "name" ? "machine-head" : ""}" style="width:${fleetPrefs.widths[k] || columns[k].width}px" aria-sort="${fleetPrefs.sort === k ? fleetPrefs.direction === "asc" ? "ascending" : "descending" : "none"}"><button data-sort-column="${k}" aria-describedby="fleet-header-help" title="Click to sort · Drag to reorder"><span class="header-label">${columns[k].label}</span><span class="header-sort">${icon(fleetPrefs.sort === k ? fleetPrefs.direction === "asc" ? "sortUp" : "sortDown" : "sort")}</span><span class="header-grip">${icon("grip")}</span></button></th>`).join("")}<th class="fleet-actions-head" scope="col">Connect</th>`;
 }
 function editFleetColumns() {
-  const draft: FleetPreferences = structuredClone(fleetPrefs);
-  const d = dialog("Customize columns", '<div id="column-options"></div><div class="drawer-actions"><button id="columns-reset" class="secondary">Reset defaults</button><button id="columns-save" class="primary">Save columns</button></div>');
-  d.classList.add("columns-dialog");
-  function draw() {
-    d.querySelector("#column-options")!.innerHTML = draft.order.map((key,i) => `<div class="column-option"><label><input type="checkbox" data-column-toggle="${key}" ${draft.visible.includes(key) ? "checked" : ""} ${key === "name" ? "disabled" : ""}>${columns[key].label}</label><label class="column-width">Width<input type="number" min="64" max="640" value="${draft.widths[key] || columns[key].width}" data-column-width="${key}" aria-label="${columns[key].label} width"></label><button class="secondary" data-column-up="${i}" ${!i ? "disabled" : ""} aria-label="Move ${columns[key].label} up">↑</button><button class="secondary" data-column-down="${i}" ${i === draft.order.length-1 ? "disabled" : ""} aria-label="Move ${columns[key].label} down">↓</button></div>`).join("");
-    d.querySelectorAll<HTMLInputElement>("[data-column-toggle]").forEach(el => el.onchange = () => { draft.visible = el.checked ? [...draft.visible, el.dataset.columnToggle!] : draft.visible.filter(k => k !== el.dataset.columnToggle); });
-    d.querySelectorAll<HTMLInputElement>("[data-column-width]").forEach(el => el.onchange = () => { draft.widths[el.dataset.columnWidth!] = Math.min(640, Math.max(64, Number(el.value) || 64)); el.value = String(draft.widths[el.dataset.columnWidth!]); });
-    for (const [attr,step] of [["columnUp",-1],["columnDown",1]] as const) d.querySelectorAll<HTMLButtonElement>(`[data-column-${step === -1 ? "up" : "down"}]`).forEach(el => el.onclick = () => { const i=Number(el.dataset[attr]); [draft.order[i],draft.order[i+step]]=[draft.order[i+step],draft.order[i]]; draw(); });
-  }
-  draw();
-  on("columns-reset", () => { Object.assign(draft,defaultPreferences()); draw(); });
-  on("columns-save", () => { fleetPrefs=draft; fleetSort=draft.sort; showPreviews=draft.visible.includes("preview"); saveFleetPreferences(); d.close(); drawFleet(); });
+  document.getElementById("fleet-view-panel")?.hidePopover();
+  editColumns(fleetPrefs, (title, html, options) => {
+    const d = dialog(title, html, options);
+    d.addEventListener("close", () => document.getElementById("fleet-view")?.focus({preventScroll:true}));
+    return d;
+  }, draft => {
+    fleetPrefs = draft;
+    fleetSort = draft.sort;
+    showPreviews = draft.visible.includes("preview");
+    saveFleetPreferences();
+    drawFleet();
+    document.getElementById("fleet-view")?.focus({ preventScroll: true });
+  });
 }
 let activeDevicePanel: HTMLDialogElement | null = null;
 let fleetScroll = { x: 0, y: 0, table: 0 };
 function clearFleetState() {
+  fleetInteractionsCleanup();
   activeDevicePanel?.close();
   activeDevicePanel?.remove();
   activeDevicePanel = null;
@@ -326,6 +332,7 @@ async function desktopSignIn() {
 }
 
 function shell(title: string, subtitle: string) {
+  fleetInteractionsCleanup();
   document.body.dataset.role = role;
   app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<span class="version">0.2</span></a><nav aria-label="Main navigation">${[
     ["fleet", "fleet", "Fleet"],
@@ -378,6 +385,7 @@ function shell(title: string, subtitle: string) {
 function content(html: string) {
   const el = document.getElementById("content");
   if (!el) return;
+  fleetInteractionsCleanup();
   el.innerHTML = html;
   el.setAttribute("aria-busy", "false");
 }
@@ -531,41 +539,82 @@ async function renderFleet() {
   }
 }
 function drawFleet() {
-  content(`<div class="fleet-toolbar"><div class="search-field">${icon("search")}<input id="fleet-search" aria-label="Search devices" placeholder="Search machines, clients, hosts or apps" value="${esc(fleetQuery)}"></div><select id="fleet-filter" aria-label="Filter status"><option value="all">All statuses</option><option value="online">Online</option><option value="review">Needs review</option><option value="offline">Offline</option></select><select id="fleet-os" aria-label="Filter operating system"><option value="all">All systems</option><option value="windows">Windows</option><option value="linux">Linux</option></select><select id="fleet-agent" aria-label="Filter Speck agent"><option value="all">All machines</option><option value="installed">With Speck agent</option><option value="missing">Without Speck agent</option><option value="conflicts">Identity needs review</option></select><select id="fleet-sort" aria-label="Sort machines">${Object.entries(columns).map(([k,c]) => `<option value="${k}">${c.label}</option>`).join("")}</select><button id="fleet-columns" class="secondary">Columns</button><label class="check"><input id="fleet-highlight" type="checkbox" ${fleetPrefs.highlight_agents ? "checked" : ""}> Highlight agents</label><label class="check preview-toggle"><input id="fleet-previews" type="checkbox" ${showPreviews ? "checked" : ""}> Previews</label></div>
+  const previousTable = document.querySelector<HTMLElement>(".fleet-table-wrap");
+  if (previousTable) fleetScroll = { x: scrollX, y: scrollY, table: previousTable.scrollLeft };
+  content(`${fleetToolbar(fleetPrefs, showPreviews, role === "viewer")}
+  <p id="fleet-header-help" class="fleet-sr-only">Click to sort. Drag to reorder columns, or focus a heading and press Alt plus Left or Right.</p><p id="fleet-column-status" class="fleet-sr-only" role="status" aria-live="polite"></p>
   <div id="fleet-source-status" role="status"></div><div id="bulk-actions" class="bulk-actions"></div><div class="fleet-table-wrap"><table class="fleet-table unified-fleet" style="min-width:${activeColumns().reduce((n,k) => n + (fleetPrefs.widths[k] || columns[k].width), 122)}px"><thead><tr>${fleetHeaders()}</tr></thead><tbody id="fleet-rows"></tbody></table></div><div class="fleet-pagination"><span id="fleet-count"></span><div><button id="fleet-prev" class="secondary">Previous</button><button id="fleet-next" class="secondary">Next</button></div></div>`);
-  (document.getElementById("fleet-filter") as HTMLSelectElement).value =
-    fleetFilter;
-  (document.getElementById("fleet-os") as HTMLSelectElement).value =
-    fleetPlatform;
-  (document.getElementById("fleet-sort") as HTMLSelectElement).value =
-    fleetSort;
+  (document.getElementById("fleet-search") as HTMLInputElement).value = fleetQuery;
+  (document.getElementById("fleet-filter") as HTMLSelectElement).value = fleetFilter;
+  (document.getElementById("fleet-os") as HTMLSelectElement).value = fleetPlatform;
+  (document.getElementById("fleet-sort") as HTMLSelectElement).value = fleetSort;
+  (document.getElementById("fleet-direction") as HTMLSelectElement).value = fleetPrefs.direction;
   (document.getElementById("fleet-agent") as HTMLSelectElement).value = fleetCoverage;
+  const filterValues = () => ({"fleet-filter":fleetFilter,"fleet-os":fleetPlatform,"fleet-agent":fleetCoverage});
+  const updateFilters = () => {
+    fleetFilter = value("fleet-filter"); fleetPlatform = value("fleet-os"); fleetCoverage = value("fleet-agent");
+    if (fleetPrefs.agent_filter !== fleetCoverage) {
+      fleetPrefs.agent_filter = fleetCoverage; saveFleetPreferences();
+    }
+    (document.getElementById("fleet-agent-only") as HTMLInputElement).checked = fleetCoverage === "installed";
+    fleetPage = 0;
+    updateFilterChips(filterValues(), id => { (document.getElementById(id) as HTMLSelectElement).value = "all"; updateFilters(); });
+    renderFleetRows();
+  };
+  updateFilterChips(filterValues(), id => { (document.getElementById(id) as HTMLSelectElement).value = "all"; updateFilters(); });
+  on("fleet-agent-only", () => {
+    (document.getElementById("fleet-agent") as HTMLSelectElement).value = (document.getElementById("fleet-agent-only") as HTMLInputElement).checked ? "installed" : "all";
+    updateFilters();
+  }, "change");
+  on("fleet-clear-filters", () => {
+    for (const id of Object.keys(filterValues())) if (id !== "fleet-agent" || fleetCoverage !== "installed") (document.getElementById(id) as HTMLSelectElement).value = "all";
+    updateFilters();
+  });
+  for (const id of Object.keys(filterValues())) on(id, updateFilters, "change");
+  on("fleet-search", () => { fleetQuery = value("fleet-search"); fleetPage = 0; renderFleetRows(); }, "input");
   on("fleet-columns", editFleetColumns);
   on("fleet-highlight", () => { fleetPrefs.highlight_agents = (document.getElementById("fleet-highlight") as HTMLInputElement).checked; saveFleetPreferences(); renderFleetRows(); }, "change");
-  document.querySelectorAll<HTMLButtonElement>("[data-sort-column]").forEach(el => el.onclick = () => { const key=el.dataset.sortColumn!; fleetPrefs.direction = fleetPrefs.sort === key && fleetPrefs.direction === "asc" ? "desc" : "asc"; fleetPrefs.sort=fleetSort=key; saveFleetPreferences(); drawFleet(); });
-  for (const id of ["fleet-search", "fleet-filter", "fleet-os", "fleet-sort", "fleet-agent"])
-    document
-      .getElementById(id)!
-      .addEventListener(id === "fleet-search" ? "input" : "change", () => {
-        fleetQuery = value("fleet-search");
-        fleetFilter = value("fleet-filter");
-        fleetPlatform = value("fleet-os");
-        fleetCoverage = value("fleet-agent");
-        if (id === "fleet-sort") { fleetSort = fleetPrefs.sort = value("fleet-sort"); fleetPrefs.direction = ["cpu","memory","seen","agent"].includes(fleetSort) ? "desc" : "asc"; saveFleetPreferences(); drawFleet(); }
-        fleetPage = 0;
-        renderFleetRows();
-      });
-  on(
-    "fleet-previews",
-    () => {
-      showPreviews = (
-        document.getElementById("fleet-previews") as HTMLInputElement
-      ).checked;
-      fleetPrefs.visible = showPreviews ? [...new Set([...fleetPrefs.visible,"preview"])] : fleetPrefs.visible.filter(k => k !== "preview");
-      saveFleetPreferences(); drawFleet();
-    },
-    "change",
-  );
+  const updateSort = () => {
+    document.querySelectorAll<HTMLElement>("th[data-column]").forEach(th => {
+      const sorted = th.dataset.column === fleetSort;
+      th.setAttribute("aria-sort", sorted ? fleetPrefs.direction === "asc" ? "ascending" : "descending" : "none");
+      th.querySelector(".header-sort")!.innerHTML = icon(sorted ? fleetPrefs.direction === "asc" ? "sortUp" : "sortDown" : "sort");
+    });
+    (document.getElementById("fleet-sort") as HTMLSelectElement).value = fleetSort;
+    (document.getElementById("fleet-direction") as HTMLSelectElement).value = fleetPrefs.direction;
+    fleetPage = 0; saveFleetPreferences(); renderFleetRows();
+  };
+  document.querySelectorAll<HTMLButtonElement>("[data-sort-column]").forEach(el => el.onclick = () => {
+    const key = el.dataset.sortColumn!;
+    fleetPrefs.direction = fleetPrefs.sort === key && fleetPrefs.direction === "asc" ? "desc" : "asc";
+    fleetPrefs.sort = fleetSort = key; updateSort();
+  });
+  on("fleet-sort", () => { fleetSort = fleetPrefs.sort = value("fleet-sort"); fleetPrefs.direction = ["cpu","memory","seen","agent"].includes(fleetSort) ? "desc" : "asc"; updateSort(); }, "change");
+  on("fleet-direction", () => { fleetPrefs.direction = value("fleet-direction"); updateSort(); }, "change");
+  on("fleet-previews", () => {
+    showPreviews = (document.getElementById("fleet-previews") as HTMLInputElement).checked;
+    fleetPrefs.visible = showPreviews ? [...new Set([...fleetPrefs.visible,"preview"])] : fleetPrefs.visible.filter(k => k !== "preview");
+    saveFleetPreferences(); drawFleet();
+    document.getElementById("fleet-view-panel")!.showPopover();
+    document.getElementById("fleet-previews")?.focus();
+  }, "change");
+  const popoverCleanup = bindFleetPopovers();
+  const headerCleanup = bindFleetHeaders(document.querySelector(".fleet-table-wrap")!, (key, index) => {
+    fleetPrefs.order = reorderedColumns(fleetPrefs.order, activeColumns(), key, index);
+    saveFleetPreferences();
+    // Move actual cells instead of rebuilding the toolbar or losing scroll/selection.
+    document.querySelectorAll(".unified-fleet tr").forEach(row => {
+      const anchor = row.querySelector(".fleet-actions-head, .connect-cell");
+      if (!anchor) return;
+      for (const column of activeColumns()) {
+        const cell = row.querySelector(`[data-column="${column}"]`);
+        if (cell) row.insertBefore(cell, anchor);
+      }
+    });
+    document.querySelector<HTMLButtonElement>(`[data-sort-column="${key}"]`)?.focus({preventScroll:true});
+    document.getElementById("fleet-column-status")!.textContent = `${columns[key].label} moved to position ${index + 1} of ${activeColumns().length}.`;
+  });
+  fleetInteractionsCleanup = () => { popoverCleanup(); headerCleanup(); };
   on("fleet-prev", () => {
     fleetPage--;
     renderFleetRows();
@@ -1903,7 +1952,7 @@ setInterval(async () => {
     page !== "fleet" ||
     remote ||
     document.querySelector("dialog:modal") ||
-    ["fleet-search", "fleet-filter", "fleet-os", "fleet-sort"].includes(
+    ["fleet-search", "fleet-filter", "fleet-os", "fleet-sort", "fleet-agent", "fleet-direction"].includes(
       document.activeElement?.id || "",
     )
   )

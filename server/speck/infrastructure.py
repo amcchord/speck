@@ -23,6 +23,7 @@ from speck.security import require_admin, require_user
 from speck.slide import Slide, safe_provider
 
 router = APIRouter(prefix="/api/infrastructure")
+SLIDE_SETTINGS_ID = "slide-settings"
 
 
 def public_data(value):
@@ -83,7 +84,29 @@ class Connection(BaseModel):
         return self
 
 
+def slide_settings_connection():
+    """Use the existing Slide account without copying or migrating its credential."""
+    with db() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key='slide'").fetchone()
+    if not row:
+        return None
+    return json.loads(unseal(row["value"])) | {
+        "id": SLIDE_SETTINGS_ID,
+        "name": "Slide (Settings)",
+        "provider": "slide",
+        "verify_tls": True,
+        "updated": None,
+        "connector": False,
+        "managed_in_settings": True,
+    }
+
+
 def get_connection(connection_id):
+    if connection_id == SLIDE_SETTINGS_ID:
+        cfg = slide_settings_connection()
+        if cfg:
+            return cfg
+        raise HTTPException(404, "Slide is no longer connected in Settings")
     with db() as conn:
         row = conn.execute("SELECT * FROM infrastructure_connections WHERE id=?", (connection_id,)).fetchone()
     if not row:
@@ -92,7 +115,9 @@ def get_connection(connection_id):
 
 
 def public_connection(row):
-    return {k: row[k] for k in ("id", "name", "provider", "url", "verify_tls", "updated", "connector")}
+    return {k: row[k] for k in ("id", "name", "provider", "url", "verify_tls", "updated", "connector")} | {
+        "managed_in_settings": row.get("managed_in_settings", False)
+    }
 
 
 async def provider_request(cfg, method, path, body=None, params=None):
@@ -262,7 +287,15 @@ def resources(cfg, rows):
 def connections(user=Depends(require_user)):
     with db() as conn:
         ids = [r["id"] for r in conn.execute("SELECT id FROM infrastructure_connections ORDER BY name")]
-    return [public_connection(get_connection(i)) for i in ids]
+    cfgs = [get_connection(i) for i in ids]
+    primary = slide_settings_connection()
+    # An identical credential is already represented. Origin alone is insufficient:
+    # different accounts on the same Slide API expose different clients and agents.
+    if primary and not any(
+        c["provider"] == "slide" and c["url"] == primary["url"] and c["token"] == primary["token"] for c in cfgs
+    ):
+        cfgs.insert(0, primary)
+    return [public_connection(c) for c in cfgs]
 
 
 async def save_connection(connection_id, body, user, old=None):
@@ -304,11 +337,15 @@ async def add_connection(body: Connection, user=Depends(require_admin)):
 
 @router.put("/connections/{connection_id}")
 async def update_connection(connection_id: str, body: Connection, user=Depends(require_admin)):
+    if connection_id == SLIDE_SETTINGS_ID:
+        raise HTTPException(409, "Manage this Slide connection in Settings")
     return await save_connection(connection_id, body, user, get_connection(connection_id))
 
 
 @router.delete("/connections/{connection_id}")
 async def remove_connection(connection_id: str, user=Depends(require_admin)):
+    if connection_id == SLIDE_SETTINGS_ID:
+        raise HTTPException(409, "Manage this Slide connection in Settings")
     with db(write=True) as conn:
         conn.execute("DELETE FROM infrastructure_connections WHERE id=?", (connection_id,))
         audit(conn, user["username"], "infrastructure.connection.removed", detail={"connection_id": connection_id})
@@ -524,7 +561,7 @@ def catalog(cfg, kind):
             ),
         }
     if kind == "protected":
-        return {"backup": operation("Back up machine")}
+        return {"backup": operation("Back up machine") | {"requires_confirmation": False}}
     return SLIDE_OPS if kind == "box" else {}
 
 
@@ -593,7 +630,7 @@ class Action(BaseModel):
     resource_id: str = Field(default="", max_length=128)
     operation: str = Field(max_length=64)
     args: dict = Field(default_factory=dict)
-    confirmation: str = Field(max_length=100)
+    confirmation: str = Field(default="", max_length=100)
 
 
 async def execute(cfg, row, body, args):
@@ -723,7 +760,7 @@ async def action(connection_id: str, body: Action, user=Depends(require_admin)):
         return {"id": previous["id"], "status": previous["status"], "result": json.loads(previous["result"])}
     row = None if body.kind == "connection" else await resolve(cfg, body.kind, body.resource_id)
     target = cfg["name"] if row is None else resources(cfg, [row])[0]["name"]
-    if body.confirmation != target:
+    if spec.get("requires_confirmation", True) and body.confirmation != target:
         raise HTTPException(422, "Type the exact target name to confirm this change")
     if cfg["provider"] == "austinland" and body.kind != "connection":
         raise HTTPException(422, "Invalid bridge target")

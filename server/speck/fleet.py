@@ -7,6 +7,7 @@ import json
 import re
 import time
 from collections import defaultdict
+from typing import Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, model_validator
@@ -52,6 +53,7 @@ class Preferences(BaseModel):
     sort: str = "name"
     direction: str = "asc"
     highlight_agents: bool = False
+    agent_filter: Literal["all", "installed", "missing", "conflicts"] = "all"
 
     @model_validator(mode="after")
     def validate_columns(self):

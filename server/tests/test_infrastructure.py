@@ -607,3 +607,13 @@ def test_direct_console_transport_closes_when_preview_ends_before_browser_connec
         await asyncio.wait_for(task, 1)
         assert closed.is_set() and not session.tcp.cancelled()
     asyncio.run(check())
+
+
+def test_only_protected_slide_backup_skips_target_confirmation(client, upstream):
+    cid = add(client)
+    assert action(client, cid, confirmation='').status_code == 422
+    assert action(client, cid, operation='backup', confirmation='').status_code == 422
+    for kind in ('box', 'virt'):
+        for spec in infra.catalog({'provider': 'slide'}, kind).values():
+            assert spec.get('requires_confirmation', True)
+    assert infra.catalog({'provider': 'slide'}, 'protected')['backup']['requires_confirmation'] is False
