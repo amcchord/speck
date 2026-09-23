@@ -205,7 +205,8 @@ def test_topology_is_opt_in_granted_connections_only_and_scoped_endpoint_identit
     result = reader.get("/api/integrations/v1/topology").json()
     assert calls == ["cluster-a"]
     assert result["connections"][0]["resources"][0]["endpoint"]["slide_agent_id"] == "agent-first"
-    assert "endpoint" not in result["connections"][0]["resources"][1]
+    assert len(result["connections"][0]["resources"]) == 1
+    assert result["visibility"] == "site_matched_guests_and_parent_hosts"
     assert "private" not in json.dumps(result)
     assert token["topology_connection_ids"] == ["cluster-a"]
     with db(write=True) as conn:
