@@ -9,6 +9,8 @@ import json
 import sys
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[1] / "server"))
 from speck.operations import STARTERS
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
+from preview_fixtures import provider_fixture
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -227,6 +229,9 @@ class Handler(BaseHTTPRequestHandler):
                     )
                 ],
             }
+            fixture = provider_fixture(route, parse_qs(url.query), NOW)
+            if fixture is not None:
+                return self.send(fixture)
             if route.endswith('/preview-status'):
                 return self.send({"enabled": False, "available": False})
             if route in resources:

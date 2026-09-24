@@ -82,9 +82,9 @@ test('background polling and navigation never trigger cleanup', async ({ page })
   const state = await setup(page);
   await page.clock.fastForward(16000);
   await expect.poll(() => state.calls.length).toBe(2);
-  await page.locator('[data-page="alerts"]').click();
+  await page.locator('[data-page="alerts"]:visible').click();
   await expect(page.locator('h1')).toHaveText('Alerts');
-  await page.locator('[data-page="fleet"]').click();
+  await page.locator('[data-page="fleet"]:visible').click();
   await expect(page.locator('#refresh')).toBeEnabled();
   await expect.poll(() => state.calls.length).toBe(3);
   expect(cleanupCalls).toBe(0);

@@ -9,6 +9,15 @@ async function signIn(page, transform = d => d, role = 'admin') {
   });
   await page.goto('/');
   await page.locator('[data-device="frontdesk"]').first().click();
+  await expect(page.locator('.machine-facts')).toBeAttached();
+  // Phones summarize identity on one line; Details expands the full facts.
+  const details = page.locator('#machine-more');
+  if (await details.isVisible()) {
+    await expect(page.locator('.machine-brief')).toBeVisible();
+    await expect(page.locator('.machine-facts')).toBeHidden();
+    await details.click();
+    await expect(details).toHaveText('Hide details');
+  }
   await expect(page.locator('.machine-facts')).toBeVisible();
 }
 async function frameFits(page) {
@@ -37,7 +46,9 @@ for (const width of [1440, 834, 760, 390, 320]) {
     expect(Math.abs(client.width - facts.width)).toBeLessThan(1);
     // Preserve the health/preview layout budget after the added client summary,
     // including its outer spacing (font metrics differ on Linux WebKit).
-    const addedSummaryHeight = (await page.locator('.machine-summary').boundingBox()).y - inventory.y;
+    const brief = page.locator('.machine-brief');
+    const identityTop = (await brief.isVisible()) ? (await brief.boundingBox()).y : inventory.y;
+    const addedSummaryHeight = (await page.locator('.machine-summary').boundingBox()).y - identityTop;
     expect(metrics.y - addedSummaryHeight).toBeLessThan(400);
     expect(storage.y + storage.height - addedSummaryHeight).toBeLessThan(650);
     if (width > 700) {

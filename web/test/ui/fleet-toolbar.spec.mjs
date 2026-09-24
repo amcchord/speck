@@ -145,7 +145,7 @@ test('visible Speck agents only switch persists across reloads and navigation',a
   await expect.poll(()=>state.getPrefs().agent_filter).toBe('installed');
   await page.reload();
   await expect(toggle).toBeChecked();await expect(page.locator('#fleet-rows tr')).toHaveCount(2);
-  await page.locator('[data-page="alerts"]').click();await page.locator('[data-page="fleet"]').click();
+  await page.locator('[data-page="alerts"]:visible').click();await page.locator('[data-page="fleet"]:visible').click();
   await expect(toggle).toBeChecked();await expect(page.locator('#fleet-rows tr')).toHaveCount(2);
   await page.getByRole('button',{name:'Filters',exact:true}).click();
   await page.getByLabel('Filter Speck agent').selectOption('missing');

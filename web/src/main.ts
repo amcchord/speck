@@ -28,6 +28,8 @@ import "./ui.css";
 import "./fleet.css";
 import "./machine.css";
 import { remoteTextKeys } from "./remote-input";
+import { startResponsive } from "./responsive";
+import "./responsive.css";
 
 const viewScope = createViewScope();
 
@@ -183,7 +185,12 @@ async function api(path: string, method = "GET", body?: any, signal?: AbortSigna
     );
   return value;
 }
+const STALE_VIEW = new StaleViewError().message;
+// Phones collapse machine identity to one line; the choice to expand it holds while panes refresh.
+let machineDetailsOpen = false;
 function notify(message: string, error = false) {
+  // A response for a page that is no longer shown is expected, not an error to report.
+  if (error && message === STALE_VIEW) return;
   const n = document.createElement("div");
   n.className = "toast" + (error ? " error" : "");
   n.textContent = message;
@@ -344,22 +351,34 @@ const NAV_GROUPS: [string, [string, string, string][]][] = [
 ];
 // Pages without live data have nothing to refresh.
 const STATIC_PAGES = ["assistant", "downloads", "settings", "account"];
+// Short labels for the tablet rail; phones show the first four primary pages in a tab bar.
+const RAIL_LABELS: Record<string, string> = { software: "Software", assistant: "AI", infrastructure: "Infra", network: "Network", recovery: "Recovery", api: "API" };
+const PRIMARY_PAGES = ["fleet", "alerts", "infrastructure", "keys"];
 function shell(title: string, subtitle: string) {
   fleetInteractionsCleanup();
   document.body.dataset.role = role;
-  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<span class="version">0.2</span></a><nav aria-label="Main navigation">${NAV_GROUPS.map(([group, items]) => {
-    const visible = items.filter(([id]) => role !== "viewer" || ["fleet", "alerts", "activity", "downloads", "settings"].includes(id));
-    if (!visible.length) return "";
-    return `<div class="nav-group">${group ? `<span class="nav-label">${group}</span>` : ""}${visible
-      .map(
-        ([id, symbol, label]) =>
-          `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol as Parameters<typeof icon>[0])}<span>${label}</span></button>`,
-      )
-      .join("")}</div>`;
-  }).join("")}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : '<div id="page-summary" class="fleet-summary page-summary" aria-label="Summary"></div>'}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions">${STATIC_PAGES.includes(page) ? "" : `<button id="refresh" class="secondary icon-button" aria-label="Refresh" title="Refresh">${icon("refresh")}</button>`}${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div></header><section id="content" tabindex="-1"></section></main>`;
+  const allowed = ([id]: [string, string, string]) => role !== "viewer" || ["fleet", "alerts", "activity", "downloads", "settings"].includes(id);
+  const navButton = ([id, symbol, label]: [string, string, string]) =>
+    `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol as Parameters<typeof icon>[0])}<span>${label}</span>${RAIL_LABELS[id] ? `<span class="rail-label" aria-hidden="true">${RAIL_LABELS[id]}</span>` : ""}</button>`;
+  const groups = NAV_GROUPS.map(([group, items]) => {
+    const visible = items.filter(allowed);
+    return visible.length ? `<div class="nav-group">${group ? `<span class="nav-label">${group}</span>` : ""}${visible.map(navButton).join("")}</div>` : "";
+  }).join("");
+  const everyPage = NAV_GROUPS.flatMap(([, items]) => items).filter(allowed);
+  const primary = [...everyPage.filter(([id]) => PRIMARY_PAGES.includes(id)), ...everyPage.filter(([id]) => !PRIMARY_PAGES.includes(id))].slice(0, 4);
+  const inMore = !primary.some(([id]) => id === page);
+  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<img class="brand-mark" src="/assets/brand/speck-mark-lime.svg" alt="" width="28" height="28"><span class="version">0.2</span></a><nav aria-label="Main navigation">${groups}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : '<div id="page-summary" class="fleet-summary page-summary" aria-label="Summary"></div>'}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><div class="page-actions">${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div>${STATIC_PAGES.includes(page) ? "" : `<button id="refresh" class="secondary icon-button" aria-label="Refresh" title="Refresh">${icon("refresh")}</button>`}</div></header><section id="content" tabindex="-1"></section></main><nav class="tabbar" aria-label="Primary navigation">${primary.map(navButton).join("")}<button id="more-open" class="${inMore ? "active" : ""}" aria-haspopup="dialog" ${inMore ? 'aria-current="page"' : ""}>${icon("more")}<span>More</span></button></nav><dialog class="more-sheet" id="more-sheet" aria-label="All pages" tabindex="-1"><div class="more-head"><span class="brand">${wordmark(true)}</span><button class="sheet-close" id="more-close" aria-label="Close">${icon("close")}</button></div><nav aria-label="All pages">${groups}</nav><div class="more-account"><span><b>${esc(username)}</b><small>${esc(role)}</small></span><button class="secondary" data-page="account">Account & access</button><button class="secondary" id="more-logout">${icon("logout")}<span>Sign out</span></button></div></dialog>`;
+  const sheet = document.getElementById("more-sheet") as HTMLDialogElement;
+  document.getElementById("more-open")!.onclick = () => {
+    sheet.showModal();
+    sheet.focus({ preventScroll: true });
+  };
+  document.getElementById("more-close")!.onclick = () => sheet.close();
+  sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.close(); });
   document.querySelectorAll<HTMLElement>("[data-page]").forEach(
     (el) =>
       (el.onclick = () => {
+        (document.getElementById("more-sheet") as HTMLDialogElement | null)?.close();
         location.hash = el.dataset.page!;
       }),
   );
@@ -367,15 +386,15 @@ function shell(title: string, subtitle: string) {
     e.preventDefault();
     document.getElementById("content")!.focus();
   };
-  const navigation = app.querySelector<HTMLElement>("aside > nav")!;
-  const active = navigation.querySelector<HTMLElement>(".active");
-  if (active && matchMedia("(max-width: 760px)").matches)
-    navigation.scrollLeft = active.offsetLeft - navigation.clientWidth / 2 + active.clientWidth / 2;
-  on("logout", async () => {
+  // Keep the current page visible in the sidebar or rail when it scrolls.
+  app.querySelector<HTMLElement>("aside > nav .active")?.scrollIntoView({ block: "nearest" });
+  const logout = async () => {
     await api("/auth/logout", "POST");
     history.replaceState(null, "", "#signin");
     login();
-  });
+  };
+  on("logout", logout);
+  on("more-logout", logout);
   on("refresh", () => render(true));
   if (page === "fleet") on("add", enrollmentDialog);
 }
@@ -386,10 +405,26 @@ function content(html: string) {
   el.innerHTML = html;
   el.setAttribute("aria-busy", "false");
   // Page-level primary actions live in the header, left of refresh, on every page.
-  const actions = document.querySelector<HTMLElement>(".workspace > header .header-actions");
+  const actions = document.querySelector<HTMLElement>(".workspace > header .page-actions");
   actions?.querySelectorAll("[data-page-action]").forEach((node) => node.remove());
   const lifted = [...el.querySelectorAll<HTMLElement>("[data-page-action]")];
   if (lifted.length) actions?.prepend(...lifted);
+  // Phones show primary page actions; secondary ones move behind one "More actions" button.
+  document.getElementById("page-more")?.remove();
+  const secondary = lifted.filter((node) => node.classList.contains("secondary"));
+  if (secondary.length && actions?.parentElement) {
+    const more = document.createElement("button");
+    more.id = "page-more";
+    more.className = "secondary icon-button page-more";
+    more.setAttribute("aria-label", "More actions");
+    more.title = "More actions";
+    more.innerHTML = icon("more");
+    more.onclick = () => {
+      const sheet = dialog("Actions", `<div class="action-list">${secondary.map((node, i) => `<button class="secondary" data-action-index="${i}">${esc(node.textContent?.trim() || "")}</button>`).join("")}</div>`);
+      sheet.querySelectorAll<HTMLButtonElement>("[data-action-index]").forEach((b) => (b.onclick = () => { sheet.close(); secondary[Number(b.dataset.actionIndex)].click(); }));
+    };
+    actions.parentElement.insertBefore(more, document.getElementById("refresh"));
+  }
 }
 function summary(html: string) {
   const el = document.getElementById("page-summary");
@@ -935,11 +970,25 @@ function machineInventorySummary(d: Item) {
 function bindProviderButtons(d: Item) {
   document.querySelectorAll<HTMLButtonElement>("[data-machine-resource]").forEach(el => el.onclick = () => infrastructure.resourceDetail(d.resources[Number(el.dataset.machineResource)]));
 }
+// Phones show one line of identity; "Details" expands the full inventory and facts.
+function machineBrief(facts: string[]) {
+  return `<div class="machine-brief"><span>${esc(facts.filter(Boolean).join(" · "))}</span><button class="text-link" id="machine-more" aria-expanded="${machineDetailsOpen}" aria-controls="detail">${machineDetailsOpen ? "Hide details" : "Details"}</button></div>`;
+}
+function bindMachineBrief() {
+  document.getElementById("detail")!.classList.toggle("show-details", machineDetailsOpen);
+  document.getElementById("machine-more")?.addEventListener("click", (e) => {
+    machineDetailsOpen = !machineDetailsOpen;
+    document.getElementById("detail")!.classList.toggle("show-details", machineDetailsOpen);
+    const button = e.currentTarget as HTMLButtonElement;
+    button.textContent = machineDetailsOpen ? "Hide details" : "Details";
+    button.setAttribute("aria-expanded", String(machineDetailsOpen));
+  });
+}
 function renderProviderMachine(d: Item) {
   const heading=activeDevicePanel?.querySelector(".dialog-head h2");
   if (heading) heading.innerHTML=`<span class="machine-title">${esc(d.label)}</span>${badge(machineState(d))}`;
   activeDevicePanel?.setAttribute("aria-label",`Machine details: ${d.label}`);
-  document.getElementById("detail")!.innerHTML = `${machineInventorySummary(d)}<div id="device-body"><div class="mini-grid machine-system"><div><small>Type</small>${esc(kindLabel(d))}</div><div><small>IP address</small>${esc(primaryAddress(d))}</div><div><small>CPU</small>${cpu(d) == null ? "Not reported" : Number(cpu(d)).toFixed(0)+"%"}</div><div><small>Memory</small>${memory(d) == null ? "Not reported" : Number(memory(d)).toFixed(0)+"%"}</div></div><p class="muted">Select a provider above for its management tools${d.resources?.some((r: Item) => ["qemu","virt"].includes(r.kind)) ? ", including the screen console" : ""}. A Speck endpoint agent adds commands, file transfer, patching and endpoint telemetry.</p></div>`;
+  document.getElementById("detail")!.innerHTML = `${machineBrief([d.client_name || "Unassigned", primaryAddress(d) === "—" ? "" : primaryAddress(d), kindLabel(d), d.location || d.site])}${machineInventorySummary(d)}<div id="device-body"><div class="mini-grid machine-system"><div><small>Type</small>${esc(kindLabel(d))}</div><div><small>IP address</small>${esc(primaryAddress(d))}</div><div><small>CPU</small>${cpu(d) == null ? "Not reported" : Number(cpu(d)).toFixed(0)+"%"}</div><div><small>Memory</small>${memory(d) == null ? "Not reported" : Number(memory(d)).toFixed(0)+"%"}</div></div><p class="muted">Select a provider above for its management tools${d.resources?.some((r: Item) => ["qemu","virt"].includes(r.kind)) ? ", including the screen console" : ""}. A Speck endpoint agent adds commands, file transfer, patching and endpoint telemetry.</p></div>`;
   const proxmox = d.resources?.find((r: Item) => r.provider === "proxmox" && ["qemu", "lxc"].includes(r.kind));
   document.getElementById("detail")!.classList.toggle("pve-provider-pane", !!proxmox);
   if (proxmox && role !== "viewer") {
@@ -948,6 +997,7 @@ function renderProviderMachine(d: Item) {
     infrastructure.machinePanel(proxmox, body.querySelector<HTMLElement>(".pve-root")!);
   }
   bindProviderButtons(d);
+  bindMachineBrief();
   void showReach(d);
 }
 let reachMap: { at: number; value: Promise<Item> } | null = null;
@@ -994,6 +1044,7 @@ async function renderDeviceContent() {
   if (heading) heading.innerHTML = `<span class="machine-title">${esc(d.label)}</span>${badge(status)}${d.archived ? badge("Archived") : !d.approved ? badge("Review") : ""}`;
   activeDevicePanel?.setAttribute("aria-label", `Machine details: ${d.label}`);
   document.getElementById("detail")!.innerHTML = `
+    ${machineBrief([d.client_name || "Unassigned", address !== "—" ? address : "", t.host?.platform || d.platform, typeof t.host?.uptime === "number" ? "up " + uptime(t.host.uptime) : ""])}
     ${machineInventorySummary(d)}
     <div class="machine-summary">
       <dl class="machine-facts">
@@ -1007,6 +1058,7 @@ async function renderDeviceContent() {
     ${d.archived ? '<div class="callout">Archived. Management is disabled; retained history and Slide identity remain available.</div>' : !d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}
     <div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body">${loadingState("Loading " + tab + "…")}</div>`;
   bindProviderButtons(d);
+  bindMachineBrief();
   void showReach(d);
   on("copy-machine-ip", async () => {
     await navigator.clipboard.writeText(address);
@@ -1182,6 +1234,10 @@ function dialog(title: string, html: string, options: { className?: string; moda
   document.body.append(d);
   if (options.modal === false) d.show();
   else d.showModal();
+  if (matchMedia("(pointer: coarse)").matches) {
+    d.tabIndex = -1;
+    d.focus({ preventScroll: true });
+  }
   d.querySelector(".close")!.addEventListener("click", () => d.close());
   d.addEventListener("close", () => d.remove());
   return d;
@@ -2025,6 +2081,7 @@ async function renderSettings() {
       document.getElementById(id)?.setAttribute("disabled", "");
   }
 }
+startResponsive();
 window.addEventListener("hashchange", () => {
   if (username) render();
   else signedOut();
