@@ -50,3 +50,10 @@
   .keys-secret { grid-template-columns: 1fr; gap: 6px; }
   .keys-editor-row { grid-template-columns: 1fr; }
 }
+.keys-group-row th { background: var(--paper); color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 650; padding: 8px 14px; }
+.keys-group-row th small { display: inline; margin-left: 6px; color: var(--muted); font-weight: 500; }
+.keys-more { display: inline !important; color: var(--muted); margin-left: 2px; }
+@media (max-width: 760px) {
+  table.net-cards tbody tr.keys-group-row { display: block; padding: 10px 2px 0; border: 0; background: transparent; }
+  table.net-cards tbody tr.keys-group-row th { display: block; padding: 0; background: transparent; }
+}

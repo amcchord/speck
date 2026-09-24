@@ -327,3 +327,5 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* Audit: a VM without a display gets one quiet line, not an empty screen frame. */
+.pve-no-screen { margin: 0 0 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fafbf7; color: var(--muted); font-size: 13px; }

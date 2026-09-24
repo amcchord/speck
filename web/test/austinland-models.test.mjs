@@ -65,3 +65,13 @@ test("API helpers build setup snippets and grouped endpoint lists", () => {
   assert.deepEqual(groups[0][1].map((o) => o.method + " " + o.path + " " + o.summary), ["GET /api/keys List Entries", "POST /api/keys x", "GET /api/keys/{name} Reveal"]);
   assert.deepEqual(endpointGroups(schema, "domains").map(([g]) => g), ["dns"]);
 });
+
+test("audit event codes read as plain language", async () => {
+  const { eventLabel } = await import("../src/activity-model.ts");
+  assert.equal(eventLabel("session.login"), "Signed in");
+  assert.equal(eventLabel("api_token.revoked"), "API token revoked");
+  assert.equal(eventLabel("dns.scan.started"), "DNS scan started");
+  assert.equal(eventLabel("infrastructure.submitted"), "Infrastructure submitted");
+  assert.equal(eventLabel("account.created"), "Account created");
+  assert.equal(eventLabel("vault.provider.saved"), "Vault provider saved");
+});

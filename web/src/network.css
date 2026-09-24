@@ -97,3 +97,6 @@ td.ip, .net-table td:first-child.mono { white-space: nowrap; }
 .net-form label.check { flex-direction: row; align-items: center; gap: 8px; margin: 0 0 8px; color: var(--ink); }
 .net-form label.check small { display: inline; margin: 0; }
 .keys-hints.vm-review dt { font-family: inherit; font-size: 12px; }
+.net-compact td { padding: 8px 14px; vertical-align: middle; }
+.net-compact .placeholder { color: #8a9a8d; }
+.net-more { margin: 12px 0 0; }

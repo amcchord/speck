@@ -53,8 +53,9 @@ export function createKeys(ui: Item) {
     const minted = entries.filter((e) => e.kind === "minted").length;
     const projects = new Set(entries.map((e) => e.project).filter(Boolean)).size;
     const configured = services.filter((s) => s.configured).length;
+    ui.summary?.(`<span><b>${entries.length}</b> vault entries</span><span><b>${projects}</b> projects</span><span><b>${minted}</b> revocable keys</span><span><b>${configured}/${services.length}</b> providers</span>`);
     content(
-      `<div class="net-intro"><p>Credentials for your projects, sealed with the server key. Every reveal is recorded in Activity.</p></div><div class="metric-strip net-summary"><div><b>${entries.length}</b><span>Vault entries · ${projects} projects</span></div><div><b>${minted}</b><span>Minted, revocable keys</span></div><div><b>${configured}/${services.length}</b><span>Providers configured</span></div><div><b>${sshKeys.length}</b><span>SSH keys · ${sshKeys.filter((k) => k.has_private).length} with private halves</span></div></div><div class="infra-tabs" role="tablist" aria-label="Key views">${tabs
+      `<div class="infra-tabs" role="tablist" aria-label="Key views">${tabs
         .map(
           ([id, label]) =>
             `<button role="tab" data-tab="${id}" id="keys-tab-${id}" aria-selected="${tab === id}" class="${tab === id ? "active" : ""}">${esc(label)}</button>`,
@@ -127,21 +128,20 @@ export function createKeys(ui: Item) {
       el.innerHTML = `<div class="empty"><h2>${entries.length ? "No matching entries" : "The vault is empty"}</h2><p>${entries.length ? "Change the search or filters." : "Provision a key for a project or store a credential."}</p></div>`;
       return;
     }
-    el.innerHTML = groupEntries(visible)
+    el.innerHTML = `<div class="infra-table-wrap"><table class="net-table net-compact keys-table"><thead><tr><th>Name</th><th>Service</th><th>Kind</th><th>Secrets</th><th>Updated</th><th>Last revealed</th></tr></thead><tbody>${groupEntries(visible)
       .map(
         ([group, items]) =>
-          `<section class="keys-group"><h3>${esc(group)} <small>${items.length}</small></h3><div class="infra-table-wrap"><table class="net-table keys-table"><thead><tr><th>Name</th><th>Service</th><th>Kind</th><th>Secrets</th><th>Updated</th><th>Last revealed</th></tr></thead><tbody>${items
+          `<tr class="keys-group-row"><th colspan="6">${esc(group)} <small>${items.length}</small></th></tr>${items
             .map(
               (e) =>
-                `<tr><td><button class="text-link net-name" data-entry="${esc(e.name)}">${esc(e.name)}</button>${e.origin === "austinland" ? "<small>Imported from AustinLand</small>" : ""}</td><td>${esc(e.service)}</td><td>${kindChip(e.kind)}</td><td>${(e.secret_names as string[])
-                  .slice(0, 4)
+                `<tr><td><button class="text-link net-name" data-entry="${esc(e.name)}">${esc(e.name)}</button></td><td>${esc(e.service)}</td><td>${kindChip(e.kind)}</td><td>${(e.secret_names as string[])
+                  .slice(0, 3)
                   .map((n) => `<span class="keys-var">${esc(n)}</span>`)
-                  .join("")}${e.secret_names.length > 4 ? `<small>+${e.secret_names.length - 4} more</small>` : ""}</td><td>${esc(relative(e.updated))}</td><td>${e.revealed ? esc(relative(e.revealed)) + `<small>${e.reveals} total</small>` : '<span class="muted">never</span>'}</td></tr>`,
+                  .join("")}${e.secret_names.length > 3 ? `<small class="keys-more">+${e.secret_names.length - 3}</small>` : ""}</td><td>${esc(relative(e.updated))}</td><td>${e.revealed ? esc(relative(e.revealed)) : '<span class="placeholder">never</span>'}</td></tr>`,
             )
-            .join("")}</tbody></table></div></section>`,
+            .join("")}`,
       )
-      .join("");
-    cardify(el);
+      .join("")}</tbody></table></div>`;
     el.querySelectorAll<HTMLButtonElement>("[data-entry]").forEach((b) =>
       b.addEventListener("click", () => openEntry(entries.find((e) => e.name === b.dataset.entry)!)),
     );
@@ -193,7 +193,7 @@ export function createKeys(ui: Item) {
       const el = panel.querySelector("#keys-pane");
       if (!el) return;
       const minted = entry.kind === "minted";
-      el.innerHTML = `<div class="net-facts"><div><span>Service</span><b>${esc(entry.service)}</b></div><div><span>Kind</span><b>${esc(minted ? "Minted" : entry.kind === "shared" ? "Shared" : "Stored")}</b></div><div><span>Project</span><b>${esc(entry.project || "—")}</b></div><div><span>Created</span><b>${esc(relative(entry.created))}</b></div><div><span>Reveals</span><b>${entry.reveals || 0}</b></div></div>${
+      el.innerHTML = `<div class="net-facts"><div><span>Service</span><b>${esc(entry.service)}</b></div><div><span>Kind</span><b>${esc(minted ? "Minted" : entry.kind === "shared" ? "Shared" : "Stored")}</b></div><div><span>Project</span><b>${esc(entry.project || "—")}</b></div><div><span>Created</span><b>${esc(relative(entry.created))}</b></div><div><span>Reveals</span><b>${entry.reveals || 0}</b></div><div><span>Origin</span><b>${entry.origin === "austinland" ? "AustinLand import" : "Speck"}</b></div></div>${
         entry.notes ? `<p class="keys-notes">${esc(entry.notes)}</p>` : ""
       }${minted ? `<p class="muted keys-meta">${Object.entries(entry.meta || {}).map(([k, v]) => `${esc(k.replaceAll("_", " "))}: <span class="mono">${esc(v)}</span>`).join(" · ")}</p>` : ""}<div class="net-pane-actions"><button class="primary" id="keys-reveal-all">${icon("eye")}<span>${revealed ? "Hide values" : "Reveal values"}</span></button><button class="secondary" id="keys-copy-env">${icon("copy")}<span>Copy as .env</span></button><button class="secondary" id="keys-edit">Edit</button><button class="secondary" id="keys-delete">Delete</button></div><div class="keys-secrets">${(entry.secret_names as string[])
         .map((name) => {

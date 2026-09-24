@@ -15,7 +15,8 @@ export function createApiAccess(ui: Item) {
   let tokens: Item[] = [],
     scopes: Item = {},
     schema: Item | null = null,
-    endpointQuery = "";
+    endpointQuery = "",
+    showInactive = false;
 
   async function copy(text: string, label = "Copied") {
     await navigator.clipboard.writeText(text);
@@ -47,20 +48,26 @@ export function createApiAccess(ui: Item) {
     const el = document.getElementById("api-tokens");
     if (!el) return;
     const active = tokens.filter((t) => t.active);
+    const inactive = tokens.length - active.length;
+    const shown = showInactive ? tokens : active;
     el.innerHTML = tokens.length
-      ? `<div class="infra-table-wrap"><table class="net-table"><thead><tr><th>Name</th><th>Scopes</th><th>Owner</th><th>Last used</th><th>Expires</th><th>Status</th><th></th></tr></thead><tbody>${tokens
+      ? `${shown.length ? `<div class="infra-table-wrap"><table class="net-table net-compact"><thead><tr><th>Name</th><th>Scopes</th><th>Owner</th><th>Last used</th><th>Expires</th><th>Status</th><th></th></tr></thead><tbody>${shown
           .map(
             (t, i) =>
               `<tr class="${t.active ? "" : "api-inactive"}"><td><b>${esc(t.name)}</b>${t.key_prefixes.length ? `<small>Vault limited to ${t.key_prefixes.map((p: string) => esc(p) + "*").join(", ")}</small>` : ""}</td><td>${t.scopes
                 .map((s: string) => chip(s, s.startsWith("keys") ? "warn" : s === "admin" ? "machine" : ""))
                 .join("")}</td><td>${esc(t.owner)}</td><td>${t.last_used ? esc(relative(t.last_used)) + `<small>${esc(t.last_ip || "")} · ${t.uses} requests</small>` : '<span class="muted">never</span>'}</td><td>${esc(relative(t.expires))}</td><td>${t.revoked ? chip("Revoked", "bad") : t.active ? chip("Active", "good") : chip("Expired", "warn")}</td><td class="net-row-actions">${t.active ? `<button class="secondary" data-revoke="${i}">Revoke</button>` : ""}</td></tr>`,
           )
-          .join("")}</tbody></table></div><p class="muted">${active.length} active. Token use appears in Activity as “owner (API: token name)”.</p>`
+          .join("")}</tbody></table></div>` : '<p class="muted">No active tokens.</p>'}<p class="muted api-token-note">${active.length} active. Token use appears in Activity as “owner (API: token name)”.${inactive ? ` <button class="text-link" id="api-toggle-inactive">${showInactive ? "Hide" : "Show"} ${inactive} revoked or expired</button>` : ""}</p>`
       : '<div class="empty"><h2>No API tokens yet</h2><p>Create one to connect Claude Code, scripts or CI.</p></div>';
+    el.querySelector("#api-toggle-inactive")?.addEventListener("click", () => {
+      showInactive = !showInactive;
+      drawTokens();
+    });
     cardify(el);
     el.querySelectorAll<HTMLButtonElement>("[data-revoke]").forEach((b) =>
       b.addEventListener("click", async () => {
-        const t = tokens[+b.dataset.revoke!];
+        const t = shown[+b.dataset.revoke!];
         const d = dialog(
           "Revoke " + t.name,
           `<form class="net-confirm"><p>Agents using this token lose access immediately. This cannot be undone.</p><div class="dialog-footer"><button type="button" class="secondary" id="api-revoke-cancel">Cancel</button><button class="primary" id="api-revoke-ok">Revoke token</button></div></form>`,

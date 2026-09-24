@@ -277,3 +277,5 @@ th[aria-sort="ascending"] .header-sort, th[aria-sort="descending"] .header-sort 
   .fleet-agent-only > .icon { display: block; }
   .fleet-agent-only > span:first-of-type { flex: 1; }
 }
+/* Audit: placeholders recede so real values stand out. */
+.fleet-table .placeholder, .agent-indicator:not(.installed) { color: #8a9a8d; }

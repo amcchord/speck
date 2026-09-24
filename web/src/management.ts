@@ -1,4 +1,5 @@
 import { available as passkeysAvailable, ceremony as passkeyCeremony } from "./passkeys";
+import { eventLabel } from "./activity-model";
 import { loadingState } from "./loading";
 import "./management.css";
 type Item = Record<string, any>;
@@ -234,7 +235,7 @@ export function createManagement(ui: Item) {
       api("/devices?include_archived=true"),
     ]);
     content(
-      `<div class="section-head"><p class="management-intro">Reviewed work, on a schedule.</p>${button("new-schedule", "New schedule", true)}</div>${
+      `<button id="new-schedule" class="primary" data-page-action>New schedule</button>${
         schedules.length
           ? `<div class="schedule-grid">${schedules
               .map(
@@ -429,7 +430,7 @@ export function createManagement(ui: Item) {
           result.items
             .map(
               (a: Item) =>
-                `<tr><td><details><summary>${esc(a.action)}</summary><pre>${esc(JSON.stringify(a.detail, null, 2))}</pre></details></td><td>${esc(a.actor)}</td><td>${esc(a.label || "—")}</td><td>${date(a.at)}</td></tr>`,
+                `<tr><td><details><summary title="${esc(a.action)}">${esc(eventLabel(a.action))}</summary><pre>${esc(JSON.stringify({ event: a.action, ...a.detail }, null, 2))}</pre></details></td><td>${esc(a.actor)}</td><td>${a.label ? esc(a.label) : '<span class="placeholder">—</span>'}</td><td>${date(a.at)}</td></tr>`,
             )
             .join(""),
         );
@@ -483,12 +484,15 @@ export function createManagement(ui: Item) {
     const keys: Item[] = await api("/access/passkeys");
     const users: Item[] = isAdmin() ? await api("/access/users") : [];
     content(
-      `<div class="settings-grid"><article class="panel"><span class="eyebrow">YOUR ACCOUNT</span><h2>${esc(me.username)}</h2><p>${esc(me.role)} · ${me.sessions} active session${me.sessions === 1 ? "" : "s"}</p><div class="management-button-stack">${button("account-password", "Change password")}${button("account-sessions", "Sign out other sessions")}</div><small>Remote sessions close when password or session access changes.</small></article><article class="panel"><span class="eyebrow">TWO-FACTOR SIGN-IN</span><h2>${me.mfa_enabled ? "Authenticator enabled" : "Add an authenticator"}</h2><p>${me.mfa_enabled ? me.recovery_codes_remaining + " unused recovery codes remain." : "Use an authenticator app to add a second step when you sign in."}</p>${button("account-mfa", me.mfa_enabled ? "Disable two-factor…" : "Set up authenticator", !me.mfa_enabled)}</article></div><article class="panel passkey-panel"><div class="section-head"><div><span class="eyebrow">PASSKEYS</span><h2>A simpler sign-in</h2></div>${button("passkey-add", "Add passkey", true)}</div><p>Use your fingerprint, face, device PIN, or security key. Your password and authenticator remain available as a fallback.</p>${keys.length ? `<ul class="passkey-list">${keys.map((key, i) => `<li><div><b>${esc(key.name)}</b><small>${key.last_used ? "Last used " + esc(new Date(key.last_used * 1000).toLocaleString()) : "Not used yet"}${key.backed_up ? " · Backed up by your provider" : ""}</small></div><div class="actions">${button("passkey-rename-" + i, "Rename")}${button("passkey-remove-" + i, "Remove")}</div></li>`).join("")}</ul>` : '<p class="muted">No passkeys yet. Add one on a device you trust.</p>'}</article>${isAdmin() ? `<div class="section-head"><h2>Operators</h2>${button("account-add", "Add account", true)}</div><div class="scroll"><table><thead><tr><th>Account</th><th>Role</th><th>Two-factor</th><th>Passkeys</th><th>Status</th><th></th></tr></thead><tbody>${users.map((u: Item, i: number) => `<tr><td><b>${esc(u.username)}</b>${u.username === me.username ? "<small>You</small>" : ""}</td><td>${esc(u.role)}</td><td>${u.mfa_enabled ? badge("Enabled", true) : badge("Not enabled")}</td><td>${u.passkey_count || 0}</td><td>${badge(u.disabled ? "Disabled" : "Active", !u.disabled)}</td><td>${button("account-edit-" + i, "Manage")}</td></tr>`).join("")}</tbody></table></div><p>Administrators manage accounts and provider credentials. Operators manage machines, recovery and automation. Viewers can read inventory, alerts and audit history.</p>` : ""}`,
+      `<div class="settings-grid"><article class="panel"><span class="eyebrow">YOUR ACCOUNT</span><h2>${esc(me.username)}</h2><p>${esc(me.role)} · ${me.sessions} active session${me.sessions === 1 ? "" : "s"}</p><div class="management-button-stack">${button("account-password", "Change password")}${button("account-sessions", "Sign out other sessions")}</div><small>Remote sessions close when password or session access changes.</small></article><article class="panel"><span class="eyebrow">TWO-FACTOR SIGN-IN</span><h2>${me.mfa_enabled ? "Authenticator enabled" : "Add an authenticator"}</h2><p>${me.mfa_enabled ? me.recovery_codes_remaining + " unused recovery codes remain." : "Use an authenticator app to add a second step when you sign in."}</p>${button("account-mfa", me.mfa_enabled ? "Disable two-factor…" : "Set up authenticator", !me.mfa_enabled)}</article></div><article class="panel passkey-panel"><div class="section-head"><div><span class="eyebrow">PASSKEYS</span><h2>A simpler sign-in</h2></div>${button("passkey-add", "Add passkey", true)}</div><p>Use your fingerprint, face, device PIN, or security key. Your password and authenticator remain available as a fallback.</p>${keys.length ? `<ul class="passkey-list">${keys.map((key, i) => `<li><div><b>${esc(key.name)}</b><small>${key.last_used ? "Last used " + esc(new Date(key.last_used * 1000).toLocaleString()) : "Not used yet"}${key.backed_up ? " · Backed up by your provider" : ""}</small></div><div class="actions">${button("passkey-rename-" + i, "Rename")}${button("passkey-remove-" + i, "Remove")}</div></li>`).join("")}</ul>` : '<p class="muted">No passkeys yet. Add one on a device you trust.</p>'}</article>${isAdmin() ? `<div class="section-head"><h2>Operators</h2>${button("account-add", "Add account", true)}</div><div class="scroll"><table class="operators-table" id="operators-table"><thead><tr><th>Account</th><th>Role</th><th>Two-factor</th><th>Passkeys</th><th>Status</th><th></th></tr></thead><tbody>${users.map((u: Item, i: number) => `<tr class="${u.disabled ? "account-disabled" : ""}"><td><b>${esc(u.username)}</b>${u.username === me.username ? "<small>You</small>" : ""}</td><td>${esc(u.role)}</td><td>${u.mfa_enabled ? badge("Enabled", true) : badge("Not enabled")}</td><td>${u.passkey_count || 0}</td><td>${badge(u.disabled ? "Disabled" : "Active", !u.disabled)}</td><td>${button("account-edit-" + i, "Manage")}</td></tr>`).join("")}</tbody></table></div>${users.some((u: Item) => u.disabled) ? `<label class="check account-toggle"><input id="account-show-disabled" type="checkbox"> Show ${users.filter((u: Item) => u.disabled).length} disabled account${users.filter((u: Item) => u.disabled).length === 1 ? "" : "s"}</label>` : ""}<p class="muted account-roles">Administrators manage accounts and provider credentials. Operators manage machines, recovery and automation. Viewers can read inventory, alerts and audit history.</p>` : ""}`,
     );
     const proof = () =>
       `<label>Current password<input type="password" id="account-current" autocomplete="current-password"></label>${me.mfa_enabled ? '<label>Authenticator or recovery code<input id="account-code" autocomplete="one-time-code" maxlength="40"></label>' : ""}`;
     const addKey = document.getElementById("passkey-add") as HTMLButtonElement;
     addKey.disabled = !passkeysAvailable();
+    document.getElementById("account-show-disabled")?.addEventListener("change", (e) =>
+      document.getElementById("operators-table")?.classList.toggle("show-disabled", (e.target as HTMLInputElement).checked),
+    );
     on("passkey-add", () => {
       const modal = dialog("Add a passkey", `<p>Confirm your account, then follow your device’s prompt.</p><label>Name<input id="passkey-name" maxlength="80" placeholder="e.g. Personal laptop" autocomplete="off"></label>${proof()}${button("passkey-create", "Create passkey", true)}`);
       const controller = new AbortController();

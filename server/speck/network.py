@@ -18,11 +18,16 @@ from speck.security import require_user
 router = APIRouter(prefix="/api/network")
 
 
+GLOBAL_UNICAST_V6 = ipaddress.ip_network("2000::/3")
+
+
 def public(address):
+    """Internet-routable: global IPv4, or IPv6 in the global unicast range (not odd reserved forms)."""
     try:
-        return ipaddress.ip_address(address).is_global
+        parsed = ipaddress.ip_address(address)
     except ValueError:
         return False
+    return parsed.is_global and (parsed.version == 4 or parsed in GLOBAL_UNICAST_V6)
 
 
 async def build_map(user):
