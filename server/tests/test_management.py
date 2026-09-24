@@ -297,7 +297,8 @@ def test_mfa_encrypted_secret_code_replay_and_single_use_recovery(client):
     secret = result.json()["secret"]
     otp = pyotp.TOTP(secret)
     assert client.post("/api/access/totp/confirm", json={"code": "not-code"}).status_code == 422
-    confirmed = client.post("/api/access/totp/confirm", json={"code": otp.now()})
+    used = otp.now()
+    confirmed = client.post("/api/access/totp/confirm", json={"code": used})
     assert confirmed.status_code == 200, confirmed.text
     codes = confirmed.json()["recovery_codes"]
     with db() as conn:
@@ -305,7 +306,8 @@ def test_mfa_encrypted_secret_code_replay_and_single_use_recovery(client):
         assert secret not in row["totp_secret"] and codes[0] not in row["recovery_codes"]
     login = {"username": "admin", "password": "test-only-admin-password"}
     assert client.post("/api/auth/login", json=login).status_code == 401
-    assert client.post("/api/auth/login", json=login | {"code": otp.now()}).status_code == 401
+    # Replay the exact confirmed code; a fresh otp.now() is valid once the 30-second window rolls over.
+    assert client.post("/api/auth/login", json=login | {"code": used}).status_code == 401
     result = client.post("/api/auth/login", json=login | {"code": codes[0]})
     assert result.status_code == 200
     assert client.post("/api/auth/login", json=login | {"code": codes[0]}).status_code == 401
