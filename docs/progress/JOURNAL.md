@@ -1048,3 +1048,52 @@ Next: merge `claude/ui-audit` to main. Optional follow-ups: preview fixtures for
 Infrastructure, Network, Keys and API so the synthetic gallery covers them, and tighter
 machine-pane header spacing.
 
+## 2026-09-24 — Phone and tablet audit and redesign
+
+User request: repeat the UI/UX audit for mobile and tablet sizes. Controls could be
+reimagined for smaller screens; commit and deploy. Branch `claude/ui-audit-mobile`
+(worktree `worktrees/ui-audit-mobile`) from main `09bcba3`.
+
+Audit: every page, tab, machine pane and primary dialog was captured in WebKit against
+production at three sizes: iPhone 15 (393 × 659), iPad Pro 11" portrait (834 × 1194) and
+landscape (1194 × 834). A disposable QA admin was used. Findings are in
+`docs/ui-ux-audit-mobile.md`:
+- Phones: the sidebar squeezed into a strip, a first screen of chrome, squeezed tables,
+  label-per-line cards, and a machine pane repeating about 1,000 px of identity.
+- Tablets: the sidebar took a quarter of the width, and header actions wrapped.
+- Four bugs: Patches Review rendered one letter per line; the sidebar clipped Settings and
+  Downloads at 834 px height; the touch Fleet checkbox truncated to "…"; and a stale-view
+  signal appeared as a red error toast.
+
+Changes (`f964117`, `724583f`, `b1cddc6`):
+- Navigation: a phone tab bar with a More sheet, and a tablet rail.
+- Header: one pattern at every size, with secondary actions behind "More actions" on phones.
+- Tables: list rows in any container under 720 px.
+- Filters fold behind one button, and dialogs become bottom sheets.
+- Machine pane: a one-line brief with Details on demand.
+- Tapping anywhere in a selection cell toggles its checkbox.
+- Infrastructure pages 100 resources at a time.
+- The four bugs are fixed, and cancelling New VM while it loads no longer reopens it.
+- Preview: synthetic provider fixtures, so Infrastructure, Network, Keys and API can be
+  reviewed locally.
+
+Phone page heights, before → after: Fleet 16,215 → 5,923 px; Domains 18,066 → 7,231 px;
+Infrastructure 16,959 → 9,480 px; LAN clients 17,918 → 8,011 px; Keys 6,953 → 4,144 px.
+
+Validation: local core gate before each release (latest: 204 backend tests, and 221 browser
+tests passed with 1 skipped), including the new `web/test/ui/responsive.spec.mjs`. Existing
+specs were updated where phone layouts deliberately moved controls. Production was
+recaptured at all three sizes after release (latest phone pass: 60 captures, no overflow, no
+script errors).
+
+Production: three releases, each after the baseline matched the previous commit, with a
+backup and automatic rollback: `20260924T031533Z-ui-mobile-f964117`,
+`20260924T032726Z-ui-mobile-724583f`, `20260924T033857Z-ui-mobile-b1cddc6` (current).
+Only application files changed. The QA admin `qa-ui-mobile` was disabled through the
+account API (0 sessions), and its local credentials file was deleted. No API tokens were
+created.
+
+Next: merge `claude/ui-audit-mobile` to main. Optional: add Chromium phone captures for
+Android sizing checks, and consider a phone-specific remote-control toolbar review with a
+live endpoint.
+

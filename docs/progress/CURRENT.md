@@ -1,16 +1,27 @@
-# UI/UX audit — live September 23, 2026
+# Phone and tablet redesign — live September 24, 2026
 
-Every page was audited at 1920 × 1080 against production ([record](../ui-ux-audit.md)), and
-the improvements are live. Navigation is grouped. Each page has one header with its summary,
-an icon refresh and its primary action. Tables flow with the page, dense views page 100
-rows at a time, placeholders are muted and event codes are readable.
+Every page was audited on iPhone- and iPad-sized screens against production
+([record](../ui-ux-audit-mobile.md)), and the redesign is live:
+- Phones get a bottom tab bar with a More sheet and a compact header, tables become two-line
+  list rows, filters fold behind one button, and dialogs rise as bottom sheets. The machine
+  pane shows one line of identity with Details on demand.
+- Tablets get an 84 px labelled rail.
+- Fixed: clipped navigation on short screens, truncated Fleet checkboxes, letter-by-letter
+  buttons, and a stray "no longer active" error toast.
 
-Source: `claude/ui-audit` (`233a434`), which includes main `b5473ca`. Live release
-`20260924T014550Z-ui-audit-233a434`; rollback: `/var/lib/speck-rollback/20260924T014550Z-ui-audit-233a434`.
-Validation: local core gate (207 passed, 1 skipped), plus production captures of every page
-without overflow or script errors. The QA admin `qa-ui-audit` is disabled.
+Source: `claude/ui-audit-mobile` (`b1cddc6`), which includes main `09bcba3`. Live release
+`20260924T033857Z-ui-mobile-b1cddc6`; rollback: `/var/lib/speck-rollback/20260924T033857Z-ui-mobile-b1cddc6`.
+Validation: local core gate (221 browser tests passed, 1 skipped), plus production captures at
+phone, tablet portrait and landscape without overflow or script errors. The QA admin
+`qa-ui-mobile` is disabled.
 
-Next safe action: merge `claude/ui-audit` to main; the next release must include it.
+Next safe action: merge `claude/ui-audit-mobile` to main; the next release must include it.
+
+---
+# UI/UX audit (desktop) — live September 23, 2026
+
+Every page was audited at 1920 × 1080 ([record](../ui-ux-audit.md)). Merged to main by PR #23
+(`09bcba3`).
 
 ---
 
