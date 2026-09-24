@@ -676,7 +676,7 @@ private evidence. Source is committed locally and has not been pushed.
 
 ## AustinLand integration — September 23, 2026 (live)
 
-`worktrees/austinland-integration`, branch `claude/austinland-integration` (pushed; no PR yet).
+`worktrees/austinland-integration`, branch `claude/austinland-integration` (merged to main by PR #22, `b5473ca`).
 Everything AustinLand managed is native in Speck: vault/key arbiter, provider credentials,
 GoDaddy DNS, UniFi public IPs via the Site Manager cloud connector, reachability map, SSH keys,
 handoffs, scoped API tokens, MCP server and agent documents, and VM launching via the existing
@@ -687,3 +687,15 @@ See [operations and acceptance](docs/operations/austinland-integration.md), the
 [synthetic gallery](docs/screenshots/austinland/README.md) and the journal. The Proxmox connector
 allowlist was not widened, so provisioning still needs the Mac bridge worker. Private release
 scripts, logs and live screenshots are in ignored `output/austinland-release/`.
+
+## UI/UX audit — September 23, 2026 (live)
+
+`worktrees/ui-audit`, branch `claude/ui-audit`. [Audit and implementation record](docs/ui-ux-audit.md):
+every page was reviewed at 1920 × 1080 with production data. The result: grouped navigation,
+one header pattern (summary, icon refresh, page actions), full-height tables, muted
+placeholders, readable events and receipts, compact dense views with paging, and inactive
+items behind toggles. Live release `20260924T014550Z-ui-audit-233a434`. Rollback trees are
+under `/var/lib/speck-rollback/<release>`. Private captures (before and after) and release
+scripts are in ignored `output/ui-audit/` and `output/ui-audit-release/`; the
+[synthetic gallery](docs/screenshots/ui-audit/README.md) is committed.
+

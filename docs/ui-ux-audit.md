@@ -95,8 +95,9 @@ clutter the operator list. *Fix:* consistent type; hide disabled accounts behind
 ## Implementation record
 
 Branch `claude/ui-audit` from main `b5473ca`. Commits `45ce99b` (audit and main changes),
-`159bc6f` (after-release review) and a final polish/record commit. Releases
-`20260924T012410Z-ui-audit-45ce99b` and `20260924T013738Z-ui-audit-159bc6f`, each after
+`159bc6f` (after-release review) and `233a434` (final polish and gallery). Releases
+`20260924T012410Z-ui-audit-45ce99b`, `…013738Z-ui-audit-159bc6f` and
+`…014550Z-ui-audit-233a434` (current), each after
 confirming production matched the previous verified commit, with a backup under
 `/var/lib/speck-rollback/<release>` and automatic rollback on a failed health check.
 

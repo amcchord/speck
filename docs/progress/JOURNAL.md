@@ -1009,3 +1009,42 @@ the Mac. DNS/NAT/key/VM writes were not exercised against live providers.
 
 Next: decide whether to widen the connector allowlist for native provisioning; exercise
 DNS, public IP mapping and VM creation on disposable resources; open a PR to main when ready.
+
+## 2026-09-23 — Full UI/UX audit and simplification
+
+User request: audit every page at a common desktop resolution, document what needs
+improving toward a powerful, simple, clean application, make the improvements, commit and
+deploy. Branch `claude/ui-audit` (worktree `worktrees/ui-audit`) from main `b5473ca`.
+
+Audit: every page, tab, machine pane and primary dialog was captured in Chromium at 1920 × 1080
+against production with a disposable QA admin. Findings are in `docs/ui-ux-audit.md`:
+eight cross-cutting findings (ungrouped navigation, redundant Refresh buttons, inconsistent
+summaries and primary actions, clipping inner scrollers, loud placeholders, very long pages,
+raw codes) and findings for each page.
+
+Changes (`45ce99b`, `159bc6f`, `233a434`):
+- Navigation is grouped (Automation, Infrastructure, Administration). There is one icon-only
+  refresh, and none on static pages. Header summaries and page actions follow one pattern.
+- Tables flow with the page. Placeholders are muted. Event codes and Proxmox receipts are
+  readable. Infrastructure, Domains and Keys rows are compact, and Domains and LAN clients
+  page 100 rows at a time.
+- Job history shows only jobs. Inactive API and Slide Chat tokens and disabled accounts
+  are behind toggles. Settings packs its cards into columns.
+- The network map classifies only unique-local IPv6 as LAN and only global unicast as public.
+
+Validation: local core gate before each release (latest: 207 passed, 1 skipped); 26
+AustinLand backend tests, including address classes; 56 production captures after the
+releases (latest run: no overflow, no script errors). Synthetic gallery:
+`docs/screenshots/ui-audit/`.
+
+Production: three releases, each after the baseline matched the previous commit, with
+a backup and automatic rollback: `20260924T012410Z-ui-audit-45ce99b`,
+`20260924T013738Z-ui-audit-159bc6f`, `20260924T014550Z-ui-audit-233a434` (current). Only
+application files changed. Accounts, settings, integrations and environment were preserved.
+The QA admin `qa-ui-audit` was disabled through the account API afterwards (0 sessions),
+and its local credentials file was deleted. No API tokens were created.
+
+Next: merge `claude/ui-audit` to main. Optional follow-ups: preview fixtures for
+Infrastructure, Network, Keys and API so the synthetic gallery covers them, and tighter
+machine-pane header spacing.
+
