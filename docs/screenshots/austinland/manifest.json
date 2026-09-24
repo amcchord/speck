@@ -1,0 +1,97 @@
+{
+  "captured": "2026-09-23",
+  "data": "synthetic",
+  "images": [
+    {
+      "file": "api-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "d5992c746b15b87f78f02905dfcc81af7c794a1bd38ece3239881cd7826992e3",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "api-phone.png",
+      "width": 390,
+      "height": 2313,
+      "sha256": "72b586472989bc562485869ed55ad3494e1fd6813fe7219e7e2153c341ad3841",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "domain-pane-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "3b72995f68c089bab7ed01914c3bc1f3d729edc3495831a4068c3904f9ed539c",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "domains-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "72dc0e539e088b12016119f32dd2e05acb5b838240158e0b380fd2546aeca7ed",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "domains-phone.png",
+      "width": 390,
+      "height": 1022,
+      "sha256": "96bc4dad5fd075a7c05845191b8396054a0d9fc7a0b820950d30d3e3e8e7d656",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "providers-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "abf9976c67d31564293cbcf0533b4f1389416d8c47da213f4f492fe32ba49067",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "provision-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "a60bfee067272cfa2fb5bdbabffe76b5b342157f3d7078117209af6571fa5545",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "public-ips-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "5a0bd5a7514a860668b34e5064e80401997f4ab02383a22bac62cf5e1c80e3a6",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "reachability-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "4715d79eeb0cf1f03df0135220e216d143ec9259a47b05039766c86c7bd33d86",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "token-created-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "b262c4af9b58e0c395e3b49d9165882c69963ece9a91bcf26b2bf71de03f6ab7",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "vault-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "ec3da3e5f2081c690b5a73c44f9b69beb3d4b71ee85adc05070296d8c41506dd",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "vault-entry-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "sha256": "7b5d4564c0739d1a03cd28f51048b37ed702fc3aab7205ece87aee7fe0203882",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    },
+    {
+      "file": "vault-entry-phone.png",
+      "width": 390,
+      "height": 960,
+      "sha256": "5833ebef8ef7a38592fb7da8f8562dbddf91143b789f947d8f46e8f996b4c923",
+      "source": "web/test/ui/austinland.spec.mjs (WebKit, synthetic fixtures)"
+    }
+  ]
+}

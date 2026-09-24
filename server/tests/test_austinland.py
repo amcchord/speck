@@ -583,3 +583,13 @@ def test_token_mode_proxmox_inventory_reads_guest_identity(monkeypatch):
     assert rows[1]["speck_identity"] == {"macs": ["BC:24:11:AA:BB:CC", "bc:24:11:00:00:02"], "uuid": "12345678-1234-1234-1234-123456789abc", "guest_agent": True}
     asyncio.run(infra.raw_inventory(cfg))
     assert calls.count("/nodes/pve/qemu/101/config") == 1
+
+
+def test_host_command_issues_audited_tokens(client):
+    token_id, value = api_tokens.issue("admin", "migration", ["admin", "keys:write"], days=1)
+    assert bearer(value).get("/api/whoami").json()["token"] == "migration"
+    assert audit_rows("api_token.created")[-1]["actor"] == "host:admin"
+    with pytest.raises(SystemExit):
+        api_tokens.issue("nobody", "x", ["read"])
+    with pytest.raises(Exception):
+        api_tokens.issue("admin", "x", ["root"])

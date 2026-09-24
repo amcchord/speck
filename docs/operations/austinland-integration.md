@@ -1,0 +1,128 @@
+# AustinLand in Speck
+
+Speck now does what the localhost AustinLand panel did, from anywhere, behind
+Speck's own sign-in, roles and audit history. Sign in as an administrator
+(for example `austin`) to see and manage all of it.
+
+| AustinLand | Speck | API |
+| --- | --- | --- |
+| Key vault and arbiter | **Keys → Vault** | `/api/keys` |
+| `.env` provider credentials | **Keys → Providers** | `/api/keys/services` |
+| SSH keys | **Keys → SSH keys** | `/api/ssh` |
+| LLMContextAccess files | **Keys → Handoffs** | `/api/context` |
+| GoDaddy DNS | **Network & DNS → Domains** | `/api/dns` |
+| UniFi public IPs and NAT | **Network & DNS → Public IPs** | `/api/unifi` |
+| LAN clients, UniFi consoles | **Network & DNS** tabs | `/api/unifi/clients`, `/api/unifi/consoles` |
+| Linode and Proxmox VMs | **Fleet**, **Infrastructure** (already native) | `/api/fleet`, `/api/infrastructure` |
+| `agents.md`, `austinland.md` | `/agents.md`, `/speck.md`, `/llms.txt`, **API & agents** | `/api/openapi.json`, `/mcp` |
+
+The endpoint shapes for keys, DNS, public IPs and SSH keys deliberately match
+AustinLand's, so an agent that knew AustinLand only needs Speck's URL and a token.
+Speck adds unified search, a reachability map and an MCP server.
+
+## How each provider is reached
+
+- **GoDaddy**: direct HTTPS from the Speck server. Every call passes one token
+  bucket at 55 requests per minute (GoDaddy allows about 60). Domains and zones
+  are cached durably; `POST /api/dns/scan` refreshes stale zones in the background.
+  Writes return the refreshed zone.
+- **UniFi**: Site Manager's cloud connector
+  (`api.ui.com/v1/connector/consoles/{id}/proxy/network/...`) reaches the gateway's
+  local Network application, including the session and v2 NAT APIs. No LAN route,
+  VPN or port forward to the control plane is needed. `UNIFI_GATEWAY` (a LAN IP or
+  console ID) selects the managed gateway. Mapping an IP creates the same two rules
+  AustinLand did — an all-ports forward (except 500/4500) and a v2 SNAT rule — named
+  `Speck: <name>`. Only `free` addresses can be mapped; rules Speck did not create,
+  including Lucea World's, are shown as `in_use` and never modified.
+- **OpenAI / Twilio**: provisioning mints a project-scoped key (OpenAI project +
+  service account, Twilio API key) and deleting the entry revokes it upstream.
+  **Anthropic / App Store Connect** keys are shared and each recipient project is recorded.
+- **Linode**: SSH-key registration uses the existing Infrastructure Linode connection.
+
+**Check** on a provider card makes one read-only request (list projects, models,
+consoles, apps or domains) and never mints or changes anything.
+
+## Reachability
+
+`GET /api/network/map` joins evidence Speck already holds, never names:
+endpoint-agent and provider addresses; Proxmox guest NIC MACs matched exactly to
+UniFi client MACs (giving LAN IPs for VMs without a guest agent); public IP
+mappings; and cached DNS records. The Public IPs, Domains and Reachability views
+use it to show which machine each address and hostname reaches.
+
+API-token Proxmox connections now read each guest's config (cached for ten
+minutes) for the same UUID/MAC/guest-agent identity the host connector reports.
+
+## Security model
+
+- Vault entries, provider credentials, SSH private keys and handoff files are sealed
+  with `SPECK_ENCRYPTION_KEY` (Fernet). Provider credentials are write-only: Speck
+  shows masked hints (first and last four characters) and never returns them.
+- The vault, handoffs and SSH private keys are for administrators. Every reveal,
+  `.env` export, handoff read and private-key read is audited by name, never value.
+  The console holds revealed values for 90 seconds and clears them on close.
+- **API tokens** (`speck_pat_…`, shown once, stored as SHA-256) act as their creator
+  and never exceed the creator's current role. `read` allows GET requests, `operate`
+  caps at operator, `admin` allows administrator writes; `keys:read` / `keys:write`
+  gate the vault independently and can be limited to entry-name prefixes. Tokens
+  cannot sign in, manage accounts, passkeys or tokens, or open interactive remote or
+  console sessions. They skip cookie CSRF checks because browsers never send them
+  ambiently. 600 requests per minute per token. Activity shows token use as
+  `owner (API: token name)`.
+- **MCP** (`POST /mcp`, streamable HTTP, stateless JSON) re-dispatches each tool call
+  to the matching REST endpoint in-process with the caller's own token, so it cannot
+  widen scopes, roles, rate limits or audit attribution. Requests with a foreign
+  `Origin` are rejected.
+
+Moving the vault from a localhost-only Mac to an Internet-facing server widens who
+could reach it if an administrator session or `keys:*` token leaked. Keep admin
+accounts on passkeys or authenticator codes, issue narrow tokens with prefixes and
+short expiry, and revoke tokens you no longer use.
+
+## Migration from AustinLand
+
+`scripts/import_austinland.py` reads (never modifies) the AustinLand checkout and
+`~/.ssh/*.pub`, then imports through the API with an administrator token holding
+`admin`, `keys:read` and `keys:write`:
+
+```sh
+uv run python scripts/import_austinland.py --dry-run          # counts only, no values
+SPECK_URL=https://speckrmm.com SPECK_TOKEN=speck_pat_… \
+  uv run python scripts/import_austinland.py
+```
+
+It copies provider credentials, vault entries (keeping minted-key metadata so
+revocation still works), AustinLand's remaining LAN credentials as one static entry,
+the GoDaddy domain/zone cache, the ten AustinLand public IP mappings, handoff files
+and SSH public keys. Existing Speck entries are never overwritten; re-running is safe.
+
+Deliberately **not** imported:
+
+- `speck-rmm` and `speck-agent-release-signing`: Speck's own deployment secrets and
+  the endpoint-update signing key must not live inside the system they protect.
+  They stay in AustinLand (use `--include-speck-secrets` only if you accept that).
+- Private halves of `~/.ssh` keys: only public keys are imported. Handoff files still
+  carry their own dedicated keys.
+- AustinLand's `secrets/` directory.
+
+AustinLand keeps running unchanged, so existing repositories that call
+`localhost:8472` still work while they move to Speck.
+
+A token for the import can be created on the server host without a browser:
+
+```sh
+cd / && (set -a; . /etc/speck/server.env; PYTHONPATH=/opt/speck/server
+  runuser -p -u speck -- /opt/speck/.venv/bin/python -m speck.api_tokens --username austin \
+    --name "AustinLand import" --scopes read,admin,keys:read,keys:write --days 1)
+```
+
+It prints the token once and records `host:austin` in Activity. Revoke it afterwards
+with `--revoke <id>` or from **API & agents**.
+
+## Not yet native
+
+- Proxmox template provisioning (Debian 13 / Windows 11 with cloud-init, disk resize
+  and Windows first-boot setup) still uses the AustinLand bridge operation
+  `proxmox-create`; the host connector's allowlist does not yet include the
+  cloud-init, resize and task-status calls it needs.
+- Generating new handoff files. Imported handoffs can be read, copied and deleted.

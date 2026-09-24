@@ -249,3 +249,45 @@ def whoami(user):
             "expires": user["expires"],
         }
     return item
+
+
+def issue(username, name, scopes, days=1, key_prefixes=()):
+    """Create a token for an existing account from the server host (break-glass automation)."""
+    body = NewToken(name=name, scopes=scopes, expires_days=days, key_prefixes=list(key_prefixes))
+    with db(write=True) as conn:
+        user = conn.execute("SELECT * FROM users WHERE username=? AND disabled=0", (username,)).fetchone()
+        if not user:
+            raise SystemExit("No enabled account named " + username)
+        if {"admin", "keys:read", "keys:write"} & set(body.scopes) and user["role"] != "admin":
+            raise SystemExit("Only administrators can hold admin or vault scopes")
+        token = PREFIX + secrets.token_urlsafe(32)
+        token_id, now = ident(), time.time()
+        conn.execute(
+            "INSERT INTO api_tokens(id,token_hash,name,owner_id,scopes,key_prefixes,created,expires) VALUES(?,?,?,?,?,?,?,?)",
+            (token_id, digest(token), body.name, user["id"], json.dumps(body.scopes), json.dumps(body.key_prefixes),
+             now, now + body.expires_days * 86400),
+        )
+        audit(conn, "host:" + username, "api_token.created",
+              detail={"id": token_id, "name": body.name, "scopes": body.scopes, "via": "host command"})
+    return token_id, token
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Create a Speck API token from the server host. Prints the token once.")
+    parser.add_argument("--username", required=True)
+    parser.add_argument("--name", required=True)
+    parser.add_argument("--scopes", required=True, help="Comma-separated: " + ", ".join(SCOPES))
+    parser.add_argument("--days", type=int, default=1)
+    parser.add_argument("--key-prefix", action="append", default=[])
+    parser.add_argument("--revoke", metavar="TOKEN_ID", help="Revoke a token instead of creating one")
+    options = parser.parse_args()
+    if options.revoke:
+        with db(write=True) as conn:
+            conn.execute("UPDATE api_tokens SET revoked=coalesce(revoked,?) WHERE id=?", (time.time(), options.revoke))
+            audit(conn, "host:" + options.username, "api_token.revoked", detail={"id": options.revoke, "via": "host command"})
+        print(json.dumps({"revoked": options.revoke}))
+    else:
+        created_id, created = issue(options.username, options.name, options.scopes.split(","), options.days, options.key_prefix)
+        print(json.dumps({"id": created_id, "token": created}))
