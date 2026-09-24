@@ -43,7 +43,7 @@
 .keys-check { min-height: 20px; font-size: 12px !important; }
 .keys-check small { color: var(--muted); }
 .keys-provider .infra-actions { margin-top: auto; justify-content: flex-start; }
-.keys-markdown { margin: 0; padding: 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.keys-markdown { margin: 0; padding: 14px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 10px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 760px) {
   .keys-actions { margin-left: 0; width: 100%; }
   .keys-actions > * { flex: 1; }

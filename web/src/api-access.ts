@@ -4,6 +4,7 @@ import "./api-access.css";
 import { icon } from "./icons";
 import { relative } from "./network-model";
 import { endpointGroups, snippets } from "./api-model";
+import { cardify } from "./table-cards";
 
 type Item = Record<string, any>;
 
@@ -56,6 +57,7 @@ export function createApiAccess(ui: Item) {
           )
           .join("")}</tbody></table></div><p class="muted">${active.length} active. Token use appears in Activity as “owner (API: token name)”.</p>`
       : '<div class="empty"><h2>No API tokens yet</h2><p>Create one to connect Claude Code, scripts or CI.</p></div>';
+    cardify(el);
     el.querySelectorAll<HTMLButtonElement>("[data-revoke]").forEach((b) =>
       b.addEventListener("click", async () => {
         const t = tokens[+b.dataset.revoke!];

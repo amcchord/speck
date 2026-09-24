@@ -593,3 +593,11 @@ def test_host_command_issues_audited_tokens(client):
         api_tokens.issue("nobody", "x", ["read"])
     with pytest.raises(Exception):
         api_tokens.issue("admin", "x", ["root"])
+    created = api_tokens.main(["--username", "admin", "--name", "cli", "--scopes", "read"])
+    assert bearer(created["token"]).get("/api/whoami").status_code == 200
+    assert api_tokens.main(["--username", "admin", "--revoke", created["id"]]) == {"revoked": created["id"]}
+    assert bearer(created["token"]).get("/api/whoami").status_code == 401
+    with pytest.raises(SystemExit):
+        api_tokens.main(["--username", "admin", "--revoke", "missing"])
+    with pytest.raises(SystemExit):
+        api_tokens.main(["--username", "admin", "--name", "no-scopes"])

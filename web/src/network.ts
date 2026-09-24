@@ -1,6 +1,7 @@
 import "./network.css";
 import { icon } from "./icons";
 import { expiresWithin, fqdn, parseRecordValues, relative } from "./network-model";
+import { cardify } from "./table-cards";
 
 type Item = Record<string, any>;
 export function createNetwork(ui: Item) {
@@ -187,6 +188,7 @@ export function createNetwork(ui: Item) {
     el.querySelectorAll<HTMLButtonElement>("[data-domain]").forEach((b) =>
       b.addEventListener("click", () => openDomain(rows[+b.dataset.domain!])),
     );
+    cardify(el);
   }
 
   async function recordHits() {
@@ -207,6 +209,7 @@ export function createNetwork(ui: Item) {
           )
           .join("")}</tbody></table></div>${result.truncated ? '<p class="muted">More records match; refine the search.</p>' : ""}`
       : "";
+    cardify(el);
     el.querySelectorAll<HTMLButtonElement>("[data-hit]").forEach((b) =>
       b.addEventListener("click", () => {
         const d = domains.find((x) => x.domain === b.dataset.hit);
@@ -302,6 +305,7 @@ export function createNetwork(ui: Item) {
           }</tr>`,
       )
       .join("")}</tbody></table></div>`;
+    cardify(panel);
     panel.querySelector("#net-refresh-zone")?.addEventListener("click", () => openDomain(d, true));
     panel.querySelector("#net-point")?.addEventListener("click", () => pointDialog(d));
     panel.querySelector("#net-add-record")?.addEventListener("click", () => recordDialog(d));
@@ -451,6 +455,7 @@ export function createNetwork(ui: Item) {
         }</tr>`;
       })
       .join("")}</tbody></table></div>`;
+    cardify(body);
     body.querySelectorAll<HTMLButtonElement>("[data-map]").forEach((b) => b.addEventListener("click", () => mapDialog(pool.pool[+b.dataset.map!])));
     body.querySelectorAll<HTMLButtonElement>("[data-unmap]").forEach((b) => b.addEventListener("click", () => unmap(pool.pool[+b.dataset.unmap!])));
   }
@@ -552,6 +557,7 @@ export function createNetwork(ui: Item) {
             )
             .join("")}</tbody></table></div>`
         : '<div class="empty"><h2>No matching machines</h2><p>Change the search or filter.</p></div>';
+      cardify(document.getElementById("net-reach-rows"));
     };
     body.querySelector<HTMLInputElement>("#net-reach-q")!.addEventListener("input", (e) => {
       reachQuery = (e.target as HTMLInputElement).value.trim();
@@ -588,6 +594,7 @@ export function createNetwork(ui: Item) {
             `<tr><td>${esc(c.name || "Unnamed")}</td><td class="mono ip">${esc(c.ip || "—")}</td><td class="mono ip">${esc(c.mac)}</td><td>${esc(c.type === "WIRELESS" ? "Wi-Fi" : c.type === "WIRED" ? "Wired" : c.type)}</td><td>${esc(c.connected_at ? relative(Date.parse(c.connected_at) / 1000) : "—")}</td><td>${c.ip ? ownerChips(c.ip) : ""}</td></tr>`,
         )
         .join("")}</tbody></table></div>${rows.length > 500 ? '<p class="muted">Showing 500; narrow the search.</p>' : ""}`;
+      cardify(document.getElementById("net-client-rows"));
     };
     body.querySelector<HTMLInputElement>("#net-client-q")!.addEventListener("input", (e) => {
       clientQuery = (e.target as HTMLInputElement).value.trim();

@@ -2,6 +2,7 @@ import "./network.css";
 import "./keys.css";
 import { icon } from "./icons";
 import { relative } from "./network-model";
+import { cardify } from "./table-cards";
 import { dotenv, groupEntries, parseDotenv, validSecretName } from "./vault-model";
 
 type Item = Record<string, any>;
@@ -140,6 +141,7 @@ export function createKeys(ui: Item) {
             .join("")}</tbody></table></div></section>`,
       )
       .join("");
+    cardify(el);
     el.querySelectorAll<HTMLButtonElement>("[data-entry]").forEach((b) =>
       b.addEventListener("click", () => openEntry(entries.find((e) => e.name === b.dataset.entry)!)),
     );
@@ -522,6 +524,7 @@ export function createKeys(ui: Item) {
           }${k.registered_as ? "" : `<button class="secondary" data-ssh-register="${i}">Add to Linode</button>`}<button class="secondary" data-ssh-delete="${i}">Delete</button></td></tr>`,
       )
       .join("")}</tbody></table></div>`;
+    cardify(body);
     body.querySelector("#ssh-generate")!.addEventListener("click", generateDialog);
     body.querySelectorAll<HTMLButtonElement>("[data-ssh-copy]").forEach((b) =>
       b.addEventListener("click", () => copy(sshKeys[+b.dataset.sshCopy!].public_key, "Copied public key")),
@@ -604,6 +607,7 @@ export function createKeys(ui: Item) {
             .join("")}</tbody></table></div>`
         : '<div class="empty"><h2>No handoff files</h2><p>Handoffs imported from AustinLand or generated for a machine appear here.</p></div>'
     }`;
+    cardify(body);
     body.querySelectorAll<HTMLButtonElement>("[data-handoff]").forEach((b) => b.addEventListener("click", () => openHandoff(handoffs[+b.dataset.handoff!])));
     body.querySelectorAll<HTMLButtonElement>("[data-handoff-delete]").forEach((b) =>
       b.addEventListener("click", async () => {

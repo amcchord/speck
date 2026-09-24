@@ -272,22 +272,28 @@ def issue(username, name, scopes, days=1, key_prefixes=()):
     return token_id, token
 
 
-if __name__ == "__main__":
+def main(argv=None):
     import argparse
 
-    parser = argparse.ArgumentParser(description="Create a Speck API token from the server host. Prints the token once.")
-    parser.add_argument("--username", required=True)
-    parser.add_argument("--name", required=True)
-    parser.add_argument("--scopes", required=True, help="Comma-separated: " + ", ".join(SCOPES))
+    parser = argparse.ArgumentParser(description="Create or revoke a Speck API token from the server host.")
+    parser.add_argument("--username", required=True, help="Account the token acts as (or that performs the revocation)")
+    parser.add_argument("--name", help="Token name when creating")
+    parser.add_argument("--scopes", help="Comma-separated scopes when creating: " + ", ".join(SCOPES))
     parser.add_argument("--days", type=int, default=1)
     parser.add_argument("--key-prefix", action="append", default=[])
-    parser.add_argument("--revoke", metavar="TOKEN_ID", help="Revoke a token instead of creating one")
-    options = parser.parse_args()
+    parser.add_argument("--revoke", metavar="TOKEN_ID", help="Revoke this token instead of creating one")
+    options = parser.parse_args(argv)
     if options.revoke:
         with db(write=True) as conn:
-            conn.execute("UPDATE api_tokens SET revoked=coalesce(revoked,?) WHERE id=?", (time.time(), options.revoke))
+            if not conn.execute("UPDATE api_tokens SET revoked=coalesce(revoked,?) WHERE id=?", (time.time(), options.revoke)).rowcount:
+                raise SystemExit("No API token " + options.revoke)
             audit(conn, "host:" + options.username, "api_token.revoked", detail={"id": options.revoke, "via": "host command"})
-        print(json.dumps({"revoked": options.revoke}))
-    else:
-        created_id, created = issue(options.username, options.name, options.scopes.split(","), options.days, options.key_prefix)
-        print(json.dumps({"id": created_id, "token": created}))
+        return {"revoked": options.revoke}
+    if not options.name or not options.scopes:
+        parser.error("--name and --scopes are required when creating a token")
+    created_id, created = issue(options.username, options.name, options.scopes.split(","), options.days, options.key_prefix)
+    return {"id": created_id, "token": created}
+
+
+if __name__ == "__main__":
+    print(json.dumps(main()))

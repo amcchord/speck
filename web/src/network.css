@@ -61,3 +61,18 @@ td.ip, .net-table td:first-child.mono { white-space: nowrap; }
 @media (max-width: 1100px) { .metric-strip.net-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .net-records td:first-child, .net-records td:nth-child(4) { white-space: nowrap; }
 .net-records td:nth-child(2) { max-width: 180px; }
+@media (max-width: 760px) {
+  .infra-table-wrap:has(> table.net-cards) { border: 0; overflow: visible; }
+  table.net-cards { min-width: 0; border-collapse: separate; }
+  table.net-cards thead { display: none; }
+  table.net-cards tbody { display: grid; gap: 10px; }
+  table.net-cards tbody tr { display: grid; grid-template-columns: minmax(0, 1fr); padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); }
+  table.net-cards tbody tr:hover td { background: transparent; }
+  table.net-cards td { display: block; position: relative; min-height: 24px; padding: 4px 0 4px 104px; border: 0; white-space: normal; max-width: none; }
+  table.net-cards td::before { content: attr(data-label); position: absolute; left: 0; top: 7px; width: 96px; color: var(--muted); font-size: 10px; letter-spacing: .5px; text-transform: uppercase; }
+  table.net-cards td:first-child { padding-left: 0; font-size: 14px; padding-bottom: 6px; }
+  table.net-cards td:first-child::before { display: none; }
+  table.net-cards td.net-cell-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; text-align: left; padding: 8px 0 0; }
+  table.net-cards td.net-cell-actions::before { display: none; }
+  table.net-cards td:empty { display: none; }
+}
