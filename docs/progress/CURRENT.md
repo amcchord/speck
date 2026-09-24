@@ -1,3 +1,23 @@
+# AustinLand integration — live September 23, 2026
+
+Speck now does what AustinLand did: **Network & DNS** (GoDaddy domains/records, UniFi
+public IPs through the cloud connector, reachability, LAN clients, consoles), **Keys**
+(encrypted vault and key arbiter, provider credentials with read-only checks, SSH keys,
+handoffs), **API & agents** (scoped `speck_pat_` tokens, MCP at `/mcp`, `/agents.md`,
+`/llms.txt`, `/speck.md`, OpenAPI) and **Infrastructure → New VM** (template VMs through
+the AustinLand bridge, password saved to the vault). Sign in as `austin`.
+
+Source: `claude/austinland-integration`, pushed to GitHub, not merged to main. Live releases
+`9b69a9d` and `0c6c35e` include the previous live `90a5fe5` and current main. AustinLand's
+data is migrated (43 vault entries, 5 providers, 286 domains, 10 NAT mappings, 6 handoffs,
+13 SSH public keys). AustinLand keeps running for existing callers and the bridge.
+
+Open: native Proxmox provisioning needs a connector allowlist change (not made); live
+DNS/NAT/key-mint/VM writes are unexercised. Details, acceptance and rollback:
+[operations](../operations/austinland-integration.md). Next release must preserve this source.
+
+---
+
 # Fleet Refresh checks Slide cleanup — live September 23, 2026
 
 Web runtime `141b126` from `worktrees/slide-cleanup-refresh` is live. An explicit

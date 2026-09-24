@@ -970,3 +970,42 @@ through Docker. CLAUDE.md now records that constraint.
 Rebased `codex/claude-md` onto `origin/main` at `d6538cb`, resolving an append
 conflict in this journal. No production deployment, remote change or push
 occurred.
+
+## 2026-09-23 — AustinLand brought into Speck
+
+User request: move everything AustinLand can see and manage, and its key storage, into
+Speck; sign in as `austin` to manage it; migrate AustinLand's data; expand the API so
+LLMs like Claude can get resources to build with; commit to GitHub; deploy; test in the
+browser. Branch `claude/austinland-integration` (worktree `worktrees/austinland-integration`)
+started from the live `codex/slide-cleanup-refresh` release (`90a5fe5`, verified against
+production file hashes) merged with `origin/main`.
+
+Added native vault/key arbiter (`/api/keys`), GoDaddy DNS (`/api/dns`), UniFi public IPs
+through the Site Manager cloud connector (`/api/unifi`), network reachability map, SSH
+keys, handoff files, scoped personal API tokens, `/agents.md`, `/llms.txt`, `/speck.md`,
+OpenAPI, unified search, an MCP server at `/mcp`, VM launching through the existing
+AustinLand bridge operation, and Network & DNS, Keys and API & agents pages plus a Fleet
+reach strip. `scripts/import_austinland.py` performs the migration through the API.
+API-token Proxmox connections now read guest configs for connector-equivalent identity.
+
+Explored real provider responses on a local instance with AustinLand's credentials using
+read-only calls only, then designed the pages against that data. Validation: 25 new
+backend tests (203 total), web unit tests, 18 new Chromium/WebKit scenarios, full local
+core gate before each release. The pre-existing Chat integration spec failure (stale after
+the deployed topology change) was fixed to match production.
+
+Production: releases `9b69a9d`, `0c6c35e` and a final overview update (see
+`docs/operations/austinland-integration.md` for rollback paths and acceptance). Data
+migrated with a one-day host token revoked immediately; Speck's own deployment and
+agent-signing secrets were deliberately left in AustinLand. Live checks covered all provider
+credentials (read-only), pool classification, the reachability map, every page in Chromium
+and WebKit phone, and a real Claude Code MCP session. A disposable QA admin was used for
+browser checks and disabled afterwards; all temporary tokens are revoked.
+
+Not changed: the Proxmox host connector allowlist. Native template provisioning would
+require adding cloud-init, resize, task-status and guest-password calls; that widening was
+declined in this session, so VM creation still depends on the AustinLand bridge worker on
+the Mac. DNS/NAT/key/VM writes were not exercised against live providers.
+
+Next: decide whether to widen the connector allowlist for native provisioning; exercise
+DNS, public IP mapping and VM creation on disposable resources; open a PR to main when ready.

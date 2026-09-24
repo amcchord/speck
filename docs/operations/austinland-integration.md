@@ -139,3 +139,54 @@ widens what a compromised control plane could ask the hosts to do and has not be
 - Generating new SSH-key handoffs that install a dedicated key on the machine. Imported
   handoffs can be read, copied and deleted; `GET /api/vms/{name}/handoff` gives a
   credential-free handoff for launched VMs.
+
+## September 23 production release
+
+Deployed from `claude/austinland-integration` with the backed-up release procedure
+(current-main ancestry, live-hash baseline, consistent SQLite snapshot, invariant checks
+for identities, accounts, settings, integrations, recovery and environment, automatic
+rollback on failure). No endpoint agent, host connector or provider configuration changed.
+
+| Release | Commit | Rollback |
+| --- | --- | --- |
+| Vault, DNS, UniFi, SSH, handoffs, tokens, MCP, pages | `9b69a9d` | `/var/lib/speck-rollback/20260924T000529Z-austinland-integration-9b69a9d` |
+| New VM, reach-aware search, Fleet reach, phone cards | `0c6c35e` | `/var/lib/speck-rollback/20260924T002457Z-austinland-integration-0c6c35e` |
+
+Each release passed `./scripts/check-local.sh core` first (the second: 203 backend tests,
+Linux agent and connector race tests, all platform builds, web units and 207
+Chromium/WebKit scenarios with one existing platform skip). The Chat integration spec
+was updated to match the already-deployed topology behavior; its failure predated this work.
+
+Migration used a one-day host token (`host:austin` in Activity), revoked immediately
+after: 5 provider credentials, 43 vault entries, 286 domains, 271 cached zones, 10 public
+IP mappings, 6 handoffs and 13 SSH public keys. `speck-rmm` and
+`speck-agent-release-signing` stayed in AustinLand.
+
+Live acceptance, all read-only against providers:
+
+- Every provider credential passed **Check** from the Linode: OpenAI (15 projects),
+  Anthropic (12 models), Twilio (active), GoDaddy, UniFi (21 consoles through the cloud
+  connector) and App Store Connect (9 apps).
+- The public IP pool matched the gateway: 9 free, 10 Speck-managed (ex-AustinLand),
+  8 other rules (Lucea World and pre-existing forwards, untouched) and the gateway address.
+- The network map traced 109 machines, 53 LAN IPs by exact UniFi MAC match, 14 NAT paths
+  and 29 machines reachable by hostname; for example `auth.slide.wtf` → 160.72.186.103 →
+  `austinland-auth` 192.168.110.10.
+- Chromium desktop and WebKit phone captured every new page with production data; the
+  New VM dialog loaded real templates and node capacity (not submitted).
+- A real Claude Code session connected to `https://speckrmm.com/mcp` with a read-only
+  token and answered from `speck_overview`, `speck_search`, `key_services` and
+  `vm_options`; a write tool call from that token was refused.
+- A background GoDaddy zone refresh was started from the console (GET requests only).
+
+Browser acceptance used a disposable administrator (`qa-austinland-browser`), disabled with
+its sessions removed afterwards. All temporary API tokens are revoked. No DNS record, NAT
+rule, VM, key mint, Linode key or endpoint changed.
+
+Not exercised live: DNS writes, public IP mapping/removal, key minting/revocation, Linode
+key registration and VM creation. These have exact-request tests with mocked providers and
+browser tests with synthetic data; exercise them deliberately on disposable resources.
+
+Rollback: stop `speck`, restore `server/` and `web/` from the rollback directory, start
+`speck`. The new tables are additive and unused by older code; keep the current database
+so vault and cache contents remain available for a later redeploy.
