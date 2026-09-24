@@ -253,3 +253,76 @@ for (const width of [1440, 390]) {
     await noOverflow(page, width);
   });
 }
+
+for (const width of [1440, 390]) {
+  test(`new VM from a template, follow it to a LAN IP and map a public IP at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 960 });
+    const writes = await setup(page);
+    let polls = 0;
+    await page.route(/\/api\/infrastructure\/(inventory|connectors|operations)/, (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith('/inventory')) return route.fulfill({ json: { connections: [{ id: 'bridge', name: 'AustinLand bridge', provider: 'austinland', connector: true, status: 'connected', resources: [] }], checked_at: now } });
+      return route.fulfill({ json: [] });
+    });
+    await page.route(/\/api\/vms(\/|$)/, async (route) => {
+      const req = route.request(), path = new URL(req.url()).pathname;
+      if (path === '/api/vms/options') return route.fulfill({ json: {
+        os_options: [{ id: 'debian13', label: 'Debian 13', ready: true, template_vmid: 9000, template_node: 'pve-1', user: 'root' }, { id: 'win11', label: 'Windows 11 Pro', ready: true, template_vmid: 9001, template_node: 'pve-1', user: 'Administrator' }],
+        presets: [{ id: 'small', cores: 1, memory_mb: 1024, disk_gb: 10 }, { id: 'medium', cores: 2, memory_mb: 4096, disk_gb: 40 }, { id: 'large', cores: 4, memory_mb: 8192, disk_gb: 80 }, { id: 'xlarge', cores: 8, memory_mb: 16384, disk_gb: 160 }],
+        nodes: [{ name: 'pve-1', online: true, memory_available_mb: 20480, storage_avail_gb: 900 }, { name: 'pve-2', online: true, memory_available_mb: 61440, storage_avail_gb: 1800 }],
+        recommended_node: 'pve-2' } });
+      if (req.method() === 'POST') { writes.push({ method: 'POST', path, body: req.postDataJSON() }); return route.fulfill({ json: { name: 'docs-web', vmid: 131, node: 'pve-2', status: 'starting', os: 'debian13', user: 'root', password_entry: 'docs-web-admin', password: null } }); }
+      polls += 1;
+      return route.fulfill({ json: polls < 2 ? { name: 'docs-web', found: false } : { name: 'docs-web', found: true, state: 'running', lan: [{ ip: '192.168.10.31' }], public: [], dns: [], ready: true } });
+    });
+    await page.clock.install();
+    await page.goto('/#infrastructure');
+    await page.getByRole('button', { name: 'New VM' }).click();
+    const form = page.getByRole('dialog', { name: 'New VM' });
+    await form.getByLabel('Name', { exact: true }).fill('docs-web');
+    await form.getByLabel('shop-deploy').check();
+    await form.getByRole('radio', { name: /Small/ }).check();
+    await page.screenshot({ path: `${shots}/vm-new-${width}-${info.project.name}.png` });
+    await form.getByRole('radio', { name: /Windows 11 Pro/ }).check();
+    await expect(form.locator('#vm-keys')).toBeHidden();
+    await expect(form.getByRole('radio', { name: /Xlarge/ })).toBeChecked();
+    await form.getByRole('radio', { name: /Debian 13/ }).check();
+    await form.getByRole('radio', { name: /Small/ }).check();
+    await form.getByRole('button', { name: 'Review' }).click();
+    const review = page.getByRole('dialog', { name: 'Create docs-web' });
+    await expect(review.getByText('Automatic (pve-2)')).toBeVisible();
+    await review.getByRole('button', { name: 'Create VM' }).click();
+    await expect.poll(() => writes.find((w) => w.path === '/api/vms')?.body).toEqual({ name: 'docs-web', project: '', os: 'debian13', preset: 'small', node: 'auto', ssh_keys: ['shop-deploy'], save_password: true });
+    const progress = page.getByRole('dialog', { name: 'Creating docs-web' });
+    await expect(progress.getByText('vault entry docs-web-admin')).toBeVisible();
+    await expect(progress.getByText('Waiting for DHCP…')).toBeVisible();
+    // Each poll schedules the next only after its request resolves, so advance time until the LAN IP appears.
+    await expect.poll(async () => { await page.clock.runFor(10000); return progress.getByText('192.168.10.31').count(); }).toBe(1);
+    await page.screenshot({ path: `${shots}/vm-ready-${width}-${info.project.name}.png` });
+    await progress.getByRole('button', { name: 'Map a public IP' }).click();
+    const expose = page.getByRole('dialog', { name: 'Map a public IP to docs-web' });
+    await expect(expose.getByLabel('Public IP')).toHaveValue('5.5.5.12');
+    await expose.getByRole('button', { name: 'Review change' }).click();
+    const confirm = page.getByRole('dialog', { name: 'Expose a host on a public IP' });
+    await confirm.getByLabel('Type 5.5.5.12 to confirm').fill('5.5.5.12');
+    await confirm.getByRole('button', { name: 'Create mapping' }).click();
+    await expect.poll(() => writes.find((w) => w.path === '/api/unifi/expose')?.body).toEqual({ public_ip: '5.5.5.12', lan_ip: '192.168.10.31', name: 'docs-web' });
+    await noOverflow(page, width);
+  });
+}
+
+test('machine pane shows LAN, public IP and hostnames from the network map', async ({ page }) => {
+  await setup(page);
+  await page.route(/\/api\/fleet(?:\?.*)?$/, async (route) => {
+    const data = await (await route.fetch()).json();
+    data.machines = [{ ...data.machines[0], id: 'proxmox:c1:qemu:101', label: 'shop-web', hostname: 'shop-web' }];
+    await route.fulfill({ json: data });
+  });
+  await page.goto('/#fleet');
+  await page.getByRole('button', { name: 'shop-web' }).first().click().catch(async () => page.locator('#fleet-rows tr').first().click());
+  const reach = page.locator('#machine-reach');
+  await expect(reach.getByText('192.168.10.20')).toBeVisible();
+  await expect(reach.getByText('www.example-shop.com')).toBeVisible();
+  await expect(reach.getByText('NAT')).toBeVisible();
+  await page.screenshot({ path: `${shots}/fleet-reach-${test.info().project.name}.png` });
+});

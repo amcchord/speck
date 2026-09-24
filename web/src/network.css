@@ -76,3 +76,24 @@ td.ip, .net-table td:first-child.mono { white-space: nowrap; }
   table.net-cards td.net-cell-actions::before { display: none; }
   table.net-cards td:empty { display: none; }
 }
+.machine-reach:empty { display: none; }
+.machine-reach { display: flex; align-items: flex-start; gap: 8px 16px; flex-wrap: wrap; margin: 0 var(--machine-gutter, 20px) 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fafbf7; font-size: 12px; }
+.machine-reach dl { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; flex: 1; }
+.machine-reach dt { color: var(--muted); font-size: 10px; letter-spacing: .5px; text-transform: uppercase; }
+.machine-reach dd { margin: 2px 0 0; }
+.machine-reach .text-link { padding: 0; font-size: 12px; }
+.vm-form fieldset { border: 0; padding: 0; margin: 0 0 14px; }
+.vm-form legend { color: var(--muted); font-size: 13px; margin-bottom: 6px; padding: 0; }
+.vm-sizes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.vm-sizes legend { grid-column: 1 / -1; }
+.vm-size { display: flex !important; flex-direction: row !important; gap: 8px; align-items: flex-start; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); cursor: pointer; }
+.vm-size:has(input:checked) { border-color: var(--fern); box-shadow: inset 0 0 0 1px var(--fern); }
+.vm-size small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.vm-keys .check { display: flex; flex-direction: row; gap: 8px; align-items: center; margin: 0 0 6px; color: var(--ink); }
+.vm-keys small { color: var(--muted); }
+.vm-review { font-size: 13px; margin: 0 0 12px; }
+.vm-review dt { font-family: inherit; font-size: 12px; }
+@media (max-width: 760px) { .vm-sizes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.net-form label.check { flex-direction: row; align-items: center; gap: 8px; margin: 0 0 8px; color: var(--ink); }
+.net-form label.check small { display: inline; margin: 0; }
+.keys-hints.vm-review dt { font-family: inherit; font-size: 12px; }

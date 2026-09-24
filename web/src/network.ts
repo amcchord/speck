@@ -626,5 +626,35 @@ export function createNetwork(ui: Item) {
       .join("")}</div>`;
   }
 
-  return { render, closePane };
+  /** Map a free public IP to a LAN host chosen elsewhere (for example a new VM). */
+  async function exposeHost(lanIp: string, name: string) {
+    pool = await api("/unifi/pool");
+    const free = (pool.pool as Item[]).filter((p) => p.status === "free");
+    if (!free.length) return notify("No free public IPs remain on the gateway", true);
+    const d = dialog(
+      "Map a public IP to " + name,
+      `<form class="net-form"><p>Forward all ports on a free public IP to <span class="mono">${esc(lanIp)}</span> and send its outbound traffic from that address.</p><label>Public IP<select id="net-expose-ip">${free
+        .map((p) => `<option>${esc(p.ip)}</option>`)
+        .join("")}</select></label><label>Mapping name<input id="net-expose-name" required maxlength="60" pattern="[A-Za-z0-9][A-Za-z0-9 ._-]*" value="${esc(name.replace(/[^A-Za-z0-9 ._-]/g, "-").slice(0, 60))}"></label><div class="dialog-footer"><button type="button" class="secondary" id="net-expose-cancel">Cancel</button><button class="primary">Review change</button></div></form>`,
+      { className: "wide" },
+    );
+    d.querySelector("#net-expose-cancel")!.addEventListener("click", () => d.close());
+    d.querySelector("form")!.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const ip = (d.querySelector("#net-expose-ip") as HTMLSelectElement).value;
+      const label = (d.querySelector("#net-expose-name") as HTMLInputElement).value.trim();
+      d.close();
+      const ok = await confirmChange(
+        "Expose a host on a public IP",
+        `<p><span class="mono">${esc(ip)}</span> → <span class="mono">${esc(lanIp)}</span> (${esc(name)})</p><p>Every port except 500 and 4500 becomes reachable from the Internet. Confirm the host's firewall first.</p>`,
+        "Create mapping",
+        ip,
+      );
+      if (!ok) return;
+      await api("/unifi/expose", "POST", { public_ip: ip, lan_ip: lanIp, name: label });
+      notify(`${ip} now forwards to ${lanIp}. Point a domain at it from Network & DNS.`);
+    });
+  }
+
+  return { render, closePane, exposeHost };
 }

@@ -119,10 +119,23 @@ cd / && (set -a; . /etc/speck/server.env; PYTHONPATH=/opt/speck/server
 It prints the token once and records `host:austin` in Activity. Revoke it afterwards
 with `--revoke <id>` or from **API & agents**.
 
+## Launching VMs
+
+**Infrastructure → New VM** and `POST /api/vms` create a Proxmox guest from the Debian 13
+cloud-init or Windows 11 template through the AustinLand bridge operation `proxmox-create`
+(automatic placement, resize, first-boot setup). Speck resolves SSH key names, generates an
+administrator password and saves it as vault entry `<name>-admin`, then follows the VM until
+UniFi reports its DHCP lease and offers to map a free public IP. `GET /api/vms/{name}` and
+`/handoff` report state, LAN/public addresses, hostnames and the credential's vault name.
+The password never appears in audit history or the infrastructure receipt.
+
+This path still depends on the AustinLand bridge worker on the Mac. Running it natively
+through the Proxmox host connector would require adding cloud-init configuration, disk
+resize, task-status and guest-password calls to the connector's fixed allowlist; that change
+widens what a compromised control plane could ask the hosts to do and has not been made.
+
 ## Not yet native
 
-- Proxmox template provisioning (Debian 13 / Windows 11 with cloud-init, disk resize
-  and Windows first-boot setup) still uses the AustinLand bridge operation
-  `proxmox-create`; the host connector's allowlist does not yet include the
-  cloud-init, resize and task-status calls it needs.
-- Generating new handoff files. Imported handoffs can be read, copied and deleted.
+- Generating new SSH-key handoffs that install a dedicated key on the machine. Imported
+  handoffs can be read, copied and deleted; `GET /api/vms/{name}/handoff` gives a
+  credential-free handoff for launched VMs.

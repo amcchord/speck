@@ -502,8 +502,8 @@ app.include_router(integrations_router)
 from speck.fleet import router as fleet_router  # noqa: E402
 app.include_router(fleet_router)
 
-from speck import agent_api, api_tokens, contexts, dns, network, ssh_keys, unifi, vault  # noqa: E402
-for module in (api_tokens, vault, dns, unifi, network, ssh_keys, contexts, agent_api):
+from speck import agent_api, api_tokens, contexts, dns, network, ssh_keys, unifi, vault, vms  # noqa: E402
+for module in (api_tokens, vault, dns, unifi, network, ssh_keys, contexts, vms, agent_api):
     app.include_router(module.router)
 
 downloads = Path(os.environ.get('SPECK_DOWNLOAD_DIR', 'output/downloads'))

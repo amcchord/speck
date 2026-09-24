@@ -601,3 +601,66 @@ def test_host_command_issues_audited_tokens(client):
         api_tokens.main(["--username", "admin", "--revoke", "missing"])
     with pytest.raises(SystemExit):
         api_tokens.main(["--username", "admin", "--name", "no-scopes"])
+
+
+def test_search_explains_what_hostnames_reach(client, monkeypatch):
+    from speck import fleet
+
+    async def inventory(refresh=False, user=None):
+        return {"machines": [{"id": "linode:1", "label": "edge", "addresses": ["5.5.5.12"], "resources": []}]}
+
+    monkeypatch.setattr(fleet, "inventory", inventory)
+    client.post("/api/unifi/exposures/import", json={"exposures": [{"public_ip": PUBLIC[1], "lan_ip": "192.168.1.20", "name": "auth-vm"}]})
+    client.post("/api/dns/import", json={"zones": {"example.com": {"fetched_at": time.time(), "records": [
+        {"type": "A", "name": "auth", "data": PUBLIC[1]}, {"type": "A", "name": "edge", "data": "5.5.5.12"}]}}})
+    result = client.get("/api/search?q=auth.example.com").json()["results"]
+    assert result[0]["type"] == "machine" and result[0]["title"] == "auth-vm" and "via " + PUBLIC[1] in result[0]["subtitle"]
+    record = next(r for r in result if r["type"] == "dns_record")
+    assert record["reaches"] == {"ip": PUBLIC[1], "machine": "auth-vm", "machine_id": None, "lan_ip": "192.168.1.20", "via": "unifi_nat"}
+    edge = client.get("/api/search?q=edge.example.com&type=dns_record").json()["results"][0]
+    assert edge["reaches"]["machine"] == "edge" and edge["reaches"]["via"] == "provider"
+
+
+def test_vm_launch_uses_bridge_saves_password_and_reports_reach(client, monkeypatch):
+    from speck import fleet
+    from speck import infrastructure as infra
+
+    assert client.post("/api/vms", json={"name": "web-1"}).status_code == 409
+    with db(write=True) as conn:
+        conn.execute("INSERT INTO infrastructure_connections VALUES('bridge','AustinLand bridge','austinland',?,1)",
+                     (__import__("speck.config", fromlist=["seal"]).seal(json.dumps({"connector": True, "url": "", "token": "", "token_id": "", "verify_tls": True, "name": "AustinLand bridge", "provider": "austinland"})),))
+    sent = []
+
+    async def request(cfg, method, path, body=None, params=None):
+        sent.append((path, body))
+        if path == "/operations/proxmox-meta":
+            return {"os_options": [{"id": "debian13", "ready": True}], "recommended_node": "pve-2"}
+        return {"vmid": 131, "node": "pve-2", "status": "starting"}
+
+    monkeypatch.setattr(infra, "provider_request", request)
+    client.post("/api/ssh/generate", json={"name": "deploy"})
+    assert client.get("/api/vms/options").json()["recommended_node"] == "pve-2"
+    assert client.post("/api/vms", json={"name": "web-1", "ssh_keys": ["missing"]}).status_code == 422
+    assert client.post("/api/vms", json={"name": "win-1", "os": "win11", "preset": "small"}).status_code == 422
+    assert client.post("/api/vms", json={"name": "bad_name"}).status_code == 422
+    launched = client.post("/api/vms", json={"name": "web-1", "preset": "small", "ssh_keys": ["deploy"], "project": "shop"}).json()
+    assert launched["vmid"] == 131 and launched["password_entry"] == "web-1-admin" and launched["password"] is None
+    args = sent[-1][1]["args"]
+    assert sent[-1][0] == "/operations/proxmox-create" and args["cores"] == 1 and args["memory_mb"] == 1024 and args["disk_gb"] == 10
+    assert args["authorized_keys"][0].startswith("ssh-ed25519 ") and len(args["root_pass"]) >= 20
+    saved = client.get("/api/keys/web-1-admin").json()
+    assert saved["secrets"] == {"USERNAME": "root", "PASSWORD": args["root_pass"]} and saved["project"] == "shop"
+    assert saved["meta"] == {"vmid": 131, "node": "pve-2", "os": "debian13"}
+    assert args["root_pass"] not in json.dumps(audit_rows("infrastructure.requested") + audit_rows("infrastructure.submitted"))
+
+    async def inventory(refresh=False, user=None):
+        return {"machines": [{"id": "proxmox:c:qemu:131", "label": "web-1", "state": "running", "provider": "proxmox",
+                              "resource": {"id": "131", "node": "pve-2", "connection_id": "c"}, "addresses": [], "resources": []}]}
+
+    monkeypatch.setattr(fleet, "inventory", inventory)
+    status = client.get("/api/vms/web-1").json()
+    assert status["found"] and status["vmid"] == "131" and status["ready"] is False
+    assert client.get("/api/vms/missing").json()["found"] is False
+    doc = client.get("/api/vms/web-1/handoff").text
+    assert "# web-1" in doc and "vault entry `web-1-admin`" in doc and args["root_pass"] not in doc and "deploy" in doc
+    assert client.get("/api/vms/missing/handoff").status_code == 404

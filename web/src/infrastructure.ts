@@ -65,7 +65,7 @@ export function createInfrastructure(ui: Item) {
     ]);
     const rows = inventory.connections.flatMap((c: Item) => c.resources);
     content(
-      `<div class="infra-intro"><p>Hosts, guests, cloud instances and backup appliances.</p>${admin() ? button("infra-add", "Add connection") : ""}</div><div class="infra-tabs" role="tablist" aria-label="Infrastructure views">${[
+      `<div class="infra-intro"><p>Hosts, guests, cloud instances and backup appliances.</p><div class="infra-actions">${admin() && ui.newVm && inventory.connections.some((c: Item) => c.provider === "austinland") ? '<button class="primary" id="infra-new-vm">New VM</button>' : ""}${admin() ? button("infra-add", "Add connection") : ""}</div></div><div class="infra-tabs" role="tablist" aria-label="Infrastructure views">${[
         ["resources", `Resources (${rows.length})`],
         ["services", "DNS & network"],
         ["connections", "Connections"],
@@ -78,6 +78,7 @@ export function createInfrastructure(ui: Item) {
         .join("")}</div><div id="infra-body"></div>`,
     );
     on("infra-add", () => editConnection());
+    on("infra-new-vm", () => ui.newVm());
     ["resources", "services", "connections", "history"].forEach((s) =>
       on("infra-tab-" + s, async () => {
         section = s;

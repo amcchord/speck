@@ -200,6 +200,10 @@ async def search(q: str, limit: int = 50, type: str = "", user=Depends(require_u
         machines = (await fleet.inventory(user=user))["machines"]
     except HTTPException:
         machines = []
+    by_address = {}
+    for m in machines:
+        for address in m.get("addresses") or []:
+            by_address.setdefault(address.split("/")[0], m)
     for m in machines:
         addresses = m.get("addresses") or []
         if matches(m.get("label"), m.get("hostname"), m.get("id"), *addresses, *(m.get("aliases") or []), m.get("client_name")):
@@ -217,9 +221,26 @@ async def search(q: str, limit: int = 50, type: str = "", user=Depends(require_u
             exposures = conn.execute("SELECT * FROM unifi_exposures ORDER BY public_ip").fetchall()
             keys = conn.execute("SELECT name,fingerprint,comment,purpose FROM ssh_keys ORDER BY name").fetchall()
             vault_rows = conn.execute("SELECT name,service,project,notes,secret_names FROM vault_entries ORDER BY name").fetchall() if vault_visible(user) else []
+        nat = {row["public_ip"]: row for row in exposures}
+
+        def reach(address):
+            """What a public address reaches: a NAT mapping to a LAN host, or a machine's own address."""
+            mapping = nat.get(address)
+            machine = by_address.get(mapping["lan_ip"] if mapping else address)
+            if not mapping and not machine:
+                return None
+            label = machine["label"] if machine else mapping["name"]
+            return {"ip": address, "machine": label, "machine_id": machine["id"] if machine else None,
+                    "lan_ip": mapping["lan_ip"] if mapping else None, "via": "unifi_nat" if mapping else "provider"}
+
+        def describe(target):
+            return target["machine"] + (f" ({target['lan_ip']})" if target["lan_ip"] else "")
+
         for row in exposures:
             if matches(row["public_ip"], row["lan_ip"], row["name"]):
-                found["public_ip"].append(hit("public_ip", row["public_ip"], f"{row['name']} → {row['lan_ip']}", "GET /api/unifi/exposures"))
+                target = reach(row["public_ip"])
+                found["public_ip"].append(hit("public_ip", row["public_ip"], f"{row['name']} → {row['lan_ip']}", "GET /api/unifi/exposures",
+                                              reaches=target))
         for row in vault_rows:
             if permitted(user, row["name"]) and matches(row["name"], row["service"], row["project"], row["notes"], row["secret_names"]):
                 found["vault_entry"].append(hit("vault_entry", row["name"], f"{row['service']} · {', '.join(json.loads(row['secret_names']))}",
@@ -234,8 +255,13 @@ async def search(q: str, limit: int = 50, type: str = "", user=Depends(require_u
             for rec in json.loads(zone["records"]):
                 name = zone["domain"] if rec.get("name") == "@" else f"{rec.get('name')}.{zone['domain']}"
                 if matches(name, rec.get("data")):
-                    found["dns_record"].append(hit("dns_record", name, f"{rec.get('type')} → {rec.get('data')}",
-                                                   f"GET /api/dns/domains/{zone['domain']}/records?cached=true", domain=zone["domain"]))
+                    target = reach(rec.get("data")) if rec.get("type") in ("A", "AAAA") else None
+                    found["dns_record"].append(hit("dns_record", name, f"{rec.get('type')} → {rec.get('data')}" + (" → " + describe(target) if target else ""),
+                                                   f"GET /api/dns/domains/{zone['domain']}/records?cached=true", domain=zone["domain"], reaches=target))
+                    # A hostname search should also surface the machine it reaches.
+                    if target and needle in name.lower() and not any(h["title"] == target["machine"] for h in found["machine"]):
+                        found["machine"].append(hit("machine", target["machine"], f"reached by {name} via {target['ip']}" + (f" → {target['lan_ip']}" if target["lan_ip"] else ""),
+                                                    "GET /api/network/map", id=target["machine_id"]))
     counts = {kind: len(items) for kind, items in found.items()}
     if type:
         results = found[type]
@@ -324,6 +350,17 @@ TOOLS = [
          body=["public_ip", "lan_ip", "name"], read_only=False),
     tool("unexpose_public_ip", "Remove a Speck-managed public IP mapping and its gateway rules.", "POST", "/api/unifi/unexpose",
          {"public_ip": S}, ["public_ip"], body=["public_ip"], read_only=False, destructive=True),
+    tool("vm_options", "Operating systems, size presets, Proxmox nodes with capacity and the recommended node for new VMs.", "GET", "/api/vms/options"),
+    tool("create_vm", "Create a Proxmox VM from the Debian 13 (cloud-init) or Windows 11 template. Saves a generated admin password to the vault "
+         "(entry <name>-admin) unless one is given. Use SSH key names from list_ssh_keys. Takes 1-3 minutes.", "POST", "/api/vms",
+         {"name": S | {"description": "Hostname-style name"}, "os": {"type": "string", "enum": ["debian13", "win11"]},
+          "preset": {"type": "string", "enum": ["small", "medium", "large", "xlarge"]}, "cores": N, "memory_mb": N, "disk_gb": N,
+          "node": S | {"description": "auto or a node name"}, "ssh_keys": {"type": "array", "items": S}, "project": S},
+         ["name"], body=["name", "os", "preset", "cores", "memory_mb", "disk_gb", "node", "ssh_keys", "project"], read_only=False),
+    tool("vm_status", "Whether a VM is in inventory and reachable: state, node, LAN IP, public IP mapping and DNS names.", "GET",
+         "/api/vms/{name}", {"name": S}, ["name"]),
+    tool("vm_handoff", "Markdown handoff for a VM: reachability, DNS names and which vault entry holds its sign-in.", "GET",
+         "/api/vms/{name}/handoff", {"name": S}, ["name"]),
     tool("list_ssh_keys", "Stored SSH public keys (for authorized_keys) and Linode registration.", "GET", "/api/ssh/keys"),
     tool("generate_ssh_key", "Generate an Ed25519 keypair; returns the public key. The private half stays sealed in Speck.",
          "POST", "/api/ssh/generate", {"name": S, "comment": S, "purpose": S}, ["name"], body=["name", "comment", "purpose"], read_only=False),

@@ -7,6 +7,7 @@ import { createInfrastructure } from "./infrastructure";
 import { createNetwork } from "./network";
 import { createKeys } from "./keys";
 import { createApiAccess } from "./api-access";
+import { launchVm } from "./vm-launch";
 import { integrationSettings } from "./integrations";
 import { machinePresence } from "./presence";
 import Guacamole from "guacamole-common-js";
@@ -511,7 +512,8 @@ const ops = createOperations({
     }
   },
 });
-const infrastructure = createInfrastructure({api, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role});
+const infrastructure = createInfrastructure({api, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
+  newVm: () => launchVm({ api, esc, notify, dialog, loadingState, exposeHost: (ip: string, name: string) => network.exposeHost(ip, name) })});
 const network = createNetwork({ api, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
 const keys = createKeys({ api, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
 const apiAccess = createApiAccess({ api, esc, notify, dialog, content, loading, role: () => role, loadingState });
@@ -925,7 +927,7 @@ async function renderDevice() {
   }
 }
 function machineInventorySummary(d: Item) {
-  return `<section class="machine-inventory"><dl><div><dt>Client</dt><dd>${esc(d.client_name || "Unassigned")}${d.client_conflict ? `<small>${esc(d.clients.map((c: Item) => c.name).join(" · "))}</small>` : ""}</dd></div><div><dt>Speck agent</dt><dd>${esc(agentLabel(d))}</dd></div><div><dt>Location / host</dt><dd>${esc(d.location || d.site || "—")}</dd></div></dl>${d.identity_evidence?.length ? `<p class="muted">Joined by ${esc(d.identity_evidence.join(" · "))}</p>` : ""}${d.identity_issues?.length ? `<p class="callout">Identity needs review: ${esc(d.identity_issues.join(" · "))}</p>` : ""}${d.stale ? '<p class="callout">Provider inventory is stale. Actions check the current provider before proceeding.</p>' : ""}<div class="drawer-actions">${(d.resources || []).map((r: Item,i: number) => `<button data-machine-resource="${i}" class="secondary" ${role === "viewer" ? "disabled" : ""}>${esc(r.provider)} · ${esc(r.kind)} ${esc(r.id)}</button>`).join("")}</div></section>`;
+  return `<section class="machine-inventory"><dl><div><dt>Client</dt><dd>${esc(d.client_name || "Unassigned")}${d.client_conflict ? `<small>${esc(d.clients.map((c: Item) => c.name).join(" · "))}</small>` : ""}</dd></div><div><dt>Speck agent</dt><dd>${esc(agentLabel(d))}</dd></div><div><dt>Location / host</dt><dd>${esc(d.location || d.site || "—")}</dd></div></dl>${d.identity_evidence?.length ? `<p class="muted">Joined by ${esc(d.identity_evidence.join(" · "))}</p>` : ""}${d.identity_issues?.length ? `<p class="callout">Identity needs review: ${esc(d.identity_issues.join(" · "))}</p>` : ""}${d.stale ? '<p class="callout">Provider inventory is stale. Actions check the current provider before proceeding.</p>' : ""}<div class="drawer-actions">${(d.resources || []).map((r: Item,i: number) => `<button data-machine-resource="${i}" class="secondary" ${role === "viewer" ? "disabled" : ""}>${esc(r.provider)} · ${esc(r.kind)} ${esc(r.id)}</button>`).join("")}</div></section><div id="machine-reach" class="machine-reach" aria-live="polite"></div>`;
 }
 function bindProviderButtons(d: Item) {
   document.querySelectorAll<HTMLButtonElement>("[data-machine-resource]").forEach(el => el.onclick = () => infrastructure.resourceDetail(d.resources[Number(el.dataset.machineResource)]));
@@ -943,6 +945,24 @@ function renderProviderMachine(d: Item) {
     infrastructure.machinePanel(proxmox, body.querySelector<HTMLElement>(".pve-root")!);
   }
   bindProviderButtons(d);
+  void showReach(d);
+}
+let reachMap: { at: number; value: Promise<Item> } | null = null;
+async function showReach(d: Item) {
+  if (role === "viewer") return;
+  if (!reachMap || reachMap.at < Date.now() - 60000) reachMap = { at: Date.now(), value: api("/network/map", "GET", undefined, undefined, false) };
+  let map: Item;
+  try {
+    map = await reachMap.value;
+  } catch {
+    reachMap = null;
+    return;
+  }
+  const el = document.getElementById("machine-reach");
+  const m = map.machines.find((x: Item) => x.id === d.id || (d.endpoint_id && x.endpoint_id === d.endpoint_id));
+  if (!el || selected !== d.id || !m) return;
+  const chip = (text: string, tone = "") => `<span class="net-chip ${tone}">${esc(text)}</span>`;
+  el.innerHTML = `<dl><div><dt>LAN</dt><dd>${m.lan.map((l: Item) => `<span class="mono">${esc(l.ip)}</span>`).join(" ") || "—"}</dd></div><div><dt>Public</dt><dd>${m.public.map((p: Item) => `<span class="mono">${esc(p.ip)}</span>${p.via === "unifi_nat" ? chip("NAT") : ""}`).join(" ") || "—"}</dd></div><div><dt>DNS names</dt><dd>${m.dns.slice(0, 8).map((n: Item) => chip(n.fqdn)).join("") || "—"}${m.dns.length > 8 ? `<small>+${m.dns.length - 8} more</small>` : ""}</dd></div></dl><a class="text-link" href="#network">Network &amp; DNS</a>`;
 }
 async function renderDeviceContent() {
   disconnect();
@@ -981,6 +1001,7 @@ async function renderDeviceContent() {
     ${d.archived ? '<div class="callout">Archived. Management is disabled; retained history and Slide identity remain available.</div>' : !d.approved ? '<div class="callout">This appears to be a restored machine. Review its identity and approve it before sending commands.</div>' : ""}
     <div class="tabs">${names.map((n) => `<button data-tab="${n}" aria-pressed="${tab === n}" class="${tab === n ? "active" : ""}">${n[0].toUpperCase() + n.slice(1)}</button>`).join("")}</div><div id="device-body">${loadingState("Loading " + tab + "…")}</div>`;
   bindProviderButtons(d);
+  void showReach(d);
   on("copy-machine-ip", async () => {
     await navigator.clipboard.writeText(address);
     notify("IP address copied");

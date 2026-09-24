@@ -55,7 +55,10 @@ curl -s -H "Authorization: Bearer $SPECK_TOKEN" "$SPECK_URL/api/search?q=lucea"
 
 Search spans machines (names, aliases, IPs), provider resources, domains and cached DNS
 records, public IP mappings, SSH keys and — for vault readers — vault entry names.
-Each result includes the API call that returns its details.
+Each result includes the API call that returns its details, and DNS/public-IP results
+include `reaches`: the machine (and LAN IP) the address leads to. Searching a hostname
+also returns that machine. `GET /api/network/map` gives the full machine → LAN IP →
+public IP → hostname picture.
 
 ## API keys for your project (the vault)
 
@@ -97,6 +100,21 @@ revoke per project. Do not delete entries you did not create.
 Commands run as SYSTEM/root on real machines. Prefer read-only diagnostics, show the
 human anything destructive first, and never retry a job whose outcome is `unknown`
 without checking its effects.
+
+## Launch a VM for your project
+
+```bash
+curl -s $SPECK_URL/api/vms/options -H "Authorization: Bearer $SPECK_TOKEN"        # templates, sizes, nodes
+curl -s -X POST $SPECK_URL/api/vms -H "Authorization: Bearer $SPECK_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"name":"myproject-web","os":"debian13","preset":"small","ssh_keys":["<name from /api/ssh/keys>"],"project":"myproject"}'
+curl -s $SPECK_URL/api/vms/myproject-web -H "Authorization: Bearer $SPECK_TOKEN"   # repeat until "ready": true
+curl -s $SPECK_URL/api/vms/myproject-web/handoff -H "Authorization: Bearer $SPECK_TOKEN"
+```
+
+Debian 13 (cloud-init, signs in as root) or Windows 11 Pro (Administrator; needs the
+`large` or `xlarge` preset). Speck generates the administrator password and stores it in
+vault entry `<name>-admin`. Creation takes one to five minutes and needs the `admin` scope.
+The VM starts on the LAN only; `ready` means Speck matched its NIC to a DHCP lease.
 
 ## Infrastructure
 
@@ -166,12 +184,11 @@ embeds a private key, so it needs `keys:read` and is audited.
 
 ## Recipe: an internet-facing server with a domain
 
-1. `GET /api/ssh/keys` — pick a `public_key` for the new machine.
-2. Create the machine (Proxmox from a template, or Linode via the infrastructure catalog)
-   and wait until it reports an address.
+1. `GET /api/ssh/keys` — choose a key name to install (or generate one with `POST /api/ssh/generate`).
+2. `POST /api/vms` — create the VM; poll `GET /api/vms/{name}` until `ready` gives the LAN IP.
 3. `GET /api/unifi/pool` — choose a `free` IP; `POST /api/unifi/expose` with the VM's LAN IP.
 4. `POST /api/dns/domains/{domain}/point` with that public IP.
-5. SSH in and build. Store any credentials you create with `POST /api/keys/static`.
+5. `GET /api/vms/{name}/handoff`, SSH in and build. Store credentials you create with `POST /api/keys/static`.
 
 ## Safety rules
 
