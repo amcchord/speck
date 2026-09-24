@@ -444,7 +444,7 @@ async function render(manualRefresh = false) {
     page = "fleet";
   const titles: Record<string, string[]> = {
     fleet: ["Fleet", ""],
-    alerts: ["Alerts", ""],
+    alerts: ["Alerts", "Health checks from every agent. Expand an alert for evidence and review actions."],
     schedules: ["Schedules", "Reviewed scans and templates that run on a schedule."],
     account: ["Account & access", ""],
     jobs: ["Job history", "Commands and operations sent to endpoint agents."],
@@ -456,7 +456,7 @@ async function render(manualRefresh = false) {
     infrastructure: ["Infrastructure", "Hosts, guests, cloud instances and backup appliances."],
     network: ["Network & DNS", "Domains, public IPs and LAN hosts, joined to the machines they reach."],
     keys: ["Keys", "Project credentials sealed with the server key. Every reveal is recorded in Activity."],
-    api: ["API & agents", "Scoped access for Claude, scripts and CI."],
+    api: ["API & agents", "Give Claude, scripts and CI scoped access to machines, infrastructure, DNS, public IPs and the key vault."],
     activity: ["Activity", ""],
     settings: ["Settings", ""],
     downloads: ["Downloads", ""],
@@ -528,6 +528,7 @@ const management = createManagement({
   dialog,
   content,
   loading,
+  summary,
   openDevice,
   assistAlert: (device: Item, alert: Item, intent: "diagnose" | "fix") => ops.assistDialog(device, "", undefined, { alert, intent }),
   role: () => role,
@@ -1742,8 +1743,8 @@ async function renderRestoreCleanup() {
 // The few facts that identify a Slide resource at a glance; full detail stays in the row.
 function slideFacts(r: Item) {
   const facts: string[] = [];
-  const name = r.display_name || r.name;
-  if (r.hostname && r.hostname !== name) facts.push(r.hostname);
+  const name = String(r.display_name || r.name || r.hostname || "").toLowerCase();
+  if (r.hostname && r.hostname.toLowerCase() !== name) facts.push(r.hostname);
   if (r.os || r.os_name) facts.push([r.os || r.os_name, r.os_version].filter(Boolean).join(" "));
   else if (r.platform) facts.push(r.platform);
   if (r.serial_number) facts.push(r.serial_number);
@@ -2012,12 +2013,13 @@ async function renderSettings() {
   if (role === "admin") await integrationSettings({ api, esc, date, on, value, notify, dialog });
   await ops.settingsPanel();
   await management.settingsPanel();
-  // Sections load from several modules; present them as one evenly sized grid.
+  // Sections load from several modules; pack them into one set of columns without row gaps.
   const grids = [...document.querySelectorAll<HTMLElement>("#content .settings-grid")];
   grids.slice(1).forEach((grid) => {
     grids[0].append(...grid.children);
     grid.remove();
   });
+  grids[0]?.classList.add("settings-masonry");
   if (role !== "admin") {
     for (const id of ["save-slide", "save-ai"])
       document.getElementById(id)?.setAttribute("disabled", "");

@@ -294,3 +294,11 @@ nav button { min-height: 36px; padding: 7px 12px; }
 @media (max-width: 760px) { .slide-row > summary { grid-template-columns: 1fr auto; } .slide-facts { grid-column: 1 / -1; grid-row: 2; } }
 .panel > .section-head:first-child, .operations-panel > .section-head:first-child { margin-top: 0; }
 #content > .section-head:first-child { margin-top: 0; }
+/* Settings cards differ in height: columns avoid the empty space a grid row leaves. */
+.settings-grid.settings-masonry { display: block; columns: 3 380px; column-gap: 16px; }
+.settings-masonry > * { break-inside: avoid; margin: 0 0 16px; width: 100%; }
+.page-summary .monitor-status { color: var(--muted); }
+.page-summary .monitor-status.warn { color: #a65c21; font-weight: 650; }
+.integration-inactive { opacity: .62; }
+#integration-token-list > .text-link { margin-top: 10px; }
+.operators-table td { vertical-align: middle; }

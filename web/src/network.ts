@@ -35,10 +35,13 @@ export function createNetwork(ui: Item) {
       .map((m) => chip(m.label, "machine"))
       .join("");
   const expiresSoon = (d: Item) => expiresWithin(d.expires, 60);
+  const none = '<span class="placeholder">—</span>';
 
   async function render() {
     loading("Loading network…");
     window.clearTimeout(scanTimer);
+    // The header refresh reloads every tab; UniFi clients come from a 30-second server cache.
+    clients = consoles = null;
     const mapRequest = api("/network/map").catch(() => null);
     [status, domains, pool, unifiStatus] = await Promise.all([
       api("/dns/status"),
@@ -465,8 +468,8 @@ export function createNetwork(ui: Item) {
         const info = map.ips[p.ip] || {};
         const names: string[] = info.dns || [];
         const lan = p.lan_ip || info.mapping?.lan_ip;
-        return `<tr class="net-ip-${p.status}"><td class="mono ip">${esc(p.ip)}</td><td>${chip(label[p.status] || p.status, tone[p.status])}</td><td>${esc(p.assigned_to || "—")}</td><td>${
-          lan ? `<span class="mono">${esc(lan)}</span>${ownerChips(lan)}${info.lan_client && !owners(lan).length ? chip(info.lan_client) : ""}` : "—"
+        return `<tr class="net-ip-${p.status}"><td class="mono ip">${esc(p.ip)}</td><td>${chip(label[p.status] || p.status, tone[p.status])}</td><td>${p.assigned_to ? esc(p.assigned_to) : none}</td><td>${
+          lan ? `<span class="mono">${esc(lan)}</span>${ownerChips(lan)}${info.lan_client && !owners(lan).length ? chip(info.lan_client) : ""}` : none
         }</td><td>${names.slice(0, 3).map((n) => chip(n)).join("")}${names.length > 3 ? `<small>+${names.length - 3} more</small>` : ""}</td>${
           admin()
             ? `<td class="net-row-actions">${p.status === "free" ? `<button class="secondary" data-map="${i}">Map to host</button>` : p.status === "assigned" ? `<button class="secondary" data-unmap="${i}">Remove</button>` : ""}</td>`
@@ -565,10 +568,10 @@ export function createNetwork(ui: Item) {
         ? `<div class="infra-table-wrap"><table class="net-table"><thead><tr><th>Machine</th><th>LAN</th><th>Public</th><th>DNS names</th></tr></thead><tbody>${rows
             .map(
               (m) =>
-                `<tr><td><b>${esc(m.label)}</b><small>${esc([m.provider, m.state].filter(Boolean).join(" · "))}</small></td><td class="ip">${m.lan.map((l: Item) => `<div class="mono">${esc(l.ip)}</div>`).join("") || "—"}</td><td class="ip">${
+                `<tr><td><b>${esc(m.label)}</b><small>${esc([m.provider, m.state].filter(Boolean).join(" · "))}</small></td><td class="ip">${m.lan.map((l: Item) => `<div class="mono">${esc(l.ip)}</div>`).join("") || none}</td><td class="ip">${
                   m.public
                     .map((p: Item) => `<div><span class="mono">${esc(p.ip)}</span><small>${p.via === "unifi_nat" ? "NAT · " + esc(p.mapping) : esc(p.via)}</small></div>`)
-                    .join("") || "—"
+                    .join("") || none
                 }</td><td>${m.dns
                   .slice(0, 6)
                   .map((n: Item) => chip(n.fqdn))
@@ -602,15 +605,15 @@ export function createNetwork(ui: Item) {
       }
       if (tab !== "clients") return;
     }
-    body.innerHTML = `<div class="infra-toolbar net-toolbar"><label class="infra-search">Search<input id="net-client-q" type="search" placeholder="Name, IP or MAC" value="${esc(clientQuery)}"></label><button class="secondary" id="net-client-refresh">${icon("refresh")}<span>Refresh</span></button></div><div id="net-client-rows"></div>`;
+    body.innerHTML = `<div class="infra-toolbar net-toolbar"><label class="infra-search">Search<input id="net-client-q" type="search" placeholder="Name, IP or MAC" value="${esc(clientQuery)}"></label></div><div id="net-client-rows"></div>`;
     const draw = () => {
       const q = clientQuery.toLowerCase();
       const rows = clients!.filter((c) => !q || c.name.toLowerCase().includes(q) || c.ip.includes(q) || c.mac.includes(q));
-      document.getElementById("net-client-rows")!.innerHTML = `<p class="muted">${rows.length} of ${clients!.length} clients</p><div class="infra-table-wrap"><table class="net-table net-compact"><thead><tr><th>Name</th><th>IP</th><th>MAC</th><th>Link</th><th>Connected</th><th>Speck machine</th></tr></thead><tbody>${rows
+      document.getElementById("net-client-rows")!.innerHTML = `<p class="muted net-count">${rows.length === clients!.length ? `${rows.length} clients` : `${rows.length} of ${clients!.length} clients`}</p><div class="infra-table-wrap"><table class="net-table net-compact"><thead><tr><th>Name</th><th>IP</th><th>MAC</th><th>Link</th><th>Connected</th><th>Speck machine</th></tr></thead><tbody>${rows
         .slice(0, clientLimit)
         .map(
           (c) =>
-            `<tr><td>${esc(c.name || "Unnamed")}</td><td class="mono ip">${esc(c.ip || "—")}</td><td class="mono ip">${esc(c.mac)}</td><td>${esc(c.type === "WIRELESS" ? "Wi-Fi" : c.type === "WIRED" ? "Wired" : c.type)}</td><td>${esc(c.connected_at ? relative(Date.parse(c.connected_at) / 1000) : "—")}</td><td>${c.ip ? ownerChips(c.ip) : ""}</td></tr>`,
+            `<tr><td>${esc(c.name || "Unnamed")}</td><td class="mono ip">${c.ip ? esc(c.ip) : none}</td><td class="mono ip">${esc(c.mac)}</td><td>${esc(c.type === "WIRELESS" ? "Wi-Fi" : c.type === "WIRED" ? "Wired" : c.type)}</td><td>${c.connected_at ? esc(relative(Date.parse(c.connected_at) / 1000)) : none}</td><td>${c.ip ? ownerChips(c.ip) : ""}</td></tr>`,
         )
         .join("")}</tbody></table></div>${rows.length > clientLimit ? `<button class="secondary net-more" id="net-clients-more">Show ${Math.min(PAGE, rows.length - clientLimit)} more of ${rows.length - clientLimit} remaining</button>` : ""}`;
       cardify(document.getElementById("net-client-rows"));
@@ -622,10 +625,6 @@ export function createNetwork(ui: Item) {
     body.querySelector<HTMLInputElement>("#net-client-q")!.addEventListener("input", (e) => {
       clientQuery = (e.target as HTMLInputElement).value.trim();
       clientLimit = PAGE;
-      draw();
-    });
-    body.querySelector("#net-client-refresh")!.addEventListener("click", async () => {
-      clients = await api("/unifi/clients?refresh=true");
       draw();
     });
     draw();

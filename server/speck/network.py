@@ -19,6 +19,18 @@ router = APIRouter(prefix="/api/network")
 
 
 GLOBAL_UNICAST_V6 = ipaddress.ip_network("2000::/3")
+UNIQUE_LOCAL_V6 = ipaddress.ip_network("fc00::/7")
+
+
+def lan_address(address):
+    """A usable LAN address: private IPv4 or unique-local IPv6 (not loopback, link-local or odd forms)."""
+    try:
+        parsed = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    if parsed.version == 4:
+        return parsed.is_private and not parsed.is_loopback and not parsed.is_link_local
+    return parsed in UNIQUE_LOCAL_V6
 
 
 def public(address):
@@ -63,7 +75,7 @@ async def build_map(user):
             if client and client.get("ip"):
                 lan[client["ip"]] = {"ip": client["ip"], "source": "unifi_mac", "mac": mac, "client": client["name"]}
         for address in sorted(addresses):
-            if not public(address):
+            if lan_address(address):
                 lan.setdefault(address, {"ip": address, "source": "reported", "client": (by_ip.get(address) or {}).get("name")})
         publics = {}
         for address in sorted(addresses):
