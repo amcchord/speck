@@ -715,6 +715,12 @@ function drawFleet() {
     const target = event.target as Element;
     // Preserve checkboxes, quick actions, and text selection within a row.
     if (target.closest("button, a, input, select, textarea, label")) return;
+    // The whole selection cell is the checkbox's touch target.
+    const selectCell = target.closest("td.select-cell");
+    if (selectCell) {
+      selectCell.querySelector<HTMLInputElement>("input:not(:disabled)")?.click();
+      return;
+    }
     if (window.getSelection()?.isCollapsed === false) return;
     const row = target.closest<HTMLTableRowElement>("tr[data-row]");
     if (row) void openDevice(row.dataset.row!);

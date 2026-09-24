@@ -110,6 +110,12 @@ test.describe('tablet portrait', () => {
     await expect(page.locator('.fleet-table thead')).toBeHidden();
     const row = page.locator('#fleet-rows tr[data-row]').first();
     expect((await row.boundingBox()).height).toBeLessThan(80);
+    // The whole selection cell toggles the checkbox without opening the machine.
+    const cell = row.locator('td.select-cell');
+    const box = await cell.boundingBox();
+    await page.mouse.click(box.x + 4, box.y + 4);
+    await expect(cell.locator('input')).toBeChecked();
+    await expect(page.locator('#machine-details')).toHaveCount(0);
   });
 });
 

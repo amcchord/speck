@@ -18,6 +18,8 @@ td .primary, td .secondary, td .quick-action { white-space: nowrap; }
 .fleet-workspace .unified-fleet td.select-cell, .fleet-workspace .unified-fleet thead th:first-child { overflow: visible; text-overflow: clip; }
 @media (pointer: coarse) {
   .fleet-workspace .unified-fleet td.select-cell, .fleet-workspace .unified-fleet thead th:first-child { width: 48px; min-width: 48px; }
+  td.select-cell, td.m-select { cursor: pointer; }
+  td.select-cell input[type=checkbox], td.m-select input[type=checkbox] { width: 20px; height: 20px; }
 }
 /* Touch devices keep hover highlights from sticking after a tap. */
 @media (hover: none) {

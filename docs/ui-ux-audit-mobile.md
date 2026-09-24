@@ -81,4 +81,49 @@ tablets and phones get lists; landscape tablets and desktops keep tables.
 
 ## Implementation record
 
-Pending.
+Branch `claude/ui-audit-mobile` from main `09bcba3`. The design above shipped as described,
+with these details:
+
+- **Page actions:** phones keep primary page actions (Add device, New VM, Scan selected) in a
+  row below the title. Secondary actions (Monitoring policy, Add connection) move behind a
+  "More actions" button, which opens a sheet.
+- **List rows:** `web/src/responsive.ts` classifies each table's cells from their content
+  (title, status chip, facts, actions) and marks them, so pages keep one table markup.
+  `web/src/responsive.css` lays marked tables out as list rows in any container under
+  720 px. Fleet has its own row layout: name first, then status, client, location, address
+  and usage, with quick actions on the right.
+- **Filters:** the Filters panel stays open while a filter re-renders the page, and the
+  button shows how many filters are active.
+- **Selection:** the whole selection cell toggles its checkbox. On touch screens the
+  checkbox is 20 px inside a 44 px cell.
+- **Infrastructure** now renders 100 resources at a time (at every size), like Domains and
+  LAN clients.
+- **B1:** stale-view signals never reach a toast. Cancelling New VM while it loads no longer
+  opens the form when the data arrives.
+- **Preview:** `scripts/preview_fixtures.py` adds synthetic infrastructure, DNS, UniFi,
+  keys and API data, so every page can be reviewed without production.
+
+Phone page height with production data (393 px wide, CSS px):
+
+| Page | Before | After |
+| --- | ---: | ---: |
+| Fleet | 16,215 | 5,923 |
+| Domains | 18,066 | 7,231 |
+| LAN clients | 17,918 | 8,011 |
+| Infrastructure | 16,959 | 9,480 |
+| Keys vault | 6,953 | 4,144 |
+| Patches | 3,231 | 2,022 |
+| API & agents | 6,511 | 5,422 |
+
+On a phone, the machine pane's tabs moved from about 550 px down the pane to about 190 px,
+so each tab's content starts on the first screen. Activity and Job history are about the
+same length: their rows were already compact once their tables became lists.
+
+Validation: the local core gate (backend, Linux agent, platform builds, web unit tests and
+Chromium/WebKit browser suites) passed before each release. The latest run had 221 browser
+tests passing and 1 skipped, including `web/test/ui/responsive.spec.mjs` (tab bar, More
+sheet, list rows, folding filters, bottom sheets, machine brief, stale-view toast, tablet
+rail, landscape reachability and selection cells). Existing specs were updated where the
+phone layout deliberately moved controls. Production was recaptured at all three sizes
+after release; no page overflowed and no script raised an error. The synthetic gallery is in
+[screenshots/ui-audit-mobile](screenshots/ui-audit-mobile/README.md).

@@ -68,6 +68,11 @@ function listTable(table: HTMLTableElement) {
   // In list mode the whole row opens its item, like the title link it carries.
   table.addEventListener("click", (event) => {
     const target = event.target as HTMLElement;
+    const selectCell = target.closest("td.m-select");
+    if (selectCell && !target.closest("input")) {
+      selectCell.querySelector<HTMLInputElement>("input:not(:disabled)")?.click();
+      return;
+    }
     if (!table.matches(".m-list") || getComputedStyle(table.tHead || table).display !== "none") return;
     if (target.closest("button, a, input, select, summary, details, label, pre")) return;
     const row = target.closest("tr");
