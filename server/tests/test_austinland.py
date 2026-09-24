@@ -666,3 +666,11 @@ def test_vm_launch_uses_bridge_saves_password_and_reports_reach(client, monkeypa
     doc = client.get("/api/vms/web-1/handoff").text
     assert "# web-1" in doc and "vault entry `web-1-admin`" in doc and args["root_pass"] not in doc and "deploy" in doc
     assert client.get("/api/vms/missing/handoff").status_code == 404
+
+
+def test_network_address_classes():
+    from speck.network import lan_address, public
+
+    assert public("8.8.8.8") and public("2600:3c03::1") and not public("::2ca6:a490:55b3:558e") and not public("10.0.0.1")
+    assert lan_address("192.168.1.5") and lan_address("fd00::5") and not lan_address("::2ca6:a490:55b3:558e")
+    assert not lan_address("127.0.0.1") and not lan_address("169.254.1.1") and not lan_address("8.8.8.8")

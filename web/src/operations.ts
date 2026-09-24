@@ -89,14 +89,14 @@ export function createOperations(ui: Item) {
       0,
     );
     content(
-      `<div class="page-intro"><div><p>Scan machines, review available updates and install what you choose.</p></div>${button("patch-scan", "Scan selected", true)}</div><div class="metric-strip"><div><b>${total}</b><span>Available updates</span></div><div><b>${reports.filter((r: Item) => r.report.reboot_required).length}</b><span>Reboot needed</span></div><div><b>${devices.filter((d: Item) => !reports.some((r: Item) => r.device_id === d.id)).length}</b><span>Not scanned</span></div></div><div class="panel operations-panel"><div class="section-head"><h2>Patch inventory</h2><label class="check"><input id="patch-select-all" type="checkbox"> Select online machines</label></div><div class="scroll"><table><thead><tr><th></th><th>Machine</th><th>Updates</th><th>Last scan</th><th>Reboot</th><th></th></tr></thead><tbody>${devices
+      `<button id="patch-scan" class="primary" data-page-action>Scan selected</button><div class="panel operations-panel"><div class="section-head"><h2>Patch inventory</h2><label class="check"><input id="patch-select-all" type="checkbox"> Select online machines</label></div><div class="scroll"><table><thead><tr><th></th><th>Machine</th><th>Updates</th><th>Last scan</th><th>Reboot</th><th></th></tr></thead><tbody>${devices
         .map((d: Item) => {
           const r = reports.find((r: Item) => r.device_id === d.id);
           return `<tr><td><input type="checkbox" data-patch-target="${d.id}" aria-label="Select ${esc(d.label)}" ${d.approved && d.online && d.telemetry?.capabilities?.managed_operations ? "" : "disabled"}></td><td><b>${esc(d.label)}</b><small>${esc(d.telemetry?.host?.platform || d.platform)}</small></td><td>${r ? badge(String(r.report.total) + " available", r.report.total === 0) : '<span class="muted">Not scanned</span>'}</td><td>${r ? date(r.scanned) : "—"}</td><td>${r?.report.reboot_required ? badge("Required") : "—"}</td><td><button class="secondary" data-patch-detail="${d.id}">Review</button></td></tr>`;
         })
         .join(
           "",
-        )}</tbody></table></div><small>Windows Update, apt and dnf. No automatic reboot. Updated Speck agents are required.</small></div><div class="section-head"><h2>Recent operations</h2>${button("patch-refresh", "Refresh")}</div><div class="operation-history">${
+        )}</tbody></table></div><small>Windows Update, apt and dnf. No automatic reboot. Updated Speck agents are required.</small></div><div class="section-head"><h2>Recent operations</h2></div><div class="operation-history">${
         batches
           .filter((b: Item) => b.kind.startsWith("patch"))
           .slice(0, 8)
@@ -126,7 +126,7 @@ export function createOperations(ui: Item) {
         ].map((e) => e.dataset.patchTarget!),
       ),
     );
-    on("patch-refresh", renderPatches);
+    ui.summary?.(`<span><b>${total}</b> available updates</span><span><b>${reports.filter((r: Item) => r.report.reboot_required).length}</b> need a reboot</span><span><b>${devices.filter((d: Item) => !reports.some((r: Item) => r.device_id === d.id)).length}</b> not scanned</span>`);
     document
       .querySelectorAll<HTMLButtonElement>("[data-patch-detail]")
       .forEach(
@@ -175,7 +175,7 @@ export function createOperations(ui: Item) {
       api("/batches"),
     ]);
     content(
-      `<div class="page-intro"><div><h2>Template library</h2><p>Reusable installers and scripts for Windows and Linux.</p></div>${button("new-template", icon("plus") + " Create template", true)}</div><div class="template-grid">${library.map((t) => `<article class="template-card"><div class="template-card-top"><span class="template-kind">${t.category === "software" ? "Software" : "Script"}</span>${badge(t.platform)}${t.builtin ? "<small>STARTER</small>" : ""}</div><h2>${esc(t.name)}</h2><p>${esc(t.description || "Reusable fleet script")}</p><div class="template-meta"><span>${t.parameters.length} inputs</span><span>${Math.ceil(t.timeout / 60)} min limit</span><span>v${t.revision}</span></div><div class="toolbar"><button class="primary" data-deploy="${t.id}">Deploy</button><button class="secondary" data-edit-template="${t.id}">${t.builtin ? "Customize" : "Edit"}</button></div></article>`).join("")}</div><div class="section-head"><h2>Recent deployments</h2>${button("software-refresh", "Refresh")}</div><div class="operation-history">${
+      `<button id="new-template" class="primary" data-page-action>${icon("plus")}<span>Create template</span></button><div class="section-head"><div><h2>Template library</h2><p class="muted">Reusable installers and scripts for Windows and Linux.</p></div></div><div class="template-grid">${library.map((t) => `<article class="template-card"><div class="template-card-top"><span class="template-kind">${t.category === "software" ? "Software" : "Script"}</span>${badge(t.platform)}${t.builtin ? "<small>STARTER</small>" : ""}</div><h2>${esc(t.name)}</h2><p>${esc(t.description || "Reusable fleet script")}</p><div class="template-meta"><span>${t.parameters.length} input${t.parameters.length === 1 ? "" : "s"}</span><span>${Math.ceil(t.timeout / 60)} min limit</span><span>v${t.revision}</span></div><div class="toolbar"><button class="primary" data-deploy="${t.id}">Deploy</button><button class="secondary" data-edit-template="${t.id}">${t.builtin ? "Customize" : "Edit"}</button></div></article>`).join("")}</div><div class="section-head"><h2>Recent deployments</h2></div><div class="operation-history">${
         batches
           .filter((b: Item) => b.kind === "template")
           .slice(0, 10)
@@ -188,7 +188,6 @@ export function createOperations(ui: Item) {
       }</div>`,
     );
     on("new-template", () => templateEditor());
-    on("software-refresh", renderSoftware);
     bindBatches();
     document
       .querySelectorAll<HTMLButtonElement>("[data-edit-template]")
@@ -513,7 +512,7 @@ export function createOperations(ui: Item) {
     ui.loading("Loading AI assistant…");
     const cfg = await api("/ai/settings");
     content(
-      `<div class="assistant-home"><h2>What are we fixing?</h2><p>Draft a script, diagnose an issue, or create a reusable template.</p><div class="assistant-composer"><label>Operating system<select id="assistant-platform"><option value="windows">Windows · PowerShell</option><option value="linux">Linux · shell</option></select></label><label>Your task<textarea id="assistant-task" rows="4" placeholder="Write a script that checks disk space and reports services that failed to start"></textarea></label><div class="toolbar">${button("assistant-start", "Ask Speck", true)}<small>${cfg.configured ? "Connected · " + esc(cfg.model) : "Connect OpenAI in Settings"}</small></div></div><div class="assistant-prompts">${["Diagnose a slow workstation", "Check DNS and connectivity", "Draft a software installer"].map((s) => `<button class="secondary" data-prompt="${esc(s)}">${esc(s)}</button>`).join("")}</div><p class="muted">AI drafts are reviewed before execution. For machine context, use Ask AI in its detail panel.</p></div>`,
+      `<div class="assistant-home"><h2>What are we fixing?</h2><p>Draft a script, diagnose an issue, or create a reusable template.</p><div class="assistant-composer"><label>Operating system<select id="assistant-platform"><option value="windows">Windows · PowerShell</option><option value="linux">Linux · shell</option></select></label><label>Your task<textarea id="assistant-task" rows="4" placeholder="Write a script that checks disk space and reports services that failed to start"></textarea></label><div class="toolbar">${button("assistant-start", "Ask Speck", true)}<small>${cfg.configured ? "Connected · " + esc(cfg.model) : "Connect OpenAI in Settings"}</small></div></div><div class="assistant-prompts">${["Diagnose a slow workstation", "Check DNS and connectivity", "Draft a software installer"].map((s) => `<button class="secondary" data-prompt="${esc(s)}">${esc(s)}</button>`).join("")}</div><p class="muted assistant-note">AI drafts are reviewed before execution. For machine context, use Ask AI in its detail panel.</p></div>`,
     );
     on("assistant-start", async () => {
       const prompt = value("assistant-task");

@@ -172,13 +172,14 @@ for (const width of [1440, 390]) {
     const writes = await setup(page);
     await page.goto('/#keys');
     await expect(page.getByRole('heading', { name: 'Keys', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /^shop/ })).toBeVisible();
-    await expect(page.getByText('Imported from AustinLand')).toBeVisible();
+    await expect(page.locator('.keys-group-row', { hasText: 'shop' })).toBeVisible();
+    await expect(page.locator('#page-summary')).toContainText('3 vault entries');
     await page.screenshot({ path: `${shots}/keys-vault-${width}-${info.project.name}.png`, fullPage: width < 800 });
     await noOverflow(page, width);
     await page.getByRole('button', { name: 'shop-database' }).click();
     const pane = page.getByRole('dialog', { name: 'shop-database', exact: true });
     await expect(pane.getByText('•••• (12 chars)')).toBeVisible();
+    await expect(pane.getByText('Speck', { exact: true })).toBeVisible();
     await expect(pane.getByText('synthetic-pw')).toHaveCount(0);
     await pane.getByRole('button', { name: 'Reveal values' }).click();
     await expect(pane.getByText('synthetic-pw')).toBeVisible();

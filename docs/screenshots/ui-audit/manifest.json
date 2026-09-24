@@ -1,0 +1,17 @@
+{
+  "viewport": "1920x1080",
+  "browser": "Chromium",
+  "source": "scripts/preview.py synthetic fixtures",
+  "files": {
+    "account-1920.png": "bb5fb7d125a73100dfe953e4b0db596b247698b52c37e405b469d903564c77e2",
+    "activity-1920.png": "06ef2ed06b01c1aa8db1ff297bf56e95a05d1755ef9f57c795e447c3cb2d37b2",
+    "alerts-1920.png": "034072be894cf04f57058d7d1f28c123a287d96788e1889f0d771794d6e5dad7",
+    "fleet-1920.png": "0442f024187a89b0cd58adc0fa0d1cf0f7c7bce8ce3db8b7e0a72be9450c4c08",
+    "jobs-1920.png": "36284746ae8f0672c123421c237e4189f2131264d83068468832dbbe91c16857",
+    "patches-1920.png": "a640024dad3eeca84ec3200a2daa19a1fe322f287074e6dddb653a370454674e",
+    "recovery-1920.png": "4d9cc400b8f736f44b776b080586cc1ebd5cfd5f62fec9306cd4eca0740220ab",
+    "schedules-1920.png": "986242f45ba311f80d127ada202d6663966605e29f52de9c38efe0912630ace8",
+    "settings-1920.png": "8dbcf0a2be24dff913fed4531b7ee1fa35c77e01673c9cfa06aee77a0d5783af",
+    "software-1920.png": "b523c742bd53ccf675d1df1d47bf4132b96234717fedbb497b0b9bc971a142cf"
+  }
+}

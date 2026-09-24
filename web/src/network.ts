@@ -24,6 +24,9 @@ export function createNetwork(ui: Item) {
   let mapReady = false;
   let pane: HTMLDialogElement | null = null;
   let scanTimer = 0;
+  const PAGE = 100;
+  let domainLimit = PAGE,
+    clientLimit = PAGE;
 
   const chip = (text: string, tone = "") => `<span class="net-chip ${tone}">${esc(text)}</span>`;
   const owners = (ip: string) => (map.ips[ip]?.machines || []) as Item[];
@@ -32,10 +35,13 @@ export function createNetwork(ui: Item) {
       .map((m) => chip(m.label, "machine"))
       .join("");
   const expiresSoon = (d: Item) => expiresWithin(d.expires, 60);
+  const none = '<span class="placeholder">—</span>';
 
   async function render() {
     loading("Loading network…");
     window.clearTimeout(scanTimer);
+    // The header refresh reloads every tab; UniFi clients come from a 30-second server cache.
+    clients = consoles = null;
     const mapRequest = api("/network/map").catch(() => null);
     [status, domains, pool, unifiStatus] = await Promise.all([
       api("/dns/status"),
@@ -62,7 +68,7 @@ export function createNetwork(ui: Item) {
       ["consoles", "UniFi consoles"],
     ];
     content(
-      `<div class="net-intro"><p>Domains, public IPs and LAN hosts, joined to the machines they reach.</p></div><div id="net-summary" class="metric-strip net-summary"></div>${
+      `${
         !status.configured
           ? `<div class="callout">GoDaddy is not configured. ${admin() ? 'Add it under <a href="#keys">Keys → Providers</a>.' : "Ask an administrator to add it."}</div>`
           : ""
@@ -94,11 +100,9 @@ export function createNetwork(ui: Item) {
   }
 
   function summary() {
-    const el = document.getElementById("net-summary");
-    if (!el) return;
     const count = (s: string) => pool.pool.filter((p: Item) => p.status === s).length;
     const linked = mapReady ? map.machines.filter((m: Item) => m.dns.length).length : null;
-    el.innerHTML = `<div><b>${domains.length}</b><span>Domains · ${status.zones_cached || 0} zones cached</span></div><div><b>${count("free")}</b><span>Free public IPs of ${pool.pool.length}</span></div><div><b>${count("assigned")}</b><span>Speck-managed mappings</span></div><div><b>${linked ?? "…"}</b><span>Machines reachable by name</span></div>`;
+    ui.summary?.(`<span><b>${domains.length}</b> domains</span><span><b>${count("free")}</b> free public IPs</span><span><b>${count("assigned")}</b> mappings</span><span><b>${linked ?? "…"}</b> machines reachable by name</span>`);
   }
 
   function renderTab() {
@@ -149,6 +153,7 @@ export function createNetwork(ui: Item) {
     let timer = 0;
     input.addEventListener("input", () => {
       domainQuery = input.value.trim();
+      domainLimit = PAGE;
       domainRows();
       window.clearTimeout(timer);
       if (domainQuery.length < 3) recordHits();
@@ -156,6 +161,7 @@ export function createNetwork(ui: Item) {
     });
     body.querySelector<HTMLSelectElement>("#net-domain-filter")!.addEventListener("change", (e) => {
       domainFilter = (e.target as HTMLSelectElement).value;
+      domainLimit = PAGE;
       domainRows();
     });
     body.querySelector("#net-scan")?.addEventListener("click", startScan);
@@ -172,19 +178,27 @@ export function createNetwork(ui: Item) {
     const el = document.getElementById("net-domain-rows");
     if (!el) return;
     const rows = filteredDomains();
+    const flags = (d: Item) =>
+      [!d.renewAuto && chip("manual renew", "warn"), !d.locked && chip("unlocked", "warn"), !d.privacy && chip("no privacy"), expiresSoon(d) && chip("expires soon", "warn")]
+        .filter(Boolean)
+        .join("");
     el.innerHTML = rows.length
-      ? `<div class="infra-table-wrap"><table class="net-table"><thead><tr><th>Domain</th><th>Apex points to</th><th>Records</th><th>Expires</th><th>Protection</th></tr></thead><tbody>${rows
-          .slice(0, 400)
+      ? `<div class="infra-table-wrap"><table class="net-table net-compact"><thead><tr><th>Domain</th><th>Apex points to</th><th>Records</th><th>Expires</th><th>Attention</th></tr></thead><tbody>${rows
+          .slice(0, domainLimit)
           .map(
             (d, i) =>
               `<tr><td><button class="text-link net-name" data-domain="${i}">${esc(d.domain)}</button></td><td>${
                 (d.apex || []).length
-                  ? (d.apex as string[]).map((ip) => (ip === "Parked" ? chip("GoDaddy parking") : `<span class="mono">${esc(ip)}</span>${ownerChips(ip)}`)).join("<br>")
-                  : `<span class="muted">${d.zone_cached_at ? "No apex A record" : "Not cached"}</span>`
-              }</td><td>${d.record_count ?? "—"}<small>${d.zone_cached_at ? "cached " + esc(relative(d.zone_cached_at)) : ""}</small></td><td>${esc(d.expires ? new Date(d.expires).toLocaleDateString() : "—")}${expiresSoon(d) ? chip("soon", "warn") : ""}</td><td class="net-flags">${d.renewAuto ? chip("auto-renew", "good") : chip("manual renew", "warn")}${d.locked ? chip("locked") : chip("unlocked", "warn")}${d.privacy ? chip("privacy") : ""}</td></tr>`,
+                  ? (d.apex as string[]).map((ip) => (ip === "Parked" ? '<span class="placeholder">GoDaddy parking</span>' : `<span class="mono">${esc(ip)}</span>${ownerChips(ip)}`)).join(" ")
+                  : `<span class="placeholder">${d.zone_cached_at ? "No apex record" : "Not cached"}</span>`
+              }</td><td>${d.record_count ?? '<span class="placeholder">—</span>'}</td><td>${esc(d.expires ? new Date(d.expires).toLocaleDateString() : "—")}</td><td class="net-flags">${flags(d) || '<span class="placeholder">—</span>'}</td></tr>`,
           )
-          .join("")}</tbody></table></div>${rows.length > 400 ? `<p class="muted">Showing 400 of ${rows.length}. Narrow the search.</p>` : ""}`
+          .join("")}</tbody></table></div>${rows.length > domainLimit ? `<button class="secondary net-more" id="net-domains-more">Show ${Math.min(PAGE, rows.length - domainLimit)} more of ${rows.length - domainLimit} remaining</button>` : ""}`
       : `<div class="empty"><h2>No matching domains</h2><p>${domains.length ? "Change the search or filter." : "Connect GoDaddy to list domains."}</p></div>`;
+    el.querySelector("#net-domains-more")?.addEventListener("click", () => {
+      domainLimit += PAGE;
+      domainRows();
+    });
     el.querySelectorAll<HTMLButtonElement>("[data-domain]").forEach((b) =>
       b.addEventListener("click", () => openDomain(rows[+b.dataset.domain!])),
     );
@@ -454,8 +468,8 @@ export function createNetwork(ui: Item) {
         const info = map.ips[p.ip] || {};
         const names: string[] = info.dns || [];
         const lan = p.lan_ip || info.mapping?.lan_ip;
-        return `<tr class="net-ip-${p.status}"><td class="mono ip">${esc(p.ip)}</td><td>${chip(label[p.status] || p.status, tone[p.status])}</td><td>${esc(p.assigned_to || "—")}</td><td>${
-          lan ? `<span class="mono">${esc(lan)}</span>${ownerChips(lan)}${info.lan_client && !owners(lan).length ? chip(info.lan_client) : ""}` : "—"
+        return `<tr class="net-ip-${p.status}"><td class="mono ip">${esc(p.ip)}</td><td>${chip(label[p.status] || p.status, tone[p.status])}</td><td>${p.assigned_to ? esc(p.assigned_to) : none}</td><td>${
+          lan ? `<span class="mono">${esc(lan)}</span>${ownerChips(lan)}${info.lan_client && !owners(lan).length ? chip(info.lan_client) : ""}` : none
         }</td><td>${names.slice(0, 3).map((n) => chip(n)).join("")}${names.length > 3 ? `<small>+${names.length - 3} more</small>` : ""}</td>${
           admin()
             ? `<td class="net-row-actions">${p.status === "free" ? `<button class="secondary" data-map="${i}">Map to host</button>` : p.status === "assigned" ? `<button class="secondary" data-unmap="${i}">Remove</button>` : ""}</td>`
@@ -554,10 +568,10 @@ export function createNetwork(ui: Item) {
         ? `<div class="infra-table-wrap"><table class="net-table"><thead><tr><th>Machine</th><th>LAN</th><th>Public</th><th>DNS names</th></tr></thead><tbody>${rows
             .map(
               (m) =>
-                `<tr><td><b>${esc(m.label)}</b><small>${esc([m.provider, m.state].filter(Boolean).join(" · "))}</small></td><td class="ip">${m.lan.map((l: Item) => `<div class="mono">${esc(l.ip)}</div>`).join("") || "—"}</td><td class="ip">${
+                `<tr><td><b>${esc(m.label)}</b><small>${esc([m.provider, m.state].filter(Boolean).join(" · "))}</small></td><td class="ip">${m.lan.map((l: Item) => `<div class="mono">${esc(l.ip)}</div>`).join("") || none}</td><td class="ip">${
                   m.public
                     .map((p: Item) => `<div><span class="mono">${esc(p.ip)}</span><small>${p.via === "unifi_nat" ? "NAT · " + esc(p.mapping) : esc(p.via)}</small></div>`)
-                    .join("") || "—"
+                    .join("") || none
                 }</td><td>${m.dns
                   .slice(0, 6)
                   .map((n: Item) => chip(n.fqdn))
@@ -591,25 +605,26 @@ export function createNetwork(ui: Item) {
       }
       if (tab !== "clients") return;
     }
-    body.innerHTML = `<div class="infra-toolbar net-toolbar"><label class="infra-search">Search<input id="net-client-q" type="search" placeholder="Name, IP or MAC" value="${esc(clientQuery)}"></label><button class="secondary" id="net-client-refresh">${icon("refresh")}<span>Refresh</span></button></div><div id="net-client-rows"></div>`;
+    body.innerHTML = `<div class="infra-toolbar net-toolbar"><label class="infra-search">Search<input id="net-client-q" type="search" placeholder="Name, IP or MAC" value="${esc(clientQuery)}"></label></div><div id="net-client-rows"></div>`;
     const draw = () => {
       const q = clientQuery.toLowerCase();
       const rows = clients!.filter((c) => !q || c.name.toLowerCase().includes(q) || c.ip.includes(q) || c.mac.includes(q));
-      document.getElementById("net-client-rows")!.innerHTML = `<p class="muted">${rows.length} of ${clients!.length} clients</p><div class="infra-table-wrap"><table class="net-table"><thead><tr><th>Name</th><th>IP</th><th>MAC</th><th>Link</th><th>Connected</th><th>Speck machine</th></tr></thead><tbody>${rows
-        .slice(0, 500)
+      document.getElementById("net-client-rows")!.innerHTML = `<p class="muted net-count">${rows.length === clients!.length ? `${rows.length} clients` : `${rows.length} of ${clients!.length} clients`}</p><div class="infra-table-wrap"><table class="net-table net-compact"><thead><tr><th>Name</th><th>IP</th><th>MAC</th><th>Link</th><th>Connected</th><th>Speck machine</th></tr></thead><tbody>${rows
+        .slice(0, clientLimit)
         .map(
           (c) =>
-            `<tr><td>${esc(c.name || "Unnamed")}</td><td class="mono ip">${esc(c.ip || "—")}</td><td class="mono ip">${esc(c.mac)}</td><td>${esc(c.type === "WIRELESS" ? "Wi-Fi" : c.type === "WIRED" ? "Wired" : c.type)}</td><td>${esc(c.connected_at ? relative(Date.parse(c.connected_at) / 1000) : "—")}</td><td>${c.ip ? ownerChips(c.ip) : ""}</td></tr>`,
+            `<tr><td>${esc(c.name || "Unnamed")}</td><td class="mono ip">${c.ip ? esc(c.ip) : none}</td><td class="mono ip">${esc(c.mac)}</td><td>${esc(c.type === "WIRELESS" ? "Wi-Fi" : c.type === "WIRED" ? "Wired" : c.type)}</td><td>${c.connected_at ? esc(relative(Date.parse(c.connected_at) / 1000)) : none}</td><td>${c.ip ? ownerChips(c.ip) : ""}</td></tr>`,
         )
-        .join("")}</tbody></table></div>${rows.length > 500 ? '<p class="muted">Showing 500; narrow the search.</p>' : ""}`;
+        .join("")}</tbody></table></div>${rows.length > clientLimit ? `<button class="secondary net-more" id="net-clients-more">Show ${Math.min(PAGE, rows.length - clientLimit)} more of ${rows.length - clientLimit} remaining</button>` : ""}`;
       cardify(document.getElementById("net-client-rows"));
+      document.getElementById("net-clients-more")?.addEventListener("click", () => {
+        clientLimit += PAGE;
+        draw();
+      });
     };
     body.querySelector<HTMLInputElement>("#net-client-q")!.addEventListener("input", (e) => {
       clientQuery = (e.target as HTMLInputElement).value.trim();
-      draw();
-    });
-    body.querySelector("#net-client-refresh")!.addEventListener("click", async () => {
-      clients = await api("/unifi/clients?refresh=true");
+      clientLimit = PAGE;
       draw();
     });
     draw();

@@ -316,3 +316,14 @@ dialog.monitoring-dialog {
   .alert-title { min-height: 32px; }
   .alert-title > span:nth-child(2) { white-space: normal; }
 }
+/* Audit: chevron follows the title; AI actions are quieter; schedule runs have breathing room. */
+.alert-title { width: auto; max-width: 100%; }
+.alert-chevron { margin-left: 2px; }
+.alerts-workspace .alert-actions .secondary { min-height: 30px; padding: 4px 10px; font-size: 12px; font-weight: 500; }
+.schedule-runs > div { gap: 10px; }
+.schedule-runs > div > span { margin-right: 6px; }
+.operators-table:not(.show-disabled) tr.account-disabled { display: none; }
+.account-toggle { margin: 10px 0 0; font-size: 13px; color: var(--ink); }
+.account-roles { font-size: 12px; margin-top: 12px; }
+.passkey-panel p { font-size: 13px; }
+.passkey-panel h2 { font-size: 20px; }

@@ -10,22 +10,32 @@ export async function integrationSettings(ui: Item) {
     `<article class="panel"><span class="eyebrow">READ-ONLY INTEGRATIONS</span><h2>Slide Chat</h2><p>Connect a Speck site to a client in <a href="https://chat.slide.recipes" target="_blank" rel="noopener noreferrer">Slide Chat</a>. Tokens can read inventory, health, services, existing patch reports and open alerts for one exact site, or all sites when explicitly selected. Optional Proxmox topology access reads hosts and guests in selected connections.</p><p>Assign machines to a site from their Manage panel first. Moving a machine out of that site immediately removes integration access.</p><button id="integration-create" class="secondary" >Create integration token</button><div id="integration-token-list"></div></article>`,
   );
   const list = document.getElementById("integration-token-list")!;
+  let showInactive = false;
+  const live = (t: Item) => !t.revoked && t.expires * 1000 > Date.now();
   const renderList = (tokens: Item[]) => {
-    list.innerHTML = tokens.length
-      ? tokens
-          .map(
-            (t, i) =>
-              `<div class="section-head"><div><strong>${esc(t.name)}</strong><br><small>${esc(t.site === "*" ? "All sites" : t.site)} · ${(t.topology_connection_ids || []).length} topology connections · ${t.revoked ? "Revoked" : t.expires * 1000 < Date.now() ? "Expired" : "Expires " + date(t.expires)}<br>Last used: ${date(t.last_used)}</small></div>${!t.revoked && t.expires * 1000 > Date.now() ? `<button class="secondary" id="integration-revoke-${i}">Revoke</button>` : ""}</div>`,
-          )
-          .join("")
-      : "<p>No integration tokens.</p>";
-    tokens.forEach((t, i) =>
+    const inactive = tokens.filter((t) => !live(t)).length;
+    const shown = showInactive ? tokens : tokens.filter(live);
+    list.innerHTML =
+      (shown.length
+        ? shown
+            .map(
+              (t, i) =>
+                `<div class="section-head${live(t) ? "" : " integration-inactive"}"><div><strong>${esc(t.name)}</strong><br><small>${esc(t.site === "*" ? "All sites" : t.site)} · ${(t.topology_connection_ids || []).length} topology connections · ${t.revoked ? "Revoked" : t.expires * 1000 < Date.now() ? "Expired" : "Expires " + date(t.expires)}<br>Last used: ${date(t.last_used)}</small></div>${live(t) ? `<button class="secondary" id="integration-revoke-${i}">Revoke</button>` : ""}</div>`,
+            )
+            .join("")
+        : `<p class="muted">No active integration tokens.</p>`) +
+      (inactive ? `<button class="text-link" id="integration-toggle-inactive">${showInactive ? "Hide" : "Show"} ${inactive} revoked or expired</button>` : "");
+    shown.forEach((t, i) =>
       on("integration-revoke-" + i, async () => {
         await api("/integrations/tokens/" + t.id, "DELETE");
         notify("Integration token revoked");
         renderList((await api("/integrations/tokens")).tokens);
       }),
     );
+    on("integration-toggle-inactive", () => {
+      showInactive = !showInactive;
+      renderList(tokens);
+    });
   };
   renderList(data.tokens);
   on("integration-create", () => {

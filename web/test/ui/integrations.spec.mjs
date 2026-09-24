@@ -65,6 +65,9 @@ for (const width of [1440, 390]) {
     await page.getByRole("button", { name: "Done", exact: true }).click();
     await expect(page.locator("#integration-issued")).toHaveCount(0);
     await page.getByRole("button", { name: "Revoke", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Show 1 revoked or expired", exact: true })
+      .click();
     await expect(page.locator("#integration-token-list")).toContainText(
       "Revoked",
     );

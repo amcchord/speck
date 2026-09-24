@@ -1,6 +1,7 @@
 import "./infrastructure.css";
 import { openProviderConsole } from "./provider-console";
 import { mountProxmoxMachine } from "./proxmox-machine";
+import { icon } from "./icons";
 type Item = Record<string, any>;
 export function createInfrastructure(ui: Item) {
   const { api, esc, on, value, notify, content, loading, badge, bytes, date } =
@@ -65,9 +66,8 @@ export function createInfrastructure(ui: Item) {
     ]);
     const rows = inventory.connections.flatMap((c: Item) => c.resources);
     content(
-      `<div class="infra-intro"><p>Hosts, guests, cloud instances and backup appliances.</p><div class="infra-actions">${admin() && ui.newVm && inventory.connections.some((c: Item) => c.provider === "austinland") ? '<button class="primary" id="infra-new-vm">New VM</button>' : ""}${admin() ? button("infra-add", "Add connection") : ""}</div></div><div class="infra-tabs" role="tablist" aria-label="Infrastructure views">${[
+      `${admin() && ui.newVm && inventory.connections.some((c: Item) => c.provider === "austinland") ? `<button class="primary" id="infra-new-vm" data-page-action>${icon("plus")}<span>New VM</span></button>` : ""}${admin() ? '<button class="secondary" id="infra-add" data-page-action>Add connection</button>' : ""}<div class="infra-tabs" role="tablist" aria-label="Infrastructure views">${[
         ["resources", `Resources (${rows.length})`],
-        ["services", "DNS & network"],
         ["connections", "Connections"],
         ["history", "Activity"],
       ]
@@ -79,7 +79,7 @@ export function createInfrastructure(ui: Item) {
     );
     on("infra-add", () => editConnection());
     on("infra-new-vm", () => ui.newVm());
-    ["resources", "services", "connections", "history"].forEach((s) =>
+    ["resources", "connections", "history"].forEach((s) =>
       on("infra-tab-" + s, async () => {
         section = s;
         await renderSection();
@@ -111,7 +111,7 @@ export function createInfrastructure(ui: Item) {
         )
         .join(
           "",
-        )}</select></label></div><label class="infra-coverage">Management<select id="infra-coverage"><option value="">All resources</option><option value="speck_agent" ${coverage === "speck_agent" ? "selected" : ""}>Speck endpoint agent</option><option value="provider_only" ${coverage === "provider_only" ? "selected" : ""}>Provider only</option><option value="host_agent" ${coverage === "host_agent" ? "selected" : ""}>Proxmox host agent</option><option value="ambiguous" ${coverage === "ambiguous" ? "selected" : ""}>Identity needs review</option></select></label><div id="infra-resources"></div>`;
+        )}</select></label><label class="infra-coverage">Management<select id="infra-coverage"><option value="">All resources</option><option value="speck_agent" ${coverage === "speck_agent" ? "selected" : ""}>Speck endpoint agent</option><option value="provider_only" ${coverage === "provider_only" ? "selected" : ""}>Provider only</option><option value="host_agent" ${coverage === "host_agent" ? "selected" : ""}>Proxmox host agent</option><option value="ambiguous" ${coverage === "ambiguous" ? "selected" : ""}>Identity needs review</option></select></label></div><div id="infra-resources"></div>`;
       on(
         "infra-search",
         () => {
@@ -181,18 +181,31 @@ export function createInfrastructure(ui: Item) {
             ),
           );
       });
-    } else if (section === "services") {
-      const bridges = inventory.connections.filter(
-        (c: Item) => c.provider === "austinland",
-      );
-      body.innerHTML = `<p class="muted">Speck manages DNS, public IPs, LAN clients, SSH keys and the credential vault directly.</p><div class="infra-connections"><article class="card"><h2>Network &amp; DNS</h2><p>GoDaddy domains and records, UniFi public IP mappings, reachability and LAN clients.</p><div class="infra-actions"><a class="primary" href="#network">Open Network &amp; DNS</a></div></article><article class="card"><h2>Keys</h2><p>Credential vault and key arbiter, provider credentials, SSH keys and machine handoffs.</p><div class="infra-actions"><a class="secondary" href="#keys">Open Keys</a></div></article>${bridges.map((c: Item, i: number) => `<article class="card"><div class="infra-card-heading"><h2>${esc(c.name)}</h2>${badge(c.status)}</div><p>Legacy AustinLand bridge on the Mac. Use it for operations Speck does not run natively yet.</p>${button("infra-bridge-" + i, "Open bridge services")}</article>`).join("")}</div>`;
-      bridges.forEach((c: Item, i: number) =>
-        on("infra-bridge-" + i, () => connectionTools(c)),
-      );
     } else {
       const rows = await api("/infrastructure/operations");
-      body.innerHTML = `<p class="muted">Submitted means the provider accepted the request. Inspect the resource for completion. Unknown outcomes require inspection before a new attempt.</p>${dataView(rows.map((r: Item) => ({ time: date(r.created), actor: r.actor, operation: r.operation, target: r.target, status: r.status, result: r.result })))}`;
+      body.innerHTML = `<p class="muted">Submitted means the provider accepted the request; inspect the resource for completion. Unknown outcomes need inspection before a new attempt.</p>${
+        rows.length
+          ? `<div class="infra-table-wrap"><table class="infra-activity"><thead><tr><th>When</th><th>Operation</th><th>Target</th><th>By</th><th>Status</th><th>Result</th></tr></thead><tbody>${rows
+              .map(
+                (r: Item) =>
+                  `<tr><td>${date(r.created)}</td><td>${esc(r.operation.replaceAll("-", " "))}</td><td>${esc(r.target)}</td><td>${esc(r.actor)}</td><td>${badge(r.status, r.status === "submitted")}</td><td>${esc(receiptSummary(r.result))}${r.result && typeof r.result === "object" && Object.keys(r.result).length > 1 ? `<details class="infra-raw"><summary>Details</summary><pre>${esc(JSON.stringify(r.result, null, 2))}</pre></details>` : ""}</td></tr>`,
+              )
+              .join("")}</tbody></table></div>`
+          : '<div class="empty"><h2>No infrastructure changes yet</h2><p>Power, configuration and provisioning requests appear here with their receipts.</p></div>'
+      }`;
     }
+  }
+  // One readable line for a provider receipt; the full JSON stays behind Details.
+  function receiptSummary(result: any): string {
+    if (result == null) return "—";
+    if (typeof result !== "object") return String(result).startsWith("UPID:") ? "Proxmox task started" : String(result).slice(0, 120);
+    if (result.message) return String(result.message);
+    const facts = [
+      ["vmid", "VM"], ["pid", "process"], ["state", "state"], ["status", "status"], ["vnc_enabled", "console"], ["backup_id", "backup"], ["id", "id"],
+    ]
+      .filter(([k]) => result[k] !== undefined && result[k] !== null && result[k] !== "")
+      .map(([k, label]) => `${label} ${k === "vnc_enabled" ? (result[k] ? "enabled" : "disabled") : result[k]}`);
+    return facts.slice(0, 3).join(" · ") || "Accepted";
   }
   function managementLabel(r: Item): string {
     if (r.management === "host_agent")
@@ -204,7 +217,7 @@ export function createInfrastructure(ui: Item) {
       return `${badge(r.agent?.online ? "Speck agent online" : "Speck agent offline", r.agent?.online)}${!r.agent?.approved ? "<small>Approval needed</small>" : r.agent?.revoked ? "<small>Enrollment revoked</small>" : ""}`;
     if (r.management === "ambiguous")
       return `${badge("Identity needs review")}<small>Duplicate hardware identity</small>`;
-    return `${badge(r.provider === "proxmox" ? "Proxmox only" : "Provider only")}<small>No matched Speck endpoint agent</small>`;
+    return `<span class="placeholder" title="No matched Speck endpoint agent">${r.provider === "proxmox" ? "Proxmox only" : "Provider only"}</span>`;
   }
   function renderRows() {
     const rows = inventory.connections

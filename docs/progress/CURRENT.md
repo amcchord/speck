@@ -1,3 +1,19 @@
+# UI/UX audit — live September 23, 2026
+
+Every page was audited at 1920 × 1080 against production ([record](../ui-ux-audit.md)), and
+the improvements are live. Navigation is grouped. Each page has one header with its summary,
+an icon refresh and its primary action. Tables flow with the page, dense views page 100
+rows at a time, placeholders are muted and event codes are readable.
+
+Source: `claude/ui-audit` (`233a434`), which includes main `b5473ca`. Live release
+`20260924T014550Z-ui-audit-233a434`; rollback: `/var/lib/speck-rollback/20260924T014550Z-ui-audit-233a434`.
+Validation: local core gate (207 passed, 1 skipped), plus production captures of every page
+without overflow or script errors. The QA admin `qa-ui-audit` is disabled.
+
+Next safe action: merge `claude/ui-audit` to main; the next release must include it.
+
+---
+
 # AustinLand integration — live September 23, 2026
 
 Speck now does what AustinLand did: **Network & DNS** (GoDaddy domains/records, UniFi
@@ -7,8 +23,8 @@ handoffs), **API & agents** (scoped `speck_pat_` tokens, MCP at `/mcp`, `/agents
 `/llms.txt`, `/speck.md`, OpenAPI) and **Infrastructure → New VM** (template VMs through
 the AustinLand bridge, password saved to the vault). Sign in as `austin`.
 
-Source: `claude/austinland-integration`, pushed to GitHub, not merged to main. Live releases
-`9b69a9d`, `0c6c35e` and `5f9cfd2` (current) include the previous live `90a5fe5` and current main. AustinLand's
+Source: `claude/austinland-integration`, merged to main by PR #22 (`b5473ca`). Releases
+`9b69a9d`, `0c6c35e` and `5f9cfd2` include the previous live `90a5fe5` and current main. AustinLand's
 data is migrated (43 vault entries, 5 providers, 286 domains, 10 NAT mappings, 6 handoffs,
 13 SSH public keys). AustinLand keeps running for existing callers and the bridge.
 

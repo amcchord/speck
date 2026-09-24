@@ -327,8 +327,8 @@ export function mountProxmoxMachine(
     const current = ++tabGeneration;
     const body = find("[data-pve-content]");
     root
-      .querySelector<HTMLElement>(".pve-preview")
-      ?.toggleAttribute("hidden", tab !== "overview");
+      .querySelectorAll<HTMLElement>(".pve-preview, .pve-no-screen")
+      .forEach((el) => el.toggleAttribute("hidden", tab !== "overview"));
     root.querySelectorAll<HTMLElement>("[data-pve-tab]").forEach((el) => {
       el.setAttribute("aria-selected", String(el.dataset.pveTab === tab));
       el.tabIndex = el.dataset.pveTab === tab ? 0 : -1;
@@ -434,7 +434,7 @@ export function mountProxmoxMachine(
       resource = { ...resource, ...detail.resource };
       guest = { state: "loading" };
       root.classList.add("pve-machine");
-      root.innerHTML = `<div class="pve-heading"><p>${esc(resource.connection_name)} <span>›</span> ${esc(resource.node)} <span>›</span> ${resource.kind === "lxc" ? "Container" : "VM"} ${esc(resource.id)}</p><span class="pve-state">${esc(detail.status?.status || resource.status || "Unknown")}</span></div><div class="pve-controls">${actions()}</div>${resource.kind === "qemu" ? `<section class="pve-preview"><div class="pve-preview-screen">${note(canScreen() ? "Screen preview" : detail.capabilities?.console?.reason || "Screen access is unavailable.")}</div><div class="pve-preview-footer"><span data-pve-preview-status role="status">${esc(canScreen() ? "A snapshot of the VM display. No guest login required." : detail.capabilities?.console?.reason || "")}</span><div>${button("capture", "Refresh preview", false, !canScreen())}${button("download", "Save screenshot", false, true)}</div></div></section>` : ""}<div class="pve-tabs" role="tablist" aria-label="Proxmox machine views">${["overview", "hardware", "network", "performance", "snapshots", "activity"].map((t) => `<button type="button" role="tab" data-pve-tab="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div><div data-pve-content role="tabpanel"></div><footer class="pve-footer">${esc(detail.checked_at ? `Checked ${date(detail.checked_at)}` : "Proxmox inventory")} · ${esc(resource.agent ? "Speck endpoint linked" : "Managed through Proxmox")}</footer>`;
+      root.innerHTML = `<div class="pve-heading"><p>${esc(resource.connection_name)} <span>›</span> ${esc(resource.node)} <span>›</span> ${resource.kind === "lxc" ? "Container" : "VM"} ${esc(resource.id)}</p><span class="pve-state">${esc(detail.status?.status || resource.status || "Unknown")}</span></div><div class="pve-controls">${actions()}</div>${resource.kind === "qemu" && !canScreen() ? `<p class="pve-no-screen" role="note">${esc(detail.capabilities?.console?.reason || "Screen access is unavailable.")}</p>` : ""}${resource.kind === "qemu" && canScreen() ? `<section class="pve-preview"><div class="pve-preview-screen">${note(canScreen() ? "Screen preview" : detail.capabilities?.console?.reason || "Screen access is unavailable.")}</div><div class="pve-preview-footer"><span data-pve-preview-status role="status">${esc(canScreen() ? "A snapshot of the VM display. No guest login required." : detail.capabilities?.console?.reason || "")}</span><div>${button("capture", "Refresh preview", false, !canScreen())}${button("download", "Save screenshot", false, true)}</div></div></section>` : ""}<div class="pve-tabs" role="tablist" aria-label="Proxmox machine views">${["overview", "hardware", "network", "performance", "snapshots", "activity"].map((t) => `<button type="button" role="tab" data-pve-tab="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div><div data-pve-content role="tabpanel"></div><footer class="pve-footer">${esc(detail.checked_at ? `Checked ${date(detail.checked_at)}` : "Proxmox inventory")} · ${esc(resource.agent ? "Speck endpoint linked" : "Managed through Proxmox")}</footer>`;
       bindActions();
       const tabs = [
         ...root.querySelectorAll<HTMLButtonElement>("[data-pve-tab]"),

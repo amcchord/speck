@@ -335,38 +335,28 @@ async function desktopSignIn() {
   }
 }
 
+// Navigation grouped by purpose; the first group is the everyday view.
+const NAV_GROUPS: [string, [string, string, string][]][] = [
+  ["", [["fleet", "fleet", "Fleet"], ["alerts", "alerts", "Alerts"]]],
+  ["Automation", [["schedules", "calendar", "Schedules"], ["patches", "patch", "Patches"], ["software", "package", "Software & scripts"], ["assistant", "spark", "AI assistant"]]],
+  ["Infrastructure", [["infrastructure", "network", "Infrastructure"], ["network", "globe", "Network & DNS"], ["slide", "slide", "Slide"], ["recovery", "recovery", "Recovery lab"]]],
+  ["Administration", [["keys", "key", "Keys"], ["api", "code", "API & agents"], ["activity", "history", "Activity"], ["settings", "settings", "Settings"], ["downloads", "download", "Downloads"]]],
+];
+// Pages without live data have nothing to refresh.
+const STATIC_PAGES = ["assistant", "downloads", "settings", "account"];
 function shell(title: string, subtitle: string) {
   fleetInteractionsCleanup();
   document.body.dataset.role = role;
-  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<span class="version">0.2</span></a><nav aria-label="Main navigation">${[
-    ["fleet", "fleet", "Fleet"],
-    ["alerts", "alerts", "Alerts"],
-    ["schedules", "calendar", "Schedules"],
-    ["patches", "patch", "Patches"],
-    ["software", "package", "Software & scripts"],
-    ["assistant", "spark", "AI assistant"],
-    ["recovery", "recovery", "Recovery lab"],
-    ["slide", "slide", "Slide"],
-    ["infrastructure", "network", "Infrastructure"],
-    ["network", "globe", "Network & DNS"],
-    ["keys", "key", "Keys"],
-    ["api", "code", "API & agents"],
-    ["activity", "history", "Activity"],
-    ["downloads", "download", "Downloads"],
-    ["settings", "settings", "Settings"],
-  ]
-    .filter(
-      ([id]) =>
-        role !== "viewer" ||
-        ["fleet", "alerts", "activity", "downloads", "settings"].includes(id),
-    )
-    .map(
-      ([id, symbol, label]) =>
-        `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol as Parameters<typeof icon>[0])}<span>${label}</span></button>`,
-    )
-    .join(
-      "",
-    )}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : ""}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><button id="refresh" class="secondary" aria-label="Refresh" title="Refresh">${icon("refresh")}${page === "fleet" ? "" : "<span>Refresh</span>"}</button>${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div></header><section id="content" tabindex="-1"></section></main>`;
+  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<span class="version">0.2</span></a><nav aria-label="Main navigation">${NAV_GROUPS.map(([group, items]) => {
+    const visible = items.filter(([id]) => role !== "viewer" || ["fleet", "alerts", "activity", "downloads", "settings"].includes(id));
+    if (!visible.length) return "";
+    return `<div class="nav-group">${group ? `<span class="nav-label">${group}</span>` : ""}${visible
+      .map(
+        ([id, symbol, label]) =>
+          `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol as Parameters<typeof icon>[0])}<span>${label}</span></button>`,
+      )
+      .join("")}</div>`;
+  }).join("")}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : '<div id="page-summary" class="fleet-summary page-summary" aria-label="Summary"></div>'}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions">${STATIC_PAGES.includes(page) ? "" : `<button id="refresh" class="secondary icon-button" aria-label="Refresh" title="Refresh">${icon("refresh")}</button>`}${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div></header><section id="content" tabindex="-1"></section></main>`;
   document.querySelectorAll<HTMLElement>("[data-page]").forEach(
     (el) =>
       (el.onclick = () => {
@@ -395,6 +385,15 @@ function content(html: string) {
   fleetInteractionsCleanup();
   el.innerHTML = html;
   el.setAttribute("aria-busy", "false");
+  // Page-level primary actions live in the header, left of refresh, on every page.
+  const actions = document.querySelector<HTMLElement>(".workspace > header .header-actions");
+  actions?.querySelectorAll("[data-page-action]").forEach((node) => node.remove());
+  const lifted = [...el.querySelectorAll<HTMLElement>("[data-page-action]")];
+  if (lifted.length) actions?.prepend(...lifted);
+}
+function summary(html: string) {
+  const el = document.getElementById("page-summary");
+  if (el) el.innerHTML = html;
 }
 function loadError(error: unknown) {
   return `<div class="empty" role="alert"><h2>Unable to load</h2><p>${esc((error as Error).message)}</p><p>Use Refresh to try again.</p></div>`;
@@ -445,20 +444,20 @@ async function render(manualRefresh = false) {
     page = "fleet";
   const titles: Record<string, string[]> = {
     fleet: ["Fleet", ""],
-    alerts: ["Alerts", ""],
-    schedules: ["Schedules", ""],
+    alerts: ["Alerts", "Health checks from every agent. Expand an alert for evidence and review actions."],
+    schedules: ["Schedules", "Reviewed scans and templates that run on a schedule."],
     account: ["Account & access", ""],
-    jobs: ["Job history", ""],
-    patches: ["Patches", ""],
+    jobs: ["Job history", "Commands and operations sent to endpoint agents."],
+    patches: ["Patches", "Scan machines, review available updates and install what you choose."],
     software: ["Software & scripts", ""],
     assistant: ["AI assistant", ""],
-    recovery: ["Recovery lab", ""],
+    recovery: ["Recovery lab", "Capture proof → back up → restore together → compare."],
     slide: ["Slide", ""],
-    infrastructure: ["Infrastructure", ""],
-    network: ["Network & DNS", ""],
-    keys: ["Keys", ""],
-    api: ["API & agents", ""],
-    activity: ["Activity", ""],
+    infrastructure: ["Infrastructure", "Hosts, guests, cloud instances and backup appliances."],
+    network: ["Network & DNS", "Domains, public IPs and LAN hosts, joined to the machines they reach."],
+    keys: ["Keys", "Project credentials sealed with the server key. Every reveal is recorded in Activity."],
+    api: ["API & agents", "Give Claude, scripts and CI scoped access to machines, infrastructure, DNS, public IPs and the key vault."],
+    activity: ["Activity", "Every sign-in, change and remote session, with who did it and when."],
     settings: ["Settings", ""],
     downloads: ["Downloads", ""],
   };
@@ -490,6 +489,7 @@ async function render(manualRefresh = false) {
 }
 const ops = createOperations({
   api,
+  summary,
   esc,
   badge,
   date,
@@ -514,9 +514,9 @@ const ops = createOperations({
 });
 const infrastructure = createInfrastructure({api, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
   newVm: () => launchVm({ api, esc, notify, dialog, loadingState, exposeHost: (ip: string, name: string) => network.exposeHost(ip, name) })});
-const network = createNetwork({ api, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
-const keys = createKeys({ api, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
-const apiAccess = createApiAccess({ api, esc, notify, dialog, content, loading, role: () => role, loadingState });
+const network = createNetwork({ api, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
+const keys = createKeys({ api, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
+const apiAccess = createApiAccess({ api, summary, esc, notify, dialog, content, loading, role: () => role, loadingState });
 const management = createManagement({
   api,
   esc,
@@ -528,6 +528,7 @@ const management = createManagement({
   dialog,
   content,
   loading,
+  summary,
   openDevice,
   assistAlert: (device: Item, alert: Item, intent: "diagnose" | "fix") => ops.assistDialog(device, "", undefined, { alert, intent }),
   role: () => role,
@@ -737,13 +738,15 @@ function renderFleetRows() {
         const active = presence.app;
         const screenAction = `${d.remote_protocol === "shell" ? "Open web shell" : d.remote_protocol === "ssh" ? "Open SSH session" : "Screen control"} · ${d.label}`;
         const shellAction = `Run ${d.platform === "windows" ? "PowerShell" : "shell command"} · ${d.label}`;
-        const usage = (value: any) => value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(0) + "%" : "—";
+        const none = '<span class="placeholder">—</span>';
+        // Providers can report memory above 100% (ballooning); show the capped share and keep the raw value on hover.
+        const usage = (value: any) => value != null && Number.isFinite(Number(value)) ? (Number(value) > 100 ? `<span title="${Number(value).toFixed(0)}% reported">100%</span>` : Number(value).toFixed(0) + "%") : none;
         const cells: Record<string,string> = {
           name: `<button data-device="${esc(d.id)}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon">${icon(d.platform === "windows" ? "windows" : d.platform === "linux" ? "linux" : "monitor")}</span><b>${esc(d.label)}</b></button>`,
-          status: badge(status), client: `${esc(d.client_name || "Unassigned")}${d.client_conflict ? ' <span title="Conflicting client memberships">⚠</span>' : ''}`,
+          status: badge(status), client: `${d.client_name ? esc(d.client_name) : '<span class="placeholder">Unassigned</span>'}${d.client_conflict ? ' <span title="Conflicting client memberships">⚠</span>' : ''}`,
           agent: `<span class="agent-indicator ${hasAgent(d) ? "installed" : ""}">${hasAgent(d) ? "● " : "○ "}${esc(agentLabel(d))}</span>${d.identity_issues?.length ? ' <span title="Identity needs review">⚠</span>' : ''}`,
-          location: esc(d.location || d.site || "—"), app: `<span title="${esc(active ? [active.title,active.process,active.user].filter(Boolean).join(" · ") : presence.desktop)}">${hasEndpoint(d) ? esc(presence.table) : "—"}</span>`,
-          cpu: usage(cpu(d)), memory: usage(memory(d)), address: esc(primaryAddress(d)), provider: esc(d.provider || "Speck"), kind: esc(kindLabel(d)), site: esc(d.site || "—"), seen: esc(date(d.last_seen)),
+          location: d.location || d.site ? esc(d.location || d.site) : none, app: hasEndpoint(d) ? `<span title="${esc(active ? [active.title,active.process,active.user].filter(Boolean).join(" · ") : presence.desktop)}">${esc(presence.table)}</span>` : none,
+          cpu: usage(cpu(d)), memory: usage(memory(d)), address: primaryAddress(d) === "—" ? none : esc(primaryAddress(d)), provider: esc(d.provider || "Speck"), kind: esc(kindLabel(d)), site: d.site ? esc(d.site) : none, seen: esc(date(d.last_seen)),
           preview: hasEndpoint(d) ? d.preview?.available ? `<button data-device="${esc(d.id)}" class="preview-thumb"><img loading="lazy" src="/api/devices/${encodeURIComponent(d.id)}/preview?t=${d.preview.captured_at}" alt="Screen preview of ${esc(d.label)}"><span>${d.preview.source === "live" ? "Live" : "Saved"} · ${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${esc(d.id)}">${d.preview?.enabled ? "No preview yet" : "Preview off"}</button>` : "—",
         };
         return `<tr data-row="${esc(d.id)}" class="${fleetSelection.has(d.id) ? "selected-row" : ""} ${fleetPrefs.highlight_agents && hasAgent(d) ? "agent-highlight" : ""}"><td class="select-cell"><input type="checkbox" data-select="${esc(d.id)}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${selectableMachine(d) ? "" : "disabled"}></td>${activeColumns().map(k => `<td data-column="${k}" data-label="${columns[k].label}" class="${columns[k].className || ""}" title="${k === "client" ? esc((d.clients || []).map((c: Item) => c.name).join(" · ")) : k === "location" ? esc(d.location) : ""}">${cells[k]}</td>`).join("")}<td class="connect-cell">${hasEndpoint(d) ? `<button data-screen="${esc(d.id)}" class="quick-action" ${d.online && selectableMachine(d) && role !== "viewer" ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(["shell", "ssh"].includes(d.remote_protocol) ? "terminal" : "monitor")}</button><button data-terminal="${esc(d.id)}" class="quick-action" ${d.online && selectableMachine(d) && role !== "viewer" ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button>` : `<button data-device="${esc(d.id)}" class="quick-action" aria-label="Manage ${esc(d.label)}" title="Manage machine">${icon("monitor")}</button>`}</td></tr>`;
@@ -961,6 +964,9 @@ async function showReach(d: Item) {
   const el = document.getElementById("machine-reach");
   const m = map.machines.find((x: Item) => x.id === d.id || (d.endpoint_id && x.endpoint_id === d.endpoint_id));
   if (!el || selected !== d.id || !m) return;
+  // Show the strip only when it adds more than the address the pane already reports.
+  const reported = primaryAddress(d).split("/")[0];
+  if (!m.public.length && !m.dns.length && m.lan.every((l: Item) => l.ip === reported)) return;
   const chip = (text: string, tone = "") => `<span class="net-chip ${tone}">${esc(text)}</span>`;
   el.innerHTML = `<dl><div><dt>LAN</dt><dd>${m.lan.map((l: Item) => `<span class="mono">${esc(l.ip)}</span>`).join(" ") || "—"}</dd></div><div><dt>Public</dt><dd>${m.public.map((p: Item) => `<span class="mono">${esc(p.ip)}</span>${p.via === "unifi_nat" ? chip("NAT") : ""}`).join(" ") || "—"}</dd></div><div><dt>DNS names</dt><dd>${m.dns.slice(0, 8).map((n: Item) => chip(n.fqdn)).join("") || "—"}${m.dns.length > 8 ? `<small>+${m.dns.length - 8} more</small>` : ""}</dd></div></dl><a class="text-link" href="#network">Network &amp; DNS</a>`;
 }
@@ -1734,6 +1740,20 @@ async function renderRestoreCleanup() {
       }
     });
 }
+// The few facts that identify a Slide resource at a glance; full detail stays in the row.
+function slideFacts(r: Item) {
+  const facts: string[] = [];
+  const name = String(r.display_name || r.name || r.hostname || "").toLowerCase();
+  if (r.hostname && r.hostname.toLowerCase() !== name) facts.push(r.hostname);
+  if (r.os || r.os_name) facts.push([r.os || r.os_name, r.os_version].filter(Boolean).join(" "));
+  else if (r.platform) facts.push(r.platform);
+  if (r.serial_number) facts.push(r.serial_number);
+  if (r.hardware_model_name) facts.push(r.hardware_model_name);
+  if (r.storage_used_bytes && r.storage_total_bytes) facts.push(`${bytes(r.storage_used_bytes)} of ${bytes(r.storage_total_bytes)}`);
+  const when = r.last_seen_at || r.backup_ended_at || r.ended_at || r.started_at || r.created_at;
+  if (when) facts.push((r.last_seen_at ? "seen " : "") + date(when));
+  return facts.slice(0, 3);
+}
 async function renderSlide() {
   loading("Loading Slide…");
   const cfg = await api("/slide/connection");
@@ -1756,7 +1776,7 @@ async function renderSlide() {
       rows
         .map(
           (r: Item, i: number) =>
-            `<details class="provider"><summary><b>${esc(r.display_name || r.name || r.hostname || r.agent_id || r.backup_id || r.snapshot_id || r.virt_id || "Resource")}</b><span>${badge(r.status || r.state || r.verify_boot_status || r.service_status || resource)}</span></summary><pre>${pretty(r)}</pre>${resource === "agent" ? `<button data-backup="${esc(r.agent_id)}" class="primary">Request backup</button>` : ""}</details>`,
+            `<details class="slide-row"><summary><b>${esc(r.display_name || r.name || r.hostname || r.agent_id || r.backup_id || r.snapshot_id || r.virt_id || "Resource")}</b><span class="slide-facts">${esc(slideFacts(r).join(" · "))}</span>${r.status || r.state || r.verify_boot_status || r.service_status ? badge(r.status || r.state || r.verify_boot_status || r.service_status) : "<span></span>"}</summary><pre>${pretty(r)}</pre>${resource === "agent" ? `<button data-backup="${esc(r.agent_id)}" class="primary">Request backup</button>` : ""}</details>`,
         )
         .join("") ||
       '<div class="empty"><h3>No resources returned.</h3><p>This is the live response from the connected Slide account.</p></div>';
@@ -1809,9 +1829,8 @@ async function renderRecovery() {
   ]);
   fleet = devices;
   content(
-    `<div class="recovery-banner"><div><h2>Recovery tests</h2><p>Capture proof → back up → restore together → compare.</p></div><button id="new-plan" class="primary">${icon("plus")} New recovery plan</button></div><div class="section-head"><div><h2>Your recovery plans</h2><p>Each run creates a shared, isolated network for its restored machines.</p></div></div><div class="plan-grid">${plans.map((p: Item) => `<article class="plan"><span class="eyebrow">RECOVERY PLAN</span><h2>${esc(p.name)}</h2><p>${p.spec.members.length} systems · ${esc(p.spec.router_prefix)}</p><button data-run="${p.id}" class="primary">Run recovery test →</button><details><summary>View plan</summary><pre>${pretty(p.spec)}</pre></details></article>`).join("") || '<div class="empty"><h3>No recovery plans</h3><p>Link devices to their Slide agent IDs, then define application checks.</p></div>'}</div><div class="section-head"><h2>Runs & evidence</h2><button id="refresh-runs" class="secondary">Refresh</button></div>${runs.map((r: Item) => `<details class="provider" ${r.status === "stopped" ? "" : "open"}><summary><b>${esc(r.state.name)}</b>${badge(r.status, r.status === "passed")}<small>${date(r.created)}</small></summary><div class="run-phase">${esc(r.phase.replaceAll("_", " "))}</div>${r.state.error ? `<div class="callout">${esc(r.state.error)}</div>` : ""}${recoveryEvidence(r)}<div class="toolbar">${r.status === "awaiting_clones" ? `<button data-verify="${r.id}" class="primary">Verify restored machines</button>` : ""}${r.status !== "running" && r.status !== "stopped" ? `<button data-stop="${r.id}" class="secondary">Stop restored VMs</button>` : ""}</div></details>`).join("")}`,
+    `<button id="new-plan" class="primary" data-page-action>${icon("plus")}<span>New recovery plan</span></button><div class="section-head"><div><h2>Your recovery plans</h2><p>Each run creates a shared, isolated network for its restored machines.</p></div></div><div class="plan-grid">${plans.map((p: Item) => `<article class="plan"><span class="eyebrow">RECOVERY PLAN</span><h2>${esc(p.name)}</h2><p>${p.spec.members.length} systems · ${esc(p.spec.router_prefix)}</p><button data-run="${p.id}" class="primary">Run recovery test →</button><details><summary>View plan</summary><pre>${pretty(p.spec)}</pre></details></article>`).join("") || '<div class="empty"><h3>No recovery plans</h3><p>Link devices to their Slide agent IDs, then define application checks.</p></div>'}</div><div class="section-head"><h2>Runs & evidence</h2></div>${runs.map((r: Item) => `<details class="provider" ${r.status === "stopped" ? "" : "open"}><summary><b>${esc(r.state.name)}</b>${badge(r.status, r.status === "passed")}<small>${date(r.created)}</small></summary><div class="run-phase">${esc(r.phase.replaceAll("_", " "))}</div>${r.state.error ? `<div class="callout">${esc(r.state.error)}</div>` : ""}${recoveryEvidence(r)}<div class="toolbar">${r.status === "awaiting_clones" ? `<button data-verify="${r.id}" class="primary">Verify restored machines</button>` : ""}${r.status !== "running" && r.status !== "stopped" ? `<button data-stop="${r.id}" class="secondary">Stop restored VMs</button>` : ""}</div></details>`).join("")}`,
   );
-  on("refresh-runs", renderRecovery);
   on("new-plan", newPlan);
   document.querySelectorAll<HTMLElement>("[data-run]").forEach(
     (el) =>
@@ -1950,13 +1969,12 @@ async function newPlan() {
 }
 async function renderJobs() {
   loading("Loading job history…");
-  const [audit, jobs, devices] = await Promise.all([
-    api("/audit"),
-    api("/jobs"),
-    api("/devices"),
-  ]);
+  const [jobs, devices] = await Promise.all([api("/jobs"), api("/devices?include_archived=true")]);
   content(
-    `<h2>Recent jobs</h2><div class="scroll"><table><thead><tr><th>Job</th><th>Device</th><th>Status</th><th>When</th></tr></thead><tbody>${jobs.map((j: Item) => `<tr><td><details><summary>${esc(j.kind)}</summary><pre>${pretty(j.result)}</pre></details></td><td class="mono">${esc(devices.find((d: Item) => d.id === j.device_id)?.label || j.device_id.slice(0, 10))}</td><td>${badge(j.status, j.status === "complete")}</td><td>${date(j.created)}</td></tr>`).join("")}</tbody></table></div><h2>Audit trail</h2><table><thead><tr><th>Action</th><th>Actor</th><th>When</th></tr></thead><tbody>${audit.map((a: Item) => `<tr><td><details><summary>${esc(a.action)}</summary><pre>${pretty(a.detail)}</pre></details></td><td>${esc(a.actor)}</td><td>${date(a.at)}</td></tr>`).join("")}</tbody></table>`,
+    `<div class="scroll"><table class="jobs-table"><thead><tr><th>Job</th><th>Machine</th><th>Status</th><th>By</th><th>When</th></tr></thead><tbody>${jobs.map((j: Item) => {
+      const device = devices.find((d: Item) => d.id === j.device_id);
+      return `<tr><td><details><summary>${esc(j.kind)}</summary><pre>${pretty(j.result)}</pre></details></td><td>${device ? esc(device.label) : '<span class="placeholder">Removed machine</span>'}</td><td>${badge(j.status, j.status === "complete")}</td><td>${j.actor ? esc(j.actor) : '<span class="placeholder">—</span>'}</td><td>${date(j.created)}</td></tr>`;
+    }).join("") || '<tr><td colspan="5" class="placeholder">No jobs yet.</td></tr>'}</tbody></table></div><p class="muted jobs-note">The complete audit trail is in <a class="text-link" href="#activity">Activity</a>.</p>`,
   );
 }
 async function renderSettings() {
@@ -1964,7 +1982,7 @@ async function renderSettings() {
   if (role === "viewer") return management.renderAccount();
   const c = await api("/slide/connection");
   content(
-    `<div class="settings-grid"><article class="panel"><span class="eyebrow">SLIDE INTEGRATION</span><h2>Slide connection</h2><p>${c.connected ? "A Slide account is connected. Enter a new token to replace it." : "Add an account-scoped Slide API token."}</p><label>API origin<input id="slide-url" value="${esc(c.url || "https://api.slide.tech")}"></label><label>API token<input id="slide-token" type="password" autocomplete="new-password"></label><button id="save-slide" class="primary">Verify & connect</button></article><article class="panel"><span class="eyebrow">DEVICE ENROLLMENT</span><h2>Windows and Linux agents</h2><p>Install Speck as a Windows service or a Linux systemd service. Devices connect outbound over HTTPS.</p><button id="enrollment" class="secondary">Add a device</button><hr><h3>Remote access</h3><p>Browser RDP with audio and microphone, VNC for desktop viewing, or SSH for a terminal. Configure each connection from the device's Remote tab.</p><p>Native RDP fallback requires network reachability to the endpoint.</p></article></div>`,
+    `<div class="settings-grid"><article class="panel"><span class="eyebrow">SLIDE INTEGRATION</span><h2>Slide connection</h2><p>${c.connected ? "A Slide account is connected. Enter a new token to replace it." : "Add an account-scoped Slide API token."}</p><label>API origin<input id="slide-url" value="${esc(c.url || "https://api.slide.tech")}"></label><label>API token<input id="slide-token" type="password" autocomplete="new-password"></label><button id="save-slide" class="primary">Verify & connect</button></article><article class="panel"><span class="eyebrow">DEVICE ENROLLMENT</span><h2>Windows and Linux agents</h2><p>Install Speck as a Windows service or a Linux systemd service. Devices connect outbound over HTTPS.</p><button id="enrollment" class="secondary">Add a device</button></article></div>`,
   );
   on("save-slide", async () => {
     await api("/slide/connection", "PUT", {
@@ -1995,6 +2013,13 @@ async function renderSettings() {
   if (role === "admin") await integrationSettings({ api, esc, date, on, value, notify, dialog });
   await ops.settingsPanel();
   await management.settingsPanel();
+  // Sections load from several modules; pack them into one set of columns without row gaps.
+  const grids = [...document.querySelectorAll<HTMLElement>("#content .settings-grid")];
+  grids.slice(1).forEach((grid) => {
+    grids[0].append(...grid.children);
+    grid.remove();
+  });
+  grids[0]?.classList.add("settings-masonry");
   if (role !== "admin") {
     for (const id of ["save-slide", "save-ai"])
       document.getElementById(id)?.setAttribute("disabled", "");

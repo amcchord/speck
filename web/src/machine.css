@@ -121,3 +121,10 @@
 
 .preview-status { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .preview-status:empty { display: none; }
+/* Audit: identity facts share one row; provider chips stay compact. */
+.machine-inventory dl { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 16px; }
+.machine-inventory { padding-bottom: 12px; margin-bottom: 12px; }
+.machine-inventory p { margin-top: 8px; }
+.machine-inventory .drawer-actions:not(:empty) { margin-top: 8px; }
+.machine-inventory .drawer-actions button { min-height: var(--control-small); padding: 4px 10px; font-size: 12px; }
+@media (max-width: 760px) { .machine-inventory dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

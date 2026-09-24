@@ -15,7 +15,8 @@ export function createApiAccess(ui: Item) {
   let tokens: Item[] = [],
     scopes: Item = {},
     schema: Item | null = null,
-    endpointQuery = "";
+    endpointQuery = "",
+    showInactive = false;
 
   async function copy(text: string, label = "Copied") {
     await navigator.clipboard.writeText(text);
@@ -28,7 +29,7 @@ export function createApiAccess(ui: Item) {
     const origin = location.origin;
     const setup = snippets(origin, "$SPECK_TOKEN");
     content(
-      `<div class="net-intro"><p>Give Claude and other agents scoped access to machines, infrastructure, DNS, public IPs and the key vault.</p></div><section class="api-start"><article class="card"><span class="eyebrow">1 · Token</span><h3>Create a scoped token</h3><p>Tokens act as you, never above your role. Grant only the scopes an agent needs.</p><button class="primary" id="api-new-token">${icon("plus")}<span>Create API token</span></button></article><article class="card"><span class="eyebrow">2 · Claude Code</span><h3>Connect over MCP</h3><p>Speck is an MCP server. Add it once and Claude can search, run commands and fetch keys.</p><pre class="keys-value api-snippet">${esc(setup.mcp)}</pre><button class="secondary" data-copy="mcp">${icon("copy")}<span>Copy command</span></button></article><article class="card"><span class="eyebrow">3 · Repositories</span><h3>Drop in SPECK.md</h3><p>Save <a class="text-link" href="/speck.md" target="_blank" rel="noopener">speck.md</a> in a repo so future agents know how to get keys and infrastructure.</p><pre class="keys-value api-snippet">${esc(setup.dropin)}</pre><button class="secondary" data-copy="dropin">${icon("copy")}<span>Copy command</span></button></article></section><div class="api-links"><a class="secondary" href="/agents.md" target="_blank" rel="noopener">Agent guide</a><a class="secondary" href="/llms.txt" target="_blank" rel="noopener">llms.txt</a><a class="secondary" href="/api/openapi.json" target="_blank" rel="noopener">OpenAPI schema</a></div><h2 class="api-head">API tokens</h2><div id="api-tokens"></div><h2 class="api-head">Endpoints</h2><p class="muted net-note">Every endpoint below accepts <span class="mono">Authorization: Bearer speck_pat_…</span>. GET requests can be tried here with your own session.</p><div class="infra-toolbar net-toolbar"><label class="infra-search">Search<input id="api-endpoint-q" type="search" placeholder="Path, method or description" value="${esc(endpointQuery)}"></label></div><div id="api-endpoints">${ui.loadingState ? ui.loadingState("Loading schema…") : ""}</div>`,
+      `<section class="api-start"><article class="card"><span class="eyebrow">1 · Token</span><h3>Create a scoped token</h3><p>Tokens act as you, never above your role. Grant only the scopes an agent needs.</p><button class="primary" id="api-new-token">${icon("plus")}<span>Create API token</span></button></article><article class="card"><span class="eyebrow">2 · Claude Code</span><h3>Connect over MCP</h3><p>Speck is an MCP server. Add it once and Claude can search, run commands and fetch keys.</p><pre class="keys-value api-snippet">${esc(setup.mcp)}</pre><button class="secondary" data-copy="mcp">${icon("copy")}<span>Copy command</span></button></article><article class="card"><span class="eyebrow">3 · Repositories</span><h3>Drop in SPECK.md</h3><p>Save <a class="text-link" href="/speck.md" target="_blank" rel="noopener">speck.md</a> in a repo so future agents know how to get keys and infrastructure.</p><pre class="keys-value api-snippet">${esc(setup.dropin)}</pre><button class="secondary" data-copy="dropin">${icon("copy")}<span>Copy command</span></button></article></section><div class="api-links"><a class="secondary" href="/agents.md" target="_blank" rel="noopener">Agent guide</a><a class="secondary" href="/llms.txt" target="_blank" rel="noopener">llms.txt</a><a class="secondary" href="/api/openapi.json" target="_blank" rel="noopener">OpenAPI schema</a></div><h2 class="api-head">API tokens</h2><div id="api-tokens"></div><h2 class="api-head">Endpoints</h2><p class="muted net-note">Every endpoint below accepts <span class="mono">Authorization: Bearer speck_pat_…</span>. GET requests can be tried here with your own session.</p><div class="infra-toolbar net-toolbar"><label class="infra-search">Search<input id="api-endpoint-q" type="search" placeholder="Path, method or description" value="${esc(endpointQuery)}"></label></div><div id="api-endpoints">${ui.loadingState ? ui.loadingState("Loading schema…") : ""}</div>`,
     );
     document.getElementById("api-new-token")!.addEventListener("click", tokenDialog);
     document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((b) =>
@@ -47,20 +48,26 @@ export function createApiAccess(ui: Item) {
     const el = document.getElementById("api-tokens");
     if (!el) return;
     const active = tokens.filter((t) => t.active);
+    const inactive = tokens.length - active.length;
+    const shown = showInactive ? tokens : active;
     el.innerHTML = tokens.length
-      ? `<div class="infra-table-wrap"><table class="net-table"><thead><tr><th>Name</th><th>Scopes</th><th>Owner</th><th>Last used</th><th>Expires</th><th>Status</th><th></th></tr></thead><tbody>${tokens
+      ? `${shown.length ? `<div class="infra-table-wrap"><table class="net-table net-compact"><thead><tr><th>Name</th><th>Scopes</th><th>Owner</th><th>Last used</th><th>Expires</th><th>Status</th><th></th></tr></thead><tbody>${shown
           .map(
             (t, i) =>
               `<tr class="${t.active ? "" : "api-inactive"}"><td><b>${esc(t.name)}</b>${t.key_prefixes.length ? `<small>Vault limited to ${t.key_prefixes.map((p: string) => esc(p) + "*").join(", ")}</small>` : ""}</td><td>${t.scopes
                 .map((s: string) => chip(s, s.startsWith("keys") ? "warn" : s === "admin" ? "machine" : ""))
                 .join("")}</td><td>${esc(t.owner)}</td><td>${t.last_used ? esc(relative(t.last_used)) + `<small>${esc(t.last_ip || "")} · ${t.uses} requests</small>` : '<span class="muted">never</span>'}</td><td>${esc(relative(t.expires))}</td><td>${t.revoked ? chip("Revoked", "bad") : t.active ? chip("Active", "good") : chip("Expired", "warn")}</td><td class="net-row-actions">${t.active ? `<button class="secondary" data-revoke="${i}">Revoke</button>` : ""}</td></tr>`,
           )
-          .join("")}</tbody></table></div><p class="muted">${active.length} active. Token use appears in Activity as “owner (API: token name)”.</p>`
+          .join("")}</tbody></table></div>` : ""}<p class="muted api-token-note">${active.length ? `${active.length} active.` : "No active tokens."} Token use appears in Activity as “owner (API: token name)”.${inactive ? ` <button class="text-link" id="api-toggle-inactive">${showInactive ? "Hide" : "Show"} ${inactive} revoked or expired</button>` : ""}</p>`
       : '<div class="empty"><h2>No API tokens yet</h2><p>Create one to connect Claude Code, scripts or CI.</p></div>';
+    el.querySelector("#api-toggle-inactive")?.addEventListener("click", () => {
+      showInactive = !showInactive;
+      drawTokens();
+    });
     cardify(el);
     el.querySelectorAll<HTMLButtonElement>("[data-revoke]").forEach((b) =>
       b.addEventListener("click", async () => {
-        const t = tokens[+b.dataset.revoke!];
+        const t = shown[+b.dataset.revoke!];
         const d = dialog(
           "Revoke " + t.name,
           `<form class="net-confirm"><p>Agents using this token lose access immediately. This cannot be undone.</p><div class="dialog-footer"><button type="button" class="secondary" id="api-revoke-cancel">Cancel</button><button class="primary" id="api-revoke-ok">Revoke token</button></div></form>`,

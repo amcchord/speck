@@ -255,3 +255,51 @@ h2, .page-intro h2 { font-size: 20px; letter-spacing: -0.4px; }
   :root { --control-height: 44px; --control-small: 44px; }
   input:where(:not([type="checkbox"]):not([type="radio"]):not([type="file"])), select, textarea { font-size: 16px; }
 }
+
+/* Audit 2026-09-23: grouped navigation, one header pattern, tables flow with the page. */
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-group + .nav-group { margin-top: 12px; }
+.nav-label { padding: 0 12px 4px; color: #8fa596; font-size: 10px; font-weight: 600; letter-spacing: .9px; text-transform: uppercase; }
+nav button { min-height: 36px; padding: 7px 12px; }
+.icon-button { width: var(--control-height); padding: 0 !important; }
+.workspace > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.workspace .page-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 20px; min-width: 0; }
+.workspace .page-heading > p { flex-basis: 100%; margin: 2px 0 0; }
+.page-summary:empty { display: none; }
+.page-summary { margin: 0 !important; font-size: 12px; }
+.header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.workspace .scroll { max-height: none; overflow: visible; overflow-x: auto; }
+.placeholder, td.placeholder, .muted-value { color: var(--muted); }
+@media (max-width: 760px) {
+  .nav-group { display: contents; }
+  .nav-label { display: none; }
+  .header-actions [data-page-action] span { display: inline; }
+  .workspace > header { flex-wrap: wrap; align-items: flex-start; }
+}
+.settings-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); max-width: none; align-items: start; }
+.settings-grid .primary, .settings-grid .secondary, .settings-grid .section-head > button { white-space: nowrap; overflow-wrap: normal; flex-shrink: 0; }
+.assistant-note { font-size: 12px; }
+/* Slide inventory: one line per resource; JSON and actions open in place. */
+.slide-list { border: 1px solid var(--line); border-radius: var(--panel-radius); background: var(--white); overflow: hidden; }
+.slide-row { border-bottom: 1px solid var(--line); }
+.slide-row:last-child { border-bottom: 0; }
+.slide-row > summary { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(0, 2fr) auto; gap: 16px; align-items: center; padding: 10px 16px; cursor: pointer; font-size: 13px; list-style: none; }
+.slide-row > summary::-webkit-details-marker { display: none; }
+.slide-row > summary:hover { background: #fafbf7; }
+.slide-facts { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slide-row[open] > summary { background: #fafbf7; }
+.slide-row > pre, .slide-row > button { margin: 0 16px 14px; }
+.jobs-table { width: 100%; }
+.jobs-table td { vertical-align: top; }
+@media (max-width: 760px) { .slide-row > summary { grid-template-columns: 1fr auto; } .slide-facts { grid-column: 1 / -1; grid-row: 2; } }
+.panel > .section-head:first-child, .operations-panel > .section-head:first-child { margin-top: 0; }
+#content > .section-head:first-child { margin-top: 0; }
+/* Settings cards differ in height: columns avoid the empty space a grid row leaves. */
+.settings-grid.settings-masonry { display: block; columns: 3 380px; column-gap: 16px; }
+.settings-masonry > * { break-inside: avoid; margin: 0 0 16px; width: 100%; }
+.page-summary .monitor-status { color: var(--muted); }
+.page-summary .monitor-status.warn { color: #a65c21; font-weight: 650; }
+.integration-inactive { opacity: .62; }
+#integration-token-list > .text-link { margin-top: 10px; }
+.operators-table td { vertical-align: middle; }
+.jobs-note { font-size: 12px; margin: 12px 0 0; }
