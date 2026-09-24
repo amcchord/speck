@@ -656,17 +656,15 @@ export function createManagement(ui: Item) {
   }
   async function updateIndicator() {
     const data = await api("/alerts?limit=1");
-    const button = document.querySelector<HTMLButtonElement>(
-      'nav [data-page="alerts"]',
-    );
-    if (!button) return;
-    button.querySelector(".alert-count")?.remove();
     const count = data.counts.unacknowledged || 0;
-    if (count)
-      button.insertAdjacentHTML(
-        "beforeend",
-        `<b class="alert-count" aria-label="${count} unacknowledged">${count > 99 ? "99+" : count}</b>`,
-      );
+    document.querySelectorAll<HTMLButtonElement>('nav [data-page="alerts"]').forEach((button) => {
+      button.querySelector(".alert-count")?.remove();
+      if (count)
+        button.insertAdjacentHTML(
+          "beforeend",
+          `<b class="alert-count" aria-label="${count} unacknowledged">${count > 99 ? "99+" : count}</b>`,
+        );
+    });
   }
   return {
     updateIndicator,

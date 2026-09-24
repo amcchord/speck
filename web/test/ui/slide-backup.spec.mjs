@@ -26,6 +26,8 @@ for (const width of [1440, 390]) test(`Slide client and one-click backup from Fl
   await expect(page.locator('#fleet-rows')).toContainText('Primary Clinic');
   await page.locator('#fleet-rows .machine-name').click();
   await expect(page.locator('#machine-details')).toContainText('Primary Clinic');
+  // Phones collapse identity (and its provider links) behind Details.
+  if (width <= 760) await page.locator('#machine-more').click();
   await page.getByRole('button', {name:'slide · protected a_primary'}).click();
   await page.getByRole('button', {name:'Back up machine', exact:true}).click();
   const dialog = page.getByRole('dialog', {name:'Back up machine', exact:true});

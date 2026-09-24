@@ -91,7 +91,13 @@ for (const width of [1440, 834, 760, 390, 320]) {
         ['account', '#account-add', 'new-account'], ['account', '[id^="passkey-rename-"]', 'rename-passkey'],
       ]) {
         await go(page, route);
-        await page.locator(selector).first().click();
+        const target = page.locator(selector).first();
+        // Phones keep secondary page actions behind "More actions".
+        if (!(await target.isVisible()) && await page.locator('#page-more').isVisible()) {
+          const label = (await target.textContent()).trim();
+          await page.locator('#page-more').click();
+          await page.locator('dialog[open] .action-list button', { hasText: label }).click();
+        } else await target.click();
         await expect(page.locator('dialog[open]')).toBeVisible();
         await geometry(page);
         await capture(page, info, name);

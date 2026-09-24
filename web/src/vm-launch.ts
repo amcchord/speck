@@ -11,10 +11,13 @@ export async function launchVm(ui: Item) {
   try {
     [options, keys] = await Promise.all([api("/vms/options"), api("/ssh/keys").catch(() => [])]);
   } catch (err) {
+    if (!loading.isConnected) return;
     loading.close();
     notify((err as Error).message, true);
     return;
   }
+  // Closing the loading dialog cancels: do not open the form afterwards.
+  if (!loading.isConnected) return;
   loading.close();
   const osOptions = (options.os_options || []) as Item[];
   const nodes = (options.nodes || []) as Item[];

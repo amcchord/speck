@@ -690,7 +690,7 @@ scripts, logs and live screenshots are in ignored `output/austinland-release/`.
 
 ## UI/UX audit — September 23, 2026 (live)
 
-`worktrees/ui-audit`, branch `claude/ui-audit`. [Audit and implementation record](docs/ui-ux-audit.md):
+`worktrees/ui-audit`, branch `claude/ui-audit` (merged by PR #23, `09bcba3`). [Audit and implementation record](docs/ui-ux-audit.md):
 every page was reviewed at 1920 × 1080 with production data. The result: grouped navigation,
 one header pattern (summary, icon refresh, page actions), full-height tables, muted
 placeholders, readable events and receipts, compact dense views with paging, and inactive
@@ -698,4 +698,21 @@ items behind toggles. Live release `20260924T014550Z-ui-audit-233a434`. Rollback
 under `/var/lib/speck-rollback/<release>`. Private captures (before and after) and release
 scripts are in ignored `output/ui-audit/` and `output/ui-audit-release/`; the
 [synthetic gallery](docs/screenshots/ui-audit/README.md) is committed.
+
+## Phone and tablet redesign — September 24, 2026 (live)
+
+`worktrees/ui-audit-mobile`, branch `claude/ui-audit-mobile`.
+[Audit and implementation record](docs/ui-ux-audit-mobile.md): every page was reviewed in
+WebKit on iPhone 15 (393 × 659), iPad Pro 11" portrait (834 × 1194) and landscape
+(1194 × 834) with production data.
+- Phones: bottom tab bar and More sheet, compact header with a "More actions" sheet, list
+  rows for every table, folding filters, bottom-sheet dialogs, and a one-line machine summary.
+- Tablets: an 84 px labelled rail.
+
+`web/src/responsive.ts` and `responsive.css` hold the shared behaviour, and
+`web/test/ui/responsive.spec.mjs` covers it. The preview server now has synthetic provider
+data (`scripts/preview_fixtures.py`). Live release `20260924T033857Z-ui-mobile-b1cddc6`.
+Private captures and release scripts are in ignored `output/ui-audit-mobile/` and
+`output/ui-audit-mobile-release/`; the
+[synthetic gallery](docs/screenshots/ui-audit-mobile/README.md) is committed.
 

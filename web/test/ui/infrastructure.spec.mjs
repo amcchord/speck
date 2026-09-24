@@ -40,7 +40,9 @@ for(const width of [1440,390]){
   await page.setViewportSize({width,height:960});await setup(page);await page.goto('/#infrastructure');
   await page.getByRole('tab',{name:'Connections',exact:true}).click();
   await expect(page.getByText('Agent 0.1.0',{exact:false})).toBeVisible();
-  await page.getByRole('button',{name:'Add connection',exact:true}).click();
+  // Phones keep secondary page actions behind "More actions".
+  if(width<=760){await page.getByRole('button',{name:'More actions',exact:true}).click();await page.locator('dialog[open]').getByRole('button',{name:'Add connection',exact:true}).click();}
+  else await page.getByRole('button',{name:'Add connection',exact:true}).click();
   await expect(page.getByLabel('Use outbound agent')).toBeChecked();
   await expect(page.getByLabel('API origin',{exact:true})).toBeHidden();
   await page.getByRole('combobox',{name:'Provider',exact:true}).selectOption('linode');

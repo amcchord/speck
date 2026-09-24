@@ -72,6 +72,12 @@ for (const width of [1440, 834, 390, 320]) {
     await page.locator('#alert-details-0').click();
     await page.locator('#resolve-0').click();
     await expect(page.locator('.alert-item')).toHaveCount(4);
+    // Phones fold filters behind one button; the panel stays open while filters re-render the list.
+    const filters = page.locator('.m-filter-toggle');
+    if (await filters.isVisible()) {
+      await expect(page.locator('#alert-state')).toBeHidden();
+      await filters.click();
+    }
     await page.locator('#alert-state').selectOption('resolved');
     await expect(page.locator('.alert-item')).toHaveCount(1);
     await expect(page.locator('[id^="fix-"]')).toHaveCount(0);

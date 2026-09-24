@@ -1,0 +1,25 @@
+{
+  "browser": "WebKit",
+  "profiles": {
+    "phone": "iPhone 15, 393x659, 2x",
+    "tablet": "iPad Pro 11, 834x1194, 1.5x",
+    "landscape": "iPad Pro 11, 1194x834, 1.5x"
+  },
+  "source": "scripts/preview.py synthetic fixtures",
+  "files": {
+    "landscape-fleet.png": "cd1a9377236b62f4fd8c3973f8943cda9d8aba6a855391e1314ba06e4fed6d90",
+    "landscape-patches.png": "1dd6eeafa3c7e529977ead5b2ec190d69447b4e73aff6bcc0cf30db5e775fa1f",
+    "phone-alerts.png": "9e8b9f5d7b3fb3eaff8fbce010d4baa8fa6e6d0d084ff3e1ce0d2a46d577222a",
+    "phone-fleet.png": "36a9c0016b352c5a79489b45baa36db8a739c80184942fd364ee9bf24697b946",
+    "phone-infrastructure-filters.png": "cf82fe96c16cb5c54362313ae40f418f19ccdbfd31ff341bb72fbcab03431c31",
+    "phone-jobs.png": "d6d6ab945e45d4db152c47ac117bfdc6f229e264051172dbf0d8256768819a0c",
+    "phone-keys.png": "66ee7a2955c18c5ef3c686da5e1465b6fe0fc9f2546ba41bdb8858ee38c397d9",
+    "phone-machine.png": "11128a93de4e9b51f035e7eb6e89d9fcc2b2f6b5d3aa321c9164d33821ae4026",
+    "phone-more-sheet.png": "76f54c5478e8b99da845f0986c44836f8f53b0c2db1ca15441560a596432b1ee",
+    "phone-network.png": "b106f3027d58aab5590900981997992262f5d60974e3935592c596f2cd3a52bb",
+    "phone-sheet-dialog.png": "eb13ea14de6d2681ceee4d7d37501d93466c47e8c6655a1d8dc6a7b94b9ec15d",
+    "tablet-fleet.png": "52290262763dcfbfb1ad25547cc3f7f6640a53a62e83272796dc5ad26f509ba0",
+    "tablet-keys.png": "a08dfe757979665e9d7a457a033feca190791a5cfd2cc4ca0157395f9f127812",
+    "tablet-patches.png": "a3025b9f6a84179eaead15dc439d48a1273580b8ddd5c188a7084eaac9474be1"
+  }
+}

@@ -111,6 +111,8 @@ for (const width of [1440, 390]) {
     await expect(page.getByText('GoDaddy parking')).toBeVisible();
     await page.screenshot({ path: `${shots}/network-domains-${width}-${info.project.name}.png`, fullPage: width < 800 });
     await noOverflow(page, width);
+    // Phones fold the Show filter behind one Filters button.
+    if (await page.locator('.m-filter-toggle').isVisible()) await page.locator('.m-filter-toggle').click();
     await page.getByLabel('Show').selectOption('expiring');
     await expect(page.getByRole('button', { name: 'example-labs.dev' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'example-shop.com', exact: true })).toHaveCount(0);
