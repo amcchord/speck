@@ -162,6 +162,7 @@ td .primary, td .secondary, td .quick-action { white-space: nowrap; }
   table.m-list > tbody > tr.m-group > * { display: block; padding: 0 !important; border: 0 !important; background: transparent; text-align: left; }
   table.m-list .net-chip, table.m-list .badge { white-space: nowrap; }
   /* Pages that need more than the defaults. */
+  table.m-list.infra-resource-table > tbody > tr > td.m-meta small { display: none; }
   table.m-list.net-records > tbody > tr > td.m-title { flex: 0 0 auto; }
   table.m-list.net-records > tbody > tr > td:nth-child(2) { order: 1; flex: 1 1 0; font-size: 14px; color: var(--ink); }
   table.m-list.net-records > tbody > tr > td:nth-child(2)::before { content: none; }

@@ -28,6 +28,9 @@ export function createInfrastructure(ui: Item) {
     provider = "",
     connection = "",
     coverage = "";
+  // Long inventories render 100 resources at a time; any filter change starts again from the top.
+  const PAGE = 100;
+  let limit = PAGE;
   let inventory: Item = { connections: [] },
     agents: Item[] = [];
   const button = (id: string, label: string) =>
@@ -116,6 +119,7 @@ export function createInfrastructure(ui: Item) {
         "infra-search",
         () => {
           query = value("infra-search");
+          limit = PAGE;
           renderRows();
         },
         "input",
@@ -124,6 +128,7 @@ export function createInfrastructure(ui: Item) {
         "infra-provider",
         () => {
           provider = value("infra-provider");
+          limit = PAGE;
           renderRows();
         },
         "change",
@@ -132,6 +137,7 @@ export function createInfrastructure(ui: Item) {
         "infra-connection",
         () => {
           connection = value("infra-connection");
+          limit = PAGE;
           renderRows();
         },
         "change",
@@ -140,6 +146,7 @@ export function createInfrastructure(ui: Item) {
         "infra-coverage",
         () => {
           coverage = value("infra-coverage");
+          limit = PAGE;
           renderRows();
         },
         "change",
@@ -242,6 +249,7 @@ export function createInfrastructure(ui: Item) {
       );
     let group = "";
     const html = rows
+      .slice(0, limit)
       .map((r: Item, i: number) => {
         const key = r.connection_id + "/" + r.node;
         const heading =
@@ -253,11 +261,15 @@ export function createInfrastructure(ui: Item) {
       })
       .join("");
     document.getElementById("infra-resources")!.innerHTML = rows.length
-      ? `<div class="infra-table-wrap"><table class="infra-resource-table"><thead><tr><th>Host / guest</th><th>Type</th><th>State</th><th>Management</th><th>Memory / capacity</th><th>Address / ID</th><th>Agent</th></tr></thead><tbody>${html}</tbody></table></div><p class="muted">${rows.length} resources · Cluster › host › guest · Checked ${date(inventory.checked_at)}</p>`
+      ? `<div class="infra-table-wrap"><table class="infra-resource-table"><thead><tr><th>Host / guest</th><th>Type</th><th>State</th><th>Management</th><th>Memory / capacity</th><th>Address / ID</th><th>Agent</th></tr></thead><tbody>${html}</tbody></table></div>${rows.length > limit ? `<button class="secondary net-more" id="infra-more">Show ${Math.min(PAGE, rows.length - limit)} more of ${rows.length - limit} remaining</button>` : ""}<p class="muted">${rows.length} resources · Cluster › host › guest · Checked ${date(inventory.checked_at)}</p>`
       : '<div class="empty"><h2>No matching resources</h2><p>Adjust the filters or add a provider connection.</p></div>';
-    rows.forEach((r: Item, i: number) => {
+    rows.slice(0, limit).forEach((r: Item, i: number) => {
       on("infra-resource-" + i, () => resourceDetail(r));
       on("infra-endpoint-" + i, () => ui.openDevice(r.agent.id));
+    });
+    document.getElementById("infra-more")?.addEventListener("click", () => {
+      limit += PAGE;
+      renderRows();
     });
   }
   function machinePanel(r: Item, root: HTMLElement) {
