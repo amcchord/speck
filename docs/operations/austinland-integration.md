@@ -151,6 +151,7 @@ rollback on failure). No endpoint agent, host connector or provider configuratio
 | --- | --- | --- |
 | Vault, DNS, UniFi, SSH, handoffs, tokens, MCP, pages | `9b69a9d` | `/var/lib/speck-rollback/20260924T000529Z-austinland-integration-9b69a9d` |
 | New VM, reach-aware search, Fleet reach, phone cards | `0c6c35e` | `/var/lib/speck-rollback/20260924T002457Z-austinland-integration-0c6c35e` |
+| Free public IP counts in `/api/overview` | `5f9cfd2` | `/var/lib/speck-rollback/20260924T003058Z-austinland-integration-5f9cfd2` |
 
 Each release passed `./scripts/check-local.sh core` first (the second: 203 backend tests,
 Linux agent and connector race tests, all platform builds, web units and 207
