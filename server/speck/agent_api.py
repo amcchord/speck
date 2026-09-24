@@ -146,13 +146,24 @@ async def overview(user=Depends(require_user)):
         contexts = conn.execute("SELECT count(*) FROM context_files").fetchone()[0]
         caches = {r["connection_id"]: r["checked"] for r in conn.execute("SELECT connection_id,checked FROM fleet_inventory_cache")}
     services = {s["service"]: s["configured"] for s in vault.services_status()}
+    pool = None
+    if services.get("unifi") and user["role"] != "viewer":
+        import asyncio
+
+        from speck.unifi import pool_counts
+
+        try:
+            async with asyncio.timeout(8):
+                pool = await pool_counts()
+        except (HTTPException, TimeoutError):
+            pool = None
     result = {
         "server": {"origin": origin(), "version": VERSION, "time": time.time()},
         "you": whoami(user),
         "endpoints": {"devices": devices["total"], "online": devices["online"] or 0},
         "infrastructure": [c | {"inventory_checked_at": caches.get(c["id"])} for c in connections],
         "dns": {"configured": services.get("godaddy", False), "domains": domains, "zones_cached": zones, "scan_running": SCAN["running"]},
-        "public_ips": {"configured": services.get("unifi", False), "speck_managed_mappings": exposures},
+        "public_ips": {"configured": services.get("unifi", False), "speck_managed_mappings": exposures, "pool": pool},
         "ssh_keys": ssh,
         "key_arbiter": {k: services.get(k, False) for k in vault.ARBITER},
         "next": [

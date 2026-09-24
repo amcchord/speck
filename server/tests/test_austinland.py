@@ -403,6 +403,8 @@ def test_unifi_pool_expose_and_unexpose_through_cloud_connector(client, upstream
     assert [c[0] for c in upstream.calls if c[0] == "DELETE"] == ["DELETE", "DELETE"]
     assert client.get("/api/unifi/exposures").json() == []
     assert client.get("/api/unifi/clients").json()[0]["mac"] == "bc:24:11:00:00:01"
+    pool = client.get("/api/overview").json()["public_ips"]["pool"]
+    assert {k: pool[k] for k in ("free", "assigned", "in_use", "gateway")} == {"free": 2, "assigned": 0, "in_use": 1, "gateway": 1}
 
 
 def test_unifi_expose_rolls_back_port_forward_when_snat_fails(client, upstream):

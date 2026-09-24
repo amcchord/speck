@@ -237,6 +237,18 @@ async def pool_state():
     return {"pool": pool, "gateway_name": reported.get("name", ""), "console_id": host["id"]}
 
 
+async def pool_counts(max_age=300):
+    """Free/assigned/in-use counts from a short cache, for orientation summaries."""
+    cached = _lookups.get("pool")
+    if not cached or cached[0] < time.time() - max_age:
+        state = await pool_state()
+        cached = _lookups["pool"] = (time.time(), state)
+    counts = {status: 0 for status in ("free", "assigned", "in_use", "gateway")}
+    for entry in cached[1]["pool"]:
+        counts[entry["status"]] += 1
+    return counts | {"checked_at": cached[0]}
+
+
 @router.get("/pool")
 async def pool(user=Depends(require_user)):
     """Public IPs on the gateway WAN: ``free``, ``assigned`` (Speck-managed), ``in_use`` (other rules) or ``gateway``."""
@@ -365,6 +377,7 @@ async def expose(body: Expose, user=Depends(require_admin)):
              state["console_id"], time.time(), user["username"], "speck"),
         )
         audit(conn, user["username"], "unifi.exposed", detail={"public_ip": body.public_ip, "lan_ip": body.lan_ip, "name": body.name})
+    _lookups.pop("pool", None)
     return {"ok": True, "public_ip": body.public_ip, "lan_ip": body.lan_ip, "rules": created}
 
 
@@ -383,6 +396,7 @@ async def unexpose(body: Unexpose, user=Depends(require_admin)):
     with db(write=True) as conn:
         conn.execute("DELETE FROM unifi_exposures WHERE public_ip=?", (body.public_ip,))
         audit(conn, user["username"], "unifi.unexposed", detail={"public_ip": body.public_ip, "lan_ip": record["lan_ip"]})
+    _lookups.pop("pool", None)
     return {"ok": True}
 
 
