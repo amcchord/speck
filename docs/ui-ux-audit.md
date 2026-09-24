@@ -94,5 +94,44 @@ clutter the operator list. *Fix:* consistent type; hide disabled accounts behind
 
 ## Implementation record
 
-The changes above were implemented in `claude/ui-audit`; see the journal entry for the
-release, the validation that ran and before/after captures.
+Branch `claude/ui-audit` from main `b5473ca`. Commits `45ce99b` (audit and main changes),
+`159bc6f` (after-release review) and a final polish/record commit. Releases
+`20260924T012410Z-ui-audit-45ce99b` and `20260924T013738Z-ui-audit-159bc6f`, each after
+confirming production matched the previous verified commit, with a backup under
+`/var/lib/speck-rollback/<release>` and automatic rollback on a failed health check.
+
+Delivered as proposed: G2–G8, Patches, Software, AI assistant, Recovery, Infrastructure,
+Network & DNS, Keys, API & agents, Activity, Job history, Account and the Fleet RAM clamp.
+Differences from the proposals:
+
+- **G1**: grouped as **Automation**, **Infrastructure** and **Administration** below
+  Fleet and Alerts. Downloads stayed in Administration rather than moving to the footer.
+- **Slide**: compact expandable rows (name, up to three facts, status), not a table.
+- **Machine pane**: the reach strip hides when it only repeats the reported IP. Only
+  global unicast IPv6 (`2000::/3`) counts as public and only unique-local IPv6
+  (`fc00::/7`) as LAN. The pane header spacing is unchanged.
+- **Settings**: cards are packed into up to three columns, which removes the gaps a
+  grid row leaves. Revoked and expired Slide Chat tokens are hidden behind a toggle.
+- **Alerts**: the after-release review moved its counts and Monitoring policy into the
+  standard header (G3/G4).
+
+Page height at 1920 × 1080 with production data (px, full page):
+
+| Page | Before | After | Note |
+| --- | ---: | ---: | --- |
+| Infrastructure | 22,333 | 15,086 | single-line rows |
+| LAN clients | ~20,900 | 4,064 | first 100 rows, then "Show more" |
+| Domains | 17,629 | 4,167 | compact rows, first 100 |
+| Job history | 10,129 | 5,118 | jobs only, full height |
+| Keys vault | 4,469 | 2,928 | one table with group rows |
+| API & agents | 4,189 | 3,903 | inactive tokens hidden |
+| Settings | 1,836 | 1,082 | columns |
+| Slide | 1,430 | 1,080 | compact rows |
+| Activity | 1,080 | 5,014 | shows all 100 loaded events, which the inner scroller had clipped |
+| Patches | 1,080 | 1,454 | shows the whole inventory, which the inner scroller had clipped |
+
+Validation: the local core gate (backend, Linux agent, platform builds, web unit and
+Chromium/WebKit browser suites) passed before each release, most recently 207 passed and
+1 skipped. All 56 production captures were retaken after the releases; the latest run
+showed no horizontal overflow and no script errors. Synthetic results are in
+[screenshots/ui-audit](screenshots/ui-audit/README.md).

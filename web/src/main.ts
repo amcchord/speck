@@ -457,7 +457,7 @@ async function render(manualRefresh = false) {
     network: ["Network & DNS", "Domains, public IPs and LAN hosts, joined to the machines they reach."],
     keys: ["Keys", "Project credentials sealed with the server key. Every reveal is recorded in Activity."],
     api: ["API & agents", "Give Claude, scripts and CI scoped access to machines, infrastructure, DNS, public IPs and the key vault."],
-    activity: ["Activity", ""],
+    activity: ["Activity", "Every sign-in, change and remote session, with who did it and when."],
     settings: ["Settings", ""],
     downloads: ["Downloads", ""],
   };
@@ -1973,8 +1973,8 @@ async function renderJobs() {
   content(
     `<div class="scroll"><table class="jobs-table"><thead><tr><th>Job</th><th>Machine</th><th>Status</th><th>By</th><th>When</th></tr></thead><tbody>${jobs.map((j: Item) => {
       const device = devices.find((d: Item) => d.id === j.device_id);
-      return `<tr><td><details><summary>${esc(j.kind)}</summary><pre>${pretty(j.result)}</pre></details></td><td>${device ? esc(device.label) : '<span class="placeholder">Removed machine</span>'}</td><td>${badge(j.status, j.status === "complete")}</td><td>${esc(j.actor || "—")}</td><td>${date(j.created)}</td></tr>`;
-    }).join("") || '<tr><td colspan="5" class="placeholder">No jobs yet.</td></tr>'}</tbody></table></div><p class="muted">The complete audit trail is in <a class="text-link" href="#activity">Activity</a>.</p>`,
+      return `<tr><td><details><summary>${esc(j.kind)}</summary><pre>${pretty(j.result)}</pre></details></td><td>${device ? esc(device.label) : '<span class="placeholder">Removed machine</span>'}</td><td>${badge(j.status, j.status === "complete")}</td><td>${j.actor ? esc(j.actor) : '<span class="placeholder">—</span>'}</td><td>${date(j.created)}</td></tr>`;
+    }).join("") || '<tr><td colspan="5" class="placeholder">No jobs yet.</td></tr>'}</tbody></table></div><p class="muted jobs-note">The complete audit trail is in <a class="text-link" href="#activity">Activity</a>.</p>`,
   );
 }
 async function renderSettings() {

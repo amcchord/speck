@@ -302,3 +302,4 @@ nav button { min-height: 36px; padding: 7px 12px; }
 .integration-inactive { opacity: .62; }
 #integration-token-list > .text-link { margin-top: 10px; }
 .operators-table td { vertical-align: middle; }
+.jobs-note { font-size: 12px; margin: 12px 0 0; }
