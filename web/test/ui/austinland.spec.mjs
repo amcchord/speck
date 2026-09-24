@@ -134,7 +134,9 @@ for (const width of [1440, 390]) {
     await expect(review.getByText('This creates a new A record.')).toBeVisible();
     await review.getByRole('button', { name: 'Update DNS' }).click();
     await expect.poll(() => writes.find((w) => w.path.endsWith('/point'))?.body).toEqual({ name: 'shop', ip: '5.5.5.12', ttl: 600 });
-    await page.keyboard.press('Escape');
+    await expect(page.getByText('shop.example-shop.com now points to 5.5.5.12')).toBeVisible();
+    await pane.getByRole('button', { name: 'Close' }).click();
+    await expect(pane).toHaveCount(0);
     await page.getByRole('tab', { name: /Public IPs/ }).click();
     await expect(page.locator('#net-body').getByText('Speck-managed', { exact: true })).toBeVisible();
     await expect(page.getByText('www.example-shop.com')).toBeVisible();

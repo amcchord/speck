@@ -265,17 +265,23 @@ export function createNetwork(ui: Item) {
   }
 
   async function openDomain(d: Item, fresh = false) {
-    closePane();
-    const panel = dialog(d.domain, `<div class="net-pane" id="net-pane">${ui.loadingState ? ui.loadingState("Loading records…") : "Loading…"}</div>`, {
-      className: "device-drawer net-drawer",
-      modal: false,
-    });
-    pane = panel;
-    const escape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && panel.open && !document.querySelector("dialog:modal")) panel.close();
-    };
-    document.addEventListener("keydown", escape);
-    panel.addEventListener("close", () => document.removeEventListener("keydown", escape));
+    // Reuse an open pane for the same domain so refreshes keep scroll position and feedback.
+    let panel = pane?.open && pane.dataset.domain === d.domain ? pane : null;
+    if (!panel) {
+      closePane();
+      panel = dialog(d.domain, `<div class="net-pane" id="net-pane">${ui.loadingState ? ui.loadingState("Loading records…") : "Loading…"}</div>`, {
+        className: "device-drawer net-drawer",
+        modal: false,
+      });
+      panel.dataset.domain = d.domain;
+      pane = panel;
+      const opened = panel;
+      const escape = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && opened.open && !document.querySelector("dialog:modal")) opened.close();
+      };
+      document.addEventListener("keydown", escape);
+      opened.addEventListener("close", () => document.removeEventListener("keydown", escape));
+    }
     let zone: Item;
     try {
       zone = await api(`/dns/domains/${encodeURIComponent(d.domain)}/records${fresh ? "" : "?cached=true"}`);
@@ -283,7 +289,7 @@ export function createNetwork(ui: Item) {
       panel.querySelector("#net-pane")!.innerHTML = `<div class="empty" role="alert"><h2>Unable to load records</h2><p>${esc((err as Error).message)}</p></div>`;
       return;
     }
-    if (pane !== panel) return;
+    if (pane !== panel || !panel) return;
     const groups = recordGroups(zone.records);
     const reach = [...new Set(zone.records.filter((r: Item) => ["A", "AAAA"].includes(r.type)).flatMap((r: Item) => owners(r.data).map((m) => m.label)))];
     panel.querySelector("#net-pane")!.innerHTML = `<div class="net-facts"><div><span>Expires</span><b>${esc(d.expires ? new Date(d.expires).toLocaleDateString() : "—")}</b></div><div><span>Renewal</span><b>${d.renewAuto ? "Automatic" : "Manual"}</b></div><div><span>Transfer lock</span><b>${d.locked ? "On" : "Off"}</b></div><div><span>Privacy</span><b>${d.privacy ? "On" : "Off"}</b></div><div><span>Records</span><b>${zone.records.length}</b></div><div><span>${zone.cached ? "Cached" : "Fetched"}</span><b>${esc(relative(zone.fetched_at))}</b></div></div>${
@@ -426,10 +432,12 @@ export function createNetwork(ui: Item) {
   }
 
   async function afterDnsWrite(d: Item) {
+    const open = pane;
     domains = (await api("/dns/domains")).domains;
     const updated = domains.find((x) => x.domain === d.domain) || d;
     if (tab === "domains") domainRows();
-    await openDomain(updated);
+    // Refresh the records pane only if it is still open; never resurrect one the user closed.
+    if (open?.open && pane === open) await openDomain(updated);
   }
 
   // ---------------- public IPs ----------------

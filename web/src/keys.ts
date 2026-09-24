@@ -312,8 +312,8 @@ export function createKeys(ui: Item) {
           secrets,
         });
         d.close();
-        notify("Stored " + result.entry.name);
         await refreshVault(result.entry.name);
+        notify("Stored " + result.entry.name);
       } catch (err) {
         notify((err as Error).message, true);
       }
@@ -336,8 +336,8 @@ export function createKeys(ui: Item) {
           secrets: collect(),
         });
         d.close();
-        notify("Saved " + entry.name);
         await refreshVault(entry.name);
+        notify("Saved " + entry.name);
       } catch (err) {
         notify((err as Error).message, true);
       }
@@ -420,12 +420,14 @@ export function createKeys(ui: Item) {
   }
 
   async function refreshVault(open?: string) {
+    const current = pane;
     entries = await api("/keys");
     const label = document.getElementById("keys-tab-vault");
     if (label) label.textContent = `Vault (${entries.length})`;
     if (tab === "vault") rows();
     const entry = open && entries.find((e) => e.name === open);
-    if (entry) openEntry(entry);
+    // A newly stored entry opens; an edited one refreshes only if its pane is still open.
+    if (entry && (!current || (current.open && pane === current))) openEntry(entry);
   }
 
   // ---------------- providers ----------------
