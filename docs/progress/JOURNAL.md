@@ -896,6 +896,33 @@ SQLite/service, and zero gateway connections after cleanup. Release ownership
 passes to the network-topology task, which must include `84eb09e` and recheck this
 baseline before its next authorized publication.
 
+## September 23 — read-only Chat topology
+
+Deployed runtime `1e5404b` from `codex/chat-topology` after the Proxmox task's release handoff. Optional token grants expose bounded Proxmox placement and safe identities; named sites return only matched guests and their parent hosts. All-sites access is explicit. The rollout preserved current main and live Proxmox/alerts changes. 178 backend tests, 31 web units, Ruff and web build pass, as do live client/full-network Chat requests and scope rejection. No endpoint/host operations. See `docs/operations/chat-topology.md` for deployment, protected-state checks and guarded rollback. No remaining task work.
+
+## 2026-09-23 — Fleet Refresh triggers Slide restore cleanup
+
+User requested automatic removal of deleted test restores, then chose an explicit
+Fleet Refresh check instead of increasing the scheduled polling frequency. Live
+inspection found five correctly linked copies within the existing confirmation
+window. The unattended worker archived all five at 15:56:20 UTC, verified in the
+audit ledger and both endpoint/unified Fleet inventories. No manual archive was
+needed; all ten original endpoint records and identities remain.
+
+Implemented and deployed web `141b126` on `codex/slide-cleanup-refresh`, including
+current main and the newer deployed Chat topology source. Refresh awaits cleanup
+before reading Fleet, reports pending/error states, retains read-only viewer
+behavior and excludes navigation/background polling. Existing cadence, grace,
+policy, identity validation and backend remain unchanged.
+
+TypeScript/Vite, 31 web units, 20 lifecycle regressions and 53 browser cases pass;
+one pre-existing WebKit-only touch skip remains. Live Chromium/WebKit checks
+confirmed the POST cleanup → GET fresh Fleet sequence and healthy responses.
+Served hashes (26 files), backend process and environment preservation pass.
+Rollback: `/var/lib/speck-rollback/20260923T160107Z-slide-cleanup-refresh-141b126/web`.
+No guest/provider write, endpoint upgrade or server restart occurred. Source is
+local; preserve this runtime until integrated. Release ownership is clear.
+
 ## 2026-09-23 — Separate SpeckRMM project folder
 
 Moved the primary checkout from `~/Development/Speck` to
@@ -943,3 +970,42 @@ through Docker. CLAUDE.md now records that constraint.
 Rebased `codex/claude-md` onto `origin/main` at `d6538cb`, resolving an append
 conflict in this journal. No production deployment, remote change or push
 occurred.
+
+## 2026-09-23 — AustinLand brought into Speck
+
+User request: move everything AustinLand can see and manage, and its key storage, into
+Speck; sign in as `austin` to manage it; migrate AustinLand's data; expand the API so
+LLMs like Claude can get resources to build with; commit to GitHub; deploy; test in the
+browser. Branch `claude/austinland-integration` (worktree `worktrees/austinland-integration`)
+started from the live `codex/slide-cleanup-refresh` release (`90a5fe5`, verified against
+production file hashes) merged with `origin/main`.
+
+Added native vault/key arbiter (`/api/keys`), GoDaddy DNS (`/api/dns`), UniFi public IPs
+through the Site Manager cloud connector (`/api/unifi`), network reachability map, SSH
+keys, handoff files, scoped personal API tokens, `/agents.md`, `/llms.txt`, `/speck.md`,
+OpenAPI, unified search, an MCP server at `/mcp`, VM launching through the existing
+AustinLand bridge operation, and Network & DNS, Keys and API & agents pages plus a Fleet
+reach strip. `scripts/import_austinland.py` performs the migration through the API.
+API-token Proxmox connections now read guest configs for connector-equivalent identity.
+
+Explored real provider responses on a local instance with AustinLand's credentials using
+read-only calls only, then designed the pages against that data. Validation: 25 new
+backend tests (203 total), web unit tests, 18 new Chromium/WebKit scenarios, full local
+core gate before each release. The pre-existing Chat integration spec failure (stale after
+the deployed topology change) was fixed to match production.
+
+Production: releases `9b69a9d`, `0c6c35e` and a final overview update (see
+`docs/operations/austinland-integration.md` for rollback paths and acceptance). Data
+migrated with a one-day host token revoked immediately; Speck's own deployment and
+agent-signing secrets were deliberately left in AustinLand. Live checks covered all provider
+credentials (read-only), pool classification, the reachability map, every page in Chromium
+and WebKit phone, and a real Claude Code MCP session. A disposable QA admin was used for
+browser checks and disabled afterwards; all temporary tokens are revoked.
+
+Not changed: the Proxmox host connector allowlist. Native template provisioning would
+require adding cloud-init, resize, task-status and guest-password calls; that widening was
+declined in this session, so VM creation still depends on the AustinLand bridge worker on
+the Mac. DNS/NAT/key/VM writes were not exercised against live providers.
+
+Next: decide whether to widen the connector allowlist for native provisioning; exercise
+DNS, public IP mapping and VM creation on disposable resources; open a PR to main when ready.

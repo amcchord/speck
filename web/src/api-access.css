@@ -1,0 +1,31 @@
+.api-start { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+.api-start .card { display: flex; flex-direction: column; gap: 8px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); min-width: 0; }
+.api-start .card h3 { margin: 0; font-size: 16px; }
+.api-start .card p { margin: 0; font-size: 13px; color: var(--muted); }
+.api-start .card > button { align-self: flex-start; margin-top: auto; }
+.api-start .eyebrow { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--fern); font-weight: 700; }
+.api-snippet { font-size: 11px; max-height: 120px; }
+.api-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 26px; }
+.api-head { margin: 22px 0 10px; font-size: 18px; }
+.api-inactive td { color: var(--muted); }
+.api-group { margin: 0 0 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); }
+.api-group summary { padding: 10px 14px; cursor: pointer; font-size: 13px; }
+.api-group summary small { color: var(--muted); margin-left: 6px; }
+.api-endpoint-list { border-top: 1px solid var(--line); }
+.api-endpoint { display: grid; grid-template-columns: 64px minmax(0, 2fr) minmax(0, 3fr) auto; gap: 12px; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.api-endpoint:last-child { border-bottom: 0; }
+.api-endpoint .secondary { min-height: var(--control-small); padding: 3px 10px; font-size: 12px; }
+.api-method { justify-self: start; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: .5px; background: var(--paper); border: 1px solid var(--line); }
+.api-get { color: var(--success); }
+.api-post { color: var(--fern); background: var(--lime); border-color: #c5da8c; }
+.api-put, .api-patch { color: var(--warning); }
+.api-delete { color: var(--danger); }
+.api-summary { color: var(--muted); }
+.api-response { max-height: 60vh; }
+@media (max-width: 1000px) { .api-start { grid-template-columns: 1fr; } }
+@media (max-width: 760px) {
+  .api-endpoint { grid-template-columns: 56px minmax(0, 1fr); }
+  .api-endpoint .api-summary { grid-column: 1 / -1; }
+}
+.api-snippet, .keys-value { color: var(--ink); }
+#api-tokens > p { font-size: 12px; margin: 8px 0 0; }

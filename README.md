@@ -24,6 +24,11 @@ Gallery data is synthetic. See the [capture notes](docs/screenshots/README.md)
 for provenance and the local preview workflow.
 
 - [Infrastructure management](docs/operations/infrastructure.md): outbound Proxmox host agents, clustered guest inventory, provider consoles, Slide appliances/VMs, Linode and AustinLand.
+- [Network, DNS and keys](docs/operations/austinland-integration.md): GoDaddy DNS, UniFi public IP mapping through
+  the cloud connector, machine reachability, an encrypted credential vault that mints or shares project API keys,
+  SSH keys and agent handoffs (formerly the localhost AustinLand panel).
+- [API for LLM agents](docs/operations/austinland-integration.md#security-model): scoped personal API tokens, an MCP
+  server at `/mcp`, `/agents.md`, `/llms.txt`, `/speck.md`, unified search and `/api/openapi.json`.
 - Wide fleet table, right-side details drawer, direct screen and prompt actions.
 - Services, CPU, memory, disks, active application, and host inventory.
 - Persistent health/service/job alerts, acknowledgement and per-machine maintenance.

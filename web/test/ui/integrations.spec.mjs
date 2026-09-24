@@ -53,6 +53,7 @@ for (const width of [1440, 390]) {
       name: "Slide Chat",
       site: "Clinic B",
       expires_days: 90,
+      topology_connection_ids: [],
     });
     const secret = page.getByLabel("Read-only token", { exact: true });
     await expect(secret).toHaveValue(issued);
@@ -73,7 +74,7 @@ for (const width of [1440, 390]) {
   });
 }
 
-test("empty sites explain setup and disable token creation", async ({
+test("without named sites an all-sites token can still be created", async ({
   page,
 }) => {
   await page
@@ -82,13 +83,11 @@ test("empty sites explain setup and disable token creation", async ({
       { name: "speck-gallery", value: "1", url: "http://127.0.0.1:8761" },
     ]);
   await page.route("**/api/integrations/tokens", (route) =>
-    route.fulfill({ json: { tokens: [], sites: [] } }),
+    route.fulfill({ json: { tokens: [], sites: [], topology_connections: [] } }),
   );
   await page.goto("/#settings");
+  await page.getByRole("button", { name: "Create integration token" }).click();
   await expect(
-    page.getByRole("button", { name: "Create integration token" }),
-  ).toBeDisabled();
-  await expect(
-    page.getByText("No named sites yet.", { exact: false }),
-  ).toBeVisible();
+    page.getByRole("combobox", { name: "Speck site", exact: true }),
+  ).toHaveValue("*");
 });

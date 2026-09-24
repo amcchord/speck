@@ -661,3 +661,29 @@ Hosted backend/build and browser checks passed on the display-capability runtime
 state, database integrity, served bytes and service health pass; matching rollback
 and private evidence are retained. See
 [release record](docs/operations/proxmox-machine-experience.md) and current state.
+
+## Fleet Refresh and removed Slide VMs — September 23, 2026
+
+Web `141b126` is deployed from `worktrees/slide-cleanup-refresh`. Explicit Fleet
+Refresh now checks Slide restore cleanup before fetching fresh inventory, using
+the existing five-minute confirmation window and policy. Scheduled checks remain
+unchanged. Source preserves main and the deployed Chat topology update. All 20
+lifecycle tests, 31 web units and 53 browser cases passed; live Chromium/WebKit
+confirmed request ordering. The original five stale copies were automatically
+archived by the worker. See the current-state entry for hashes, rollback and
+private evidence. Source is committed locally and has not been pushed.
+
+
+## AustinLand integration — September 23, 2026 (live)
+
+`worktrees/austinland-integration`, branch `claude/austinland-integration` (pushed; no PR yet).
+Everything AustinLand managed is native in Speck: vault/key arbiter, provider credentials,
+GoDaddy DNS, UniFi public IPs via the Site Manager cloud connector, reachability map, SSH keys,
+handoffs, scoped API tokens, MCP server and agent documents, and VM launching via the existing
+AustinLand bridge. AustinLand data was migrated through the API with a revoked host token; Speck's
+own deployment and signing secrets stayed in AustinLand. Releases `9b69a9d` and `0c6c35e` passed
+the local core gate and live read-only acceptance, including a real Claude Code MCP session.
+See [operations and acceptance](docs/operations/austinland-integration.md), the
+[synthetic gallery](docs/screenshots/austinland/README.md) and the journal. The Proxmox connector
+allowlist was not widened, so provisioning still needs the Mac bridge worker. Private release
+scripts, logs and live screenshots are in ignored `output/austinland-release/`.

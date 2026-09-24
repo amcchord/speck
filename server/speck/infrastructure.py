@@ -179,11 +179,55 @@ async def linode_list(cfg, path):
     raise HTTPException(502, "Inventory page limit exceeded")
 
 
+_token_identity: dict = {}
+
+
+def config_identity(config):
+    """UUID, NIC MACs and guest-agent flag from a guest config, matching the host connector."""
+    identity = {"macs": [], "uuid": "", "guest_agent": False}
+    for key, value in (config or {}).items():
+        value = str(value)
+        if key == "smbios1":
+            match = re.search(r"(?i)(?:^|,)uuid=([0-9a-f-]{36})(?:,|$)", value)
+            identity["uuid"] = match.group(1) if match else ""
+        elif key == "agent":
+            identity["guest_agent"] = value == "1" or value.startswith("1,") or "enabled=1" in value
+        elif re.fullmatch(r"net[0-9]+", key):
+            identity["macs"] += re.findall(r"(?i)(?:[0-9a-f]{2}:){5}[0-9a-f]{2}", value)
+    return identity
+
+
+async def enrich_token_inventory(cfg, rows):
+    """API-token connections read each guest config (cached) for the connector's identity fields."""
+    guests = [r for r in rows if r.get("type") in ("qemu", "lxc") and re.fullmatch(r"[A-Za-z0-9_-]+", str(r.get("node", "")))]
+    limit = asyncio.Semaphore(8)
+
+    async def one(row):
+        key = (cfg.get("id"), row["node"], row["type"], row.get("vmid"))
+        cached = _token_identity.get(key)
+        if cached and cached[0] > time.time() - 600:
+            row["speck_identity"], row["identity_available"] = cached[1], True
+            return
+        try:
+            async with limit:
+                config = await provider_request(cfg, "GET", f"/nodes/{row['node']}/{row['type']}/{int(row['vmid'])}/config")
+        except (HTTPException, ValueError, TypeError):
+            row["identity_available"] = False
+            return
+        identity = config_identity(config if isinstance(config, dict) else {})
+        _token_identity[key] = (time.time(), identity)
+        row["speck_identity"], row["identity_available"] = identity, True
+
+    await asyncio.gather(*(one(r) for r in guests))
+
+
 async def raw_inventory(cfg):
     if cfg["provider"] == "proxmox":
         rows = await provider_request(cfg, "GET", "/speck/inventory" if cfg.get("connector") else "/cluster/resources")
         if not isinstance(rows, list) or not all(isinstance(r, dict) and r.get("type") for r in rows):
             raise HTTPException(502, "Invalid Proxmox inventory")
+        if not cfg.get("connector"):
+            await enrich_token_inventory(cfg, rows)
         return rows
     if cfg["provider"] == "linode":
         return await linode_list(cfg, "/linode/instances")

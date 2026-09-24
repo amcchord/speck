@@ -24,15 +24,24 @@ def session_for(token):
 
 
 def require_user(request: Request):
-    user = session_for(request.cookies.get(COOKIE))
-    if request.method not in ('GET', 'HEAD', 'OPTIONS'):
+    from speck import api_tokens
+
+    token = api_tokens.presented(request)
+    if token:
+        # Bearer tokens are never sent ambiently by a browser, so CSRF checks do not apply.
+        user = api_tokens.authenticate(token, request)
+        api_tokens.enforce(user, request)
+    else:
+        user = session_for(request.cookies.get(COOKIE))
+    if not token and request.method not in ('GET', 'HEAD', 'OPTIONS'):
         if request.headers.get('origin') != origin():
             raise HTTPException(403, 'Origin rejected')
         if not secrets.compare_digest(user['csrf'], request.headers.get('x-csrf-token', '')):
             raise HTTPException(403, 'CSRF token rejected')
     path = request.url.path
     if user['role'] == 'viewer':
-        reads = {'/api/fleet', '/api/fleet/preferences', '/api/auth/me', '/api/devices', '/api/alerts', '/api/monitoring', '/api/audit/events', '/api/access/me'}
+        reads = {'/api/fleet', '/api/fleet/preferences', '/api/auth/me', '/api/devices', '/api/alerts', '/api/monitoring', '/api/audit/events', '/api/access/me',
+                 '/api/whoami', '/api/overview', '/api/search', '/api/guide'}
         personal = {'/api/fleet/preferences', '/api/auth/logout', '/api/access/password', '/api/access/sessions/revoke', '/api/access/totp/setup', '/api/access/totp/confirm', '/api/access/totp/disable'}
         if not ((request.method == 'GET' and path in reads) or path in personal or path == '/api/access/passkeys' or path.startswith('/api/access/passkeys/')):
             raise HTTPException(403, 'Viewer accounts can read inventory, alerts and audit history')

@@ -1,0 +1,99 @@
+/* Network, Keys and API pages. Shared control geometry stays in ui.css. */
+.net-intro p { margin: 0 0 16px; color: var(--muted); }
+.net-summary { margin-bottom: 8px; }
+.net-note { margin: 0 0 14px; font-size: 13px; max-width: 900px; }
+.net-toolbar { margin-bottom: 10px; }
+.net-subhead { margin: 24px 0 10px; font-size: 15px; }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+.net-table { width: 100%; min-width: 720px; border-collapse: collapse; }
+.net-table th { text-align: left; font-size: 11px; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); padding: 10px 14px; background: var(--paper); border-bottom: 1px solid var(--line); }
+.net-table td { padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: top; }
+.net-table tbody tr:last-child td { border-bottom: 0; }
+.net-table tbody tr:hover td { background: #fafbf7; }
+.net-table small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.net-table .text-link { padding: 0; font-size: 13px; font-weight: 600; text-align: left; }
+.net-name { color: var(--ink) !important; }
+.net-row-actions { white-space: nowrap; text-align: right; }
+.net-row-actions .secondary + .secondary { margin-left: 6px; }
+.net-flags { white-space: normal; }
+.net-chip { display: inline-block; margin: 2px 4px 2px 0; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--white); color: var(--ink); font-size: 11px; line-height: 18px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.net-chip.good { background: #eef5e6; border-color: #cfe0bf; color: var(--success); }
+.net-chip.warn { background: #fbf4e4; border-color: #ecdcb3; color: var(--warning); }
+.net-chip.bad { background: #f8ebe8; border-color: #ebc8c1; color: var(--danger); }
+.net-chip.machine { background: var(--lime); border-color: #c5da8c; color: var(--forest); font-weight: 600; }
+.mono + .net-chip { margin-left: 6px; }
+.net-scan { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+.net-scan progress { width: 180px; accent-color: var(--fern); }
+.net-scan .secondary { margin-left: auto; }
+.net-drawer { width: min(860px, 94vw); }
+.net-pane { padding: 4px 20px 28px; }
+.net-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); background: var(--white); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 8px 0 14px; }
+.net-facts > div { padding: 10px 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; }
+.net-facts span { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.net-facts b { display: block; margin-top: 3px; font-size: 14px; overflow-wrap: anywhere; }
+.net-reach { margin: 0 0 12px; font-size: 13px; }
+.net-pane-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.net-records { min-width: 600px; }
+.net-value { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; margin: 1px 0; }
+.net-form, .net-confirm { display: flex; flex-direction: column; padding: 4px 0 0; }
+.net-form label, .net-confirm label { display: flex; flex-direction: column; }
+.net-form small, .net-help { display: block; margin: -10px 0 16px; color: var(--muted); font-size: 12px; }
+.net-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.net-form textarea { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
+.net-change { margin: 6px 0 12px; padding-left: 18px; }
+.net-confirm p { margin: 0 0 10px; font-size: 14px; }
+.net-consoles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.net-console { padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); }
+.net-console h3 { margin: 0; font-size: 15px; }
+.net-console p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.net-console.managed { border-color: var(--fern); box-shadow: inset 0 0 0 1px var(--fern); }
+.net-ip-free td:first-child { color: var(--success); font-weight: 600; }
+.callout a { color: var(--fern); }
+@media (max-width: 760px) {
+  .net-pane { padding: 4px 16px 24px; }
+  .net-form-row { grid-template-columns: 1fr; }
+  .net-scan .secondary { margin-left: 0; }
+}
+.metric-strip.net-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.net-summary > div { padding: 14px 18px; gap: 14px; }
+.net-summary b { font-size: 28px; }
+td.ip, .net-table td:first-child.mono { white-space: nowrap; }
+@media (max-width: 1100px) { .metric-strip.net-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.net-records td:first-child, .net-records td:nth-child(4) { white-space: nowrap; }
+.net-records td:nth-child(2) { max-width: 180px; }
+@media (max-width: 760px) {
+  .infra-table-wrap:has(> table.net-cards) { border: 0; overflow: visible; }
+  table.net-cards { min-width: 0; border-collapse: separate; }
+  table.net-cards thead { display: none; }
+  table.net-cards tbody { display: grid; gap: 10px; }
+  table.net-cards tbody tr { display: grid; grid-template-columns: minmax(0, 1fr); padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); }
+  table.net-cards tbody tr:hover td { background: transparent; }
+  table.net-cards td { display: block; position: relative; min-height: 24px; padding: 4px 0 4px 104px; border: 0; white-space: normal; max-width: none; }
+  table.net-cards td::before { content: attr(data-label); position: absolute; left: 0; top: 7px; width: 96px; color: var(--muted); font-size: 10px; letter-spacing: .5px; text-transform: uppercase; }
+  table.net-cards td:first-child { padding-left: 0; font-size: 14px; padding-bottom: 6px; }
+  table.net-cards td:first-child::before { display: none; }
+  table.net-cards td.net-cell-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; text-align: left; padding: 8px 0 0; }
+  table.net-cards td.net-cell-actions::before { display: none; }
+  table.net-cards td:empty { display: none; }
+}
+.machine-reach:empty { display: none; }
+.machine-reach { display: flex; align-items: flex-start; gap: 8px 16px; flex-wrap: wrap; margin: 0 var(--machine-gutter, 20px) 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fafbf7; font-size: 12px; }
+.machine-reach dl { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; flex: 1; }
+.machine-reach dt { color: var(--muted); font-size: 10px; letter-spacing: .5px; text-transform: uppercase; }
+.machine-reach dd { margin: 2px 0 0; }
+.machine-reach .text-link { padding: 0; font-size: 12px; }
+.vm-form fieldset { border: 0; padding: 0; margin: 0 0 14px; }
+.vm-form legend { color: var(--muted); font-size: 13px; margin-bottom: 6px; padding: 0; }
+.vm-sizes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.vm-sizes legend { grid-column: 1 / -1; }
+.vm-size { display: flex !important; flex-direction: row !important; gap: 8px; align-items: flex-start; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); cursor: pointer; }
+.vm-size:has(input:checked) { border-color: var(--fern); box-shadow: inset 0 0 0 1px var(--fern); }
+.vm-size small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.vm-keys .check { display: flex; flex-direction: row; gap: 8px; align-items: center; margin: 0 0 6px; color: var(--ink); }
+.vm-keys small { color: var(--muted); }
+.vm-review { font-size: 13px; margin: 0 0 12px; }
+.vm-review dt { font-family: inherit; font-size: 12px; }
+@media (max-width: 760px) { .vm-sizes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.net-form label.check { flex-direction: row; align-items: center; gap: 8px; margin: 0 0 8px; color: var(--ink); }
+.net-form label.check small { display: inline; margin: 0; }
+.keys-hints.vm-review dt { font-family: inherit; font-size: 12px; }

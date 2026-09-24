@@ -65,7 +65,7 @@ export function createInfrastructure(ui: Item) {
     ]);
     const rows = inventory.connections.flatMap((c: Item) => c.resources);
     content(
-      `<div class="infra-intro"><p>Hosts, guests, cloud instances and backup appliances.</p>${admin() ? button("infra-add", "Add connection") : ""}</div><div class="infra-tabs" role="tablist" aria-label="Infrastructure views">${[
+      `<div class="infra-intro"><p>Hosts, guests, cloud instances and backup appliances.</p><div class="infra-actions">${admin() && ui.newVm && inventory.connections.some((c: Item) => c.provider === "austinland") ? '<button class="primary" id="infra-new-vm">New VM</button>' : ""}${admin() ? button("infra-add", "Add connection") : ""}</div></div><div class="infra-tabs" role="tablist" aria-label="Infrastructure views">${[
         ["resources", `Resources (${rows.length})`],
         ["services", "DNS & network"],
         ["connections", "Connections"],
@@ -78,6 +78,7 @@ export function createInfrastructure(ui: Item) {
         .join("")}</div><div id="infra-body"></div>`,
     );
     on("infra-add", () => editConnection());
+    on("infra-new-vm", () => ui.newVm());
     ["resources", "services", "connections", "history"].forEach((s) =>
       on("infra-tab-" + s, async () => {
         section = s;
@@ -184,7 +185,7 @@ export function createInfrastructure(ui: Item) {
       const bridges = inventory.connections.filter(
         (c: Item) => c.provider === "austinland",
       );
-      body.innerHTML = `<p class="muted">DNS records, public IP mappings, LAN clients, SSH keys and VM provisioning through your AustinLand connection.</p><div class="infra-connections">${bridges.map((c: Item, i: number) => `<article class="card"><h2>${esc(c.name)}</h2>${badge(c.status)}<p>Choose a service to inspect or manage.</p>${button("infra-bridge-" + i, "Open services")}</article>`).join("")}</div>${!bridges.length ? '<div class="empty"><h2>No AustinLand bridge connected</h2><p>Add a connection to your authenticated AustinLand bridge.</p></div>' : ""}`;
+      body.innerHTML = `<p class="muted">Speck manages DNS, public IPs, LAN clients, SSH keys and the credential vault directly.</p><div class="infra-connections"><article class="card"><h2>Network &amp; DNS</h2><p>GoDaddy domains and records, UniFi public IP mappings, reachability and LAN clients.</p><div class="infra-actions"><a class="primary" href="#network">Open Network &amp; DNS</a></div></article><article class="card"><h2>Keys</h2><p>Credential vault and key arbiter, provider credentials, SSH keys and machine handoffs.</p><div class="infra-actions"><a class="secondary" href="#keys">Open Keys</a></div></article>${bridges.map((c: Item, i: number) => `<article class="card"><div class="infra-card-heading"><h2>${esc(c.name)}</h2>${badge(c.status)}</div><p>Legacy AustinLand bridge on the Mac. Use it for operations Speck does not run natively yet.</p>${button("infra-bridge-" + i, "Open bridge services")}</article>`).join("")}</div>`;
       bridges.forEach((c: Item, i: number) =>
         on("infra-bridge-" + i, () => connectionTools(c)),
       );
