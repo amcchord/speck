@@ -118,7 +118,7 @@ export function mountProxmoxMachine(
               resource,
             )),
       );
-    bind("[data-pve-refresh]", () => load());
+    bind("[data-pve-refresh]", () => load(true));
     bind("[data-pve-agent]", () => {
       owner?.close();
       ui.openDevice(resource.agent.id);
@@ -414,7 +414,7 @@ export function mountProxmoxMachine(
       }
     }
   }
-  async function load() {
+  async function load(fresh = false) {
     const current = ++generation;
     tabGeneration++;
     preview?.abort();
@@ -424,8 +424,8 @@ export function mountProxmoxMachine(
       '<p class="pve-note" role="status">Loading Proxmox machine…</p>';
     try {
       const results = await Promise.allSettled([
-        ui.api(path),
-        ui.api(`${base}/catalog?kind=${resource.kind}`),
+        (fresh && ui.freshApi ? ui.freshApi : ui.api)(path),
+        (fresh && ui.freshApi ? ui.freshApi : ui.api)(`${base}/catalog?kind=${resource.kind}`),
       ]);
       if (!alive() || current !== generation) return;
       if (results[0].status === "rejected") throw results[0].reason;

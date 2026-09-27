@@ -5,6 +5,9 @@ import { bindFleetHeaders, reorderedColumns } from "./fleet-headers";
 import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
 import { createInfrastructure } from "./infrastructure";
 import { createHome } from "./home";
+import { createReadCache, readPolicy } from "./read-cache";
+import { createFlyout } from "./flyout";
+import { slideStory, slideName, slideKinds, detailStatus } from "./resource-story";
 import { createNetwork } from "./network";
 import { createKeys } from "./keys";
 import { createApiAccess } from "./api-access";
@@ -63,8 +66,8 @@ function saveFleetPreferences() {
     if (!(error instanceof StaleViewError) && username === owner && csrf === session) notify("Could not save Fleet preferences. Try again.");
   });
 }
-async function loadFleet(force = false) {
-  const [result, prefs] = await Promise.all([api("/fleet" + (force ? "?refresh=true" : "")), fleetPrefsLoaded ? Promise.resolve(null) : api("/fleet/preferences")]);
+async function loadFleet(force = false, fresh = false) {
+  const [result, prefs] = await Promise.all([api("/fleet" + (force ? "?refresh=true" : ""), "GET", undefined, undefined, true, fresh), fleetPrefsLoaded ? Promise.resolve(null) : api("/fleet/preferences")]);
   if (prefs) { fleetPrefs = { ...defaultPreferences(), ...prefs }; fleetPrefsLoaded = true; fleetCoverage = fleetPrefs.agent_filter; fleetSort = prefs.sort; showPreviews = prefs.visible.includes("preview"); }
   fleetSources = result.connections;
   fleet = result.machines;
@@ -92,6 +95,11 @@ function editFleetColumns() {
 let activeDevicePanel: HTMLDialogElement | null = null;
 let fleetScroll = { x: 0, y: 0, table: 0 };
 function clearFleetState() {
+  readCache.clear();
+  pageReads.clear();
+  document.querySelectorAll<HTMLDialogElement>('dialog').forEach(d => { d.close(); d.remove(); });
+  network.reset(); infrastructure.reset();
+  reachMap = null;
   fleetInteractionsCleanup();
   activeDevicePanel?.close();
   activeDevicePanel?.remove();
@@ -156,8 +164,46 @@ const badge = (s: string, good = false) => {
   return `<span class="badge ${tone}">${esc(s)}</span>`;
 };
 
-async function api(path: string, method = "GET", body?: any, signal?: AbortSignal, scoped = true): Promise<any> {
+const readCache = createReadCache((path, signal) => requestApi(path, "GET", undefined, signal));
+let pageReads = new Map<string, number>();
+function freshness() {
+  const el = document.getElementById("page-freshness");
+  if (!el) return;
+  const states = [...pageReads].map(([path, used]) => ({...readCache.state(path), used})).filter(s => s.at);
+  if (!states.length) { el.innerHTML = ""; return; }
+  const failed = states.some(s => s.failed), expired = states.some(s => s.expired), pending = states.some(s => s.pending), changed = states.some(s => s.revision! > s.used);
+  const seconds = Math.max(0, Math.floor((Date.now() - Math.min(...states.map(s => s.at!))) / 1000));
+  const age = seconds < 5 ? "just now" : seconds < 60 ? `${seconds}s ago` : `${Math.floor(seconds / 60)}m ago`;
+  el.dataset.state = failed ? "failed" : pending ? "updating" : "ready";
+  el.innerHTML = `${failed ? 'Saved data · refresh failed' : pending ? 'Saved data · updating in background' : expired ? 'Saved data · refresh needed' : changed ? 'Updated data is ready' : 'Loaded '+age}${failed || expired || changed ? ' <button class="text-link" id="show-latest">'+(failed ? 'Retry' : expired ? 'Refresh' : 'Show latest')+'</button>' : ''}`;
+  document.getElementById("show-latest")?.addEventListener("click", () => void render(failed || expired));
+}
+readCache.subscribe(freshness);
+setInterval(freshness, 15000);
+const flyout = createFlyout(dialog);
+const freshApi = (path: string) => api(path, "GET", undefined, undefined, true, true);
+async function api(path: string, method = "GET", body?: any, signal?: AbortSignal, scoped = true, fresh = false): Promise<any> {
   const current = scoped ? viewScope.checkpoint() : () => {};
+  const reads = pageReads;
+  if (fresh && /^\/dns\/domains\/[^/]+\/records$/.test(path)) readCache.invalidate(path+"?cached=true");
+  // Console creation/cleanup changes only an ephemeral session, not inventory.
+  const mutates = method !== "GET" && path !== "/fleet/preferences" && !/^\/(remote\/sessions\/|infrastructure\/connections\/[^/]+\/console$)/.test(path);
+  if (mutates) readCache.clear();
+  try {
+    const policy = method === "GET" && username ? readPolicy(path) : null;
+    const cached = policy !== null && !fresh ? readCache.peek(path) : undefined;
+    const result = policy !== null ? await readCache.read(path, {signal, fresh}) : await requestApi(path, method, body, signal);
+    current();
+    if (policy !== null && reads === pageReads) {
+      reads.set(path, cached?.revision ?? readCache.state(path).revision ?? 0);
+      freshness();
+    }
+    return result;
+  } catch (error) { current(); throw error; }
+  finally { if (mutates) readCache.clear(); }
+}
+async function requestApi(path: string, method = "GET", body?: any, signal?: AbortSignal): Promise<any> {
+  const owner = csrf;
   const headers: Record<string, string> = { "X-CSRF-Token": csrf };
   if (body !== undefined && !(body instanceof FormData))
     headers["Content-Type"] = "application/json";
@@ -171,9 +217,9 @@ async function api(path: string, method = "GET", body?: any, signal?: AbortSigna
         : body === undefined
           ? undefined
           : JSON.stringify(body),
-  }).catch((err) => { current(); throw err; });
+  });
   const value = await r.json().catch(() => ({}));
-  current();
+  if (owner !== csrf) throw new StaleViewError();
   if (r.status === 401 && !path.startsWith("/auth/")) {
     signedOut();
     throw new Error("Your session ended. Sign in again.");
@@ -369,7 +415,7 @@ function shell(title: string, subtitle: string) {
   const everyPage = NAV_GROUPS.flatMap(([, items]) => items).filter(allowed);
   const primary = [...everyPage.filter(([id]) => PRIMARY_PAGES.includes(id)), ...everyPage.filter(([id]) => !PRIMARY_PAGES.includes(id))].slice(0, 4);
   const inMore = !primary.some(([id]) => id === page);
-  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#home" aria-label="Speck home">${wordmark(true)}<img class="brand-mark" src="/assets/brand/speck-mark-lime.svg" alt="" width="28" height="28"><span class="version">0.2</span></a><nav aria-label="Main navigation">${groups}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : '<div id="page-summary" class="fleet-summary page-summary" aria-label="Summary"></div>'}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><div class="page-actions">${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div>${STATIC_PAGES.includes(page) ? "" : `<button id="refresh" class="secondary icon-button" aria-label="Refresh" title="Refresh">${icon("refresh")}</button>`}</div></header><section id="content" tabindex="-1"></section></main><nav class="tabbar" aria-label="Primary navigation">${primary.map(navButton).join("")}<button id="more-open" class="${inMore ? "active" : ""}" aria-haspopup="dialog" ${inMore ? 'aria-current="page"' : ""}>${icon("more")}<span>More</span></button></nav><dialog class="more-sheet" id="more-sheet" aria-label="All pages" tabindex="-1"><div class="more-head"><span class="brand">${wordmark(true)}</span><button class="sheet-close" id="more-close" aria-label="Close">${icon("close")}</button></div><nav aria-label="All pages">${groups}</nav><div class="more-account"><span><b>${esc(username)}</b><small>${esc(role)}</small></span><button class="secondary" data-page="account">Account & access</button><button class="secondary" id="more-logout">${icon("logout")}<span>Sign out</span></button></div></dialog>`;
+  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#home" aria-label="Speck home">${wordmark(true)}<img class="brand-mark" src="/assets/brand/speck-mark-lime.svg" alt="" width="28" height="28"><span class="version">0.2</span></a><nav aria-label="Main navigation">${groups}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : '<div id="page-summary" class="fleet-summary page-summary" aria-label="Summary"></div>'}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}<div id="page-freshness" class="page-freshness" role="status" aria-live="polite"></div></div><div class="header-actions"><div class="page-actions">${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div>${STATIC_PAGES.includes(page) ? "" : `<button id="refresh" class="secondary icon-button" aria-label="Refresh" title="Refresh">${icon("refresh")}</button>`}</div></header><section id="content" tabindex="-1"></section></main><nav class="tabbar" aria-label="Primary navigation">${primary.map(navButton).join("")}<button id="more-open" class="${inMore ? "active" : ""}" aria-haspopup="dialog" ${inMore ? 'aria-current="page"' : ""}>${icon("more")}<span>More</span></button></nav><dialog class="more-sheet" id="more-sheet" aria-label="All pages" tabindex="-1"><div class="more-head"><span class="brand">${wordmark(true)}</span><button class="sheet-close" id="more-close" aria-label="Close">${icon("close")}</button></div><nav aria-label="All pages">${groups}</nav><div class="more-account"><span><b>${esc(username)}</b><small>${esc(role)}</small></span><button class="secondary" data-page="account">Account & access</button><button class="secondary" id="more-logout">${icon("logout")}<span>Sign out</span></button></div></dialog>`;
   const sheet = document.getElementById("more-sheet") as HTMLDialogElement;
   document.getElementById("more-open")!.onclick = () => {
     sheet.showModal();
@@ -441,6 +487,8 @@ function loading(label: string) {
   document.getElementById("content")?.setAttribute("aria-busy", "true");
 }
 async function render(manualRefresh = false) {
+  if (manualRefresh) readCache.clear();
+  pageReads = new Map();
   if (page === "fleet" && document.getElementById("fleet-rows")) {
     fleetScroll = { x: scrollX, y: scrollY, table: document.querySelector(".fleet-table-wrap")!.scrollLeft };
   }
@@ -556,9 +604,9 @@ const ops = createOperations({
     }
   },
 });
-const infrastructure = createInfrastructure({api, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
+const infrastructure = createInfrastructure({api, freshApi, flyout, resourceInventory: () => fleet.flatMap(m => m.resources || []), sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
   newVm: () => launchVm({ api, esc, notify, dialog, loadingState, exposeHost: (ip: string, name: string) => network.exposeHost(ip, name) })});
-const network = createNetwork({ api, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
+const network = createNetwork({ api, freshApi, flyout, openMachine: async (id: string) => { if (!fleet.some(m => m.id === id)) await loadFleet(); await openDevice(id); }, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
 const keys = createKeys({ api, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
 const apiAccess = createApiAccess({ api, summary, esc, notify, dialog, content, loading, role: () => role, loadingState });
 const management = createManagement({
@@ -627,7 +675,7 @@ async function renderFleet(manualRefresh = false) {
         notify("Slide cleanup could not be checked. Refreshing Fleet inventory anyway.", true);
       }
     }
-    await loadFleet(hadCache || manualRefresh);
+    await loadFleet(manualRefresh);
     if (hadCache) renderFleetRows();
     else drawFleet();
   } catch (err) {
@@ -1027,6 +1075,11 @@ function renderProviderMachine(d: Item) {
     const body = document.getElementById("device-body")!;
     body.innerHTML = '<div class="pve-root"></div>';
     infrastructure.machinePanel(proxmox, body.querySelector<HTMLElement>(".pve-root")!);
+  } else if (d.resources?.length && role !== "viewer") {
+    const resource = d.resources.find((r: Item) => r.kind === "node") || d.resources[0];
+    const body = document.getElementById("device-body")!;
+    body.classList.add("provider-story");
+    void infrastructure.resourcePanel(resource, body);
   }
   bindProviderButtons(d);
   bindMachineBrief();
@@ -1842,52 +1895,76 @@ function slideFacts(r: Item) {
   if (when) facts.push((r.last_seen_at ? "seen " : "") + date(when));
   return facts.slice(0, 3);
 }
+let slideResource = "agent";
+async function openSlideResource(resource: string, row: Item) {
+  const pane = flyout(slideName(row), `<div class="slide-detail">${slideStory(resource,row)}</div>${resource === 'agent' ? '<section class="resource-actions"><h3>Backup operations</h3><p class="resource-note">Request a new backup through the connected Slide account.</p><button class="secondary" data-slide-backup>Request backup</button></section>' : ''}`, {tone:"protection",subtitle:"Slide · "+(slideKinds[resource] || 'Resource')});
+  const bindRelated = () => pane.querySelectorAll<HTMLButtonElement>('[data-slide-related]').forEach(button => button.onclick = async () => {
+    button.disabled = true;
+    try {
+      const kind = button.dataset.slideRelated!;
+      const rows = await api('/slide/inventory?resource='+encodeURIComponent(kind));
+      if (!pane.open || !pane.isConnected) return;
+      const match = rows.find((r: Item) => String(r[kind+'_id'] || r.id) === button.dataset.resourceId);
+      if (match) await openSlideResource(kind,match);
+      else notify('This related resource is not present in the current Slide inventory.');
+    } catch (error) { if (pane.open) notify((error as Error).message,true); }
+    finally { button.disabled = false; }
+  });
+  bindRelated();
+  const backup = pane.querySelector<HTMLButtonElement>('[data-slide-backup]');
+  if (backup) backup.onclick = async () => {
+    backup.disabled = true;
+    try {
+      const result = await api('/slide/backups','POST',{agent_id:row.agent_id});
+      if (pane.open) { backup.textContent = 'Backup requested'; notify('Backup requested: '+result.backup_id); }
+    } catch (error) { if (pane.open) notify((error as Error).message,true); backup.disabled=false; }
+  };
+  if (resource === 'device') {
+    const target = pane.querySelector<HTMLElement>('[data-slide-protected]')!;
+    try {
+      const agents = await api('/slide/inventory?resource=agent');
+      if (!pane.open || !target.isConnected) return;
+      const protectedSystems = agents.filter((a: Item) => a.device_id === row.device_id);
+      target.innerHTML = protectedSystems.length ? `<div class="resource-related">${protectedSystems.map((a: Item)=>`<button type="button" data-slide-related="agent" data-resource-id="${esc(a.agent_id)}"><span><b>${esc(slideName(a))}</b><small>${esc([a.os || a.platform,a.os_version].filter(Boolean).join(' '))}</small></span><span aria-hidden="true">→</span></button>`).join('')}</div>` : '<p class="resource-note">No protected systems in the returned inventory refer to this appliance.</p>';
+      bindRelated();
+    } catch {
+      if (pane.open && target.isConnected) target.innerHTML = '<p class="resource-notice">Protected-system inventory is unavailable. Appliance details remain visible.</p>';
+    }
+  }
+}
 async function renderSlide() {
   loading("Loading Slide…");
   const cfg = await api("/slide/connection");
   if (!cfg.connected) {
-    content(
-      '<div class="empty"><h2>Connect your Slide account.</h2><p>Add an API token in Settings to see live backup and recovery data.</p><a class="primary" href="#settings">Open settings →</a></div>',
-    );
+    content('<div class="empty"><h2>Connect your Slide account.</h2><p>Add an API token in Settings to see live backup and recovery data.</p><a class="primary" href="#settings">Open settings →</a></div>');
     return;
   }
-  content(
-    `<div class="section-head"><div><h2>Slide inventory</h2><p>${esc(cfg.url)}</p></div><select id="slide-resource" aria-label="Slide resource type"><option value="agent">Protected systems</option><option value="device">Slide appliances</option><option value="snapshot">Snapshots + verification</option><option value="backup">Backup jobs</option><option value="network">Recovery networks</option><option value="restore/virt">Restored virtual machines</option><option value="restore/file">File restores</option><option value="restore/image">Image exports</option></select></div><article id="restore-cleanup" class="panel"></article><div id="slide-data"></div>`,
-  );
-  await renderRestoreCleanup();
+  content(`<div class="section-head"><div><h2>Backup & recovery inventory</h2><p>Explore protection, capacity and recovery evidence.</p></div><select id="slide-resource" aria-label="Slide resource type">${Object.entries(slideKinds).map(([key,label])=>'<option value="'+key+'" '+(slideResource===key?'selected':'')+'>'+esc(label)+'</option>').join('')}</select></div><article id="restore-cleanup" class="panel"></article><label class="slide-search">Find a resource<input id="slide-search" type="search" placeholder="Name, address or resource ID"></label><div id="slide-data"></div>`);
+  let generation = 0;
   const load = async () => {
-    const resource = value("slide-resource");
-    const rows = await api(
-      "/slide/inventory?resource=" + encodeURIComponent(resource),
-    );
-    document.getElementById("slide-data")!.innerHTML =
-      rows
-        .map(
-          (r: Item, i: number) =>
-            `<details class="slide-row"><summary><b>${esc(r.display_name || r.name || r.hostname || r.agent_id || r.backup_id || r.snapshot_id || r.virt_id || "Resource")}</b><span class="slide-facts">${esc(slideFacts(r).join(" · "))}</span>${r.status || r.state || r.verify_boot_status || r.service_status ? badge(r.status || r.state || r.verify_boot_status || r.service_status) : "<span></span>"}</summary><pre>${pretty(r)}</pre>${resource === "agent" ? `<button data-backup="${esc(r.agent_id)}" class="primary">Request backup</button>` : ""}</details>`,
-        )
-        .join("") ||
-      '<div class="empty"><h3>No resources returned.</h3><p>This is the live response from the connected Slide account.</p></div>';
-    document.querySelectorAll<HTMLElement>("[data-backup]").forEach(
-      (el) =>
-        (el.onclick = async () => {
-          try {
-            const r = await api("/slide/backups", "POST", {
-              agent_id: el.dataset.backup,
-            });
-            notify("Backup requested: " + r.backup_id);
-          } catch (e) {
-            notify((e as Error).message, true);
-          }
-        }),
-    );
+    const current = ++generation;
+    slideResource = value('slide-resource');
+    const resource = slideResource, target = document.getElementById('slide-data')!;
+    target.innerHTML = loadingState('Loading '+(slideKinds[resource] || 'inventory').toLowerCase()+'…');
+    const rows = await api('/slide/inventory?resource='+encodeURIComponent(resource));
+    if (!target.isConnected || current !== generation) return;
+    let limit = 100;
+    const search = document.getElementById('slide-search') as HTMLInputElement;
+    const draw = () => {
+      const query = search.value.trim().toLowerCase();
+      const filtered = rows.filter((r: Item) => !query || JSON.stringify(r).toLowerCase().includes(query));
+      target.innerHTML = filtered.length ? `<p class="resource-note">${filtered.length} resources · Select one to explore its details and relationships.</p><div class="slide-list">${filtered.slice(0,limit).map((r: Item,i: number)=>`<button class="slide-resource-row" data-slide-detail="${i}" aria-haspopup="dialog"><span><b>${esc(slideName(r))}</b><small>${esc(slideFacts(r).join(' · ') || slideKinds[resource])}</small></span>${detailStatus(r.status || r.state || r.verify_boot_status || r.verify_fs_status || r.service_status)}<span aria-hidden="true">→</span></button>`).join('')}</div>${filtered.length>limit ? '<button class="secondary" id="slide-more">Show '+Math.min(100,filtered.length-limit)+' more</button>' : ''}` : '<div class="empty"><h3>No matching resources.</h3><p>Try another search or resource type.</p></div>';
+      target.querySelectorAll<HTMLElement>('[data-slide-detail]').forEach(b=>b.onclick=()=>void openSlideResource(resource,filtered[Number(b.dataset.slideDetail)]));
+      target.querySelector('#slide-more')?.addEventListener('click',()=>{limit+=100;draw();});
+    };
+    search.oninput = () => {limit=100;draw();};
+    draw();
   };
-  document
-    .getElementById("slide-resource")!
-    .addEventListener("change", () =>
-      load().catch((e) => notify(e.message, true)),
-    );
-  await load();
+  document.getElementById('slide-resource')!.addEventListener('change',()=>void load().catch(e=>notify(e.message,true)));
+  await Promise.all([load(),renderRestoreCleanup().catch(error=> {
+    const target=document.getElementById('restore-cleanup');
+    if (target) target.innerHTML='<p class="resource-notice">Cleanup status unavailable. '+esc((error as Error).message)+'</p>';
+  })]);
 }
 function recoveryEvidence(run: Item) {
   const rows = (run.state.members || [])
@@ -2142,7 +2219,7 @@ setInterval(async () => {
     return;
   polling = true;
   try {
-    await loadFleet();
+    await loadFleet(false, true);
     if (document.getElementById("fleet-rows")) renderFleetRows();
     refreshOpenMachine();
   } catch {

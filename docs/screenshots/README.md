@@ -1,5 +1,8 @@
 # Speck screenshots
 
+**[Resource flyouts](resource-details/README.md)**: cloud and backup details,
+readable capacity and protection, and related resources on desktop, tablet and phone.
+
 **[Connected workspace](connected-workspace/README.md)**: the new Home command bar,
 UniFi / Proxmox / Speck relationships, automation entry points and expanded palette.
 

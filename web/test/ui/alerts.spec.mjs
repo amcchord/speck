@@ -74,7 +74,9 @@ for (const width of [1440, 834, 390, 320]) {
     await expect(page.locator('.alert-item')).toHaveCount(4);
     // Phones fold filters behind one button; the panel stays open while filters re-render the list.
     const filters = page.locator('.m-filter-toggle');
-    if (await filters.isVisible()) {
+    if (width <= 760) {
+      // Responsive enhancement runs on the next frame; wait for the stable phone UI.
+      await expect(filters).toBeVisible();
       await expect(page.locator('#alert-state')).toBeHidden();
       await filters.click();
     }

@@ -2,6 +2,7 @@ import "./infrastructure.css";
 import { openProviderConsole } from "./provider-console";
 import { mountProxmoxMachine } from "./proxmox-machine";
 import { icon } from "./icons";
+import { infrastructureStory, relatedResources, technicalDetail } from "./resource-story";
 type Item = Record<string, any>;
 export function createInfrastructure(ui: Item) {
   const { api, esc, on, value, notify, content, loading, badge, bytes, date } =
@@ -277,68 +278,57 @@ export function createInfrastructure(ui: Item) {
       {id: current.connection_id, name: current.connection_name, provider: current.provider}, id, spec, current));
   }
   async function resourceDetail(r: Item) {
-    if (r.provider === "proxmox" && ["qemu", "lxc"].includes(r.kind)) {
-      const d = dialog(r.name, '<div class="pve-root"></div>');
-      d.classList.add("infra-dialog");
-      machinePanel(r, d.querySelector<HTMLElement>(".pve-root")!);
-      return;
-    }
-    const d = dialog(r.name, '<p role="status">Loading resource…</p>');
-    d.classList.add("infra-dialog");
-    let detail: Item, catalog: Item;
-    try {
-      [detail, catalog] = await Promise.all([
-        api(
-          `/infrastructure/connections/${r.connection_id}/resources/${r.kind}/${encodeURIComponent(r.id)}`,
-        ),
-        api(
-          `/infrastructure/connections/${r.connection_id}/catalog?kind=${r.kind}`,
-        ),
-      ]);
-    } catch (e) {
-      d.querySelector("[role=status]")!.textContent = (e as Error).message;
-      return;
-    }
-    if (!d.open) return;
-    const target =
-      d.querySelector(".dialog-body") || d.querySelector("form") || d;
-    const panel = document.createElement("div");
-    panel.innerHTML = `<p class="infra-breadcrumb">${esc(r.connection_name)} › ${esc(r.node)} › ${esc(r.name)}</p><p>${managementLabel(r)}</p>${r.agent ? button("infra-open-agent", "Open Speck agent") : `<p class="muted">Discovered through ${labels[r.provider]}. ${r.provider === "proxmox" ? "Power, resources, snapshots, cloning and migration work through Proxmox. Commands and text files require the QEMU guest agent. The provider console works without a Speck agent. A Speck agent adds desktop sessions, full file transfer, patching and monitoring." : ""}</p>`}<div class="infra-actions">${r.kind === "qemu" || r.kind === "virt" ? button("infra-console", "Open provider console") : ""}${Object.entries(
-      catalog,
-    )
-      .filter(
-        ([id, spec]: [string, any]) =>
-          (admin() || spec.method === "GET") &&
-          (!r.template || id === "clone" || spec.method === "GET"),
-      )
-      .map(([id, spec]: [string, any]) =>
-        button("infra-action-" + id, spec.label),
-      )
-      .join("")}</div>${Object.entries(detail)
-      .filter(([key]) => key !== "resource")
-      .map(
-        ([key, data]) =>
-          `<details ${key === "status" || key === "configuration" ? "open" : ""}><summary>${esc(key.replaceAll("_", " "))}</summary>${dataView(data)}</details>`,
-      )
-      .join("")}`;
-    // Keep the shared dialog heading and close controls.
-    d.querySelector("[role=status]")?.remove();
-    target.append(panel);
-    on("infra-console", () => openProviderConsole(ui, r));
-    on("infra-open-agent", async () => {
-      d.close();
-      await ui.openDevice(r.agent.id);
+    const d = ui.flyout(r.name, '<div class="infra-detail-root"></div>', {
+      className: "infra-dialog", tone: r.provider === "slide" ? "protection" : "compute",
+      subtitle: [labels[r.provider], r.connection_name, r.node !== r.name ? r.node : ""].filter(Boolean).join(" · "),
     });
-    Object.entries(catalog).forEach(([id, spec]) =>
-      on("infra-action-" + id, () =>
-        operationForm(
-          inventory.connections.find((c: Item) => c.id === r.connection_id) || {id:r.connection_id,name:r.connection_name,provider:r.provider},
-          id,
-          spec as Item,
-          r,
-        ),
-      ),
-    );
+    const root = d.querySelector(".infra-detail-root") as HTMLElement;
+    if (r.provider === "proxmox" && ["qemu", "lxc"].includes(r.kind)) {
+      root.classList.add("pve-root");
+      machinePanel(r, root);
+    } else void resourcePanel(r, root);
+  }
+  async function resourcePanel(initial: Item, root: HTMLElement) {
+    let resource = initial, detail: Item | null = null, catalog: Item = {}, busy = true, errors: string[] = [];
+    let version = 0;
+    const path = `/infrastructure/connections/${initial.connection_id}/resources/${initial.kind}/${encodeURIComponent(initial.id)}`;
+    const catalogPath = `/infrastructure/connections/${initial.connection_id}/catalog?kind=${initial.kind}`;
+    const allResources = () => {
+      const known = [...inventory.connections.flatMap((c: Item) => c.resources || []), ...(ui.resourceInventory?.() || [])];
+      return [...new Map(known.map((r: Item) => [r.connection_id+"/"+r.kind+"/"+r.id,r])).values()] as Item[];
+    };
+    function paint() {
+      if (!root.isConnected) return;
+      const siblings = allResources(), guests = relatedResources(resource, siblings);
+      const allowed = Object.entries(catalog).filter(([id, s]: [string, any]) => (admin() || s.method === "GET") && (!resource.template || id === "clone" || s.method === "GET"));
+      const secondary = ([id]: [string, any]) => /delete|remove|destroy|rename|migrate|clone/.test(id);
+      const action = ([id, s]: [string, any]) => `<button class="secondary ${/delete|remove|destroy/.test(id) ? 'is-destructive' : ''}" data-infra-action="${esc(id)}">${esc(s.label)}</button>`;
+      const actions = `<section class="resource-actions"><h3>Management</h3><p class="resource-note">${resource.agent ? 'Linked to a Speck endpoint agent.' : resource.management === 'host_agent' ? 'Managed through an outbound Speck host connector.' : 'Managed through the provider. Endpoint commands and patching require a Speck agent.'}</p><div class="resource-action-buttons">${resource.agent ? '<button class="secondary" data-resource-agent>Open Speck agent</button>' : ''}${resource.kind === 'virt' ? '<button class="secondary" data-resource-console>Open provider console</button>' : ''}${allowed.filter(a=>!secondary(a)).map(action).join('')}</div>${allowed.some(secondary) ? '<details class="resource-more"><summary>More actions</summary><div class="resource-action-buttons">'+allowed.filter(secondary).map(action).join('')+'</div></details>' : ''}</section>`;
+      root.innerHTML = `<div class="resource-refresh"><span role="status">${busy ? 'Reading provider details…' : 'Provider details loaded'}</span><button class="text-link" data-resource-refresh ${busy ? 'disabled' : ''}>Refresh details</button></div>${errors.length ? '<p class="resource-notice">'+esc(errors.join(' '))+'</p>' : ''}${infrastructureStory(resource, detail, siblings, actions)}${detail ? technicalDetail(detail) : ''}`;
+      root.querySelector('[data-resource-refresh]')?.addEventListener('click',()=>void load(true));
+      root.querySelector('[data-resource-agent]')?.addEventListener('click',()=> { root.closest('dialog')?.close(); void ui.openDevice(resource.agent.id); });
+      root.querySelector('[data-resource-console]')?.addEventListener('click',()=>void openProviderConsole(ui,resource));
+      root.querySelectorAll<HTMLElement>('[data-related-resource]').forEach(b=>b.onclick=()=>void resourceDetail(guests[Number(b.dataset.relatedResource)]));
+      root.querySelectorAll<HTMLElement>('[data-infra-action]').forEach(b=>b.onclick=()=> {
+        const id = b.dataset.infraAction!;
+        void operationForm({id:resource.connection_id,name:resource.connection_name,provider:resource.provider},id,catalog[id],resource);
+      });
+    }
+    async function load(fresh = false) {
+      const current = ++version;
+      busy = true; errors = []; paint();
+      const read = fresh ? ui.freshApi : api;
+      const results = await Promise.allSettled([read(path),read(catalogPath)]);
+      if (!root.isConnected || current !== version) return;
+      if (results[0].status === 'fulfilled') {
+        detail = results[0].value;
+        resource = {...initial,...detail!.resource};
+      } else errors.push('Provider details could not be refreshed. Inventory information remains visible.');
+      if (results[1].status === 'fulfilled') catalog = results[1].value;
+      else errors.push('Management actions are unavailable.');
+      busy = false; paint();
+    }
+    await load();
   }
   function input(f: Item): string {
     if (f.options)
@@ -557,5 +547,5 @@ export function createInfrastructure(ui: Item) {
       }
     };
   }
-  return { render, resourceDetail, machinePanel };
+  return { render, resourceDetail, machinePanel, resourcePanel, reset: () => { inventory = {connections:[]}; agents = []; } };
 }

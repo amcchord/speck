@@ -112,6 +112,9 @@ test('empty inventory, unavailable inventory and unconfigured AI are distinct', 
   await expect(page).toHaveURL(/#assistant$/);
   await page.route(/\/api\/fleet(?:\?.*)?$/, r => r.fulfill({status:503,json:{detail:'Unavailable'}}));
   await page.goto('/#home');
+  // Navigation now reuses the known empty snapshot. Explicit refresh tests the
+  // unavailable source rather than silently discarding that cached snapshot.
+  await page.locator('#refresh').click();
   await expect(page.locator('#home-results')).toContainText('Inventory unavailable');
   await expect(page.locator('.home-stat.agents strong')).toHaveText('—');
 });

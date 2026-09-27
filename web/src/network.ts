@@ -2,6 +2,7 @@ import "./network.css";
 import { icon } from "./icons";
 import { expiresWithin, fqdn, parseRecordValues, relative } from "./network-model";
 import { cardify } from "./table-cards";
+import { detailHero, detailFacts, detailSection, technicalDetail } from "./resource-story";
 
 type Item = Record<string, any>;
 export function createNetwork(ui: Item) {
@@ -284,27 +285,21 @@ export function createNetwork(ui: Item) {
     let panel = pane?.open && pane.dataset.domain === d.domain ? pane : null;
     if (!panel) {
       closePane();
-      panel = dialog(d.domain, `<div class="net-pane" id="net-pane">${ui.loadingState ? ui.loadingState("Loading records…") : "Loading…"}</div>`, {
-        className: "device-drawer net-drawer",
-        modal: false,
+      panel = ui.flyout(d.domain, `<div class="net-pane" id="net-pane">${ui.loadingState ? ui.loadingState("Loading records…") : "Loading…"}</div>`, {
+        className: "net-drawer", tone: "network", subtitle: "DNS domain · GoDaddy",
       });
-      panel.dataset.domain = d.domain;
+      panel!.dataset.domain = d.domain;
       pane = panel;
-      const opened = panel;
-      const escape = (e: KeyboardEvent) => {
-        if (e.key === "Escape" && opened.open && !document.querySelector("dialog:modal")) opened.close();
-      };
-      document.addEventListener("keydown", escape);
-      opened.addEventListener("close", () => document.removeEventListener("keydown", escape));
     }
     let zone: Item;
     try {
-      zone = await api(`/dns/domains/${encodeURIComponent(d.domain)}/records${fresh ? "" : "?cached=true"}`);
+      zone = await (fresh ? ui.freshApi : api)(`/dns/domains/${encodeURIComponent(d.domain)}/records${fresh ? "" : "?cached=true"}`);
     } catch (err) {
+      if (!panel?.open) return;
       panel.querySelector("#net-pane")!.innerHTML = `<div class="empty" role="alert"><h2>Unable to load records</h2><p>${esc((err as Error).message)}</p></div>`;
       return;
     }
-    if (pane !== panel || !panel) return;
+    if (pane !== panel || !panel?.open) return;
     const groups = recordGroups(zone.records);
     const reach = [...new Set(zone.records.filter((r: Item) => ["A", "AAAA"].includes(r.type)).flatMap((r: Item) => owners(r.data).map((m) => m.label)))];
     panel.querySelector("#net-pane")!.innerHTML = `<div class="net-facts"><div><span>Expires</span><b>${esc(d.expires ? new Date(d.expires).toLocaleDateString() : "—")}</b></div><div><span>Renewal</span><b>${d.renewAuto ? "Automatic" : "Manual"}</b></div><div><span>Transfer lock</span><b>${d.locked ? "On" : "Off"}</b></div><div><span>Privacy</span><b>${d.privacy ? "On" : "Off"}</b></div><div><span>Records</span><b>${zone.records.length}</b></div><div><span>${zone.cached ? "Cached" : "Fetched"}</span><b>${esc(relative(zone.fetched_at))}</b></div></div>${
@@ -469,7 +464,7 @@ export function createNetwork(ui: Item) {
         const info = map.ips[p.ip] || {};
         const names: string[] = info.dns || [];
         const lan = p.lan_ip || info.mapping?.lan_ip;
-        return `<tr class="net-ip-${p.status}"><td class="mono ip">${esc(p.ip)}</td><td>${chip(label[p.status] || p.status, tone[p.status])}</td><td>${p.assigned_to ? esc(p.assigned_to) : none}</td><td>${
+        return `<tr class="net-ip-${p.status}"><td class="mono ip"><button class="text-link" data-ip-detail="${i}" aria-haspopup="dialog">${esc(p.ip)}</button></td><td>${chip(label[p.status] || p.status, tone[p.status])}</td><td>${p.assigned_to ? esc(p.assigned_to) : none}</td><td>${
           lan ? `<span class="mono">${esc(lan)}</span>${ownerChips(lan)}${info.lan_client && !owners(lan).length ? chip(info.lan_client) : ""}` : none
         }</td><td>${names.slice(0, 3).map((n) => chip(n)).join("")}${names.length > 3 ? `<small>+${names.length - 3} more</small>` : ""}</td>${
           admin()
@@ -479,6 +474,7 @@ export function createNetwork(ui: Item) {
       })
       .join("")}</tbody></table></div>`;
     cardify(body);
+    body.querySelectorAll<HTMLButtonElement>('[data-ip-detail]').forEach(b=>b.onclick=()=>openIp(pool.pool[Number(b.dataset.ipDetail)]));
     body.querySelectorAll<HTMLButtonElement>("[data-map]").forEach((b) => b.addEventListener("click", () => mapDialog(pool.pool[+b.dataset.map!])));
     body.querySelectorAll<HTMLButtonElement>("[data-unmap]").forEach((b) => b.addEventListener("click", () => unmap(pool.pool[+b.dataset.unmap!])));
   }
@@ -615,11 +611,12 @@ export function createNetwork(ui: Item) {
       document.getElementById("net-client-rows")!.innerHTML = `<p class="muted net-count">${rows.length === clients!.length ? `${rows.length} clients` : `${rows.length} of ${clients!.length} clients`}</p><div class="infra-table-wrap"><table class="net-table net-compact"><thead><tr><th>Name</th><th>IP</th><th>MAC</th><th>Link</th><th>Connected</th><th>Speck machine</th></tr></thead><tbody>${rows
         .slice(0, clientLimit)
         .map(
-          (c) =>
-            `<tr><td>${esc(c.name || "Unnamed")}</td><td class="mono ip">${c.ip ? esc(c.ip) : none}</td><td class="mono ip">${esc(c.mac)}</td><td>${esc(c.type === "WIRELESS" ? "Wi-Fi" : c.type === "WIRED" ? "Wired" : c.type)}</td><td>${c.connected_at ? esc(relative(Date.parse(c.connected_at) / 1000)) : none}</td><td>${c.ip ? ownerChips(c.ip) : ""}</td></tr>`,
+          (c, i) =>
+            `<tr><td><button class="text-link" data-client-detail="${i}" aria-haspopup="dialog">${esc(c.name || "Unnamed")}</button></td><td class="mono ip">${c.ip ? esc(c.ip) : none}</td><td class="mono ip">${esc(c.mac)}</td><td>${esc(c.type === "WIRELESS" ? "Wi-Fi" : c.type === "WIRED" ? "Wired" : c.type)}</td><td>${c.connected_at ? esc(relative(Date.parse(c.connected_at) / 1000)) : none}</td><td>${c.ip ? ownerChips(c.ip) : ""}</td></tr>`,
         )
         .join("")}</tbody></table></div>${rows.length > clientLimit ? `<button class="secondary net-more" id="net-clients-more">Show ${Math.min(PAGE, rows.length - clientLimit)} more of ${rows.length - clientLimit} remaining</button>` : ""}`;
       cardify(document.getElementById("net-client-rows"));
+      document.querySelectorAll<HTMLElement>('[data-client-detail]').forEach(b=>b.onclick=()=>openClient(rows[Number(b.dataset.clientDetail)]));
       document.getElementById("net-clients-more")?.addEventListener("click", () => {
         clientLimit += PAGE;
         draw();
@@ -646,10 +643,32 @@ export function createNetwork(ui: Item) {
     }
     body.innerHTML = `<p class="muted net-note">Every UniFi console on the Site Manager account. Speck manages public IPs on the highlighted gateway.</p><div class="net-consoles">${consoles!
       .map(
-        (c) =>
-          `<article class="card net-console ${c.is_managed_gateway ? "managed" : ""}"><div class="infra-card-heading"><h3>${esc(c.name)}</h3>${badge(c.state || "unknown", c.state === "connected")}</div><p>${esc(c.model || "UniFi console")}${c.version ? " · " + esc(c.version) : ""}</p><p class="mono">${esc(c.ip || "")}</p>${c.is_managed_gateway ? chip("Managed gateway", "good") : ""}</article>`,
+        (c, i) =>
+          `<article class="card net-console ${c.is_managed_gateway ? "managed" : ""}"><div class="infra-card-heading"><h3><button class="text-link" data-console-detail="${i}" aria-haspopup="dialog">${esc(c.name)}</button></h3>${badge(c.state || "unknown", c.state === "connected")}</div><p>${esc(c.model || "UniFi console")}${c.version ? " · " + esc(c.version) : ""}</p><p class="mono">${esc(c.ip || "")}</p>${c.is_managed_gateway ? chip("Managed gateway", "good") : ""}</article>`,
       )
       .join("")}</div>`;
+    body.querySelectorAll<HTMLElement>('[data-console-detail]').forEach(b=>b.onclick=()=>openConsole(consoles![Number(b.dataset.consoleDetail)]));
+  }
+
+  function machineLinks(ip: string) {
+    return detailSection('Machines reporting this address', owners(ip).length ? `<div class="resource-related">${owners(ip).map(m=>`<button data-network-machine="${esc(m.id)}"><span><b>${esc(m.label)}</b><small>Inspect identity and network evidence</small></span><span aria-hidden="true">→</span></button>`).join('')}</div>` : '<p class="resource-note">No machine in the loaded network map reports this address.</p>');
+  }
+  function bindMachineLinks(p: HTMLDialogElement) {
+    p.querySelectorAll<HTMLElement>('[data-network-machine]').forEach(b=>b.onclick=()=> { p.close(); void ui.openMachine(b.dataset.networkMachine); });
+  }
+  function openIp(p: Item) {
+    const info = map.ips[p.ip] || {}, lan = p.lan_ip || info.mapping?.lan_ip;
+    const labels: Item = {free:'Available',assigned:'Speck-managed mapping',in_use:'Other gateway rule',gateway:'Gateway address'};
+    const d = ui.flyout(p.ip, detailHero('UniFi · Public address',labels[p.status] || p.status,p.status==='assigned' ? 'This address forwards inbound traffic to its mapped LAN host and supplies that host’s outbound address.' : 'Address allocation and gateway evidence from the connected UniFi network.') + detailSection('Routing',detailFacts([['Gateway',pool.gateway_name],['Public address',p.ip],['Mapped LAN host',lan],['Mapping name',p.assigned_to],['Source',p.status==='assigned' ? 'Speck-managed UniFi NAT mapping' : 'UniFi gateway inventory']])) + detailSection('DNS names',detailFacts([['Names pointing here',info.dns?.length ? info.dns : 'No cached DNS names']])) + machineLinks(lan || p.ip) + `${admin() && ['free','assigned'].includes(p.status) ? '<section class="resource-actions"><h3>Mapping</h3><button class="secondary" data-ip-action>'+(p.status==='free' ? 'Map to host' : 'Remove mapping')+'</button></section>' : ''}` + technicalDetail(p),{tone:'network',subtitle:'Network · Public IP'});
+    bindMachineLinks(d);
+    d.querySelector('[data-ip-action]')?.addEventListener('click',()=> p.status==='free' ? mapDialog(p) : void unmap(p));
+  }
+  function openClient(c: Item) {
+    const d = ui.flyout(c.name || c.ip || 'LAN client',detailHero('UniFi · LAN client',null,'Reported network presence. An address match alone does not establish a Speck endpoint identity.') + detailSection('Connection',detailFacts([['IP address',c.ip],['MAC address',c.mac],['Link',c.type==='WIRELESS' ? 'Wi-Fi' : c.type==='WIRED' ? 'Wired' : c.type],['Connected since',c.connected_at ? new Date(c.connected_at).toLocaleString() : null],['Network',c.network || c.network_name],['Access point / switch',c.uplink_name || c.ap_name]])) + machineLinks(c.ip) + technicalDetail(c),{tone:'network',subtitle:'Network · LAN client'});
+    bindMachineLinks(d);
+  }
+  function openConsole(c: Item) {
+    ui.flyout(c.name || 'UniFi console',detailHero('UniFi · Console',c.state,c.is_managed_gateway ? 'This gateway manages the public address pool and NAT mappings shown in Speck.' : 'A console discovered through the connected UniFi Site Manager account.') + detailSection('Console',detailFacts([['Model',c.model],['Software version',c.version],['Address',c.ip],['Gateway management',c.is_managed_gateway ? 'Managed by Speck' : 'Discovery only']])) + technicalDetail(c),{tone:'network',subtitle:'Network · UniFi console'});
   }
 
   /** Map a free public IP to a LAN host chosen elsewhere (for example a new VM). */
@@ -689,5 +708,10 @@ export function createNetwork(ui: Item) {
     reachFilter = "all";
     location.hash = "network";
   }
-  return { render, closePane, exposeHost, showMachine };
+  function reset() {
+    window.clearTimeout(scanTimer); closePane(); clients = consoles = null;
+    domains = []; status = {}; pool = {pool:[]}; unifiStatus = {};
+    map = {machines:[],ips:{}}; mapReady = false; reachMachine = "";
+  }
+  return { render, closePane, exposeHost, showMachine, reset };
 }

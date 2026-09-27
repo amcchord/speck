@@ -1,0 +1,37 @@
+[
+  {
+    "file": "cloud-1440.png",
+    "sha256": "d166ec3143ddc7652b7d31aeba73dd3dc61ca3b602a191e82c6a6812324cef5b",
+    "source": "web/test/ui/resource-details.spec.mjs",
+    "data": "Synthetic provider fixtures only",
+    "browser": "Chromium"
+  },
+  {
+    "file": "cloud-834.png",
+    "sha256": "159594331190a89b2f517798f1133d0d196824ef6b6bfed6c0dd6512b0d5fabc",
+    "source": "web/test/ui/resource-details.spec.mjs",
+    "data": "Synthetic provider fixtures only",
+    "browser": "Chromium"
+  },
+  {
+    "file": "cloud-390.png",
+    "sha256": "50e9edd745c5ee995487dbadb72b13df0a420e3ecdb2dc4b8ed448850d9bca0a",
+    "source": "web/test/ui/resource-details.spec.mjs",
+    "data": "Synthetic provider fixtures only",
+    "browser": "Chromium"
+  },
+  {
+    "file": "slide-1440.png",
+    "sha256": "12f7e84ce228c419946e974a02ca3a49cc0eb6ae9ff53f3e6e03fc29eaa5db96",
+    "source": "web/test/ui/resource-details.spec.mjs",
+    "data": "Synthetic provider fixtures only",
+    "browser": "Chromium"
+  },
+  {
+    "file": "slide-390.png",
+    "sha256": "27d2888b9e37f41d0cd061e1ca410bae19667a4423612fe24ca26fce522328b2",
+    "source": "web/test/ui/resource-details.spec.mjs",
+    "data": "Synthetic provider fixtures only",
+    "browser": "Chromium"
+  }
+]

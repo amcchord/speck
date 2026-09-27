@@ -764,3 +764,37 @@ invoked. Test login sessions were signed out. Private deployment manifests, logs
 and live screenshots remain in ignored `output/connected-workspace-release/`.
 No backend restart, agent change, provider operation, recovery action, GitHub push
 or merge occurred. Windows/Linux operational qualification remains unchanged.
+
+## Resource flyouts and faster repeat navigation — September 27, 2026
+
+The shared resource flyout replaces infrastructure modals and inline Slide JSON,
+and also covers DNS, public IPs, LAN clients and UniFi consoles. Cloud instances
+lead with compute, capacity, network and backup protection. Proxmox hosts show
+storage, networks and explicitly scoped guest relationships, including in Fleet.
+Slide shows schedules, retention, verification and recovery configuration;
+appliances link to their protected systems. Technical fields remain available in
+a collapsed, recursively formatted section. Actions retain their existing review
+and confirmation behavior. Desktop, tablet and phone layouts share the same
+structure, with focus restoration and protection against late responses.
+
+Reusable inventory reads now share a bounded memory-only session cache. Return
+visits show saved data immediately, with background refresh and explicit freshness,
+failure and Show latest controls. Mutations invalidate reads; logout clears data
+and open inspectors. Fresh mutation preflights, secrets and live operation reads
+are excluded. Fleet telemetry polling still reads current server data, while
+navigation no longer forces provider refreshes. Cold loads still depend on the
+provider. Slide status and inventory load concurrently; histories have search
+and bounded rendering.
+
+Implementation and limits: [resource details](docs/operations/resource-details.md).
+Reviewed synthetic captures: [gallery](docs/screenshots/resource-details/README.md).
+Private test and release evidence: ignored `output/resource-details-release/`.
+
+Local release validation passes: TypeScript/Vite, 51 web unit tests and the full
+Chromium/WebKit suite (261 passed, one existing CDP touch skip). The first full
+run exposed a WebKit test race that checked phone filters before the responsive
+enhancement frame; the test now waits for the visible phone control. Earlier
+focused runs caught and corrected stale Fleet polling, Safari focus restoration
+and session cleanup before the final passing run. Backend, native and agent
+sources are unchanged; their qualification limits remain unchanged. No hosted CI
+run was requested for this local static release.
