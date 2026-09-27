@@ -914,3 +914,31 @@ The baseline also hashes every vault entry/provider credential, SSH key and
 handoff so deployment can verify they remain unchanged. Production publication
 will use the shared deployment lock, a rollback snapshot and an immediate live
 index comparison. Final deployment acceptance is recorded below after release.
+
+### Production acceptance — Keys workspace
+
+Deployed `2b4cb275dfe9745d1b85888f17c4e01050f80b96` as
+`20260927T182901Z-keys-2b4cb27`. Before the production build and again before
+publication, origin/main was fetched and verified as an ancestor; all newer
+observability/agent work was preserved. Publication held the shared deployment
+lock and compared the live index to the inspected baseline immediately before
+its atomic replacement. A consistent database backup, server, web, downloads and
+configuration rollback snapshot was retained in the private operator record.
+
+All 27 public web assets match the build manifest. Service health is active.
+Authenticated metadata-only checks passed for all 43 vault entries, six
+providers, 13 SSH identities and six handoffs, with 280 locally known system
+targets. Inventory round trips measured 11–24 ms from this operator Mac; median
+individual detail reads were about 10 ms. These are observed API timings, not a
+guarantee for every network or browser. Repeat navigation and local search were
+separately verified in the browser suite.
+
+The database hashes of vault entries (including reveal counters), provider
+credentials, SSH keys and handoffs are unchanged after deployment and acceptance.
+Account/device identities, connections, recovery configuration, environment and
+requirements also match the baseline. No production credential was revealed,
+rotated, provisioned, revoked or linked for testing. Agent downloads are byte-for-byte
+unchanged and the automatic update version remains 0.3.3. GitHub CI was not run.
+Private manifests, backups and validation logs are under ignored
+`output/keys-workspace/` and the deployment record. The public index SHA-256 is
+`6db069fb15f54d4e2acd2b885d06fce5d076050f9cd90a1466586a1235e619f5`.
