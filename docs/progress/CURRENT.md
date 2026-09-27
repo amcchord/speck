@@ -1,11 +1,21 @@
-# Connected Home — local September 27, 2026
+# Connected Home — live September 27, 2026
 
 The `codex/connected-workspace` branch adds a Home command bar, joined machine
 relationships, an expanded semantic palette, and direct entry to reviewed AI
-drafts and schedules. It includes main `7ad0d63`. The full web gate passes:
-41 units and 243 browser checks, with one existing platform-specific skip; the
-final Home refinement passes 22 focused browser checks. No production release or
-GitHub push occurred. See [behavior and limits](../operations/connected-workspace.md)
+drafts and schedules. Source `db61a96` includes main `7ad0d63` and the previous
+mobile release. Static release `20260927T133224Z-connected-workspace-db61a96`
+is live at https://speckrmm.com. All 26 public files match the build; the backend
+kept its PID and source, configuration and identity fingerprints remained intact.
+
+The release web gate passes: 41 units and 243 browser checks, with one existing
+WebKit skip. Authenticated production checks passed in desktop Chromium and
+tablet/phone WebKit, including relationships, search, drill-down, AI review and
+the schedule editor. No AI generation or operational submission was made.
+Rollback: `/var/lib/speck-rollback/20260927T133224Z-connected-workspace-db61a96/web`.
+Private evidence: ignored `output/connected-workspace-release/`.
+
+No GitHub push or merge occurred. The next release must retain `db61a96` until it
+reaches main. See [behavior, validation and rollback](../operations/connected-workspace.md)
 and [synthetic screenshots](../screenshots/connected-workspace/README.md).
 
 ---

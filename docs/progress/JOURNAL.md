@@ -1097,3 +1097,31 @@ Next: merge `claude/ui-audit-mobile` to main. Optional: add Chromium phone captu
 Android sizing checks, and consider a phone-specific remote-control toolbar review with a
 live endpoint.
 
+## 2026-09-27 — Connected Home production release
+
+The user authorized publication of `db61a96` on `codex/connected-workspace`.
+Released `20260927T133224Z-connected-workspace-db61a96` after fetching main and
+confirming ancestry, preserving the previously deployed mobile release, verifying
+all 41 live backend Python files, and checking sole deployment ownership. The
+shared release lock covered a fresh baseline comparison, static backup and atomic
+index swap. Old hashed assets remain available to existing browser sessions.
+
+TypeScript/Vite, 41 web units and the full Chromium/WebKit suite passed (243 browser
+checks and one existing CDP touch skip). All 26 public static files match the
+release manifest. Backend PID, dependencies, environment and seven identity /
+configuration fingerprints remained unchanged; no service restart was required.
+
+Authenticated production acceptance passed in Chromium at 1440 pixels and WebKit
+at 834/390 pixels. Home loaded all sources and displayed real UniFi, Proxmox and
+Speck relationships. Search, machine/host details, exact-ID network drill-down,
+Fleet deep links, the command shortcut, Linux AI review handoff and schedule
+editor worked. No overflow, script errors, HTTP errors or operational writes were
+observed. AI requests and schedules were not submitted; test sessions were signed
+out. Real screenshots and evidence remain private in ignored
+`output/connected-workspace-release/`.
+
+Rollback web tree: `/var/lib/speck-rollback/20260927T133224Z-connected-workspace-db61a96/web`.
+No backend, native client, agent, provider or recovery changes. Existing platform
+qualification limits remain. Source and release records are local; no push or
+merge occurred. Future deployments must preserve `db61a96` until it reaches main.
+See [operations record](../operations/connected-workspace.md).

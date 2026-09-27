@@ -3,8 +3,8 @@
 The console now opens at **Home** after sign-in unless the operator followed an
 existing page or remote-session link. Fleet remains the detailed inventory view. AI drafting now starts from Home rather
 than occupying a separate sidebar destination; existing assistant links still work.
-This is a local web change on `codex/connected-workspace`, based on main `7ad0d63`;
-it has not been published to production.
+This web change is live at https://speckrmm.com from `codex/connected-workspace`,
+source `db61a96`, including main `7ad0d63` and the previous mobile release.
 
 ## Starting from the work
 
@@ -84,7 +84,40 @@ tests cover connection scoping, identity conflicts, reported-address ambiguity a
 search. [Synthetic screenshots](../screenshots/connected-workspace/README.md)
 show the current console. Exact verification totals are in WORKBOOK.md.
 
-Production acceptance, real AI calls and live Windows/Linux agent operations were
-not exercised by this UI change. Existing platform qualification limits remain.
-Before publication, follow the current-main, live-baseline and deployment-owner
-checks in AGENTS.md and retain any newer deployed work.
+## Production release — September 27, 2026
+
+Release `20260927T133224Z-connected-workspace-db61a96` published static assets only.
+Main was fetched and confirmed as an ancestor before the build and release. The
+live backend matched the release source, and the previous mobile release was
+already included. The sole deployment owner held the shared release lock and
+compared the live index with its baseline immediately before the atomic swap.
+Old hashed assets were retained for open browser sessions.
+
+All 26 files served over HTTPS match the build. Current index SHA-256:
+`261199c2a10d3da0fa5adcdb4711638433bd6573b1f2418daa8d1fcb417a00ae`.
+Backend PID, source files, dependency manifest, environment and fingerprints of
+endpoint identities, installations, accounts, recovery plans, preview policies,
+provider connections and connector enrollments remained unchanged.
+
+Authenticated live acceptance passed in Chromium at 1440 pixels and WebKit at
+834/390 pixels. Home loaded all five sources, searched real inventory, displayed
+the three relationship cards, and opened the reviewed schedule editor without
+submitting it. Desktop acceptance additionally checked machine and Proxmox host
+details, exact-ID network drill-down, Fleet deep links, the command shortcut and
+the Linux AI review handoff. No overflow, script errors, HTTP errors or operational
+writes occurred. Login sessions were signed out. Live captures were visually
+reviewed and remain private in ignored `output/connected-workspace-release/`.
+
+Rollback tree:
+`/var/lib/speck-rollback/20260927T133224Z-connected-workspace-db61a96/web`.
+For rollback, coordinate one owner, hold the shared release lock and compare the
+current index with the release hash above before restoring the prior static
+assets and atomically replacing the index. Retain later hashed assets; no backend
+restart or database/configuration restore is needed for this web-only release.
+
+The release re-ran TypeScript/Vite, 41 web units and the full Chromium/WebKit suite:
+243 passed and one existing WebKit CDP touch case skipped. GitHub CI was not run.
+Real AI generation and Windows/Linux endpoint operations were not exercised by
+this UI rollout. Existing platform qualification limits remain. Source and the
+release record are committed locally; no GitHub push or merge occurred. A future
+release must preserve this deployed source until it reaches main.

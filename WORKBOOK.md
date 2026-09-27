@@ -717,7 +717,7 @@ Private captures and release scripts are in ignored `output/ui-audit-mobile/` an
 [synthetic gallery](docs/screenshots/ui-audit-mobile/README.md) is committed.
 
 
-## Connected Home and expanded palette — September 27, 2026 (local)
+## Connected Home and expanded palette — September 27, 2026 (live)
 
 `codex/connected-workspace` starts from current main `7ad0d63`. Home becomes the
 default signed-in destination, with machine/host/IP/DNS search, Cmd/Ctrl+K,
@@ -740,10 +740,27 @@ first iterations exposed navigation-selector and short-sidebar regressions; both
 were corrected before the passing full run. No GitHub CI run was requested.
 
 A loopback-only connected preview runs with `scripts/preview.py --connected`; it
-uses synthetic endpoints and documentation IP ranges. No deployment, backend or
-agent changes, live AI request, provider operation, credential access, recovery
-action, GitHub push or merge occurred. Windows/Linux operational qualification
-remains as previously recorded. [Behavior and limits](docs/operations/connected-workspace.md),
+uses synthetic endpoints and documentation IP ranges. [Behavior and limits](docs/operations/connected-workspace.md),
 [gallery](docs/screenshots/connected-workspace/README.md). Local logs are in ignored
-`output/connected-workspace/`. Production publication still requires the release
-preflight and a fresh comparison with the live baseline.
+`output/connected-workspace/`.
+
+User-authorized static release `20260927T133224Z-connected-workspace-db61a96` is
+live at https://speckrmm.com, source `db61a962fda4fed1fc9eb729d44c030c2dfd73e4`.
+Fetched main `7ad0d63` before the production build and publishing; ancestry and
+the previously deployed mobile source `b1cddc6` are preserved. This task was the
+sole active deployment owner and publication held the shared release lock. The
+live index matched the inspected baseline immediately before its atomic swap.
+All 26 public files match the build. The backend's 41 Python files, dependency
+manifest, environment, PID and seven configuration/identity groups are unchanged.
+Rollback web tree: `/var/lib/speck-rollback/20260927T133224Z-connected-workspace-db61a96/web`.
+
+The release build, 41 units and full Chromium/WebKit suite (243 passed, one
+existing skip) passed again. Authenticated production acceptance passed at 1440
+pixels in Chromium and 834/390 pixels in WebKit: all Home sources loaded, search,
+relationship cards, machine/Proxmox-host/network drill-down, Fleet links, command
+shortcut, AI review handoff and the schedule editor worked, with no overflow,
+script errors or HTTP errors. AI generation and operational submissions were not
+invoked. Test login sessions were signed out. Private deployment manifests, logs,
+and live screenshots remain in ignored `output/connected-workspace-release/`.
+No backend restart, agent change, provider operation, recovery action, GitHub push
+or merge occurred. Windows/Linux operational qualification remains unchanged.
