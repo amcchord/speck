@@ -523,7 +523,7 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
         const result = await (fresh ? ui.freshApi : ui.api)(endpoint);
         if (pane.open && version === current) {
           data = result;
-          if (!data.ports.length && tab === "ports") tab = "clients";
+          if (!result.ports.length && tab === "ports") tab = "clients";
           draw();
         }
       } catch (err) {
