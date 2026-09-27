@@ -122,3 +122,5 @@ The [capture manifest](manifest.json) records dimensions, SHA-256 digests and pr
 operational evidence and before screenshots stay in ignored `output/`.
 
 [Saved desktop previews](previews/README.md) show the last saved timestamp and desktop recovery guidance on desktop and mobile.
+
+[Infrastructure, LAN clients and interactive terminals](observability/README.md)

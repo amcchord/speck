@@ -842,3 +842,26 @@ Local core passed (214 backend, Linux race checks, platform builds, 51 web units
 273 browser checks; one existing skip), plus 18 final focused browser checks.
 Real Windows ConPTY passed without changing enrollment. Release owner is the
 current connected-workspace task; deployment and acceptance follow below.
+
+Deployed source `3a282ac` as `20260927T173225Z-observability-3a282ac` under the
+shared release lock. The full live baseline and immediate pre-publish index
+matched; current origin/main and the newer deployed commits are ancestors. All
+27 public web hashes matched. Backend restarted with no active jobs/recovery.
+The signed agent 0.3.2 release was published after real Windows/Linux shell
+canaries passed state, Unicode, resize, Ctrl+C and clean reconnect.
+
+Live provider telemetry and UniFi observations passed; 17 Network sites have
+reported locations. Environment, identities, account/provider/connector/recovery
+configuration, SQLite integrity and service health were preserved. No schema
+change. Remaining eligible endpoint updates follow the existing idle-only policy.
+Rollback: `/var/lib/speck-rollback/20260927T173225Z-observability-3a282ac`.
+Private evidence: `output/operations-overhaul/`. Preserve this release in future
+deployments until it reaches main. No GitHub push/merge or hosted CI run occurred.
+
+During 0.3.2 automatic rollout, one Windows helper replacement failed and rolled
+back cleanly. Windows offers were temporarily held, leaving Linux offers active.
+Agent 0.3.3 hardens executable replacement against transient Windows image locks,
+waits for helper process exit, and runs the verified candidate as the updater.
+Windows file-lock, transaction/rollback and ConPTY tests passed on the lab host;
+Linux agent/connector race tests passed again. No failed update bypasses approval
+or changes endpoint identity; final release validation follows below.

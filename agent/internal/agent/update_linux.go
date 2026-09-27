@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+func replaceUpdateFile(_ context.Context, source, destination string) error {
+	return replaceFile(source, destination)
+}
+
 func protectUpdateDir(path string) error { return os.Chmod(path, 0700) }
 func launchUpdate(helper, config string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)

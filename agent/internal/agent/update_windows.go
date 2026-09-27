@@ -10,9 +10,28 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
 )
+
+// Executable images and scanners can retain transient Windows file locks.
+// Retry only sharing/access failures, bounded by the update transaction.
+func replaceUpdateFile(parent context.Context, source, destination string) error {
+	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
+	defer cancel()
+	for {
+		err := replaceFile(source, destination)
+		if err == nil || (!errors.Is(err, windows.ERROR_SHARING_VIOLATION) && !errors.Is(err, windows.ERROR_ACCESS_DENIED)) {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return errors.Join(err, ctx.Err())
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+}
 
 func protectUpdateDir(path string) error {
 	cmd := exec.Command("icacls.exe", path, "/inheritance:r", "/grant:r", "*S-1-5-18:(OI)(CI)F", "*S-1-5-32-544:(OI)(CI)F")
@@ -77,7 +96,7 @@ func stopUpdateHelpers(install string) error {
 	// Scope process termination to the installed Speck helper, not an arbitrary name.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command", `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Filter "Name='speck-desktop.exe'" | Where-Object {$_.ExecutablePath -eq (Join-Path $env:SPECK_UPDATE_INSTALL 'speck-desktop.exe')} | ForEach-Object {Stop-Process -Id $_.ProcessId -Force}`)
+	cmd := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command", `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Filter "Name='speck-desktop.exe'" | Where-Object {$_.ExecutablePath -eq (Join-Path $env:SPECK_UPDATE_INSTALL 'speck-desktop.exe')} | ForEach-Object {$p=Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue; if($p){Stop-Process -Id $p.Id -Force; if(-not $p.WaitForExit(15000)){throw 'Speck helper did not exit'}}}`)
 	cmd.Env = append(cmd.Environ(), "SPECK_UPDATE_INSTALL="+install)
 	quiet(cmd)
 	return cmd.Run()

@@ -66,5 +66,54 @@ environment and child-process cleanup. The test did not alter enrollment or the
 running agent. Linux PTY behavior passed under the race detector. Windows ARM,
 physical iOS and older Windows versions have not been qualified.
 
-Production acceptance is recorded below after publication. Live customer captures, provider schemas and
-endpoint test logs are kept only in ignored `output/operations-overhaul/`.
+Live customer captures, provider schemas and endpoint test logs are kept only
+in ignored `output/operations-overhaul/`.
+
+### Production release
+
+Published `3a282acf74ea78917be7081108b0706a0f57645c` as
+`20260927T173225Z-observability-3a282ac`. Before the production build, origin/main
+was fetched and confirmed an ancestor; the unmerged Home and resource-detail
+releases were preserved. The current task held the shared deployment lock.
+All deployed backend files and the live index matched the inspected baseline,
+including an immediate index comparison before publication. No active job or
+recovery blocked the restart.
+
+All 27 public web files matched the candidate hashes. Live authenticated reads
+verified Linode CPU/network/disk history (285 samples), Proxmox host and guest
+CPU/memory/network history (1,440 samples), all 17 reported Network-site
+locations and client observations on both the managed gateway and another site.
+Unreported host disk rates and guest I/O wait remain explicitly unavailable.
+
+Windows and Linux canaries run agent 0.3.2 with preserved enrollment identities
+and retained binary backups. Real authenticated TLS WebSocket sessions passed
+persistent state, Unicode, resize, Ctrl+C, disconnect and fresh reconnect on both.
+The Windows desktop helper hash and running user-session helper were verified;
+Windows retains its configured RDP screen default. The signed 0.3.2 update
+pointer and all four downloadable binaries were published after canary acceptance.
+Remaining eligible agents use the existing idle-only update policy.
+
+Service health, unchanged environment, identities, accounts, provider connections,
+connector enrollments and recovery policies were verified. SQLite integrity and
+foreign keys passed; no validation shell remained active. No native application
+release, recovery operation, GitHub push/merge or unrelated workload change was
+performed. Hosted CI was not run for these local commits.
+
+Rollback is retained at
+`/var/lib/speck-rollback/20260927T173225Z-observability-3a282ac` with previous
+server, web, downloads, configuration and a consistent SQLite snapshot. A rollback
+should restore server/web and the previous agent-update pointer under the shared
+lock, while preserving database writes made since release; no schema changed.
+Existing agents do not automatically downgrade. Restore their retained binaries
+when needed, preserving each endpoint's original configuration and identity.
+
+Public [screenshots](../screenshots/observability/README.md) use synthetic data.
+
+The 0.3.2 automatic rollout exposed one Windows helper-file replacement failure;
+rollback restored the old agent and kept the endpoint online. Windows offers were
+held while agent 0.3.3 was prepared. The updater now waits for desktop helpers to
+exit, retries transient executable locks for at most 15 seconds, and uses the
+verified candidate for its updater helper so future installer fixes apply during
+the current upgrade. Real Windows tests cover released and persistent file locks,
+identity preservation, the complete staged transaction and rollback scenarios.
+Linux agent/connector race tests passed again. Final rollout evidence follows.
