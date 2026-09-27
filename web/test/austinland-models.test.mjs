@@ -75,3 +75,13 @@ test("audit event codes read as plain language", async () => {
   assert.equal(eventLabel("account.created"), "Account created");
   assert.equal(eventLabel("vault.provider.saved"), "Vault provider saved");
 });
+
+
+test('credential search combines tokens across metadata and never indexes secret material', async () => {
+  const { searchKeys } = await import('../src/vault-model.ts');
+  const entries = [{name:'shop-db', project:'Commerce', secret_names:['DATABASE_URL'], secrets:{PASSWORD:'secret-canary'}, hints:{PASSWORD:'masked-canary'}}, {name:'lab-db', project:'Lab'}];
+  assert.deepEqual(searchKeys(entries, ' commerce  database '), [entries[0]]);
+  assert.deepEqual(searchKeys(entries, 'secret-canary'), []);
+  assert.deepEqual(searchKeys(entries, 'masked-canary'), []);
+  assert.deepEqual(searchKeys(entries, 'shop lab'), []);
+});

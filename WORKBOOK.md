@@ -876,3 +876,41 @@ state, Unicode, resize, Ctrl+C, teardown and clean reconnect again. All platform
 offers are enabled; automatic-update policy is unchanged. The frontend/backend
 remain `3a282ac`, with no active validation shell and final database/configuration
 invariants intact. Preserve both release commits until they reach main.
+
+## Keys workspace — September 27, 2026
+
+The Keys page now shares the resource flyout used elsewhere. Vault entries show
+exact creation/update/reveal timestamps, actors, recent audited activity, related
+source credentials and recorded system associations. Providers, SSH identities
+and sealed handoffs have searchable views and detail inspectors. Local metadata
+search combines terms across names, projects, fields and linked system labels;
+vault rendering is bounded to 80 rows at a time. Inventory reads use the existing
+session-only stale-while-refresh cache. Secret values and handoff documents remain
+outside that cache.
+
+New metadata routes enforce existing vault scopes and name-prefix restrictions.
+Activity projects only timestamp/actor/action, never arbitrary audit payloads.
+System linking is an audited administrator-session action validated against local
+endpoint/provider inventory. Links describe recorded configuration, not verified
+runtime use. VM provisioning records administrator-credential and SSH-key
+associations for future creates; imported credentials are not matched by name.
+Reads outside Speck are not observed. SSH registration is now an explicit read
+instead of a dependency of loading Keys. Handoffs require an explicit reveal;
+handoff and SSH private-key displays expire after 90 seconds. Closing a vault
+flyout discards a late reveal response.
+
+Local validation: 217 backend tests, Ruff, 52 web unit tests, TypeScript/Vite,
+289 browser tests (one existing touch-only skip), plus 16 focused Chromium/WebKit
+checks after final refinements. These include 1440/768/390px layouts, a 500-entry
+vault, repeat navigation without refetching lists, metadata-only inspection,
+system links, access scopes and secret expiry/cancellation. No agent or native
+code changed; no new platform build or hosted CI claim is made. Synthetic visual
+review is in `docs/screenshots/keys/`.
+
+This task is the single deployment owner; the active-task inventory showed no
+other active Speck deployment. The inspected live release was the observability
+release from `3a282ac`, with agent 0.3.3 from `e6fbfd2`, and both remain ancestors.
+The baseline also hashes every vault entry/provider credential, SSH key and
+handoff so deployment can verify they remain unchanged. Production publication
+will use the shared deployment lock, a rollback snapshot and an immediate live
+index comparison. Final deployment acceptance is recorded below after release.

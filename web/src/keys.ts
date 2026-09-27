@@ -3,13 +3,15 @@ import "./keys.css";
 import { icon } from "./icons";
 import { relative } from "./network-model";
 import { cardify } from "./table-cards";
-import { dotenv, groupEntries, parseDotenv, validSecretName } from "./vault-model";
+import { detailDate, detailFacts, detailHero, detailSection } from "./resource-story";
+import { dotenv, groupEntries, parseDotenv, validSecretName, searchKeys } from "./vault-model";
 
 type Item = Record<string, any>;
 const REVEAL_SECONDS = 90;
 
 export function createKeys(ui: Item) {
   const { api, esc, notify, content, loading } = ui;
+  const fresh = ui.freshApi || api;
   const dialog: (title: string, html: string, options?: Item) => HTMLDialogElement = ui.dialog;
   const admin = () => ui.role() === "admin";
   let tab = "vault";
@@ -21,11 +23,19 @@ export function createKeys(ui: Item) {
     sshKeys: Item[] = [],
     handoffs: Item[] = [];
   let pane: HTMLDialogElement | null = null;
+  let limit = 80, projectFilter = "", usageFilter = "";
+  const queries: Record<string, string> = {};
 
   const chip = (text: string, tone = "") => `<span class="net-chip ${tone}">${esc(text)}</span>`;
   const kindChip = (kind: string) =>
     chip(kind === "minted" ? "Minted" : kind === "shared" ? "Shared" : "Stored", kind === "minted" ? "good" : kind === "shared" ? "machine" : "");
   const loadingState = (label: string) => (ui.loadingState ? ui.loadingState(label) : esc(label));
+
+  const safely = (action: () => Promise<unknown>) => async () => {
+    try { await action(); } catch (error) {
+      if ((error as Error).name !== 'AbortError') notify((error as Error).message, true);
+    }
+  };
 
   async function copy(text: string, label = "Copied") {
     await navigator.clipboard.writeText(text);
@@ -41,8 +51,8 @@ export function createKeys(ui: Item) {
     [entries, services, sshKeys, handoffs] = await Promise.all([
       api("/keys"),
       api("/keys/services"),
-      api("/ssh/keys").catch(() => []),
-      api("/context/files").catch(() => []),
+      api("/ssh/keys?registration=false"),
+      api("/context/files"),
     ]);
     const tabs = [
       ["vault", `Vault (${entries.length})`],
@@ -64,6 +74,7 @@ export function createKeys(ui: Item) {
     );
     document.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((b) =>
       b.addEventListener("click", () => {
+        closePane();
         tab = b.dataset.tab!;
         document.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((x) => {
           x.classList.toggle("active", x === b);
@@ -88,7 +99,7 @@ export function createKeys(ui: Item) {
 
   function vaultTab(body: HTMLElement) {
     const serviceNames = [...new Set(entries.map((e) => e.service))].sort();
-    body.innerHTML = `<div class="infra-toolbar net-toolbar"><label class="infra-search">Search<input id="keys-q" type="search" placeholder="Name, project, service or variable" value="${esc(query)}"></label><label>Service<select id="keys-service"><option value="">All services</option>${serviceNames
+    body.innerHTML = `<div class="keys-overview"><div><span class="keys-eyebrow">Credential workspace</span><h2>Credentials & access</h2><p>Find a credential, see what it connects to and follow its history.</p></div><div class="keys-overview-stats"><span><b data-key-linked-count>${entries.filter(e => e.system_count > 0).length}</b>linked to systems</span><span><b data-key-access-count>${entries.filter(e => e.revealed).length}</b>accessed through Speck</span></div></div><div class="infra-toolbar net-toolbar"><label class="infra-search">Search<input id="keys-q" type="search" placeholder="Search names, projects, services or variables…" value="${esc(query)}"></label><label>Service<select id="keys-service"><option value="">All services</option>${serviceNames
       .map((s) => `<option ${serviceFilter === s ? "selected" : ""}>${esc(s)}</option>`)
       .join("")}</select></label><label>Kind<select id="keys-kind"><option value="">All kinds</option>${[
       ["minted", "Minted"],
@@ -96,52 +107,60 @@ export function createKeys(ui: Item) {
       ["static", "Stored"],
     ]
       .map(([v, l]) => `<option value="${v}" ${kindFilter === v ? "selected" : ""}>${l}</option>`)
-      .join("")}</select></label><div class="keys-actions"><button class="primary" id="keys-provision">${icon("plus")}<span>Provision key</span></button><button class="secondary" id="keys-store">Store credential</button></div></div><div id="keys-rows"></div>`;
+      .join("")}</select></label><div class="keys-actions"><button class="primary" id="keys-provision">${icon("plus")}<span>Provision key</span></button><button class="secondary" id="keys-store">Store credential</button></div></div><div class="keys-filter-line"><label>Project<select id="keys-project"><option value="">All projects</option>${[...new Set(entries.map(e => e.project).filter(Boolean))].sort().map(p => `<option ${p === projectFilter ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label><label>Usage<select id="keys-usage"><option value="">All credentials</option><option value="linked" ${usageFilter === 'linked' ? 'selected' : ''}>Linked to systems</option><option value="unlinked" ${usageFilter === 'unlinked' ? 'selected' : ''}>No recorded systems</option><option value="accessed" ${usageFilter === 'accessed' ? 'selected' : ''}>Accessed through Speck</option></select></label><span class="muted">Search metadata and linked systems. Values stay sealed.</span></div><div id="keys-rows"></div>`;
     body.querySelector<HTMLInputElement>("#keys-q")!.addEventListener("input", (e) => {
       query = (e.target as HTMLInputElement).value.trim().toLowerCase();
-      rows();
+      limit = 80; rows();
     });
     body.querySelector<HTMLSelectElement>("#keys-service")!.addEventListener("change", (e) => {
       serviceFilter = (e.target as HTMLSelectElement).value;
-      rows();
+      limit = 80; rows();
     });
     body.querySelector<HTMLSelectElement>("#keys-kind")!.addEventListener("change", (e) => {
       kindFilter = (e.target as HTMLSelectElement).value;
-      rows();
+      limit = 80; rows();
     });
     body.querySelector("#keys-provision")!.addEventListener("click", provisionDialog);
     body.querySelector("#keys-store")!.addEventListener("click", () => storeDialog());
+    body.querySelector<HTMLSelectElement>("#keys-project")!.addEventListener("change", e => { projectFilter = (e.target as HTMLSelectElement).value; limit = 80; rows(); });
+    body.querySelector<HTMLSelectElement>("#keys-usage")!.addEventListener("change", e => { usageFilter = (e.target as HTMLSelectElement).value; limit = 80; rows(); });
     rows();
   }
 
   function rows() {
     const el = document.getElementById("keys-rows");
     if (!el) return;
-    const visible = entries.filter(
-      (e) =>
-        (!serviceFilter || e.service === serviceFilter) &&
-        (!kindFilter || e.kind === kindFilter) &&
-        (!query ||
-          [e.name, e.service, e.project || "", e.notes || "", ...(e.secret_names || [])].some((v: string) => v.toLowerCase().includes(query))),
-    );
+    const linked = document.querySelector('[data-key-linked-count]'), accessed = document.querySelector('[data-key-access-count]');
+    if (linked) linked.textContent = String(entries.filter(e => e.system_count > 0).length);
+    if (accessed) accessed.textContent = String(entries.filter(e => e.revealed).length);
+    const matches = searchKeys(entries, query).filter(e => (!serviceFilter || e.service === serviceFilter) && (!kindFilter || e.kind === kindFilter) && (!projectFilter || e.project === projectFilter) && (!usageFilter || (usageFilter === 'linked' ? e.system_count > 0 : usageFilter === 'unlinked' ? !e.system_count : e.revealed)));
+    const visible = matches.slice(0, limit);
     if (!visible.length) {
       el.innerHTML = `<div class="empty"><h2>${entries.length ? "No matching entries" : "The vault is empty"}</h2><p>${entries.length ? "Change the search or filters." : "Provision a key for a project or store a credential."}</p></div>`;
       return;
     }
-    el.innerHTML = `<div class="infra-table-wrap"><table class="net-table net-compact keys-table"><thead><tr><th>Name</th><th>Service</th><th>Kind</th><th>Secrets</th><th>Updated</th><th>Last revealed</th></tr></thead><tbody>${groupEntries(visible)
+    el.innerHTML = `<p class="keys-result" role="status">${matches.length} ${matches.length === 1 ? "credential" : "credentials"}${matches.length !== entries.length ? ` of ${entries.length}` : ""}</p><div class="infra-table-wrap"><table class="net-table net-compact keys-table"><thead><tr><th>Name</th><th>Service</th><th>Kind</th><th>Systems / variables</th><th>Updated</th><th>Last access</th></tr></thead><tbody>${groupEntries(visible)
       .map(
         ([group, items]) =>
           `<tr class="keys-group-row"><th colspan="6">${esc(group)} <small>${items.length}</small></th></tr>${items
             .map(
               (e) =>
-                `<tr><td><button class="text-link net-name" data-entry="${esc(e.name)}">${esc(e.name)}</button></td><td>${esc(e.service)}</td><td>${kindChip(e.kind)}</td><td>${(e.secret_names as string[])
+                `<tr class="keys-click-row"><td><button class="text-link net-name" data-entry="${esc(e.name)}">${esc(e.name)}</button></td><td>${esc(e.service)}</td><td>${kindChip(e.kind)}</td><td>${e.system_count ? `<span class="keys-system-count">${e.system_count} system${e.system_count === 1 ? "" : "s"}${e.system_labels?.length ? " · " + esc(e.system_labels.slice(0, 2).join(", ")) : ""}</span>` : ""}${(e.secret_names as string[])
                   .slice(0, 3)
                   .map((n) => `<span class="keys-var">${esc(n)}</span>`)
-                  .join("")}${e.secret_names.length > 3 ? `<small class="keys-more">+${e.secret_names.length - 3}</small>` : ""}</td><td>${esc(relative(e.updated))}</td><td>${e.revealed ? esc(relative(e.revealed)) : '<span class="placeholder">never</span>'}</td></tr>`,
+                  .join("")}${e.secret_names.length > 3 ? `<small class="keys-more">+${e.secret_names.length - 3}</small>` : ""}</td><td>${esc(relative(e.updated))}</td><td>${e.revealed ? esc(relative(e.revealed)) : '<span class="placeholder">Not recorded</span>'}</td></tr>`,
             )
             .join("")}`,
       )
       .join("")}</tbody></table></div>`;
+    if (matches.length > limit) {
+      el.insertAdjacentHTML('beforeend', `<button class="secondary keys-load-more">Show next ${Math.min(80, matches.length-limit)}</button>`);
+      el.querySelector('.keys-load-more')!.addEventListener('click', () => { limit += 80; rows(); });
+    }
+    cardify(el);
+    el.querySelectorAll<HTMLTableRowElement>('tr.keys-click-row').forEach(row => row.addEventListener('click', event => {
+      if (!(event.target as Element).closest('button')) row.querySelector<HTMLButtonElement>('button')?.click();
+    }));
     el.querySelectorAll<HTMLButtonElement>("[data-entry]").forEach((b) =>
       b.addEventListener("click", () => openEntry(entries.find((e) => e.name === b.dataset.entry)!)),
     );
@@ -154,21 +173,84 @@ export function createKeys(ui: Item) {
 
   function sidePane(title: string, html: string) {
     closePane();
-    const panel = dialog(title, html, { className: "device-drawer net-drawer", modal: false });
+    const panel = ui.flyout(title, html, { tone: "protection", className: "keys-flyout" });
     pane = panel;
-    const escape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && panel.open && !document.querySelector("dialog:modal")) panel.close();
+    return panel as HTMLDialogElement;
+  }
+
+  const when = (value: any) => value ? detailDate(value) : "Not recorded";
+  const activity = (data: Item) => detailSection("Access & activity", `${detailFacts([["Last access through Speck", when(data.last_access?.at)], ["Accessed by", data.last_access?.actor || "Not recorded"]])}<p class="resource-note">${esc(data.coverage || "Activity records access through Speck. Use outside Speck is not observed.")}</p><ol class="keys-timeline">${(data.events || []).map((event: Item) => `<li><span class="keys-event-dot"></span><div><b>${esc(event.action.replace(/^(vault|ssh|context)\./, '').replaceAll('.', ' ').replaceAll('_', ' '))}</b><span>${esc(event.actor)} · <time>${esc(when(event.at))}</time></span></div></li>`).join('') || '<li class="resource-note">No activity recorded in Speck yet.</li>'}</ol>`);
+
+  function metadata(panel: HTMLDialogElement, kind: string, name: string, base: string, onEntry?: (entry: Item) => void) {
+    const slot = panel.querySelector<HTMLElement>('[data-key-metadata]')!;
+    const load = async () => {
+      try {
+        const data = await fresh(base + '/details');
+        if (!panel.open || pane !== panel) return;
+        if (data.entry) onEntry?.(data.entry);
+        const systems = data.systems || [];
+        slot.innerHTML = (kind !== 'handoff' ? detailSection('Used by systems', `<div class="keys-section-heading"><p class="resource-note">Recorded associations. Removing a link does not change access on the system.</p><button class="secondary" data-link-system>Link system</button></div><div class="resource-related">${systems.map((link: Item, i: number) => `<div><span>${link.target ? `<button class="text-link" data-key-system="${i}">${esc(link.target.label)}</button>` : `<b>${esc(link.label)}</b>`}<small>${esc(link.source)} · ${esc(link.created_by)} · ${esc(when(link.created))}</small>${link.note ? `<small>${esc(link.note)}</small>` : ''}${!link.target ? '<small>Not in the current local inventory</small>' : ''}</span><button class="text-link" data-unlink-system="${i}" aria-label="Remove link to ${esc(link.label)}">Unlink</button></div>`).join('') || '<p class="resource-note">No systems have been linked yet. Add known usage to keep this credential’s context with it.</p>'}</div>`) : '') + ((data.related || []).length ? detailSection('Related credentials', `<div class="resource-related">${data.related.map((r: Item) => `<button data-related-key="${esc(r.name)}"><span><b>${esc(r.name)}</b><small>${esc(r.relationship)} · ${esc(r.service)}</small></span><span>→</span></button>`).join('')}</div>`) : '') + activity(data);
+        slot.querySelectorAll<HTMLButtonElement>('[data-related-key]').forEach(button => button.addEventListener('click', async () => {
+          const next = entries.find(e => e.name === button.dataset.relatedKey);
+          if (next) openEntry(next);
+        }));
+        slot.querySelector('[data-link-system]')?.addEventListener('click', () => linkDialog(base, load));
+        slot.querySelectorAll<HTMLButtonElement>('[data-key-system]').forEach(button => button.addEventListener('click', () => ui.openKeySystem(systems[+button.dataset.keySystem!].target)));
+        slot.querySelectorAll<HTMLButtonElement>('[data-unlink-system]').forEach(button => button.addEventListener('click', async () => {
+          await api(base + '/systems?target_id=' + encodeURIComponent(systems[+button.dataset.unlinkSystem!].target_id), 'DELETE');
+          await load();
+          entries = await api('/keys'); rows();
+        }));
+      } catch (error) {
+        if (!panel.open) return;
+        slot.innerHTML = '<p class="resource-notice">Activity and system links could not be loaded.</p><button class="secondary" data-retry-metadata>Try again</button>';
+        slot.querySelector('[data-retry-metadata]')!.addEventListener('click', load);
+      }
     };
-    document.addEventListener("keydown", escape);
-    panel.addEventListener("close", () => document.removeEventListener("keydown", escape));
-    return panel;
+    void load();
+    return load;
+  }
+
+  async function linkDialog(base: string, reload: () => Promise<void>) {
+    const d = dialog('Link a system', '<div class="net-form"><p class="resource-note">Record where this credential is configured. This does not install or reveal it.</p><label>Search systems<input type="search" id="key-target-search" placeholder="Name, provider or host"></label><div id="key-targets" class="resource-related">Loading local inventory…</div><label>Usage note<input id="key-link-note" maxlength="500" placeholder="For example: database login used by the backup service"></label></div>');
+    try {
+      const targets: Item[] = await api('/keys/system-targets');
+      if (!d.open) return;
+      const draw = () => {
+        const visible = searchKeys(targets, d.querySelector<HTMLInputElement>('#key-target-search')!.value).slice(0, 60);
+        d.querySelector('#key-targets')!.innerHTML = visible.map((t, i) => `<button data-key-target="${i}"><span><b>${esc(t.label)}</b><small>${esc(t.description)}</small></span><span>Link →</span></button>`).join('') || '<p class="resource-note">No matching systems. Refresh Fleet to discover provider resources.</p>';
+        d.querySelectorAll<HTMLButtonElement>('[data-key-target]').forEach(button => button.addEventListener('click', async () => {
+          button.disabled = true;
+          try {
+            await api(base + '/systems', 'POST', {target_id: visible[+button.dataset.keyTarget!].id, note: d.querySelector<HTMLInputElement>('#key-link-note')!.value});
+            d.close(); await reload(); entries = await api('/keys'); rows();
+          } catch (error) { notify((error as Error).message, true); button.disabled = false; }
+        }));
+      };
+      d.querySelector('#key-target-search')!.addEventListener('input', draw); draw();
+    } catch (error) { d.querySelector('#key-targets')!.textContent = (error as Error).message; }
+  }
+
+  function tabSearch(body: HTMLElement, placeholder: string) {
+    body.insertAdjacentHTML('afterbegin', `<label class="keys-tab-search">Search<input type="search" value="${esc(queries[tab] || '')}" placeholder="${esc(placeholder)}" data-key-tab-search></label>`);
+    const input = body.querySelector<HTMLInputElement>('[data-key-tab-search]')!;
+    input.addEventListener('input', () => {
+      queries[tab] = input.value;
+      const source = tab === 'providers' ? services : tab === 'ssh' ? sshKeys : handoffs;
+      const visible = new Set(searchKeys(source, input.value));
+      body.querySelectorAll<HTMLElement>('[data-search-index]').forEach(el => el.hidden = !visible.has(source[+el.dataset.searchIndex!]));
+      const status = body.querySelector<HTMLElement>('[data-key-results]');
+      if (status) status.textContent = `${visible.size} results${visible.size ? '' : ' · Try another name, project or fingerprint.'}`;
+    });
+    body.insertAdjacentHTML('beforeend', '<p class="keys-result" data-key-results role="status"></p>');
+    input.dispatchEvent(new Event('input'));
   }
 
   function openEntry(entry: Item) {
     let revealed: Record<string, string> | null = null;
     let timer = 0;
     const shown = new Set<string>();
-    const panel = sidePane(entry.name, `<div class="net-pane" id="keys-pane"></div>`);
+    const panel = sidePane(entry.name, `<div class="net-pane" id="keys-pane"></div><div data-key-metadata><p class="resource-note">Loading activity and system links…</p></div>`);
     const forget = () => {
       revealed = null;
       shown.clear();
@@ -177,7 +259,8 @@ export function createKeys(ui: Item) {
     panel.addEventListener("close", forget);
     async function load() {
       if (revealed) return revealed;
-      const full = await api("/keys/" + encodeURIComponent(entry.name));
+      const full = await fresh("/keys/" + encodeURIComponent(entry.name));
+      if (!panel.open || pane !== panel) throw new DOMException("This credential has been closed", "AbortError");
       revealed = full.secrets;
       entry.revealed = Date.now() / 1000;
       entry.reveals = (entry.reveals || 0) + 1;
@@ -187,15 +270,14 @@ export function createKeys(ui: Item) {
         draw();
         notify("Revealed values were cleared from this page");
       }, REVEAL_SECONDS * 1000);
+      void reloadMetadata();
       return revealed!;
     }
     function draw() {
       const el = panel.querySelector("#keys-pane");
       if (!el) return;
       const minted = entry.kind === "minted";
-      el.innerHTML = `<div class="net-facts"><div><span>Service</span><b>${esc(entry.service)}</b></div><div><span>Kind</span><b>${esc(minted ? "Minted" : entry.kind === "shared" ? "Shared" : "Stored")}</b></div><div><span>Project</span><b>${esc(entry.project || "—")}</b></div><div><span>Created</span><b>${esc(relative(entry.created))}</b></div><div><span>Reveals</span><b>${entry.reveals || 0}</b></div><div><span>Origin</span><b>${entry.origin === "austinland" ? "AustinLand import" : "Speck"}</b></div></div>${
-        entry.notes ? `<p class="keys-notes">${esc(entry.notes)}</p>` : ""
-      }${minted ? `<p class="muted keys-meta">${Object.entries(entry.meta || {}).map(([k, v]) => `${esc(k.replaceAll("_", " "))}: <span class="mono">${esc(v)}</span>`).join(" · ")}</p>` : ""}<div class="net-pane-actions"><button class="primary" id="keys-reveal-all">${icon("eye")}<span>${revealed ? "Hide values" : "Reveal values"}</span></button><button class="secondary" id="keys-copy-env">${icon("copy")}<span>Copy as .env</span></button><button class="secondary" id="keys-edit">Edit</button><button class="secondary" id="keys-delete">Delete</button></div><div class="keys-secrets">${(entry.secret_names as string[])
+      el.innerHTML = detailHero(entry.service + ' · ' + (minted ? 'Minted key' : entry.kind === 'shared' ? 'Shared credential' : 'Stored credential'), '', entry.notes || 'A sealed credential with its history and system relationships.', [['Project', entry.project || 'Unassigned'], ['Variables', entry.secret_names.length], ['Reveals', entry.reveals || 0]]) + detailSection('Lifecycle', detailFacts([['Created', when(entry.created)], ['Last updated', when(entry.updated)], ['Created by', entry.created_by], ['Last revealed', when(entry.revealed)], ['Origin', entry.origin === 'austinland' ? 'AustinLand import' : 'Speck'], ['Service', entry.service]])) + `<div class="net-pane-actions"><button class="primary" id="keys-reveal-all">${icon("eye")}<span>${revealed ? "Hide values" : "Reveal values"}</span></button><button class="secondary" id="keys-copy-env">${icon("copy")}<span>Copy as .env</span></button><button class="secondary" id="keys-edit">Edit</button><button class="secondary" id="keys-delete">Delete</button></div><div class="keys-secrets">${(entry.secret_names as string[])
         .map((name) => {
           const visible = revealed && shown.has(name);
           const value = visible ? revealed![name] : entry.hints?.[name] || "••••";
@@ -205,7 +287,7 @@ export function createKeys(ui: Item) {
           }<div class="keys-secret-actions"><button class="secondary" data-show="${esc(name)}" aria-label="${visible ? "Hide" : "Show"} ${esc(name)}">${visible ? "Hide" : "Show"}</button><button class="secondary" data-copy="${esc(name)}" aria-label="Copy ${esc(name)}">${icon("copy")}</button></div></div>`;
         })
         .join("")}</div><p class="muted keys-footnote">Values stay in this page for ${REVEAL_SECONDS} seconds after they are fetched, and are cleared when you close it. Copying places a value on your clipboard.</p>`;
-      el.querySelector("#keys-reveal-all")!.addEventListener("click", async () => {
+      el.querySelector("#keys-reveal-all")!.addEventListener("click", safely(async () => {
         if (revealed) forget();
         else {
           await load();
@@ -213,12 +295,12 @@ export function createKeys(ui: Item) {
         }
         draw();
         rows();
-      });
-      el.querySelector("#keys-copy-env")!.addEventListener("click", async () => copy(dotenv(await load()), "Copied .env lines"));
+      }));
+      el.querySelector("#keys-copy-env")!.addEventListener("click", safely(async () => copy(dotenv(await load()), "Copied .env lines")));
       el.querySelector("#keys-edit")!.addEventListener("click", () => editDialog(entry));
       el.querySelector("#keys-delete")!.addEventListener("click", () => deleteEntry(entry));
       el.querySelectorAll<HTMLButtonElement>("[data-show]").forEach((b) =>
-        b.addEventListener("click", async () => {
+        b.addEventListener("click", safely(async () => {
           const name = b.dataset.show!;
           if (shown.has(name)) shown.delete(name);
           else {
@@ -226,12 +308,13 @@ export function createKeys(ui: Item) {
             shown.add(name);
           }
           draw();
-        }),
+        })),
       );
       el.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((b) =>
-        b.addEventListener("click", async () => copy((await load())[b.dataset.copy!], "Copied " + b.dataset.copy)),
+        b.addEventListener("click", safely(async () => copy((await load())[b.dataset.copy!], "Copied " + b.dataset.copy))),
       );
     }
+    const reloadMetadata = metadata(panel, 'vault', entry.name, '/keys/' + encodeURIComponent(entry.name), latest => { Object.assign(entry, latest); draw(); rows(); });
     draw();
   }
 
@@ -434,18 +517,12 @@ export function createKeys(ui: Item) {
 
   function providersTab(body: HTMLElement) {
     body.innerHTML = `<p class="muted net-note">Master credentials Speck uses on your behalf. Values are write-only here: Speck shows masked hints and never returns them. <b>Check</b> makes one read-only request to prove a credential works.</p><div class="keys-providers">${services
-      .map((s) => {
+      .map((s, i) => {
         const check = s.last_check;
-        return `<article class="card keys-provider" id="provider-${esc(s.service)}"><div class="infra-card-heading"><h3>${esc(s.label)}</h3>${
+        return `<article class="card keys-provider" data-search-index="${i}" id="provider-${esc(s.service)}"><div class="infra-card-heading"><h3><button class="text-link" data-provider-details="${i}">${esc(s.label)}</button></h3>${
           s.configured ? chip("Configured", "good") : chip(s.configuration_error ? "Needs attention" : "Not configured", "warn")
         }</div><p>${chip(s.mode === "mint" ? "Mints project keys" : s.mode === "shared" ? "Shares one key" : "Used by Speck", s.mode === "mint" ? "good" : "")}</p><p class="keys-provider-desc">${esc(s.description)}</p>${
-          Object.keys(s.hints || {}).length
-            ? `<dl class="keys-hints">${Object.entries(s.hints)
-                .map(([k, v]) => `<dt>${esc(k)}</dt><dd class="mono">${esc(v)}</dd>`)
-                .join("")}${Object.entries(s.settings || {})
-                .map(([k, v]) => `<dt>${esc(k)}</dt><dd class="mono">${esc(v)}</dd>`)
-                .join("")}</dl>`
-            : ""
+          `<p class="keys-provider-scope">${entries.filter(e => e.service === s.service).length} project credentials</p>`
         }${s.configuration_error ? `<p class="infra-error">${esc(s.configuration_error)}</p>` : ""}<p class="keys-check" id="check-${esc(s.service)}">${
           check ? `${check.ok ? chip("Working", "good") : chip("Failed", "bad")} ${esc(check.detail)} <small>${esc(relative(check.checked_at))} · ${check.latency_ms} ms</small>` : ""
         }</p><div class="infra-actions"><button class="secondary" data-check="${esc(s.service)}" ${s.configured ? "" : "disabled"}>Check</button>${
@@ -455,6 +532,8 @@ export function createKeys(ui: Item) {
         }</div>${s.updated ? `<small class="muted">Updated ${esc(relative(s.updated))}${s.updated_by ? " by " + esc(s.updated_by) : ""}</small>` : ""}</article>`;
       })
       .join("")}</div>`;
+    tabSearch(body, 'Search providers and capabilities…');
+    body.querySelectorAll<HTMLButtonElement>('[data-provider-details]').forEach(b => b.addEventListener('click', () => openProvider(services[+b.dataset.providerDetails!])));
     body.querySelectorAll<HTMLButtonElement>("[data-check]").forEach((b) =>
       b.addEventListener("click", async () => {
         b.disabled = true;
@@ -480,6 +559,12 @@ export function createKeys(ui: Item) {
         else storeDialog({ name: b.dataset.openEntry, service: "app-store-connect" });
       }),
     );
+  }
+
+  function openProvider(s: Item) {
+    const related = entries.filter(e => e.service === s.service);
+    const panel = sidePane(s.label, detailHero('Provider credentials', s.configured ? 'Configured' : 'Needs setup', s.description, [['Project entries', related.length], ['Mode', s.mode === 'mint' ? 'Minted' : s.mode === 'shared' ? 'Shared' : 'Service'], ['Last check', s.last_check ? s.last_check.ok ? 'Working' : 'Failed' : 'Not checked']]) + detailSection('Configuration', detailFacts([['Updated', when(s.updated)], ['Updated by', s.updated_by], ['Last checked', when(s.last_check?.checked_at)], ['Result', s.last_check?.detail || 'No check recorded']])) + detailSection('Stored fields', detailFacts(Object.entries({...s.hints, ...s.settings}).map(([key, value]) => [key, value]))) + detailSection('Related credentials', `<div class="resource-related">${related.map((e,i) => `<button data-provider-entry="${i}"><span><b>${esc(e.name)}</b><small>${esc(e.project || 'No project')} · ${esc(e.kind)}</small></span><span>→</span></button>`).join('') || '<p class="resource-note">No project credentials recorded for this service.</p>'}</div>`) + activity({...s, coverage: 'Provider checks and configuration changes are recorded here. Project credential access appears in each credential’s history.'}));
+    panel.querySelectorAll<HTMLButtonElement>('[data-provider-entry]').forEach(b => b.addEventListener('click', () => openEntry(related[+b.dataset.providerEntry!])));
   }
 
   function providerDialog(s: Item) {
@@ -508,7 +593,7 @@ export function createKeys(ui: Item) {
         d.close();
         notify(s.label + " saved");
         services = await api("/keys/services");
-        renderTab();
+        closePane(); renderTab();
       } catch (err) {
         notify((err as Error).message, true);
       }
@@ -518,26 +603,36 @@ export function createKeys(ui: Item) {
   // ---------------- SSH keys ----------------
 
   function sshTab(body: HTMLElement) {
-    body.innerHTML = `<div class="infra-toolbar net-toolbar"><p class="muted net-note">Public keys for <span class="mono">authorized_keys</span> and Linode. Keys generated here keep their private half sealed in Speck; imported workstation keys are public only.</p><div class="keys-actions"><button class="primary" id="ssh-generate">${icon("plus")}<span>Generate key</span></button></div></div><div class="infra-table-wrap"><table class="net-table"><thead><tr><th>Name</th><th>Fingerprint</th><th>Purpose</th><th>Private key</th><th>Linode</th><th></th></tr></thead><tbody>${sshKeys
-      .map(
-        (k, i) =>
-          `<tr><td><b>${esc(k.name)}</b><small>${esc(k.type)}${k.comment && k.comment !== k.name ? " · " + esc(k.comment) : ""}</small></td><td class="mono">${esc(k.fingerprint)}</td><td>${esc(k.purpose || "—")}</td><td>${k.has_private ? chip("Held in Speck", "good") : chip("Public only")}</td><td>${k.registered_as ? chip(k.registered_as, "machine") : '<span class="muted">—</span>'}</td><td class="net-row-actions"><button class="secondary" data-ssh-copy="${i}">${icon("copy")}<span>Public key</span></button>${
-            k.has_private ? `<button class="secondary" data-ssh-private="${i}">Private key</button>` : ""
-          }${k.registered_as ? "" : `<button class="secondary" data-ssh-register="${i}">Add to Linode</button>`}<button class="secondary" data-ssh-delete="${i}">Delete</button></td></tr>`,
-      )
-      .join("")}</tbody></table></div>`;
-    cardify(body);
-    body.querySelector("#ssh-generate")!.addEventListener("click", generateDialog);
+    body.innerHTML = `<div class="keys-section-heading"><p class="resource-note">SSH identities, fingerprints and recorded system access. Inspect a key to see its history and manage it.</p><button class="primary" id="ssh-generate">${icon('plus')}<span>Generate key</span></button></div><div class="infra-table-wrap"><table class="net-table keys-table"><thead><tr><th>Identity</th><th>Purpose</th><th>Key material</th><th>Created</th></tr></thead><tbody>${sshKeys.map((k,i) => `<tr data-search-index="${i}"><td><button class="text-link net-name" data-ssh-open="${i}">${esc(k.name)}</button><small class="keys-fingerprint">${esc(k.fingerprint)}</small></td><td>${esc(k.purpose || 'No purpose recorded')}</td><td>${k.has_private ? chip('Held in Speck', 'good') : chip('Public only')}<small>${esc(k.type)}</small></td><td>${esc(relative(k.created))}</td></tr>`).join('')}</tbody></table></div>`;
+    cardify(body); tabSearch(body, 'Search names, purposes or fingerprints…');
+    body.querySelector('#ssh-generate')!.addEventListener('click', generateDialog);
+    body.querySelectorAll<HTMLButtonElement>('[data-ssh-open]').forEach(b => b.addEventListener('click', () => openSSH(sshKeys[+b.dataset.sshOpen!])));
+  }
+
+  function openSSH(k: Item) {
+    const i = sshKeys.indexOf(k);
+    const body = sidePane(k.name, detailHero('SSH identity', k.has_private ? 'Private key sealed' : 'Public only', k.purpose || 'No purpose recorded', [['Algorithm', k.type.replace('ssh-', '')], ['Origin', k.origin === 'austinland' ? 'Imported' : 'Speck'], ['Created', relative(k.created)]]) + detailSection('Identity', detailFacts([['Fingerprint', k.fingerprint], ['Comment', k.comment], ['Created', when(k.created)], ['Created by', k.created_by], ['Last updated', 'Keys are immutable; created date applies'], ['Linode registration', k.registration_checked === false ? 'Not checked on this visit' : k.registered_as || 'Not registered']])) + `<div class="resource-action-buttons keys-detail-actions"><button class="secondary" data-ssh-copy="${i}">${icon('copy')}<span>Copy public key</span></button>${k.has_private ? `<button class="secondary" data-ssh-private="${i}">Reveal private key</button>` : ''}${k.registration_checked === false ? `<button class="secondary" data-ssh-check>Check Linode registration</button>` : ''}${!k.registered_as ? `<button class="secondary" data-ssh-register="${i}">Add to Linode</button>` : ''}<button class="secondary" data-ssh-delete="${i}">Delete</button></div><details class="resource-technical"><summary>Public key</summary><pre class="keys-value">${esc(k.public_key)}</pre></details><div data-key-metadata><p class="resource-note">Loading activity and system links…</p></div>`);
+    const reloadSSH = metadata(body, 'ssh', k.name, '/ssh/keys/' + encodeURIComponent(k.name));
+    body.querySelector<HTMLButtonElement>('[data-ssh-check]')?.addEventListener('click', async event => {
+      const button = event.currentTarget as HTMLButtonElement; button.disabled = true;
+      try {
+        const current = (await fresh('/ssh/keys')).find((row: Item) => row.name === k.name);
+        if (current && body.open && pane === body) { Object.assign(k, current); openSSH(k); }
+      } catch (error) { notify((error as Error).message, true); button.disabled = false; }
+    });
     body.querySelectorAll<HTMLButtonElement>("[data-ssh-copy]").forEach((b) =>
       b.addEventListener("click", () => copy(sshKeys[+b.dataset.sshCopy!].public_key, "Copied public key")),
     );
     body.querySelectorAll<HTMLButtonElement>("[data-ssh-private]").forEach((b) =>
       b.addEventListener("click", async () => {
         const k = sshKeys[+b.dataset.sshPrivate!];
-        const result = await api(`/ssh/keys/${encodeURIComponent(k.name)}/private`);
+        const result = await fresh(`/ssh/keys/${encodeURIComponent(k.name)}/private`);
+        if (!body.open || pane !== body) { result.private_key = ""; return; }
         const d = dialog(
           "Private key · " + k.name,
           `<div class="net-confirm"><p class="muted">Recorded in Activity. Save it with mode 600 and never commit it.</p><pre class="keys-value">${esc(result.private_key)}</pre><div class="dialog-footer"><button class="secondary" id="ssh-private-close">Done</button><button class="primary" id="ssh-private-copy">${icon("copy")}<span>Copy</span></button></div></div>`, { className: "wide" });
+        const expiry = window.setTimeout(() => d.close(), REVEAL_SECONDS * 1000);
+        d.addEventListener('close', () => { window.clearTimeout(expiry); result.private_key = ''; void reloadSSH(); });
         d.querySelector("#ssh-private-close")!.addEventListener("click", () => d.close());
         d.querySelector("#ssh-private-copy")!.addEventListener("click", () => copy(result.private_key, "Copied private key"));
       }),
@@ -547,8 +642,8 @@ export function createKeys(ui: Item) {
         const k = sshKeys[+b.dataset.sshRegister!];
         await api("/ssh/register", "POST", { name: k.name, label: k.name });
         notify(k.name + " added to Linode");
-        sshKeys = await api("/ssh/keys");
-        renderTab();
+        sshKeys = await api("/ssh/keys?registration=false");
+        closePane(); renderTab();
       }),
     );
     body.querySelectorAll<HTMLButtonElement>("[data-ssh-delete]").forEach((b) =>
@@ -565,8 +660,8 @@ export function createKeys(ui: Item) {
           e.preventDefault();
           await api("/ssh/keys/" + encodeURIComponent(k.name), "DELETE");
           d.close();
-          sshKeys = await api("/ssh/keys");
-          renderTab();
+          sshKeys = await api("/ssh/keys?registration=false");
+          closePane(); renderTab();
         });
       }),
     );
@@ -588,7 +683,7 @@ export function createKeys(ui: Item) {
         });
         d.close();
         await copy(result.public_key, "Generated " + result.name + "; public key copied");
-        sshKeys = await api("/ssh/keys");
+        sshKeys = await api("/ssh/keys?registration=false");
         renderTab();
       } catch (err) {
         notify((err as Error).message, true);
@@ -599,17 +694,18 @@ export function createKeys(ui: Item) {
   // ---------------- handoffs ----------------
 
   function handoffsTab(body: HTMLElement) {
-    body.innerHTML = `<p class="muted net-note">Markdown handoffs give another agent SSH access, DNS wiring and a system snapshot for one machine. They embed a private key, so opening one is recorded in Activity.</p>${
+    body.innerHTML = `<p class="muted net-note">Markdown handoffs give another agent SSH access, DNS wiring and a system snapshot for one machine. Reveal a document to access its instructions and embedded private key. Every reveal is recorded in Activity.</p>${
       handoffs.length
         ? `<div class="infra-table-wrap"><table class="net-table"><thead><tr><th>Machine</th><th>Domain</th><th>Created</th><th>Size</th><th></th></tr></thead><tbody>${handoffs
             .map(
               (h, i) =>
-                `<tr><td><button class="text-link net-name" data-handoff="${i}">${esc(h.machine)}</button><small class="mono">${esc(h.filename)}</small></td><td>${esc(h.domain || "—")}</td><td>${esc(relative(h.created))}${h.origin === "austinland" ? "<small>Imported from AustinLand</small>" : ""}</td><td>${(h.size / 1024).toFixed(1)} KB</td><td class="net-row-actions"><button class="secondary" data-handoff-delete="${i}">Delete</button></td></tr>`,
+                `<tr data-search-index="${i}"><td><button class="text-link net-name" data-handoff="${i}">${esc(h.machine)}</button><small class="mono">${esc(h.filename)}</small></td><td>${esc(h.domain || "—")}</td><td>${esc(relative(h.created))}${h.origin === "austinland" ? "<small>Imported from AustinLand</small>" : ""}</td><td>${(h.size / 1024).toFixed(1)} KB</td><td class="net-row-actions"><button class="secondary" data-handoff-delete="${i}">Delete</button></td></tr>`,
             )
             .join("")}</tbody></table></div>`
         : '<div class="empty"><h2>No handoff files</h2><p>Handoffs imported from AustinLand or generated for a machine appear here.</p></div>'
     }`;
     cardify(body);
+    tabSearch(body, "Search machines, domains or filenames…");
     body.querySelectorAll<HTMLButtonElement>("[data-handoff]").forEach((b) => b.addEventListener("click", () => openHandoff(handoffs[+b.dataset.handoff!])));
     body.querySelectorAll<HTMLButtonElement>("[data-handoff-delete]").forEach((b) =>
       b.addEventListener("click", async () => {
@@ -632,25 +728,29 @@ export function createKeys(ui: Item) {
     );
   }
 
-  async function openHandoff(h: Item) {
-    const panel = sidePane(h.machine + (h.domain ? " · " + h.domain : ""), `<div class="net-pane" id="handoff-pane">${loadingState("Loading handoff…")}</div>`);
-    const file = await api("/context/files/" + encodeURIComponent(h.filename));
-    if (pane !== panel) return;
-    let showKey = false;
-    const masked = () =>
-      file.markdown.replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, "••••  private key hidden — use Show private key  ••••");
+  function openHandoff(h: Item) {
+    const panel = sidePane(h.machine + (h.domain ? " · " + h.domain : ""), detailHero('Machine handoff', 'Sealed document', 'Connection instructions and a system snapshot for another operator or agent.', [['Machine', h.machine], ['Domain', h.domain || 'Not recorded'], ['Size', (h.size / 1024).toFixed(1) + ' KB']]) + detailSection('Document', detailFacts([['Filename', h.filename], ['Stored', when(h.created)], ['Created by', h.created_by], ['Origin', h.origin], ['Provider', h.provider], ['Target', h.target]])) + `<div id="handoff-pane"></div><div data-key-metadata><p class="resource-note">Loading access history…</p></div>`);
+    let markdown: string | null = null, timer = 0;
+    const forget = () => { markdown = null; window.clearTimeout(timer); };
+    panel.addEventListener('close', forget);
+    const reloadMetadata = metadata(panel, 'handoff', h.filename, '/context/files/' + encodeURIComponent(h.filename));
     const draw = () => {
-      panel.querySelector("#handoff-pane")!.innerHTML = `<div class="net-pane-actions"><button class="secondary" id="handoff-toggle">${icon("eye")}<span>${showKey ? "Hide private key" : "Show private key"}</span></button><button class="secondary" id="handoff-copy">${icon("copy")}<span>Copy Markdown</span></button><button class="secondary" id="handoff-download">${icon("download")}<span>Download</span></button></div><pre class="keys-markdown">${esc(showKey ? file.markdown : masked())}</pre>`;
-      panel.querySelector("#handoff-toggle")!.addEventListener("click", () => {
-        showKey = !showKey;
-        draw();
+      panel.querySelector('#handoff-pane')!.innerHTML = `<p class="resource-note">${markdown ? 'This document contains credentials. Values clear after 90 seconds or when you close it.' : 'The document stays sealed until you reveal it. Reading or copying it is recorded in Activity.'}</p><div class="resource-action-buttons keys-detail-actions"><button class="primary" id="handoff-toggle">${markdown ? 'Hide handoff' : 'Reveal handoff'}</button>${markdown ? `<button class="secondary" id="handoff-copy">Copy Markdown</button><button class="secondary" id="handoff-download">Download</button>` : ''}</div>${markdown ? `<pre class="keys-markdown">${esc(markdown)}</pre>` : ''}`;
+      panel.querySelector<HTMLButtonElement>('#handoff-toggle')!.addEventListener('click', async (event) => {
+        if (markdown) { forget(); draw(); return; }
+        (event.currentTarget as HTMLButtonElement).disabled = true;
+        try {
+          const file = await fresh('/context/files/' + encodeURIComponent(h.filename));
+          if (!panel.open || pane !== panel) return;
+          markdown = file.markdown;
+          timer = window.setTimeout(() => { forget(); draw(); }, REVEAL_SECONDS * 1000);
+          draw(); void reloadMetadata();
+        } catch (error) { notify((error as Error).message, true); draw(); }
       });
-      panel.querySelector("#handoff-copy")!.addEventListener("click", () => copy(file.markdown, "Copied handoff"));
-      panel.querySelector("#handoff-download")!.addEventListener("click", () => {
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([file.markdown], { type: "text/markdown" }));
-        link.download = h.filename;
-        link.click();
+      panel.querySelector('#handoff-copy')?.addEventListener('click', () => copy(markdown!, 'Copied handoff'));
+      panel.querySelector('#handoff-download')?.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([markdown!], {type:'text/markdown'})); link.download = h.filename; link.click();
         setTimeout(() => URL.revokeObjectURL(link.href), 1000);
       });
     };

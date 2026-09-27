@@ -125,12 +125,21 @@ async def launch(body: Launch, user=Depends(require_admin)):
                 "kind": "static",
                 "project": vault.slug(body.project) if body.project.strip() else None,
                 "notes": f"Administrator login for VM {body.name} (VMID {result.get('vmid')}, {body.os}) created {time.strftime('%Y-%m-%d')}.",
-                "meta": {"vmid": result.get("vmid"), "node": result.get("node"), "os": body.os},
+                "meta": {"vmid": result.get("vmid"), "node": result.get("node"), "os": body.os, "connection_id": cfg["id"]},
                 "secrets": {"USERNAME": USERS[body.os], "PASSWORD": secret},
             }, user["username"])
             from speck.db import audit
 
             audit(conn, user["username"], "vault.stored", detail={"name": entry, "secrets": ["PASSWORD", "USERNAME"]})
+    if result.get("vmid"):
+        from speck.key_details import associate
+
+        target_id = f"austinland:{cfg['id']}:qemu:{result['vmid']}"
+        with db(write=True) as conn:
+            if entry:
+                associate(conn, "vault", entry, target_id, body.name, user["username"], "VM provisioning", "Administrator credential saved during VM creation")
+            for key in body.ssh_keys:
+                associate(conn, "ssh", key, target_id, body.name, user["username"], "VM provisioning", "Public key supplied during VM creation; guest installation is not independently verified")
     return {
         "request_id": receipt["id"],
         "status": result.get("status", "starting"),

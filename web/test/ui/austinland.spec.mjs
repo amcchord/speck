@@ -69,6 +69,7 @@ async function setup(page) {
     if (path === '/api/unifi/consoles') return json([{ id: 'console-1', name: 'Main office', ip: '5.5.5.1', model: 'UniFi Dream Machine Pro Max', version: '5.0', state: 'connected', is_managed_gateway: true }, { id: 'console-2', name: 'Warehouse', ip: '5.5.6.1', model: 'UniFi Dream Machine Pro', version: '4.3', state: 'connected', is_managed_gateway: false }]);
     if (path.startsWith('/api/unifi/')) return json({ ok: true });
     if (path === '/api/network/map') return json(networkMap);
+    if (path.endsWith('/details') && /\/(keys|ssh|context)\//.test(path)) return json({events:[{at:now-600,actor:'demo',action:'vault.reveal'}],last_access:{at:now-600,actor:'demo'},systems:[]});
     if (path === '/api/keys' && method === 'GET') return json(entries);
     if (path === '/api/keys/services') return json(services);
     if (path.endsWith('/check')) return json({ service: 'godaddy', ok: true, detail: 'Domain API reachable (5 sample domains)', checked_at: now, latency_ms: 180 });
@@ -224,9 +225,9 @@ for (const width of [1440, 390]) {
     await page.getByRole('tab', { name: /Handoffs/ }).click();
     await page.getByRole('button', { name: 'shop-web' }).click();
     const handoff = page.getByRole('dialog', { name: 'shop-web · example-shop.com' });
-    await expect(handoff.getByText('private key hidden')).toBeVisible();
+    await expect(handoff.getByText('The document stays sealed', {exact:false})).toBeVisible();
     await expect(handoff.getByText('synthetic-private-key-material')).toHaveCount(0);
-    await handoff.getByRole('button', { name: 'Show private key' }).click();
+    await handoff.getByRole('button', { name: 'Reveal handoff' }).click();
     await expect(handoff.getByText('synthetic-private-key-material')).toBeVisible();
     await noOverflow(page, width);
   });

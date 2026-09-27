@@ -18,6 +18,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from speck import key_details
 from speck.config import seal, unseal
 from speck.db import audit, db
 from speck.security import require_admin, require_user
@@ -97,7 +98,7 @@ async def linode_keys():
     try:
         return cfg, await infra.linode_list(cfg, "/profile/sshkeys")
     except HTTPException:
-        return cfg, []
+        raise HTTPException(502, "Linode SSH registration could not be checked; try again later") from None
 
 
 def public_row(row, registered):
@@ -117,13 +118,13 @@ def public_row(row, registered):
 
 
 @router.get("/keys")
-async def keys(user=Depends(require_user)):
+async def keys(registration: bool = True, user=Depends(require_user)):
     """Stored public keys, whether a private half is held, and Linode registration."""
-    _, account = await linode_keys()
+    _, account = await linode_keys() if registration else (None, [])
     registered = {identity(k["ssh_key"]): k["label"] for k in account}
     with db() as conn:
         rows = conn.execute("SELECT * FROM ssh_keys ORDER BY lower(name)").fetchall()
-    return [public_row(r, registered) for r in rows]
+    return [public_row(r, registered) | {"registration_checked": registration} for r in rows]
 
 
 class Generate(BaseModel):
@@ -142,6 +143,28 @@ def generate_key(body: Generate, user=Depends(require_admin)):
 
 def key_readers(request: Request):
     return access(require_user(request))
+
+
+@router.get("/keys/{name}/details")
+def details(name: str, user=Depends(key_readers)):
+    with db() as conn:
+        row = conn.execute("SELECT * FROM ssh_keys WHERE name=?", (name,)).fetchone()
+        if not row:
+            raise HTTPException(404, "SSH key not found")
+    return {"entry": public_row(row, {}), **key_details.details("ssh", name)}
+
+
+@router.post("/keys/{name}/systems")
+def link_system(name: str, body: key_details.SystemLink, user=Depends(require_admin)):
+    with db() as conn:
+        if not conn.execute("SELECT 1 FROM ssh_keys WHERE name=?", (name,)).fetchone():
+            raise HTTPException(404, "SSH key not found")
+    return key_details.link("ssh", name, body, user)
+
+
+@router.delete("/keys/{name}/systems")
+def unlink_system(name: str, target_id: str, user=Depends(require_admin)):
+    return key_details.unlink("ssh", name, target_id, user)
 
 
 @router.get("/keys/{name}/private")
@@ -188,6 +211,7 @@ def remove(name: str, user=Depends(require_admin)):
     with db(write=True) as conn:
         if not conn.execute("DELETE FROM ssh_keys WHERE name=?", (name,)).rowcount:
             raise HTTPException(404, "SSH key not found")
+        conn.execute("DELETE FROM key_systems WHERE kind='ssh' AND name=?", (name,))
         audit(conn, user["username"], "ssh.deleted", detail={"name": name})
     return {"ok": True}
 

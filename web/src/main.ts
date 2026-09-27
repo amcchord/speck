@@ -186,6 +186,7 @@ async function api(path: string, method = "GET", body?: any, signal?: AbortSigna
   const current = scoped ? viewScope.checkpoint() : () => {};
   const reads = pageReads;
   if (fresh && /^\/dns\/domains\/[^/]+\/records$/.test(path)) readCache.invalidate(path+"?cached=true");
+  if (method === "GET" && /^\/keys\/[^/?]+(?:\/env)?$/.test(path) && !/^\/keys\/(services|system-targets)$/.test(path)) readCache.invalidate('/keys');
   // Console creation/cleanup changes only an ephemeral session, not inventory.
   const mutates = method !== "GET" && path !== "/fleet/preferences" && !/^\/(remote\/sessions\/|infrastructure\/connections\/[^/]+\/console$)/.test(path);
   if (mutates) readCache.clear();
@@ -607,7 +608,14 @@ const ops = createOperations({
 const infrastructure = createInfrastructure({api, freshApi, flyout, summary, resourceInventory: () => fleet.flatMap(m => m.resources || []), sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
   newVm: () => launchVm({ api, esc, notify, dialog, loadingState, exposeHost: (ip: string, name: string) => network.exposeHost(ip, name) })});
 const network = createNetwork({ api, freshApi, flyout, openMachine: async (id: string) => { if (!fleet.some(m => m.id === id)) await loadFleet(); await openDevice(id); }, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
-const keys = createKeys({ api, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
+const keys = createKeys({ api, freshApi, flyout, openKeySystem: async (target: any) => {
+  try {
+    await loadFleet();
+    const machine = fleet.find(m => m.id === target.device_id || m.id === target.id || (target.resource && m.resources?.some((r: any) => r.connection_id === target.resource.connection_id && r.kind === target.resource.kind && String(r.id) === String(target.resource.id))));
+    if (!machine) { notify("This system is no longer in Fleet", true); return; }
+    keys.closePane(); await openDevice(machine.id);
+  } catch (error) { notify((error as Error).message, true); }
+}, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
 const apiAccess = createApiAccess({ api, summary, esc, notify, dialog, content, loading, role: () => role, loadingState });
 const management = createManagement({
   api, flyout,

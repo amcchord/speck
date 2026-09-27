@@ -26,6 +26,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from speck import key_details
 from speck.config import seal, unseal
 from speck.db import audit, db
 from speck.security import require_user
@@ -34,7 +35,7 @@ router = APIRouter(prefix="/api/keys")
 NAME = re.compile(r"[A-Za-z0-9._-]{1,120}")
 SECRET_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,99}")
 MAX_VALUE = 65536
-RESERVED = {"services", "provision", "static", "import"}
+RESERVED = {"services", "provision", "static", "import", "system-targets"}
 MINTABLE = ("openai", "twilio")
 ARBITER = ("openai", "anthropic", "twilio", "app-store-connect")
 APP_STORE_MASTER = "app-store-connect"
@@ -85,6 +86,7 @@ PROVIDERS: dict[str, dict[str, Any]] = {
 
 
 def migrate(conn):
+    key_details.migrate(conn)
     conn.executescript("""
     CREATE TABLE IF NOT EXISTS vault_entries(
       name TEXT PRIMARY KEY,service TEXT NOT NULL,kind TEXT NOT NULL,project TEXT,notes TEXT NOT NULL DEFAULT '',
@@ -317,6 +319,9 @@ def services_status():
             "last_check": CHECKS.get("app-store-connect"),
         }
     )
+    for item in out:
+        with db() as conn:
+            item.update(key_details.history(conn, "provider", item["service"]))
     return out
 
 
@@ -640,7 +645,10 @@ async def provision(body: ProvisionBody, user=Depends(writers)):
 def list_entries(q: str = "", service: str = "", project: str = "", user=Depends(readers)):
     """All entries the caller may read, with masked value hints. GET /api/keys/{name} reveals values."""
     with db() as conn:
-        rows = conn.execute("SELECT * FROM vault_entries ORDER BY lower(name)").fetchall()
+        system_labels = {}
+        for link in conn.execute("SELECT name,label FROM key_systems WHERE kind='vault' ORDER BY label"):
+            system_labels.setdefault(link['name'], []).append(link['label'])
+        rows = conn.execute("SELECT v.*, (SELECT count(*) FROM key_systems k WHERE k.kind='vault' AND k.name=v.name) AS system_count FROM vault_entries v ORDER BY lower(name)").fetchall()
     needle = q.strip().lower()
     out = []
     for row in rows:
@@ -653,7 +661,7 @@ def list_entries(q: str = "", service: str = "", project: str = "", user=Depends
         haystack = " ".join([row["name"], row["service"], row["project"] or "", row["notes"], row["secret_names"]]).lower()
         if needle and needle not in haystack:
             continue
-        out.append(row_entry(row))
+        out.append(row_entry(row) | {"system_count": row["system_count"], "system_labels": system_labels.get(row["name"], [])})
     return out
 
 
@@ -759,6 +767,46 @@ def import_entries(body: ImportBody, user=Depends(writers)):
     return {"created": created, "skipped": skipped}
 
 
+@router.get("/system-targets")
+def system_targets(user=Depends(readers)):
+    if user.get("via") == "token":
+        raise HTTPException(403, "Browse system associations from a signed-in administrator session")
+    with db() as conn:
+        return key_details.targets(conn)
+
+
+@router.get("/{name}/details")
+def entry_details(name: str, user=Depends(readers)):
+    require_permitted(user, name)
+    with db() as conn:
+        row = load(conn, name)
+        if not row:
+            raise HTTPException(404, "Key not found")
+        entry = row_entry(row)
+        related = []
+        source = entry['meta'].get('source_entry')
+        for other in conn.execute("SELECT name,service,project,meta FROM vault_entries WHERE name!=?", (name,)):
+            if permitted(user, other['name']) and (other['name'] == source or json.loads(other['meta']).get('source_entry') == name):
+                related.append({'name': other['name'], 'service': other['service'], 'project': other['project'],
+                                'relationship': 'Source credential' if other['name'] == source else 'Shared from this credential'})
+    return {"entry": entry, "related": related, **key_details.details("vault", name)}
+
+
+@router.post("/{name}/systems")
+def link_system(name: str, body: key_details.SystemLink, user=Depends(writers)):
+    require_permitted(user, name)
+    with db() as conn:
+        if not load(conn, name):
+            raise HTTPException(404, "Key not found")
+    return key_details.link("vault", name, body, user)
+
+
+@router.delete("/{name}/systems")
+def unlink_system(name: str, target_id: str, user=Depends(writers)):
+    require_permitted(user, name)
+    return key_details.unlink("vault", name, target_id, user)
+
+
 @router.get("/{name}")
 def get_entry(name: str, user=Depends(readers)):
     """The full entry including secret values. Audited."""
@@ -847,5 +895,6 @@ async def delete_entry(name: str, revoke: bool = True, user=Depends(writers)):
     revoked = await revoke_upstream(entry) if revoke else []
     with db(write=True) as conn:
         conn.execute("DELETE FROM vault_entries WHERE name=?", (name,))
+        conn.execute("DELETE FROM key_systems WHERE kind='vault' AND name=?", (name,))
         audit(conn, user["username"], "vault.deleted", detail={"name": name, "revoked": revoked})
     return {"ok": True, "revoked": revoked}

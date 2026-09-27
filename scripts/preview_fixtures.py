@@ -186,9 +186,13 @@ def provider_fixture(route, query, now):
     if route == "/api/network/map":
         return {"machines": machines, "ips": ips, "clients_checked": True, "client_error": None, "zones_cached": 5, "checked_at": now}
     if route == "/api/keys":
-        return entries
+        return [e | {"system_count": 1 if i < 3 else 0} for i, e in enumerate(entries)]
     if route == "/api/keys/services":
         return services
+    if route.endswith("/details") and any(route.startswith(prefix) for prefix in ("/api/keys/", "/api/ssh/keys/", "/api/context/files/")):
+        return {"events": [{"at": now - 300, "actor": "demo", "action": "vault.reveal"}, {"at": now - day, "actor": "demo", "action": "vault.updated"}], "last_access": {"at": now - 300, "actor": "demo"}, "systems": [{"label": "clinic-portal", "target_id": "proxmox:c1:qemu:101", "source": "Recorded by administrator", "created": now-day, "created_by": "demo", "note": "Application credential", "target": {"id": "proxmox:c1:qemu:101", "label": "clinic-portal", "resource": {"connection_id": "c1", "kind": "qemu", "id": "101"}}}]}
+    if route == "/api/keys/system-targets":
+        return [{"id": "proxmox:c1:qemu:101", "label": "clinic-portal", "description": "Proxmox · Main office"}]
     if route.startswith("/api/keys/"):
         name = route.rsplit("/", 1)[-1]
         entry = next((e for e in entries if e["name"] == name), None)
