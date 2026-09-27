@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.mjs";
 const GiB = 1024 ** 3;
 const resource = {
   id: "101",
@@ -179,6 +179,8 @@ async function setup(page, options = {}) {
       data = options.noGuest
         ? { state: "unavailable", message: "Guest agent is not responding." }
         : guest;
+    else if (path.includes('/resources/') && path.endsWith('/metrics'))
+      data = {timeframe:'day',checked_at:Date.now()/1000,note:'Proxmox RRD averages. Gaps indicate readings the provider did not report.',series:[{key:'cpu',label:'CPU utilization',unit:'%',points:[[1790168400,5],[1790168460,6],[1790168520,null],[1790168580,7]]}]};
     else if (path.includes("/resources/"))
       data = options.stopped
         ? {
@@ -255,7 +257,7 @@ async function setup(page, options = {}) {
       } else frame();
     },
   );
-  await page.goto("/");
+  await page.goto("/#fleet");
   await page.locator('[data-row="provider-101"] .machine-name').click();
   return { calls, input, deleted };
 }
@@ -314,8 +316,12 @@ for (const width of [1440, 390])
     await expect(pane.getByText("vmbr0", { exact: true })).toBeVisible();
     await pane.getByRole("tab", { name: "Performance", exact: true }).click();
     await expect(
-      pane.getByRole("img", { name: "CPU over the last hour" }),
+      pane.getByRole("img", { name: "CPU utilization over the selected interval" }),
     ).toBeVisible();
+    await pane.locator('[data-history]').selectOption('hour');
+    const reading=pane.getByRole('slider',{name:'Inspect CPU utilization reading'});
+    await reading.focus();await reading.press('Home');
+    await expect(reading).toHaveAttribute('aria-valuetext',/5%/);
     await pane.getByRole("tab", { name: "Snapshots", exact: true }).click();
     await expect(
       pane.getByText("before-update", { exact: true }),
@@ -400,4 +406,13 @@ test("infrastructure opens the same organized VM overview", async ({
   await expect(
     pane.getByRole("tab", { name: "Hardware", exact: true }),
   ).toBeVisible();
+});
+
+
+test('provider performance tab has a durable detail link',async({page})=>{
+  await setup(page);
+  await page.goto('/#infrastructure');await page.getByRole('button',{name:'Clinic server',exact:true}).click();
+  await page.locator('[data-pve-tab="performance"]').click();
+  expect(JSON.parse(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('inspect')).tab).toBe('performance');
+  await page.reload();await expect(page.locator('[data-pve-tab="performance"]')).toHaveAttribute('aria-selected','true');
 });

@@ -33,17 +33,27 @@ The wordmark is an outlined Inter drawing, so installed fonts cannot change it.
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| Forest | `#192E24` | Navigation, sign-in brand panel, app icon |
+| Forest | `#192E24` | Sign-in brand panel, app icon, brand assets |
 | Fern | `#385D44` | Primary actions, focus, links |
 | Lime | `#DCECAB` | Identity on forest, restrained highlights |
-| Paper | `#F4F5F0` | Page background |
+| Paper | `#F5F6F8` | Neutral page background |
 | White | `#FFFFFF` | Working surfaces and fields |
-| Ink | `#24382C` | Primary text |
-| Muted | `#5E6F61` | Supporting text on paper/white |
-| Line | `#DCE3D8` | Quiet separators; never the only focus signal |
+| Ink | `#26313B` | Primary text |
+| Muted | `#626D79` | Supporting text on paper/white |
+| Line | `#DFE3E8` | Quiet separators; never the only focus signal |
+| Slate | `#202B38` | Console navigation and mobile navigation sheet |
+| Blue / blue-soft | `#245D9F` / `#EDF4FF` | UniFi, network addresses and DNS relationships |
+| Copper / copper-soft | `#92512B` / `#FCF1E8` | Proxmox and cloud infrastructure relationships |
+| Violet / violet-soft | `#6750A4` / `#F3EFFC` | AI drafts, templates and automation |
+| Agent-soft | `#EDF4ED` | Speck agent context, paired with Fern |
 | Success | `#35613F` | Positive status text |
 | Warning | `#795916` | Review and attention text |
 | Danger | `#993E32` | Failed or error status text |
+
+The expanded console palette separates work areas. Green remains the Speck
+identity and agent color. Blue, copper and violet describe categories, not health.
+Relationship cards carry names and evidence labels, so their meaning survives
+without color. Pale variants are backgrounds; their darker pairs are text.
 
 Status always has a word, never color alone. Lime is a surface/accent, not small
 text on white. Use a visible two-pixel focus ring, lime on forest or fern on light

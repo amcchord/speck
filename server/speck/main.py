@@ -35,11 +35,14 @@ async def lifespan(app):
     management_task = asyncio.create_task(worker())
     from speck.restore_lifecycle import worker as restore_worker
     restore_task = asyncio.create_task(restore_worker())
+    from speck.network_history import worker as history_worker
+    history_task = asyncio.create_task(history_worker())
     try:
         yield
     finally:
         await stop_worker(management_task)
         await stop_worker(restore_task)
+        await stop_worker(history_task)
     from speck.remote import sessions, close_session
     from speck.slide import workers
     for session_id in list(sessions):
@@ -62,7 +65,7 @@ async def headers(request: Request, call_next):
     response.headers.update({'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY',
                              'Referrer-Policy': 'no-referrer', 'Permissions-Policy': 'microphone=(self), camera=()',
                              'Cache-Control': 'no-store',
-                             'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"})
+                             'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"})
     return response
 
 
@@ -349,6 +352,9 @@ def job_result(job_id: str, body: JobResult, device=Depends(require_agent)):
         if body.status != 'running':
             from speck.operations import record_patch_result
             record_patch_result(conn, row, body.result)
+            from speck.inspection import record_result
+            if body.status == 'complete':
+                record_result(conn, row, body.result)
             audit(conn, 'agent', 'job.' + body.status, device['id'], {'job_id': job_id, 'kind': row['kind']})
     return {'ok': True}
 
@@ -460,6 +466,11 @@ async def agent_upload(transfer_id: str, request: Request, device=Depends(requir
     return {'ok': True, 'sha256': checksum, 'size': total}
 
 
+from speck.inspection import router as inspection_router  # noqa: E402
+app.include_router(inspection_router)
+from speck.network_history import router as history_router  # noqa: E402
+app.include_router(history_router)
+
 from speck.agent_updates import router as agent_update_router  # noqa: E402
 app.include_router(agent_update_router)
 
@@ -495,6 +506,8 @@ app.include_router(infrastructure_console_router)
 
 from speck.infrastructure import router as infrastructure_router  # noqa: E402
 app.include_router(infrastructure_router)
+from speck.provider_metrics import router as provider_metrics_router  # noqa: E402
+app.include_router(provider_metrics_router)
 
 from speck.integrations import router as integrations_router  # noqa: E402
 app.include_router(integrations_router)
@@ -505,6 +518,15 @@ app.include_router(fleet_router)
 from speck import agent_api, api_tokens, contexts, dns, network, ssh_keys, unifi, vault, vms  # noqa: E402
 for module in (api_tokens, vault, dns, unifi, network, ssh_keys, contexts, vms, agent_api):
     app.include_router(module.router)
+
+from speck.unifi_observability import router as unifi_observability_router  # noqa: E402
+app.include_router(unifi_observability_router)
+
+from speck.network_equipment import router as network_equipment_router  # noqa: E402
+app.include_router(network_equipment_router)
+
+from speck.provider_explorer import router as provider_explorer_router  # noqa: E402
+app.include_router(provider_explorer_router)
 
 downloads = Path(os.environ.get('SPECK_DOWNLOAD_DIR', 'output/downloads'))
 if downloads.exists():

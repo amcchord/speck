@@ -128,7 +128,7 @@ async def start_session(device_id: str, body: StartSession, user=Depends(require
     protocol = options['remote_protocol'] if body.mode == 'auto' else ('shell' if body.mode == 'shell' else (config or {}).get('protocol'))
     if protocol == 'shell':
         if not options['remote_shell_available']:
-            raise HTTPException(409, 'Update this Linux agent to enable the web shell')
+            raise HTTPException(409, 'Update this agent to enable the interactive terminal')
         config = {'protocol': 'shell'}
     elif not config:
         raise HTTPException(409, 'Configure a remote connection first')

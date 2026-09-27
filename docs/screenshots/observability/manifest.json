@@ -1,0 +1,17 @@
+[
+  {
+    "file": "infrastructure-desktop.png",
+    "sha256": "c7c04e66258486be9e82d14f4764143d7bdf739604c7ef621cc25cdc63ee1333",
+    "source": "scripts/preview.py synthetic fixtures; Chromium; current production frontend"
+  },
+  {
+    "file": "lan-clients-phone.png",
+    "sha256": "2953ecee00e58b2bbca4d97773635781732015a4cb3e91c29fc746379d49bc39",
+    "source": "scripts/preview.py synthetic fixtures; Chromium; current production frontend"
+  },
+  {
+    "file": "powershell-phone.png",
+    "sha256": "e5349c8208adf8ce2ea477a5110e78624661c3db7c18ddf6c95520c699acc41b",
+    "source": "scripts/preview.py synthetic fixtures; Chromium; current production frontend"
+  }
+]

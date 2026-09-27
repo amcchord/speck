@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.mjs';
 
 for (const width of [1440, 390]) test(`Slide client and one-click backup from Fleet at ${width}px`, async ({page}, info) => {
   await page.setViewportSize({width, height:960});
@@ -22,7 +22,7 @@ for (const width of [1440, 390]) test(`Slide client and one-click backup from Fl
     }
     throw new Error('Unexpected request: ' + url.pathname);
   });
-  await page.goto('/');
+  await page.goto('/#fleet');
   await expect(page.locator('#fleet-rows')).toContainText('Primary Clinic');
   await page.locator('#fleet-rows .machine-name').click();
   await expect(page.locator('#machine-details')).toContainText('Primary Clinic');

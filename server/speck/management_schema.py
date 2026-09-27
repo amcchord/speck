@@ -3,6 +3,10 @@
 
 def migrate(conn):
     columns = {
+        "sessions": {
+            "created": "REAL",
+            "last_seen": "REAL",
+        },
         "users": {
             "role": "TEXT NOT NULL DEFAULT 'admin'",
             "disabled": "INTEGER NOT NULL DEFAULT 0",

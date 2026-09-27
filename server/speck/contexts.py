@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from speck import key_details
 from speck.config import seal, unseal
 from speck.db import audit, db
 from speck.security import require_admin, require_user
@@ -65,6 +66,15 @@ def files(user=Depends(require_admin)):
             "SELECT filename,machine,domain,provider,target,size,created,created_by,origin FROM context_files ORDER BY created DESC"
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+@router.get("/files/{filename}/details")
+def details(filename: str, user=Depends(readers)):
+    with db() as conn:
+        row = conn.execute("SELECT filename,machine,domain,provider,target,size,created,created_by,origin FROM context_files WHERE filename=?", (filename,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Handoff file not found")
+    return {"entry": dict(row), **key_details.details("handoff", filename)}
 
 
 @router.get("/files/{filename}")

@@ -54,3 +54,20 @@ export function groupEntries<T extends Record<string, any>>(entries: T[]) {
 export function validSecretName(name: string) {
   return SECRET.test(name);
 }
+
+
+// Index only metadata: never secrets, masked hints, document contents or public keys.
+const searchIndex = new WeakMap<object, string>();
+export function searchKeys<T extends Record<string, any>>(items: T[], query: string): T[] {
+  const tokens = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return items;
+  return items.filter(item => {
+    let text = searchIndex.get(item);
+    if (text === undefined) {
+      text = ['name', 'label', 'service', 'project', 'notes', 'kind', 'description', 'purpose', 'comment', 'fingerprint', 'type', 'machine', 'domain', 'filename']
+        .map(key => String(item[key] || '')).concat(item.secret_names || [], item.system_labels || []).join(' ').toLocaleLowerCase();
+      searchIndex.set(item, text);
+    }
+    return tokens.every(token => text!.includes(token));
+  });
+}

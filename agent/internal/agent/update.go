@@ -279,7 +279,9 @@ func (c *Client) checkUpdate(ctx context.Context) bool {
 		return false
 	}
 	helper := filepath.Join(stage, "updater"+exeSuffix())
-	if copyUpdateFile(binary, helper) != nil {
+	// Run the verified candidate so installation fixes apply during this release.
+	candidate := filepath.Join(stage, "speck-agent-"+runtime.GOOS+"-"+runtime.GOARCH+exeSuffix())
+	if copyUpdateFile(candidate, helper) != nil {
 		return fail()
 	}
 	plan := updatePlan{Envelope: *offer.Release, Previous: Version, Config: c.ConfigPath}
@@ -407,7 +409,7 @@ func installStagedUpdate(ctx context.Context, config, stage, install string, man
 					restore := filepath.Join(stage, names[asset.Name]+".restore")
 					err := copyUpdateFile(backup, restore)
 					if err == nil {
-						err = replaceFile(restore, target)
+						err = replaceUpdateFile(rollbackCtx, restore, target)
 					}
 					recovery = errors.Join(recovery, err)
 				}
@@ -434,7 +436,7 @@ func installStagedUpdate(ctx context.Context, config, stage, install string, man
 		return e
 	}
 	for _, asset := range manifest.Files {
-		if e := replaceFile(filepath.Join(stage, asset.Name), filepath.Join(install, names[asset.Name])); e != nil {
+		if e := replaceUpdateFile(ctx, filepath.Join(stage, asset.Name), filepath.Join(install, names[asset.Name])); e != nil {
 			return e
 		}
 		replaced = true

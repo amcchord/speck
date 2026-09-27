@@ -1,7 +1,12 @@
+import { rememberResource, registerResource, bindResourceNavigation } from "./resource-navigation";
+import {mountProviderExplorer} from "./provider-explorer";
+import {detailDate} from "./resource-story";
 import "./infrastructure.css";
+import { mountPerformance } from "./performance";
 import { openProviderConsole } from "./provider-console";
 import { mountProxmoxMachine } from "./proxmox-machine";
 import { icon } from "./icons";
+import { infrastructureStory, relatedResources, technicalDetail, detailHero, detailSection, detailFacts } from "./resource-story";
 type Item = Record<string, any>;
 export function createInfrastructure(ui: Item) {
   const { api, esc, on, value, notify, content, loading, badge, bytes, date } =
@@ -68,6 +73,7 @@ export function createInfrastructure(ui: Item) {
       api("/infrastructure/connectors"),
     ]);
     const rows = inventory.connections.flatMap((c: Item) => c.resources);
+    ui.summary?.(`<span><b>${rows.filter((r: Item)=>['running','online'].includes(r.status)).length}</b> running</span><span><b>${inventory.connections.length}</b> connections</span><span><b>${rows.filter((r: Item)=>r.agent).length}</b> linked agents</span>`);
     content(
       `${admin() && ui.newVm && inventory.connections.some((c: Item) => c.provider === "austinland") ? `<button class="primary" id="infra-new-vm" data-page-action>${icon("plus")}<span>New VM</span></button>` : ""}${admin() ? '<button class="secondary" id="infra-add" data-page-action>Add connection</button>' : ""}<div class="infra-tabs" role="tablist" aria-label="Infrastructure views">${[
         ["resources", `Resources (${rows.length})`],
@@ -98,7 +104,9 @@ export function createInfrastructure(ui: Item) {
   async function renderSection() {
     const body = document.getElementById("infra-body")!;
     if (section === "resources") {
-      body.innerHTML = `${inventory.connections
+      const all = inventory.connections.flatMap((c: Item)=>c.resources || []);
+      const running = all.filter((r: Item)=>['running','online'].includes(r.status));
+      body.innerHTML = `<section class="infra-landscape"><div class="infra-landscape-title"><span class="resource-eyebrow">Connected infrastructure</span><h2>Your estate, in context</h2><p>Explore a connection, follow a host to its guests, or inspect a machine’s performance.</p></div><div class="infra-totals"><div><strong>${running.length}</strong><span>Running / online</span></div><div><strong>${all.filter((r: Item)=>r.provider==='proxmox'&&r.kind==='node').length}</strong><span>Hypervisors</span></div><div><strong>${all.filter((r: Item)=>r.provider==='linode').length}</strong><span>Cloud instances</span></div><div><strong>${all.filter((r: Item)=>r.agent).length}</strong><span>Linked endpoints</span></div></div></section><div class="infra-scope-list" aria-label="Browse connections"><button class="infra-scope ${!connection?'selected':''}" data-infra-scope=""><b>All connections</b><span>${all.length} resources</span></button>${inventory.connections.filter((c:Item)=>c.resources?.length).map((c:Item)=>`<button class="infra-scope ${connection===c.id?'selected':''}" data-infra-scope="${esc(c.id)}"><b>${esc(c.name)}</b><span>${esc(labels[c.provider])} · ${c.resources.length} resources</span></button>`).join('')}</div>${inventory.connections
         .filter((c: Item) => c.status !== "connected")
         .map(
           (c: Item) =>
@@ -151,12 +159,15 @@ export function createInfrastructure(ui: Item) {
         },
         "change",
       );
+      body.querySelectorAll<HTMLButtonElement>('[data-infra-scope]').forEach(b=>b.onclick=()=>{
+        connection=b.dataset.infraScope!;provider='';query='';limit=PAGE;void renderSection();
+      });
       renderRows();
     } else if (section === "connections") {
       body.innerHTML = `<div class="infra-connections">${inventory.connections
         .map(
           (c: Item, i: number) =>
-            `<article class="card"><div class="infra-card-heading"><h2>${esc(c.name)}</h2>${badge(c.status, c.status === "connected")}</div><p>${labels[c.provider]} · ${c.connector ? "Outbound agent" : esc(c.url)}</p>${c.error ? `<p class="infra-error">${esc(c.error)}</p>` : ""}<div class="infra-actions">${button("infra-tools-" + i, "Manage")}${admin() ? c.managed_in_settings ? '<a class="secondary" href="#settings">Manage in Settings</a>' : button("infra-edit-" + i, "Edit") + button("infra-remove-" + i, "Disconnect") : ""}${admin() && c.connector ? button("infra-enroll-" + i, "Enroll host") : ""}</div>${agents
+            `<article class="card infra-connection-card" data-provider="${esc(c.provider)}"><div class="infra-card-heading"><span class="infra-provider-label">${esc(labels[c.provider])}</span>${badge(c.status, c.status === "connected")}</div><h2><button class="text-link" data-connection-detail="${i}">${esc(c.name)}</button></h2><p>${c.connector ? "Outbound connector" : esc(c.url)}</p><div class="infra-connection-counts"><span><b>${c.resources?.length || 0}</b> resources</span><span><b>${(c.resources || []).filter((r:Item)=>['running','online'].includes(r.status)).length}</b> running</span><span><b>${(c.resources || []).filter((r:Item)=>r.agent).length}</b> agent links</span></div>${c.error ? `<p class="infra-error">${esc(c.error)}</p>` : ""}<div class="infra-actions">${button("infra-tools-" + i, "Manage")}${admin() ? c.managed_in_settings ? '<a class="secondary" href="#settings">Manage in Settings</a>' : button("infra-edit-" + i, "Edit") + button("infra-remove-" + i, "Disconnect") : ""}${admin() && c.connector ? button("infra-enroll-" + i, "Enroll host") : ""}</div>${agents
               .filter((a) => a.connection_id === c.id)
               .map(
                 (a, j) =>
@@ -167,6 +178,7 @@ export function createInfrastructure(ui: Item) {
         .join(
           "",
         )}</div>${!inventory.connections.length ? '<div class="empty"><h2>Connect your infrastructure</h2><p>Add a Proxmox cluster, Linode account, Slide account or AustinLand bridge.</p></div>' : ""}`;
+      body.querySelectorAll<HTMLElement>('[data-connection-detail]').forEach(b=>b.onclick=()=>connectionDetail(inventory.connections[Number(b.dataset.connectionDetail)]));
       inventory.connections.forEach((c: Item, i: number) => {
         on("infra-tools-" + i, () => connectionTools(c));
         on("infra-edit-" + i, () => editConnection(c));
@@ -195,12 +207,30 @@ export function createInfrastructure(ui: Item) {
           ? `<div class="infra-table-wrap"><table class="infra-activity"><thead><tr><th>When</th><th>Operation</th><th>Target</th><th>By</th><th>Status</th><th>Result</th></tr></thead><tbody>${rows
               .map(
                 (r: Item) =>
-                  `<tr><td>${date(r.created)}</td><td>${esc(r.operation.replaceAll("-", " "))}</td><td>${esc(r.target)}</td><td>${esc(r.actor)}</td><td>${badge(r.status, r.status === "submitted")}</td><td>${esc(receiptSummary(r.result))}${r.result && typeof r.result === "object" && Object.keys(r.result).length > 1 ? `<details class="infra-raw"><summary>Details</summary><pre>${esc(JSON.stringify(r.result, null, 2))}</pre></details>` : ""}</td></tr>`,
+                  `<tr><td>${date(r.created)}</td><td><button class="text-link" data-receipt="${esc(r.id)}" aria-haspopup="dialog">${esc(r.operation.replaceAll("-", " "))} ↗</button></td><td>${esc(r.target)}</td><td>${esc(r.actor)}</td><td>${badge(r.status, r.status === "submitted")}</td><td>${esc(receiptSummary(r.result))}</td></tr>`,
               )
               .join("")}</tbody></table></div>`
           : '<div class="empty"><h2>No infrastructure changes yet</h2><p>Power, configuration and provisioning requests appear here with their receipts.</p></div>'
       }`;
+      body.querySelectorAll<HTMLButtonElement>('[data-receipt]').forEach(b=>b.onclick=()=>operationDetail(rows.find((r:Item)=>r.id===b.dataset.receipt)));
     }
+  }
+  function connectionDetail(c: Item) {
+    rememberResource({kind:"connection",id:c.id},()=>connectionDetail(c));
+    const members=c.resources || [];
+    const d=ui.flyout(c.name,detailHero(labels[c.provider]+' · Connection',c.status,'Provider access, resource coverage and connector health in one place.',[['Resources',members.length],['Running',members.filter((r:Item)=>['running','online'].includes(r.status)).length],['Linked agents',members.filter((r:Item)=>r.agent).length]])+detailSection('Connection',detailFacts([['Provider',labels[c.provider]],['Configuration updated',date(c.updated)],['Collection outcome',c.error || c.status],['Credential source',c.connector?'Outbound connector enrollment':c.managed_in_settings?'Slide settings credential':'Credential sealed on this connection; separate from project vault entries'],['Transport',c.connector?'Outbound connector':'Provider API'],['Origin',c.url],['Inventory checked',date(inventory.checked_at)]]))+detailSection('Host connectors',agents.filter(a=>a.connection_id===c.id).map(a=>`<div class="infra-agent"><span><b>${esc(a.hostname)}</b><small>Agent ${esc(a.version)} · ${date(a.last_seen)}</small></span>${badge(a.online?'online':'offline',a.online)}</div>`).join('')||'<p class="resource-note">This connection uses its provider API.</p>')+'<div class="resource-actions"><button class="primary" data-browse-connection>Browse resources</button><button class="secondary" data-manage-connection>Management tools</button></div>',{tone:c.provider==='slide'?'protection':'compute',subtitle:labels[c.provider]});
+    const details=document.createElement('section');details.className='resource-section';details.innerHTML='<h3>Capabilities &amp; related configuration</h3><p class="resource-note">Reading supported tools…</p>';d.querySelector('.resource-body').append(details);
+    void api('/infrastructure/connections/'+c.id+'/catalog').then((catalog:Item)=>{if(!d.open)return;details.innerHTML='<h3>Capabilities &amp; related configuration</h3><p>'+Object.values(catalog).filter((s:any)=>admin()||s.method==='GET').map((s:any)=>esc(s.label)).join(' · ')+'</p>'+(c.managed_in_settings?'<a href="#settings">Manage this Slide credential in Settings →</a>':admin()?'<p class="resource-note">Credentials are stored on this connection. Provider keys in the project vault are independent unless a recorded provisioning association says otherwise.</p><button class="secondary" data-edit-connection-detail>Edit connection configuration</button>':'')+'<p class="resource-note">A successful inventory collection confirms read access at the observed time, not every management permission. Actions validate current provider capabilities.</p>';details.querySelector('[data-edit-connection-detail]')?.addEventListener('click',()=>editConnection(c));}).catch(()=>{details.innerHTML='<p class="resource-notice">Capability discovery unavailable. Inspect the collection error and connector state.</p>';});
+    d.querySelector('[data-browse-connection]')!.addEventListener('click',()=>{d.close();connection=c.id;provider='';query='';section='resources';if(location.hash.split('?')[0]==='#infrastructure')void render();else location.hash='#infrastructure';});
+    d.querySelector('[data-manage-connection]')!.addEventListener('click',()=>void connectionTools(c));
+  }
+  function operationDetail(r: Item) {
+    if(!r)return;
+    rememberResource({kind:"infrastructure-operation",id:r.id},()=>operationDetail(r));
+    const c=inventory.connections.find((c:Item)=>c.id===r.connection_id);
+    const matches=(c?.resources || []).filter((x:Item)=>r.resource_id&&String(x.id)===String(r.resource_id)&&(!r.kind||x.kind===r.kind));
+    const d=ui.flyout(r.operation.replaceAll('-',' '),detailHero('Infrastructure · Activity',r.status,r.status==='submitted'?'The provider accepted this request. Check the target to confirm its outcome.':r.status==='unknown'?'The outcome is unknown. Inspect the provider before attempting this operation again.':'The recorded outcome of this request.')+detailSection('Request',detailFacts([['Target',r.target],['Connection',c?.name || r.connection_id],['Requested by',r.actor],['Submitted',date(r.created)],['Updated',date(r.updated)],['Request ID',r.id]]))+detailSection('Provider receipt',`<p>${esc(receiptSummary(r.result))}</p>`+technicalDetail(r.result))+(matches.length===1?'<button class="primary" data-receipt-target>Inspect target</button>':'<p class="resource-note">An exact target link is not available in the current inventory.</p>'),{tone:'automation',subtitle:'Activity · '+r.target});
+    d.querySelector('[data-receipt-target]')?.addEventListener('click',()=>void resourceDetail(matches[0]));
   }
   // One readable line for a provider receipt; the full JSON stays behind Details.
   function receiptSummary(result: any): string {
@@ -254,14 +284,14 @@ export function createInfrastructure(ui: Item) {
         const key = r.connection_id + "/" + r.node;
         const heading =
           key !== group
-            ? `<tr class="infra-group"><th colspan="7">${esc(r.connection_name)} <span>›</span> ${esc(r.node || labels[r.provider])}</th></tr>`
+            ? `<tr class="infra-group"><th colspan="8">${esc(r.connection_name)} <span>›</span> ${esc(r.node || labels[r.provider])}</th></tr>`
             : "";
         group = key;
-        return `${heading}<tr class="${r.kind === "node" ? "infra-host-row" : ""}"><td><button class="text-link" id="infra-resource-${i}">${r.kind !== "node" && r.provider === "proxmox" ? '<span class="infra-branch" aria-hidden="true">↳</span>' : ""}${esc(r.name)}</button>${r.template ? "<small>Template</small>" : ""}</td><td>${esc(kinds[r.kind])}</td><td>${badge(r.status)}</td><td>${managementLabel(r)}</td><td>${r.max_memory ? `${r.memory ? bytes(r.memory) + " / " : ""}${bytes(r.max_memory)}` : "—"}<small>${r.max_disk ? bytes(r.max_disk) + " disk" : ""}</small></td><td>${esc(r.addresses?.join(", ") || r.id)}<small>${esc(r.pool || "")}</small></td><td>${r.agent ? button("infra-endpoint-" + i, "Open agent") : ""}</td></tr>`;
+        return `${heading}<tr class="${r.kind === "node" ? "infra-host-row" : ""}"><td><button class="text-link" id="infra-resource-${i}">${r.kind !== "node" && r.provider === "proxmox" ? '<span class="infra-branch" aria-hidden="true">↳</span>' : ""}${esc(r.name)}</button>${r.template ? "<small>Template</small>" : ""}</td><td>${esc(kinds[r.kind])}</td><td>${badge(r.status)}</td><td>${managementLabel(r)}</td><td>${typeof r.cpu==='number'?`<span class="infra-load">${Math.round(r.cpu*100)}%<i style="--load:${Math.min(100,Math.max(0,r.cpu*100))}%"></i></span>`:r.provider==='linode'?'<span class="placeholder">In details</span>':'—'}</td><td>${r.max_memory ? `${r.memory ? bytes(r.memory) + " / " : ""}${bytes(r.max_memory)}` : "—"}<small>${r.max_disk ? bytes(r.max_disk) + " disk" : ""}</small></td><td>${esc(r.addresses?.join(", ") || r.id)}<small>${esc(r.pool || "")}</small></td><td>${r.agent ? button("infra-endpoint-" + i, "Open agent") : ""}</td></tr>`;
       })
       .join("");
     document.getElementById("infra-resources")!.innerHTML = rows.length
-      ? `<div class="infra-table-wrap"><table class="infra-resource-table"><thead><tr><th>Host / guest</th><th>Type</th><th>State</th><th>Management</th><th>Memory / capacity</th><th>Address / ID</th><th>Agent</th></tr></thead><tbody>${html}</tbody></table></div>${rows.length > limit ? `<button class="secondary net-more" id="infra-more">Show ${Math.min(PAGE, rows.length - limit)} more of ${rows.length - limit} remaining</button>` : ""}<p class="muted">${rows.length} resources · Cluster › host › guest · Checked ${date(inventory.checked_at)}</p>`
+      ? `<div class="infra-table-wrap"><table class="infra-resource-table"><thead><tr><th>Host / guest</th><th>Type</th><th>State</th><th>Management</th><th>CPU</th><th>Memory / capacity</th><th>Address / ID</th><th>Agent</th></tr></thead><tbody>${html}</tbody></table></div>${rows.length > limit ? `<button class="secondary net-more" id="infra-more">Show ${Math.min(PAGE, rows.length - limit)} more of ${rows.length - limit} remaining</button>` : ""}<p class="muted">${rows.length} resources · Cluster › host › guest · Checked ${date(inventory.checked_at)}</p>`
       : '<div class="empty"><h2>No matching resources</h2><p>Adjust the filters or add a provider connection.</p></div>';
     rows.slice(0, limit).forEach((r: Item, i: number) => {
       on("infra-resource-" + i, () => resourceDetail(r));
@@ -272,73 +302,78 @@ export function createInfrastructure(ui: Item) {
       renderRows();
     });
   }
-  function machinePanel(r: Item, root: HTMLElement) {
-    return mountProxmoxMachine(ui, r, root, (id, spec, current) => operationForm(
+  function machinePanel(r: Item, root: HTMLElement, initialTab = "overview", selectTab?: (tab: string) => void) {
+    return mountProxmoxMachine({...ui,openResource:resourceDetail,initialTab,selectTab}, r, root, (id, spec, current) => operationForm(
       {id: current.connection_id, name: current.connection_name, provider: current.provider}, id, spec, current));
   }
-  async function resourceDetail(r: Item) {
-    if (r.provider === "proxmox" && ["qemu", "lxc"].includes(r.kind)) {
-      const d = dialog(r.name, '<div class="pve-root"></div>');
-      d.classList.add("infra-dialog");
-      machinePanel(r, d.querySelector<HTMLElement>(".pve-root")!);
-      return;
-    }
-    const d = dialog(r.name, '<p role="status">Loading resource…</p>');
-    d.classList.add("infra-dialog");
-    let detail: Item, catalog: Item;
-    try {
-      [detail, catalog] = await Promise.all([
-        api(
-          `/infrastructure/connections/${r.connection_id}/resources/${r.kind}/${encodeURIComponent(r.id)}`,
-        ),
-        api(
-          `/infrastructure/connections/${r.connection_id}/catalog?kind=${r.kind}`,
-        ),
-      ]);
-    } catch (e) {
-      d.querySelector("[role=status]")!.textContent = (e as Error).message;
-      return;
-    }
-    if (!d.open) return;
-    const target =
-      d.querySelector(".dialog-body") || d.querySelector("form") || d;
-    const panel = document.createElement("div");
-    panel.innerHTML = `<p class="infra-breadcrumb">${esc(r.connection_name)} › ${esc(r.node)} › ${esc(r.name)}</p><p>${managementLabel(r)}</p>${r.agent ? button("infra-open-agent", "Open Speck agent") : `<p class="muted">Discovered through ${labels[r.provider]}. ${r.provider === "proxmox" ? "Power, resources, snapshots, cloning and migration work through Proxmox. Commands and text files require the QEMU guest agent. The provider console works without a Speck agent. A Speck agent adds desktop sessions, full file transfer, patching and monitoring." : ""}</p>`}<div class="infra-actions">${r.kind === "qemu" || r.kind === "virt" ? button("infra-console", "Open provider console") : ""}${Object.entries(
-      catalog,
-    )
-      .filter(
-        ([id, spec]: [string, any]) =>
-          (admin() || spec.method === "GET") &&
-          (!r.template || id === "clone" || spec.method === "GET"),
-      )
-      .map(([id, spec]: [string, any]) =>
-        button("infra-action-" + id, spec.label),
-      )
-      .join("")}</div>${Object.entries(detail)
-      .filter(([key]) => key !== "resource")
-      .map(
-        ([key, data]) =>
-          `<details ${key === "status" || key === "configuration" ? "open" : ""}><summary>${esc(key.replaceAll("_", " "))}</summary>${dataView(data)}</details>`,
-      )
-      .join("")}`;
-    // Keep the shared dialog heading and close controls.
-    d.querySelector("[role=status]")?.remove();
-    target.append(panel);
-    on("infra-console", () => openProviderConsole(ui, r));
-    on("infra-open-agent", async () => {
-      d.close();
-      await ui.openDevice(r.agent.id);
+  async function resourceDetail(r: Item, initialTab = "overview") {
+    const reference = {kind:"infrastructure",id:String(r.id),connection:r.connection_id,provider:r.provider,resourceKind:r.kind};
+    rememberResource({...reference,tab:initialTab}, () => resourceDetail(r,initialTab));
+    const d = ui.flyout(r.name, '<div class="infra-detail-root"></div>', {
+      className: "infra-dialog", tone: r.provider === "slide" ? "protection" : "compute",
+      subtitle: [labels[r.provider], r.connection_name, r.node !== r.name ? r.node : ""].filter(Boolean).join(" · "),
     });
-    Object.entries(catalog).forEach(([id, spec]) =>
-      on("infra-action-" + id, () =>
-        operationForm(
-          inventory.connections.find((c: Item) => c.id === r.connection_id) || {id:r.connection_id,name:r.connection_name,provider:r.provider},
-          id,
-          spec as Item,
-          r,
-        ),
-      ),
-    );
+    const root = d.querySelector(".infra-detail-root") as HTMLElement;
+    if (r.provider === "proxmox" && ["qemu", "lxc"].includes(r.kind)) {
+      root.classList.add("pve-root");
+      machinePanel(r, root, initialTab, selectedTab => {
+        rememberResource({...reference,tab:selectedTab}, () => resourceDetail(r,selectedTab));
+        bindResourceNavigation(d);
+      });
+    } else void resourcePanel(r, root);
+  }
+  async function resourcePanel(initial: Item, root: HTMLElement) {
+    let resource = initial, detail: Item | null = null, catalog: Item = {}, busy = true, errors: string[] = [];
+    let version = 0;
+    const path = `/infrastructure/connections/${initial.connection_id}/resources/${initial.kind}/${encodeURIComponent(initial.id)}`;
+    const catalogPath = `/infrastructure/connections/${initial.connection_id}/catalog?kind=${initial.kind}`;
+    const allResources = () => {
+      const known = [...inventory.connections.flatMap((c: Item) => c.resources || []), ...(ui.resourceInventory?.() || [])];
+      return [...new Map(known.map((r: Item) => [r.connection_id+"/"+r.kind+"/"+r.id,r])).values()] as Item[];
+    };
+    function paint() {
+      if (!root.isConnected) return;
+      const siblings = allResources(), guests = relatedResources(resource, siblings);
+      const allowed = Object.entries(catalog).filter(([id, s]: [string, any]) => (admin() || s.method === "GET") && (!resource.template || id === "clone" || s.method === "GET"));
+      const secondary = ([id]: [string, any]) => /delete|remove|destroy|rename|migrate|clone/.test(id);
+      const action = ([id, s]: [string, any]) => `<button class="secondary ${/delete|remove|destroy/.test(id) ? 'is-destructive' : ''}" data-infra-action="${esc(id)}">${esc(s.label)}</button>`;
+      const actions = `<section class="resource-actions"><h3>Management</h3><p class="resource-note">${resource.agent ? 'Linked to a Speck endpoint agent.' : resource.management === 'host_agent' ? 'Managed through an outbound Speck host connector.' : 'Managed through the provider. Endpoint commands and patching require a Speck agent.'}</p><div class="resource-action-buttons">${resource.agent ? '<button class="secondary" data-resource-agent>Open Speck agent</button>' : ''}${resource.kind === 'virt' ? '<button class="secondary" data-resource-console>Open provider console</button>' : ''}${allowed.filter(a=>!secondary(a)).map(action).join('')}</div>${allowed.some(secondary) ? '<details class="resource-more"><summary>More actions</summary><div class="resource-action-buttons">'+allowed.filter(secondary).map(action).join('')+'</div></details>' : ''}</section>`;
+      root.innerHTML = `<div class="resource-refresh"><span role="status">${busy ? 'Reading provider details…' : 'Provider details loaded'}</span><button class="text-link" data-resource-refresh ${busy ? 'disabled' : ''}>Refresh details</button></div>${errors.length ? '<p class="resource-notice">'+esc(errors.join(' '))+'</p>' : ''}${infrastructureStory(resource, detail, siblings, actions+(detail && ['linode','proxmox'].includes(resource.provider) ? '<section class="resource-performance"></section>' : ''))}${!busy && (resource.provider==='linode'||resource.kind==='protected') ? '<div data-provider-explorer></div>' : ''}${detail ? technicalDetail(detail) : ''}`;
+      const explorer=root.querySelector<HTMLElement>('[data-provider-explorer]');
+      if(explorer)mountProviderExplorer({...ui,openResource:resourceDetail},resource,explorer);
+      root.querySelectorAll<HTMLElement>('[data-host-detail]').forEach(b=>b.onclick=()=>{
+        const kind=b.dataset.hostDetail!,row=detail![kind][Number(b.dataset.hostIndex)];
+        const title=kind==='storage'?row.storage:kind==='network'?row.iface:row.type || 'Provider task';
+        const facts=kind==='storage'?[['Type',row.type],['Used',bytes(row.used)],['Capacity',bytes(row.total)],['Content',row.content],['Shared',row.shared==null?null:row.shared===1],['Enabled',row.enabled==null?null:row.enabled===1],['Active',row.active==null?null:row.active===1]]:kind==='network'?[['Interface',row.iface],['Type',row.type],['Address',row.cidr || row.address],['Gateway',row.gateway],['Bridge ports',row.bridge_ports],['VLAN aware',row.bridge_vlan_aware],['Autostart',row.autostart==null?null:row.autostart===1],['Active',row.active==null?null:row.active===1]]:[['Operation',row.type],['Resource ID',row.id],['User',row.user],['Result',row.status || 'Running'],['Started',detailDate(row.starttime)],['Finished',detailDate(row.endtime)],['Task ID',row.upid]];
+        const p=ui.flyout(title,detailHero('Proxmox · '+kind.replaceAll('_',' '),null,resource.node || resource.name)+detailFacts(facts as [string,any][])+technicalDetail(row),{tone:'compute',subtitle:resource.connection_name});
+        const back=document.createElement('button');back.className='text-link';back.textContent='← Back to host';back.onclick=()=>void resourceDetail(resource);p.querySelector('.resource-body')!.prepend(back);
+      });
+      const performanceRoot=root.querySelector<HTMLElement>('.resource-performance');
+      if(performanceRoot) mountPerformance(ui,resource,performanceRoot);
+      root.querySelector('[data-resource-refresh]')?.addEventListener('click',()=>void load(true));
+      root.querySelector('[data-resource-agent]')?.addEventListener('click',()=> { root.closest('dialog')?.close(); void ui.openDevice(resource.agent.id); });
+      root.querySelector('[data-resource-console]')?.addEventListener('click',()=>void openProviderConsole(ui,resource));
+      root.querySelectorAll<HTMLElement>('[data-related-resource]').forEach(b=>b.onclick=()=>void resourceDetail(guests[Number(b.dataset.relatedResource)]));
+      root.querySelectorAll<HTMLElement>('[data-infra-action]').forEach(b=>b.onclick=()=> {
+        const id = b.dataset.infraAction!;
+        void operationForm({id:resource.connection_id,name:resource.connection_name,provider:resource.provider},id,catalog[id],resource);
+      });
+    }
+    async function load(fresh = false) {
+      const current = ++version;
+      busy = true; errors = []; paint();
+      const read = fresh ? ui.freshApi : api;
+      const results = await Promise.allSettled([read(path),read(catalogPath)]);
+      if (!root.isConnected || current !== version) return;
+      if (results[0].status === 'fulfilled') {
+        detail = results[0].value;
+        resource = {...initial,...detail!.resource};
+      } else errors.push('Provider details could not be refreshed. Inventory information remains visible.');
+      if (results[1].status === 'fulfilled') catalog = results[1].value;
+      else errors.push('Management actions are unavailable.');
+      busy = false; paint();
+    }
+    await load();
   }
   function input(f: Item): string {
     if (f.options)
@@ -557,5 +592,13 @@ export function createInfrastructure(ui: Item) {
       }
     };
   }
-  return { render, resourceDetail, machinePanel };
+  registerResource('connection',async ref=>{[inventory,agents]=await Promise.all([api('/infrastructure/inventory'),api('/infrastructure/connectors')]);const c=inventory.connections.find((c:Item)=>c.id===ref.id);if(!c)throw new Error('Connection is no longer configured');connectionDetail(c);});
+  registerResource('infrastructure-operation',async ref=>{const rows=await api('/infrastructure/operations');const r=rows.find((r:Item)=>r.id===ref.id);if(!r)throw new Error('Operation is not in recent history');operationDetail(r);});
+  registerResource("infrastructure", async ref => {
+    const result = await api("/infrastructure/inventory");
+    const resource = (result.resources || result.connections?.flatMap((c:Item)=>c.resources || []) || []).find((r:Item)=>String(r.id)===ref.id && r.connection_id===ref.connection && r.kind===ref.resourceKind);
+    if (!resource) throw new Error("Resource is not in the current provider inventory. Refresh Infrastructure to inspect collection health.");
+    await resourceDetail(resource,ref.tab || "overview");
+  });
+  return { render, resourceDetail, machinePanel, resourcePanel, reset: () => { inventory = {connections:[]}; agents = []; } };
 }

@@ -1,9 +1,25 @@
+import { resourceHref } from "./resource-navigation";
+import {mountBackupCoverage} from "./backup-coverage";
+import {createRecoveryInspection,recoveryReadiness} from "./recovery-inspection";
+import { createCommandPalette } from "./command-palette";
+import { listWorkspace, clearListViews } from "./list-workspace";
+import { createMachineInspection } from "./machine-inspection";
+import { mountFiles } from "./file-workbench";
+import { backupEvidence } from "./backup-evidence";
+import { detailFacts, detailSection, detailDate, technicalDetail } from "./resource-story";
+import { bindResourceNavigation, rememberResource, registerResource, restoreResource, clearResourceHistory, currentResource } from "./resource-navigation";
+import { createRunDetails } from "./run-detail";
+import {mountProviderExplorer} from "./provider-explorer";
 import { columns, defaultPreferences, hasEndpoint, hasAgent, selectableMachine, machineState, agentLabel, kindLabel, cpu, memory, sortMachines } from "./fleet-model";
 import { editColumns } from "./fleet-columns";
 import { fleetToolbar, bindFleetPopovers, updateFilterChips } from "./fleet-toolbar";
 import { bindFleetHeaders, reorderedColumns } from "./fleet-headers";
 import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
 import { createInfrastructure } from "./infrastructure";
+import { createHome } from "./home";
+import { createReadCache, readPolicy } from "./read-cache";
+import { createFlyout } from "./flyout";
+import { slideStory, slideName, slideKinds, detailStatus } from "./resource-story";
 import { createNetwork } from "./network";
 import { createKeys } from "./keys";
 import { createApiAccess } from "./api-access";
@@ -38,7 +54,7 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 let csrf = "",
   username = "",
   role = "viewer",
-  page = "fleet",
+  page = "home",
   fleet: Item[] = [],
   selected = "",
   tab = "overview",
@@ -62,8 +78,8 @@ function saveFleetPreferences() {
     if (!(error instanceof StaleViewError) && username === owner && csrf === session) notify("Could not save Fleet preferences. Try again.");
   });
 }
-async function loadFleet(force = false) {
-  const [result, prefs] = await Promise.all([api("/fleet" + (force ? "?refresh=true" : "")), fleetPrefsLoaded ? Promise.resolve(null) : api("/fleet/preferences")]);
+async function loadFleet(force = false, fresh = false) {
+  const [result, prefs] = await Promise.all([api("/fleet" + (force ? "?refresh=true" : ""), "GET", undefined, undefined, true, fresh), fleetPrefsLoaded ? Promise.resolve(null) : api("/fleet/preferences")]);
   if (prefs) { fleetPrefs = { ...defaultPreferences(), ...prefs }; fleetPrefsLoaded = true; fleetCoverage = fleetPrefs.agent_filter; fleetSort = prefs.sort; showPreviews = prefs.visible.includes("preview"); }
   fleetSources = result.connections;
   fleet = result.machines;
@@ -91,6 +107,12 @@ function editFleetColumns() {
 let activeDevicePanel: HTMLDialogElement | null = null;
 let fleetScroll = { x: 0, y: 0, table: 0 };
 function clearFleetState() {
+  clearResourceHistory(); clearListViews();
+  readCache.clear();
+  pageReads.clear();
+  document.querySelectorAll<HTMLDialogElement>('dialog').forEach(d => { d.close(); d.remove(); });
+  network.reset(); infrastructure.reset();
+  reachMap = null;
   fleetInteractionsCleanup();
   activeDevicePanel?.close();
   activeDevicePanel?.remove();
@@ -155,8 +177,47 @@ const badge = (s: string, good = false) => {
   return `<span class="badge ${tone}">${esc(s)}</span>`;
 };
 
-async function api(path: string, method = "GET", body?: any, signal?: AbortSignal, scoped = true): Promise<any> {
+const readCache = createReadCache((path, signal) => requestApi(path, "GET", undefined, signal));
+let pageReads = new Map<string, number>();
+function freshness() {
+  const el = document.getElementById("page-freshness");
+  if (!el) return;
+  const states = [...pageReads].map(([path, used]) => ({...readCache.state(path), used})).filter(s => s.at);
+  if (!states.length) { el.innerHTML = ""; return; }
+  const failed = states.some(s => s.failed), expired = states.some(s => s.expired), pending = states.some(s => s.pending), changed = states.some(s => s.revision! > s.used);
+  const seconds = Math.max(0, Math.floor((Date.now() - Math.min(...states.map(s => s.at!))) / 1000));
+  const age = seconds < 5 ? "just now" : seconds < 60 ? `${seconds}s ago` : `${Math.floor(seconds / 60)}m ago`;
+  el.dataset.state = failed ? "failed" : pending ? "updating" : "ready";
+  el.innerHTML = `${failed ? 'Saved data · refresh failed' : pending ? 'Saved data · updating in background' : expired ? 'Saved data · refresh needed' : changed ? 'Updated data is ready' : 'Loaded '+age}${failed || expired || changed ? ' <button class="text-link" id="show-latest">'+(failed ? 'Retry' : expired ? 'Refresh' : 'Show latest')+'</button>' : ''}`;
+  document.getElementById("show-latest")?.addEventListener("click", () => void render(failed || expired));
+}
+readCache.subscribe(freshness);
+setInterval(freshness, 15000);
+const flyout = createFlyout(dialog);
+const freshApi = (path: string) => api(path, "GET", undefined, undefined, true, true);
+async function api(path: string, method = "GET", body?: any, signal?: AbortSignal, scoped = true, fresh = false): Promise<any> {
   const current = scoped ? viewScope.checkpoint() : () => {};
+  const reads = pageReads;
+  if (fresh && /^\/dns\/domains\/[^/]+\/records$/.test(path)) readCache.invalidate(path+"?cached=true");
+  if (method === "GET" && /^\/keys\/[^/?]+(?:\/env)?$/.test(path) && !/^\/keys\/(services|system-targets)$/.test(path)) readCache.invalidate('/keys');
+  // Console creation/cleanup changes only an ephemeral session, not inventory.
+  const mutates = method !== "GET" && path !== "/fleet/preferences" && !/^\/(remote\/sessions\/|infrastructure\/connections\/[^/]+\/console$)/.test(path);
+  if (mutates) readCache.clear();
+  try {
+    const policy = method === "GET" && username ? readPolicy(path) : null;
+    const cached = policy !== null && !fresh ? readCache.peek(path) : undefined;
+    const result = policy !== null ? await readCache.read(path, {signal, fresh}) : await requestApi(path, method, body, signal);
+    current();
+    if (policy !== null && reads === pageReads) {
+      reads.set(path, cached?.revision ?? readCache.state(path).revision ?? 0);
+      freshness();
+    }
+    return result;
+  } catch (error) { current(); throw error; }
+  finally { if (mutates) readCache.clear(); }
+}
+async function requestApi(path: string, method = "GET", body?: any, signal?: AbortSignal): Promise<any> {
+  const owner = csrf;
   const headers: Record<string, string> = { "X-CSRF-Token": csrf };
   if (body !== undefined && !(body instanceof FormData))
     headers["Content-Type"] = "application/json";
@@ -170,9 +231,9 @@ async function api(path: string, method = "GET", body?: any, signal?: AbortSigna
         : body === undefined
           ? undefined
           : JSON.stringify(body),
-  }).catch((err) => { current(); throw err; });
+  });
   const value = await r.json().catch(() => ({}));
-  current();
+  if (owner !== csrf) throw new StaleViewError();
   if (r.status === 401 && !path.startsWith("/auth/")) {
     signedOut();
     throw new Error("Your session ended. Sign in again.");
@@ -344,8 +405,8 @@ async function desktopSignIn() {
 
 // Navigation grouped by purpose; the first group is the everyday view.
 const NAV_GROUPS: [string, [string, string, string][]][] = [
-  ["", [["fleet", "fleet", "Fleet"], ["alerts", "alerts", "Alerts"]]],
-  ["Automation", [["schedules", "calendar", "Schedules"], ["patches", "patch", "Patches"], ["software", "package", "Software & scripts"], ["assistant", "spark", "AI assistant"]]],
+  ["", [["home", "home", "Home"], ["fleet", "fleet", "Fleet"], ["alerts", "alerts", "Alerts"]]],
+  ["Automation", [["schedules", "calendar", "Schedules"], ["patches", "patch", "Patches"], ["software", "package", "Software & scripts"]]],
   ["Infrastructure", [["infrastructure", "network", "Infrastructure"], ["network", "globe", "Network & DNS"], ["slide", "slide", "Slide"], ["recovery", "recovery", "Recovery lab"]]],
   ["Administration", [["keys", "key", "Keys"], ["api", "code", "API & agents"], ["activity", "history", "Activity"], ["settings", "settings", "Settings"], ["downloads", "download", "Downloads"]]],
 ];
@@ -353,11 +414,12 @@ const NAV_GROUPS: [string, [string, string, string][]][] = [
 const STATIC_PAGES = ["assistant", "downloads", "settings", "account"];
 // Short labels for the tablet rail; phones show the first four primary pages in a tab bar.
 const RAIL_LABELS: Record<string, string> = { software: "Software", assistant: "AI", infrastructure: "Infra", network: "Network", recovery: "Recovery", api: "API" };
-const PRIMARY_PAGES = ["fleet", "alerts", "infrastructure", "keys"];
+const PRIMARY_PAGES = ["home", "fleet", "alerts", "infrastructure"];
 function shell(title: string, subtitle: string) {
   fleetInteractionsCleanup();
   document.body.dataset.role = role;
-  const allowed = ([id]: [string, string, string]) => role !== "viewer" || ["fleet", "alerts", "activity", "downloads", "settings"].includes(id);
+  document.body.dataset.workspacePage = page;
+  const allowed = ([id]: [string, string, string]) => role !== "viewer" || ["home", "fleet", "alerts", "activity", "downloads", "settings"].includes(id);
   const navButton = ([id, symbol, label]: [string, string, string]) =>
     `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol as Parameters<typeof icon>[0])}<span>${label}</span>${RAIL_LABELS[id] ? `<span class="rail-label" aria-hidden="true">${RAIL_LABELS[id]}</span>` : ""}</button>`;
   const groups = NAV_GROUPS.map(([group, items]) => {
@@ -367,7 +429,8 @@ function shell(title: string, subtitle: string) {
   const everyPage = NAV_GROUPS.flatMap(([, items]) => items).filter(allowed);
   const primary = [...everyPage.filter(([id]) => PRIMARY_PAGES.includes(id)), ...everyPage.filter(([id]) => !PRIMARY_PAGES.includes(id))].slice(0, 4);
   const inMore = !primary.some(([id]) => id === page);
-  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<img class="brand-mark" src="/assets/brand/speck-mark-lime.svg" alt="" width="28" height="28"><span class="version">0.2</span></a><nav aria-label="Main navigation">${groups}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : '<div id="page-summary" class="fleet-summary page-summary" aria-label="Summary"></div>'}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><div class="page-actions">${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div>${STATIC_PAGES.includes(page) ? "" : `<button id="refresh" class="secondary icon-button" aria-label="Refresh" title="Refresh">${icon("refresh")}</button>`}</div></header><section id="content" tabindex="-1"></section></main><nav class="tabbar" aria-label="Primary navigation">${primary.map(navButton).join("")}<button id="more-open" class="${inMore ? "active" : ""}" aria-haspopup="dialog" ${inMore ? 'aria-current="page"' : ""}>${icon("more")}<span>More</span></button></nav><dialog class="more-sheet" id="more-sheet" aria-label="All pages" tabindex="-1"><div class="more-head"><span class="brand">${wordmark(true)}</span><button class="sheet-close" id="more-close" aria-label="Close">${icon("close")}</button></div><nav aria-label="All pages">${groups}</nav><div class="more-account"><span><b>${esc(username)}</b><small>${esc(role)}</small></span><button class="secondary" data-page="account">Account & access</button><button class="secondary" id="more-logout">${icon("logout")}<span>Sign out</span></button></div></dialog>`;
+  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#home" aria-label="Speck home">${wordmark(true)}<img class="brand-mark" src="/assets/brand/speck-mark-lime.svg" alt="" width="28" height="28"><span class="version">0.2</span></a><nav aria-label="Main navigation">${groups}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : '<div id="page-summary" class="fleet-summary page-summary" aria-label="Summary"></div>'}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}<div id="page-freshness" class="page-freshness" role="status" aria-live="polite"></div></div><div class="header-actions"><button id="workspace-search" class="secondary icon-button" aria-label="Search workspace" title="Search workspace (Ctrl / ⌘ K)">${icon("search")}</button><div class="page-actions">${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div>${STATIC_PAGES.includes(page) ? "" : `<button id="refresh" class="secondary icon-button" aria-label="Refresh" title="Refresh">${icon("refresh")}</button>`}</div></header><section id="content" tabindex="-1"></section></main><nav class="tabbar" aria-label="Primary navigation">${primary.map(navButton).join("")}<button id="more-open" class="${inMore ? "active" : ""}" aria-haspopup="dialog" ${inMore ? 'aria-current="page"' : ""}>${icon("more")}<span>More</span></button></nav><dialog class="more-sheet" id="more-sheet" aria-label="All pages" tabindex="-1"><div class="more-head"><span class="brand">${wordmark(true)}</span><button class="sheet-close" id="more-close" aria-label="Close">${icon("close")}</button></div><nav aria-label="All pages">${groups}</nav><div class="more-account"><span><b>${esc(username)}</b><small>${esc(role)}</small></span><button class="secondary" data-page="account">Account & access</button><button class="secondary" id="more-logout">${icon("logout")}<span>Sign out</span></button></div></dialog>`;
+  on("workspace-search",()=>commandPalette.open());
   const sheet = document.getElementById("more-sheet") as HTMLDialogElement;
   document.getElementById("more-open")!.onclick = () => {
     sheet.showModal();
@@ -375,7 +438,7 @@ function shell(title: string, subtitle: string) {
   };
   document.getElementById("more-close")!.onclick = () => sheet.close();
   sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.close(); });
-  document.querySelectorAll<HTMLElement>("[data-page]").forEach(
+  app.querySelectorAll<HTMLElement>("nav [data-page], .more-account [data-page]").forEach(
     (el) =>
       (el.onclick = () => {
         (document.getElementById("more-sheet") as HTMLDialogElement | null)?.close();
@@ -439,6 +502,9 @@ function loading(label: string) {
   document.getElementById("content")?.setAttribute("aria-busy", "true");
 }
 async function render(manualRefresh = false) {
+  const initialInspection = JSON.stringify(currentResource());
+  if (manualRefresh) readCache.clear();
+  pageReads = new Map();
   if (page === "fleet" && document.getElementById("fleet-rows")) {
     fleetScroll = { x: scrollX, y: scrollY, table: document.querySelector(".fleet-table-wrap")!.scrollLeft };
   }
@@ -448,15 +514,17 @@ async function render(manualRefresh = false) {
     .querySelectorAll<HTMLDialogElement>("dialog")
     .forEach((d) => d.close());
   if (location.hash.startsWith("#desktop-signin/")) { await desktopSignIn(); return; }
-  page = location.hash.slice(1) || "fleet";
+  page = location.hash.slice(1) || "home";
   if (page.startsWith("remote/")) {
     const [id, query = ""] = page.slice(7).split("?");
     const mode = new URLSearchParams(query).get("mode") || "auto";
     await renderRemotePage(id, 0, mode);
     return;
   }
+  page = page.split("?")[0];
   if (
     ![
+      "home",
       "fleet",
       "alerts",
       "schedules",
@@ -476,8 +544,9 @@ async function render(manualRefresh = false) {
       "downloads",
     ].includes(page)
   )
-    page = "fleet";
+    page = "home";
   const titles: Record<string, string[]> = {
+    home: ["Home", ""],
     fleet: ["Fleet", ""],
     alerts: ["Alerts", "Health checks from every agent. Expand an alert for evidence and review actions."],
     schedules: ["Schedules", "Reviewed scans and templates that run on a schedule."],
@@ -499,6 +568,7 @@ async function render(manualRefresh = false) {
   shell(...(titles[page] as [string, string]));
   try {
     await {
+      home: home.render,
       fleet: () => renderFleet(manualRefresh),
       alerts: management.renderAlerts,
       schedules: management.renderSchedules,
@@ -517,13 +587,22 @@ async function render(manualRefresh = false) {
       settings: renderSettings,
       downloads: () => content(desktopDownloads(true)),
     }[page]!();
+    if (page === "home" && focusHomeCommand) {
+      focusHomeCommand = false;
+      document.getElementById("home-query")?.focus();
+    }
+    if (initialInspection !== "null" && initialInspection === JSON.stringify(currentResource())) await restoreResource();
     void management.updateIndicator().catch(() => {});
   } catch (err) {
     if (!(err instanceof StaleViewError) && username) content(loadError(err));
   }
 }
+const machineInspection = createMachineInspection({api,flyout,dialog,notify,showJob:(id:string)=>runDetails.job(id),openDevice,openNetwork:(d:Item)=>network.showMachine(d)});
+const recoveryInspection=createRecoveryInspection({api,flyout});
+const runDetails = createRunDetails({api, flyout, openDevice, role: () => role, notify});
+registerResource("machine", async ref => { await loadFleet(); await openDevice(ref.id, ref.tab || "overview"); });
 const ops = createOperations({
-  api,
+  api, flyout, showBatch: runDetails.batch, showJob: runDetails.job, role: () => role, newSchedule: (seed:Item) => management.newSchedule(seed),
   summary,
   esc,
   badge,
@@ -547,13 +626,20 @@ const ops = createOperations({
     }
   },
 });
-const infrastructure = createInfrastructure({api, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
+const infrastructure = createInfrastructure({api, freshApi, flyout, summary, resourceInventory: () => fleet.flatMap(m => m.resources || []), sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
   newVm: () => launchVm({ api, esc, notify, dialog, loadingState, exposeHost: (ip: string, name: string) => network.exposeHost(ip, name) })});
-const network = createNetwork({ api, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
-const keys = createKeys({ api, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
-const apiAccess = createApiAccess({ api, summary, esc, notify, dialog, content, loading, role: () => role, loadingState });
+const network = createNetwork({ api, freshApi, flyout, openMachine: async (id: string) => { if (!fleet.some(m => m.id === id)) await loadFleet(); await openDevice(id); }, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
+const keys = createKeys({ api, freshApi, flyout, openKeySystem: async (target: any) => {
+  try {
+    await loadFleet();
+    const machine = fleet.find(m => m.id === target.device_id || m.id === target.id || (target.resource && m.resources?.some((r: any) => r.connection_id === target.resource.connection_id && r.kind === target.resource.kind && String(r.id) === String(target.resource.id))));
+    if (!machine) { notify("This system is no longer in Fleet", true); return; }
+    keys.closePane(); await openDevice(machine.id);
+  } catch (error) { notify((error as Error).message, true); }
+}, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
+const apiAccess = createApiAccess({ api, flyout, summary, esc, notify, dialog, content, loading, role: () => role, loadingState });
 const management = createManagement({
-  api,
+  api, flyout, showBatch: runDetails.batch, showJob: runDetails.job,
   esc,
   badge,
   date,
@@ -569,6 +655,22 @@ const management = createManagement({
   role: () => role,
   username: () => username,
   refresh: render,
+});
+const home = createHome({
+  api, esc, content, on, date, loading, dialog,
+  checkpoint: () => viewScope.checkpoint(), role: () => role,
+  newSchedule: () => management.newSchedule(),
+  openNetwork: (machine: Item) => network.showMachine(machine),
+  openMachine: async (machine: Item | undefined) => {
+    if (!machine) return;
+    fleet = [...fleet.filter(d => d.id !== machine.id), machine];
+    await openDevice(machine.id);
+  },
+  assist: async (machine: Item, prompt: string) => {
+    await ops.assistDialog(machine);
+    const input = document.getElementById("ai-prompt") as HTMLTextAreaElement | null;
+    if (input) { input.value = prompt; input.focus(); }
+  },
 });
 async function renderFleet(manualRefresh = false) {
   if (!fleetCache) loading("Loading fleet…");
@@ -602,7 +704,7 @@ async function renderFleet(manualRefresh = false) {
         notify("Slide cleanup could not be checked. Refreshing Fleet inventory anyway.", true);
       }
     }
-    await loadFleet(hadCache || manualRefresh);
+    await loadFleet(manualRefresh);
     if (hadCache) renderFleetRows();
     else drawFleet();
   } catch (err) {
@@ -616,6 +718,8 @@ async function renderFleet(manualRefresh = false) {
   }
 }
 function drawFleet() {
+  const subset=new URLSearchParams(location.hash.split("?")[1] || "").get("coverage");
+  if(subset && ["all","endpoints","connectors","candidates","missing","conflicts"].includes(subset)){fleetCoverage=subset;fleetFilter="all";fleetPlatform="all";fleetQuery="";fleetPage=0;history.replaceState(null,"",location.hash.split("?")[0]);}
   const previousTable = document.querySelector<HTMLElement>(".fleet-table-wrap");
   if (previousTable) fleetScroll = { x: scrollX, y: scrollY, table: previousTable.scrollLeft };
   content(`${fleetToolbar(fleetPrefs, showPreviews, role === "viewer")}
@@ -755,7 +859,7 @@ function visibleFleet() {
   return sortMachines(fleet.filter(d =>
     `${d.label} ${d.hostname} ${d.client_name || ""} ${(d.clients || []).map((c: Item) => c.name).join(" ")} ${d.location || ""} ${d.provider || ""} ${(d.aliases || []).join(" ")} ${d.site || ""} ${(d.tags || []).join(" ")} ${d.platform} ${machinePresence(d).app?.title || ""} ${machinePresence(d).app?.process || ""} ${primaryAddress(d)}`.toLowerCase().includes(fleetQuery.toLowerCase()) &&
     (fleetPlatform === "all" || d.platform === fleetPlatform) &&
-    (fleetCoverage === "all" || fleetCoverage === "installed" && hasAgent(d) || fleetCoverage === "missing" && !hasAgent(d) || fleetCoverage === "conflicts" && (d.identity_issues?.length || d.client_conflict)) &&
+    (fleetCoverage === "endpoints" && selectableMachine(d) || fleetCoverage === "connectors" && hasAgent(d) && !hasEndpoint(d) || fleetCoverage === "candidates" && hasEndpoint(d) && !d.approved || fleetCoverage === "all" || fleetCoverage === "installed" && hasAgent(d) || fleetCoverage === "missing" && !hasAgent(d) || fleetCoverage === "conflicts" && (d.identity_issues?.length || d.client_conflict)) &&
     (fleetFilter === "all" || fleetFilter === "online" && ["online","running","active"].includes(machineState(d).toLowerCase()) || fleetFilter === "offline" && ["offline","stopped","off"].includes(machineState(d).toLowerCase()) || fleetFilter === "review" && (hasEndpoint(d) && !d.approved || d.identity_issues?.length || d.client_conflict))), fleetSort, fleetPrefs.direction, primaryAddress);
 }
 function renderFleetRows() {
@@ -763,7 +867,8 @@ function renderFleetRows() {
     if (!fleet.some((d) => d.id === id && selectableMachine(d))) fleetSelection.delete(id);
   });
   const summary = document.getElementById("fleet-summary");
-  if (summary) summary.innerHTML = `<span><i class="status-dot"></i><b>${fleet.filter((d) => ["online","running","active"].includes(machineState(d).toLowerCase())).length}</b> online</span><span><b>${fleet.length}</b> machines</span><span><b>${fleet.filter(hasAgent).length}</b> with Speck agent</span>`;
+  if (summary) summary.innerHTML = `<span><i class="status-dot"></i><b>${fleet.filter((d) => ["online","running","active"].includes(machineState(d).toLowerCase())).length}</b> online</span><button class="text-link" data-coverage-count="all"><b>${fleet.length}</b> machines</button><button class="text-link" data-coverage-count="endpoints"><b>${fleet.filter(selectableMachine).length}</b> approved endpoints</button><button class="text-link" data-coverage-count="connectors"><b>${fleet.filter(d=>hasAgent(d)&&!hasEndpoint(d)).length}</b> host connectors</button><button class="text-link" data-coverage-count="candidates"><b>${fleet.filter(d=>hasEndpoint(d)&&!d.approved).length}</b> unapproved copies</button>`;
+  summary?.querySelectorAll<HTMLElement>('[data-coverage-count]').forEach(b=>b.onclick=()=>{fleetCoverage=b.dataset.coverageCount!;fleetFilter='all';fleetPlatform='all';fleetQuery='';drawFleet();});
   const sourceStatus = document.getElementById("fleet-source-status");
   if (sourceStatus) sourceStatus.innerHTML = fleetSources.filter(c => c.stale).map(c => `<p class="fleet-stale">${esc(c.name)}: ${esc(c.error)} ${c.checked_at ? "Last checked " + date(c.checked_at) : ""}</p>`).join("");
   document.querySelector(".fleet-table")?.classList.toggle("with-previews", showPreviews);
@@ -851,6 +956,7 @@ function highlightActiveMachine() {
   });
 }
 async function openDevice(id: string, initialTab = "overview") {
+  rememberResource({kind:"machine",id,tab:initialTab}, () => openDevice(id,initialTab));
   if (activeDevicePanel?.open && selected === id && tab === initialTab) {
     activeDevicePanel.querySelector<HTMLButtonElement>(".close")?.focus();
     return;
@@ -863,10 +969,12 @@ async function openDevice(id: string, initialTab = "overview") {
   tab = role === "viewer" ? "overview" : initialTab;
   const panel = dialog("Machine details", `<div id="detail">${loadingState("Loading machine…")}</div>`,
     { className: "device-drawer", modal: false });
+  bindResourceNavigation(panel);
   panel.id = "machine-details";
   activeDevicePanel = panel;
   highlightActiveMachine();
   const escape = (event: KeyboardEvent) => {
+    if (tab === "terminal" && panel.querySelector(".shell-workspace")?.contains(event.target as Node)) return;
     if (event.key !== "Escape" || !panel.open || document.querySelector("dialog:modal")) return;
     event.preventDefault();
     panel.close();
@@ -876,10 +984,12 @@ async function openDevice(id: string, initialTab = "overview") {
     document.removeEventListener("keydown", escape);
     if (activeDevicePanel !== panel) return;
     activeDevicePanel = null;
+    disconnect();
     detailVersion++;
     highlightActiveMachine();
     // Return to the machine after dismissal; navigation and replacement panes
     // keep their own focus instead.
+    if (page === "home") document.getElementById("home-open-machine")?.focus({ preventScroll: true });
     if (page === "fleet") {
       document.querySelectorAll<HTMLButtonElement>("#fleet-rows .machine-name").forEach((button) => {
         if (button.dataset.device === id) button.focus({ preventScroll: true });
@@ -937,7 +1047,7 @@ function machineHealth(d: Item) {
             <div><small>Processor</small><strong>${cpu === null ? "—" : cpu.toFixed(1) + "<em>%</em>"}</strong>${cpu === null ? '<small>Not reported</small>' : `<progress aria-label="Processor utilization" max="100" value="${cpu}"></progress>`}</div>
             <div><small>Memory</small><strong>${memory === null ? "—" : memory.toFixed(0) + "<em>%</em>"}</strong>${memory === null ? '<small>Not reported</small>' : `<progress aria-label="Memory utilization" max="100" value="${memory}"></progress>`}${t.memory?.total != null ? `<small>${t.memory.used == null ? "—" : bytes(t.memory.used)} / ${bytes(t.memory.total)}</small>` : ""}</div>
           </div>
-          <section class="machine-storage"><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${x.used == null ? "—" : bytes(x.used)} / ${x.total == null ? "—" : bytes(x.total)}</span>${percent(x.usedPercent) === null ? "" : `<progress aria-label="Storage utilization ${esc(x.path)}" value="${x.usedPercent}" max="100"></progress>`}</div>`).join("") || '<small>No storage reported</small>'}</section>
+          <section class="machine-storage"><h3>Storage</h3>${(t.disks || []).map((x: Item, i: number) => `<div class="disk"><button class="text-link" data-volume="${i}">${esc(x.path)}</button><span>${x.used == null ? "—" : bytes(x.used)} / ${x.total == null ? "—" : bytes(x.total)}</span>${percent(x.usedPercent) === null ? "" : `<progress aria-label="Storage utilization ${esc(x.path)}" value="${x.usedPercent}" max="100"></progress>`}</div>`).join("") || '<small>No storage reported</small>'}</section>
           <div class="machine-foreground"><div><small>${presence.appLabel}</small><h3>${esc(presence.title)}</h3>${presence.app?.process ? `<small>${esc(presence.app.process)}</small>` : ""}${!presence.current && presence.app?.observed_at ? `<small>Last observed ${esc(date(Date.parse(presence.app.observed_at) / 1000))}</small>` : ""}</div><div class="machine-user"><small>${presence.userHeading}</small><b>${esc(presence.userLabel)}</b></div><div class="machine-desktop"><small>Interactive desktop</small><b>${esc(presence.desktop)}</b></div></div>`;
 }
 function refreshOpenMachine() {
@@ -971,9 +1081,15 @@ async function renderDevice() {
   }
 }
 function machineInventorySummary(d: Item) {
-  return `<section class="machine-inventory"><dl><div><dt>Client</dt><dd>${esc(d.client_name || "Unassigned")}${d.client_conflict ? `<small>${esc(d.clients.map((c: Item) => c.name).join(" · "))}</small>` : ""}</dd></div><div><dt>Speck agent</dt><dd>${esc(agentLabel(d))}</dd></div><div><dt>Location / host</dt><dd>${esc(d.location || d.site || "—")}</dd></div></dl>${d.identity_evidence?.length ? `<p class="muted">Joined by ${esc(d.identity_evidence.join(" · "))}</p>` : ""}${d.identity_issues?.length ? `<p class="callout">Identity needs review: ${esc(d.identity_issues.join(" · "))}</p>` : ""}${d.stale ? '<p class="callout">Provider inventory is stale. Actions check the current provider before proceeding.</p>' : ""}<div class="drawer-actions">${(d.resources || []).map((r: Item,i: number) => `<button data-machine-resource="${i}" class="secondary" ${role === "viewer" ? "disabled" : ""}>${esc(r.provider)} · ${esc(r.kind)} ${esc(r.id)}</button>`).join("")}</div></section><div id="machine-reach" class="machine-reach" aria-live="polite"></div>`;
+  return `<section class="machine-inventory"><dl><div><dt>Client</dt><dd>${esc(d.client_name || "Unassigned")}${d.client_conflict ? `<small>${esc(d.clients.map((c: Item) => c.name).join(" · "))}</small>` : ""}</dd></div><div><dt>Speck agent</dt><dd>${esc(agentLabel(d))}</dd></div><div><dt>Location / host</dt><dd>${esc(d.location || d.site || "—")}</dd></div></dl>${d.identity_evidence?.length ? `<p class="muted">Joined by ${esc(d.identity_evidence.join(" · "))}</p>` : ""}${d.identity_issues?.length ? `<p class="callout">Identity needs review: ${esc(d.identity_issues.join(" · "))}</p>` : ""}${d.stale ? '<p class="callout">Provider inventory is stale. Actions check the current provider before proceeding.</p>' : ""}<button class="text-link" data-identity-detail>Inspect identity &amp; coverage →</button><div class="drawer-actions">${(d.resources || []).map((r: Item,i: number) => `<button data-machine-resource="${i}" class="secondary" ${role === "viewer" ? "disabled" : ""}>${esc(r.provider)} · ${esc(r.kind)} ${esc(r.id)}</button>`).join("")}</div></section><div id="machine-reach" class="machine-reach" aria-live="polite"></div>`;
 }
+function inspectIdentity(d:Item){
+  rememberResource({kind:'identity',id:d.id},()=>inspectIdentity(d));
+  flyout(d.label+' · Identity',detailFacts([['Endpoint agent',hasEndpoint(d)?'Present':'Not installed'],['Approved for endpoint management',hasEndpoint(d)?!!d.approved:'Not applicable'],['Host connector',hasAgent(d)&&!hasEndpoint(d)?'Present':'Not recorded as a connector-only identity'],['Lifecycle',d.archived?'Archived':d.revoked?'Revoked':hasEndpoint(d)&&!d.approved?'Unapproved copy':'Active inventory'],['Hardware identity',d.hardware_id],['Installation identity',d.installation_id],['Source endpoint',d.endpoint_id || (hasEndpoint(d)?d.id:null)]])+detailSection('Join evidence',(d.identity_evidence || []).map((v:string)=>'<p>'+esc(v)+'</p>').join('')||'<p>No cross-provider join evidence recorded.</p>')+detailSection('Conflicts',(d.identity_issues || []).map((v:string)=>'<p class="resource-notice">'+esc(v)+'</p>').join('')+(d.client_conflict?'<p class="resource-notice">Provider records disagree on the client assignment.</p>':'')||'<p>No identity conflicts reported.</p>')+detailSection('Provider identities',(d.resources || []).map((r:Item)=>`<p><a href="${resourceHref(location.hash.slice(1),{kind:'infrastructure',id:String(r.id),connection:r.connection_id,resourceKind:r.kind,provider:r.provider})}">${esc(r.provider)} · ${esc(r.kind)} · ${esc(r.id)} →</a></p>`).join(''))+'<p class="resource-note">Matches use reported identity evidence. Approval changes are reviewed from the machine; this view does not merge identities or approve restored copies.</p>',{tone:'agents'});
+}
+registerResource('identity',async ref=>{await loadFleet();const d=fleet.find(d=>d.id===ref.id);if(!d)throw new Error('Identity is not in current inventory');inspectIdentity(d);});
 function bindProviderButtons(d: Item) {
+  document.querySelector('[data-identity-detail]')?.addEventListener('click',()=>{rememberResource({kind:'identity',id:d.id},()=>inspectIdentity(d));inspectIdentity(d);});
   document.querySelectorAll<HTMLButtonElement>("[data-machine-resource]").forEach(el => el.onclick = () => infrastructure.resourceDetail(d.resources[Number(el.dataset.machineResource)]));
 }
 // Phones show one line of identity; "Details" expands the full inventory and facts.
@@ -1000,7 +1116,16 @@ function renderProviderMachine(d: Item) {
   if (proxmox && role !== "viewer") {
     const body = document.getElementById("device-body")!;
     body.innerHTML = '<div class="pve-root"></div>';
-    infrastructure.machinePanel(proxmox, body.querySelector<HTMLElement>(".pve-root")!);
+    infrastructure.machinePanel(proxmox, body.querySelector<HTMLElement>(".pve-root")!, tab, targetTab => {
+      tab = targetTab;
+      rememberResource({kind:"machine",id:d.id,tab:targetTab}, () => openDevice(d.id,targetTab));
+      if (activeDevicePanel) bindResourceNavigation(activeDevicePanel);
+    });
+  } else if (d.resources?.length && role !== "viewer") {
+    const resource = d.resources.find((r: Item) => r.kind === "node") || d.resources[0];
+    const body = document.getElementById("device-body")!;
+    body.classList.add("provider-story");
+    void infrastructure.resourcePanel(resource, body);
   }
   bindProviderButtons(d);
   bindMachineBrief();
@@ -1022,9 +1147,10 @@ async function showReach(d: Item) {
   if (!el || selected !== d.id || !m) return;
   // Show the strip only when it adds more than the address the pane already reports.
   const reported = primaryAddress(d).split("/")[0];
-  if (!m.public.length && !m.dns.length && m.lan.every((l: Item) => l.ip === reported)) return;
+  if (!m.network_clients?.length && !m.public.length && !m.dns.length && m.lan.every((l: Item) => l.ip === reported)) return;
   const chip = (text: string, tone = "") => `<span class="net-chip ${tone}">${esc(text)}</span>`;
-  el.innerHTML = `<dl><div><dt>LAN</dt><dd>${m.lan.map((l: Item) => `<span class="mono">${esc(l.ip)}</span>`).join(" ") || "—"}</dd></div><div><dt>Public</dt><dd>${m.public.map((p: Item) => `<span class="mono">${esc(p.ip)}</span>${p.via === "unifi_nat" ? chip("NAT") : ""}`).join(" ") || "—"}</dd></div><div><dt>DNS names</dt><dd>${m.dns.slice(0, 8).map((n: Item) => chip(n.fqdn)).join("") || "—"}${m.dns.length > 8 ? `<small>+${m.dns.length - 8} more</small>` : ""}</dd></div></dl><a class="text-link" href="#network">Network &amp; DNS</a>`;
+  el.innerHTML = `<dl><div><dt>LAN</dt><dd>${m.lan.map((l: Item) => `<span class="mono">${esc(l.ip)}</span>`).join(" ") || "—"}</dd></div><div><dt>Public</dt><dd>${m.public.map((p: Item) => `<span class="mono">${esc(p.ip)}</span>${p.via === "unifi_nat" ? chip("NAT") : ""}`).join(" ") || "—"}</dd></div><div><dt>DNS names</dt><dd>${m.dns.slice(0, 8).map((n: Item) => `<a class="net-chip" href="${resourceHref(location.hash.slice(1),{kind:"dns-record",id:n.name || "@",connection:n.domain,resourceKind:n.type || "A"})}">${esc(n.fqdn)}</a>`).join("") || "—"}${m.dns.length > 8 ? `<small>+${m.dns.length - 8} more</small>` : ""}</dd></div></dl><a class="text-link" href="#network">Network &amp; DNS</a>${m.network_clients?.length ? '<div class="machine-uplinks">'+m.network_clients.map((c:Item,i:number)=>'<button data-machine-uplink="'+i+'">'+esc(c.uplink_name || 'Network equipment')+(c.port?' · Port '+esc(c.port):'')+' →</button>').join('')+'</div><small>Matched by unique MAC address · provider observations</small>':''}`;
+  el.querySelectorAll<HTMLElement>('[data-machine-uplink]').forEach(b=>b.onclick=()=>{const c=m.network_clients[Number(b.dataset.machineUplink)];void network.openEquipment(c,c.uplink_id,c.port);});
 }
 async function renderDeviceContent() {
   disconnect();
@@ -1038,8 +1164,10 @@ async function renderDeviceContent() {
         : [
             "overview",
             "services",
+            "inventory",
             "network",
             "terminal",
+            "scripts",
             "files",
             "patches",
             "remote",
@@ -1074,6 +1202,9 @@ async function renderDeviceContent() {
     (el) =>
       (el.onclick = () => {
         tab = el.dataset.tab!;
+        const targetTab = tab;
+        rememberResource({kind:"machine",id:d.id,tab:targetTab}, () => openDevice(d.id,targetTab));
+        if (activeDevicePanel) bindResourceNavigation(activeDevicePanel);
         renderDevice();
       }),
   );
@@ -1082,6 +1213,8 @@ async function renderDeviceContent() {
     on("drawer-screen", () => launchRemote(d));
     on("drawer-terminal", () => {
       tab = "terminal";
+      rememberResource({kind:"machine",id:d.id,tab}, () => openDevice(d.id,"terminal"));
+      if (activeDevicePanel) bindResourceNavigation(activeDevicePanel);
       return renderDevice();
     });
     on("drawer-ai", () => ops.assistDialog(d));
@@ -1099,12 +1232,18 @@ async function renderDeviceContent() {
       </div>
       <div class="mini-grid machine-system"><div><small>Hostname</small>${esc(d.hostname || "Not reported")}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion || "Not reported")}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
 
+    body.addEventListener("click", event => {
+      const volume = (event.target as Element).closest<HTMLButtonElement>("[data-volume]");
+      if (volume) { const current = fleet.find(item => item.id === d.id) || d; const disk = current.telemetry?.disks?.[Number(volume.dataset.volume)]; if (disk) machineInspection.volume(current, disk); }
+    });
     management.devicePanel(d, body);
     if (canPreview) await ops.previewPanel(d, body.querySelector<HTMLElement>("#machine-preview")!);
   } else if (tab === "patches") {
     await ops.devicePatches(d, body);
+  } else if (tab === "inventory") {
+    await machineInspection.inventory(d,body);
   } else if (tab === "services") {
-    body.innerHTML = `<div class="toolbar"><input id="service-search" aria-label="Filter services" placeholder="Filter services…"><small>${(t.services || []).length} services</small></div><div class="scroll"><table><thead><tr><th>Service</th><th>State</th><th>Control</th></tr></thead><tbody id="services"></tbody></table></div>`;
+    body.innerHTML = `<div class="toolbar"><input id="service-search" aria-label="Filter services" placeholder="Filter services…"><small>${(t.services || []).length} services</small></div><div class="scroll"><table><thead><tr><th>Service</th><th>State / startup</th><th>Control</th></tr></thead><tbody id="services"></tbody></table></div>`;
     const rows = () => {
       document.getElementById("services")!.innerHTML = (t.services || [])
         .filter((s: Item) =>
@@ -1114,18 +1253,16 @@ async function renderDeviceContent() {
         )
         .map(
           (s: Item, i: number) =>
-            `<tr><td><b>${esc(s.name)}</b><small>${esc(s.display_name || s.description)}</small></td><td>${badge(s.state || s.status || "unknown", ["running", "active"].includes(s.state || s.status))}</td><td><select data-service="${esc(s.name)}" aria-label="Control ${esc(s.name)}"><option value="">Action…</option><option>start</option><option>stop</option><option>restart</option></select></td></tr>`,
+            `<tr><td><button class="text-link" data-service-detail="${esc(s.name)}">${esc(s.name)}</button><small>${esc(s.display_name || s.description)}</small></td><td>${badge(s.state || s.status || "unknown", ["running", "active"].includes(s.state || s.status))}<small>${esc(s.start_type || s.detail || "Startup not reported")}</small></td><td><select data-service="${esc(s.name)}" aria-label="Control ${esc(s.name)}"><option value="">Action…</option><option>start</option><option>stop</option><option>restart</option></select></td></tr>`,
         )
         .join("");
+      document.querySelectorAll<HTMLButtonElement>('[data-service-detail]').forEach(b=>b.onclick=()=>machineInspection.service(d,(t.services || []).find((s:Item)=>s.name===b.dataset.serviceDetail)));
       document.querySelectorAll<HTMLSelectElement>("[data-service]").forEach(
         (el) =>
           (el.onchange = async () => {
             if (!el.value) return;
             try {
-              await queue("service.control", {
-                name: el.dataset.service,
-                action: el.value,
-              });
+              await machineInspection.serviceControl(d,el.dataset.service!,el.value);
             } catch (err) {
               notify((err as Error).message, true);
             }
@@ -1137,7 +1274,8 @@ async function renderDeviceContent() {
     document.getElementById("service-search")!.addEventListener("input", rows);
   } else if (tab === "network") {
     const n = t.network || {};
-    body.innerHTML = `<div class="toolbar probe-toolbar"><select id="probe-kind" aria-label="Network test"><option value="ping">Ping</option><option value="dns">DNS lookup</option><option value="tcp">TCP connect</option><option value="trace">Trace route</option></select><input id="probe-target" aria-label="Host or IP" placeholder="Host or IP"><input id="probe-port" aria-label="Port" type="number" value="443" style="width:85px"><button id="probe" class="primary">Test</button></div><div id="job-result"></div>${(n.interfaces || []).map((x: Item) => `<div class="nic"><b>${esc(x.name)}</b><span>${esc((x.addrs || []).map((a: Item) => a.address).join(" · "))}</span><small>MAC ${esc(x.mac || "—")} · MTU ${esc(x.mtu)} · ${esc((x.flags || []).join(", "))}</small></div>`).join("")}<details><summary>Routes and DNS</summary><pre>${pretty({ routes: n.routes, dns: n.dns || n.dns_servers, resolver: n.resolver_details })}</pre></details><details><summary>Traffic counters</summary><pre>${pretty(n.counters)}</pre></details><details open><summary>Connections ${n.connections_truncated ? "(first 350)" : ""}</summary><div class="scroll"><table><thead><tr><th>Process</th><th>Local → Remote</th><th>State</th></tr></thead><tbody>${(n.connections || []).map((c: Item) => `<tr><td>${esc(c.process)}<small>PID ${c.pid}</small></td><td class="mono">${esc(c.local?.ip)}:${c.local?.port}<small>→ ${esc(c.remote?.ip)}:${c.remote?.port}</small></td><td>${esc(c.status || (c.type === 2 ? "UDP" : ""))}</td></tr>`).join("")}</tbody></table></div></details>`;
+    body.innerHTML = `<div class="toolbar probe-toolbar"><select id="probe-kind" aria-label="Network test"><option value="ping">Ping</option><option value="dns">DNS lookup</option><option value="tcp">TCP connect</option><option value="trace">Trace route</option></select><input id="probe-target" aria-label="Host or IP" placeholder="Host or IP"><input id="probe-port" aria-label="Port" type="number" value="443" style="width:85px"><button id="probe" class="primary">Test</button></div><div id="job-result"></div>`;
+    machineInspection.network(d,body);
     on("probe", async () =>
       showJob(
         await queue("network.check", {
@@ -1148,6 +1286,16 @@ async function renderDeviceContent() {
       ),
     );
   } else if (tab === "terminal") {
+    if (!d.remote_shell_available) {
+      body.innerHTML=`<section class="terminal-intro"><span class="resource-eyebrow">Interactive terminal</span><h2>${d.platform==='windows'?'PowerShell':'Shell'}</h2><p>Update the Speck agent on this machine to enable a persistent interactive session with command history, completion and Ctrl+C.</p><p class="muted">${d.platform==='windows'?'Windows 10 / Server 2019 or newer is required for the pseudoconsole.':'Linux uses a native PTY through the agent.'}</p><button class="secondary" id="open-scripts">Open script runner</button></section>`;
+      on('open-scripts',()=>{tab='scripts';void renderDevice();});
+    } else {
+      const panel=activeDevicePanel,deviceID=d.id;
+      const {openWebShell}=await import('./web-shell');
+      if(!body.isConnected||panel!==activeDevicePanel||selected!==deviceID||tab!=='terminal')return;
+      remoteCleanup=openWebShell(body,{id:d.id,label:d.label,platform:d.platform,embedded:true},csrf,signedOut);
+    }
+  } else if (tab === "scripts") {
     body.innerHTML = `<p>Run as ${d.platform === "windows" ? "Local System using PowerShell" : "the agent service account using /bin/sh"}. Output is captured and audited.</p><textarea id="script" aria-label="Command" class="code" spellcheck="false" rows="7" placeholder="${d.platform === "windows" ? "Get-Service | Select-Object -First 10" : "systemctl --failed"}"></textarea><div class="toolbar"><select id="shell" aria-label="Command shell"><option value="auto">${d.platform === "windows" ? "PowerShell" : "Shell (/bin/sh)"}</option>${d.platform === "linux" ? '<option value="powershell">PowerShell (pwsh required)</option>' : ""}</select><button id="execute" class="primary">Run command →</button></div><div id="job-result"></div>`;
     on("execute", async () =>
       showJob(
@@ -1174,32 +1322,7 @@ async function renderDeviceContent() {
       }),
     );
   } else if (tab === "files") {
-    body.innerHTML = `<p>Transfers are verified with SHA-256. Maximum file size: 256 MiB.</p><div class="toolbar"><input id="file-path" aria-label="Full file path" placeholder="Full path on this device" value="${d.platform === "windows" ? "C:\\ProgramData" : "/tmp"}"><button id="browse" class="secondary">List</button><button id="download" class="primary">Download</button></div><div class="toolbar"><input id="file-upload" aria-label="Choose file to upload" type="file"><button id="upload" class="secondary">Upload to path</button></div><small>Upload path includes the filename. Existing files are preserved.</small><div id="job-result"></div><div id="transfers">${loadingState("Loading transfers…")}</div>`;
-    on("browse", async () =>
-      showJob(await queue("files.list", { path: value("file-path") })),
-    );
-    on("download", async () => {
-      const r = await api(`/devices/${d.id}/files/download`, "POST", {
-        path: value("file-path"),
-      });
-      await showJob(r.job_id);
-      await transfers(d.id);
-    });
-    on("upload", async () => {
-      const f = (document.getElementById("file-upload") as HTMLInputElement)
-        .files?.[0];
-      if (!f) throw new Error("Choose a file first");
-      const form = new FormData();
-      form.append("file", f);
-      const r = await api(
-        `/devices/${d.id}/files/upload?path=${encodeURIComponent(value("file-path"))}`,
-        "POST",
-        form,
-      );
-      await showJob(r.job_id);
-      await transfers(d.id);
-    });
-    await transfers(d.id);
+    mountFiles({api,flyout,dialog,showJob:runDetails.job},d,body);
   } else if (tab === "remote") {
     body.innerHTML = `<div class="remote-intro"><h2>Remote access</h2><p>${d.remote_protocol === "shell" ? "Open an interactive web shell through the agent. No SSH setup is needed." : d.remote_protocol === "ssh" ? "Open an SSH terminal through the agent." : d.remote_protocol === "vnc" ? "Open a VNC desktop through the agent." : "Open an RDP desktop through the agent, with speaker output and microphone input."}</p><div class="toolbar"><button id="connect" class="primary">Open browser session</button><button id="remote-config" class="secondary">Connection settings</button>${d.remote_shell_available && d.remote_protocol !== "shell" ? `<a class="secondary" href="#remote/${d.id}?mode=shell">Open web shell</a>` : ""}</div>${d.remote_protocol === "rdp" ? `<a class="text-link" href="/api/devices/${d.id}/remote/native.rdp">Download native RDP fallback ↗</a><small>The native viewer needs a LAN or VPN route to this machine.</small>` : ""}<div class="callout">RDP creates or reconnects a desktop session. Windows client editions may lock the local console. Linux needs an RDP or VNC desktop service; headless Linux machines open a web shell with an updated agent.</div></div>`;
     on("remote-config", () => configureRemote(d));
@@ -1325,7 +1448,7 @@ async function renderRemotePage(id: string, attempt = 0, mode = "auto") {
     await loadFleet();
     const d = fleet.find((d) => d.id === id);
     if (!d) throw new Error("Machine not found");
-    if (!d.remote_configured)
+    if (!d.remote_configured && !(mode === "shell" && d.remote_shell_available))
       throw new Error(
         "Configure the machine’s Remote connection in Fleet first.",
       );
@@ -1333,7 +1456,7 @@ async function renderRemotePage(id: string, attempt = 0, mode = "auto") {
       const current = viewScope.checkpoint();
       const { openWebShell } = await import("./web-shell");
       current();
-      remoteCleanup = openWebShell(app, { id: d.id, label: d.label, configured_remote_protocol: d.configured_remote_protocol }, csrf, signedOut);
+      remoteCleanup = openWebShell(app, { id: d.id, label: d.label, platform: d.platform, configured_remote_protocol: d.configured_remote_protocol }, csrf, signedOut);
     } else {
       await connectRemote({ ...d, remote_protocol: d.configured_remote_protocol || d.remote_protocol }, attempt);
     }
@@ -1816,52 +1939,93 @@ function slideFacts(r: Item) {
   if (when) facts.push((r.last_seen_at ? "seen " : "") + date(when));
   return facts.slice(0, 3);
 }
+let slideResource = "agent";
+async function openSlideResource(resource: string, row: Item) {
+  rememberResource({kind:"slide",id:String(row[resource.split("/").at(-1)!+"_id"] || row.id),resourceKind:resource},()=>openSlideResource(resource,row));
+  const pane = flyout(slideName(row), `<div class="slide-detail">${slideStory(resource,row)}</div>${resource === 'agent' ? '<section class="resource-actions"><h3>Backup operations</h3><p class="resource-note">Request a new backup through the connected Slide account.</p><button class="secondary" data-slide-backup>Request backup</button></section>' : ''}`, {tone:"protection",subtitle:"Slide · "+(slideKinds[resource] || 'Resource')});
+  const bindRelated = () => pane.querySelectorAll<HTMLButtonElement>('[data-slide-related]').forEach(button => button.onclick = async () => {
+    button.disabled = true;
+    try {
+      const kind = button.dataset.slideRelated!;
+      const rows = await api('/slide/inventory?resource='+encodeURIComponent(kind));
+      if (!pane.open || !pane.isConnected) return;
+      const match = rows.find((r: Item) => String(r[kind+'_id'] || r.id) === button.dataset.resourceId);
+      if (match) await openSlideResource(kind,match);
+      else notify('This related resource is not present in the current Slide inventory.');
+    } catch (error) { if (pane.open) notify((error as Error).message,true); }
+    finally { button.disabled = false; }
+  });
+  bindRelated();
+  if(resource==='agent'){
+    const history=document.createElement('div');pane.querySelector('.resource-body')!.append(history);
+    mountProviderExplorer({api,freshApi,flyout,notify,openResource:(r:Item)=>infrastructure.resourceDetail(r),onEvidence:(sections:Item,checked:number)=>{
+      const evidence=backupEvidence(sections,row),target=pane.querySelector('[data-protection-summary]');
+      if(!pane.open||!target)return;
+      target.innerHTML=detailSection('Protection evidence',detailFacts([['Latest recorded recovery point',detailDate(evidence.latestPoint)],['Evidence source',evidence.source],['Latest successful backup job',detailDate(evidence.successful)],['Latest provider-verified point',detailDate(evidence.verified)],['Coverage',evidence.state],['Failed jobs in loaded history',evidence.failed],['History checked',detailDate(checked)],['Agent last seen',detailDate(row.last_seen_at)],['Backup agent version',row.agent_version]]))+'<p class="resource-note">Provider snapshot verification does not prove application recovery. '+(evidence.complete?'Showing all returned history.':'Summary uses the loaded history; more records are available below.')+'</p>';
+    }}, {provider:'slide' ,kind:'protected',connection_id:'slide-settings',connection_name:'Slide (Settings)',id:row.agent_id,name:slideName(row)},history);
+  }
+  const backup = pane.querySelector<HTMLButtonElement>('[data-slide-backup]');
+  if (backup) backup.onclick = async () => {
+    backup.disabled = true;
+    try {
+      const result = await api('/slide/backups','POST',{agent_id:row.agent_id});
+      if (pane.open) { backup.textContent = 'Backup requested'; notify('Backup requested: '+result.backup_id); }
+    } catch (error) { if (pane.open) notify((error as Error).message,true); backup.disabled=false; }
+  };
+  if (resource === 'device') {
+    const target = pane.querySelector<HTMLElement>('[data-slide-protected]')!;
+    try {
+      const agents = await api('/slide/inventory?resource=agent');
+      if (!pane.open || !target.isConnected) return;
+      const protectedSystems = agents.filter((a: Item) => a.device_id === row.device_id);
+      target.innerHTML = protectedSystems.length ? `<div class="resource-related">${protectedSystems.map((a: Item)=>`<button type="button" data-slide-related="agent" data-resource-id="${esc(a.agent_id)}"><span><b>${esc(slideName(a))}</b><small>${esc([a.os || a.platform,a.os_version].filter(Boolean).join(' '))}</small></span><span aria-hidden="true">→</span></button>`).join('')}</div>` : '<p class="resource-note">No protected systems in the returned inventory refer to this appliance.</p>';
+      bindRelated();
+    } catch {
+      if (pane.open && target.isConnected) target.innerHTML = '<p class="resource-notice">Protected-system inventory is unavailable. Appliance details remain visible.</p>';
+    }
+  }
+}
+registerResource('slide',async ref=>{
+  const kind=ref.resourceKind || 'agent', rows=await api('/slide/inventory?resource='+encodeURIComponent(kind));
+  const row=rows.find((r:Item)=>String(r[kind.split('/').at(-1)!+'_id'] || r.id)===ref.id);
+  if(!row)throw new Error('This Slide resource is not in the current inventory. Historical recovery evidence remains available in Recovery lab.');
+  await openSlideResource(kind,row);
+});
 async function renderSlide() {
   loading("Loading Slide…");
   const cfg = await api("/slide/connection");
   if (!cfg.connected) {
-    content(
-      '<div class="empty"><h2>Connect your Slide account.</h2><p>Add an API token in Settings to see live backup and recovery data.</p><a class="primary" href="#settings">Open settings →</a></div>',
-    );
+    content('<div class="empty"><h2>Connect your Slide account.</h2><p>Add an API token in Settings to see live backup and recovery data.</p><a class="primary" href="#settings">Open settings →</a></div>');
     return;
   }
-  content(
-    `<div class="section-head"><div><h2>Slide inventory</h2><p>${esc(cfg.url)}</p></div><select id="slide-resource" aria-label="Slide resource type"><option value="agent">Protected systems</option><option value="device">Slide appliances</option><option value="snapshot">Snapshots + verification</option><option value="backup">Backup jobs</option><option value="network">Recovery networks</option><option value="restore/virt">Restored virtual machines</option><option value="restore/file">File restores</option><option value="restore/image">Image exports</option></select></div><article id="restore-cleanup" class="panel"></article><div id="slide-data"></div>`,
-  );
-  await renderRestoreCleanup();
+  content(`<div class="section-head"><div><h2>Backup & recovery inventory</h2><p>Explore protection, capacity and recovery evidence.</p></div><select id="slide-resource" aria-label="Slide resource type">${Object.entries(slideKinds).map(([key,label])=>'<option value="'+key+'" '+(slideResource===key?'selected':'')+'>'+esc(label)+'</option>').join('')}</select></div><div id="backup-coverage"></div><label class="slide-search">Find a resource<input id="slide-search" type="search" placeholder="Name, address or resource ID"></label><div id="slide-data"></div><details class="resource-section"><summary>Restored-machine cleanup</summary><article id="restore-cleanup" class="panel"></article></details>`);
+  let generation = 0;
   const load = async () => {
-    const resource = value("slide-resource");
-    const rows = await api(
-      "/slide/inventory?resource=" + encodeURIComponent(resource),
-    );
-    document.getElementById("slide-data")!.innerHTML =
-      rows
-        .map(
-          (r: Item, i: number) =>
-            `<details class="slide-row"><summary><b>${esc(r.display_name || r.name || r.hostname || r.agent_id || r.backup_id || r.snapshot_id || r.virt_id || "Resource")}</b><span class="slide-facts">${esc(slideFacts(r).join(" · "))}</span>${r.status || r.state || r.verify_boot_status || r.service_status ? badge(r.status || r.state || r.verify_boot_status || r.service_status) : "<span></span>"}</summary><pre>${pretty(r)}</pre>${resource === "agent" ? `<button data-backup="${esc(r.agent_id)}" class="primary">Request backup</button>` : ""}</details>`,
-        )
-        .join("") ||
-      '<div class="empty"><h3>No resources returned.</h3><p>This is the live response from the connected Slide account.</p></div>';
-    document.querySelectorAll<HTMLElement>("[data-backup]").forEach(
-      (el) =>
-        (el.onclick = async () => {
-          try {
-            const r = await api("/slide/backups", "POST", {
-              agent_id: el.dataset.backup,
-            });
-            notify("Backup requested: " + r.backup_id);
-          } catch (e) {
-            notify((e as Error).message, true);
-          }
-        }),
-    );
+    const current = ++generation;
+    slideResource = value('slide-resource');
+    const resource = slideResource, target = document.getElementById('slide-data')!;
+    target.innerHTML = loadingState('Loading '+(slideKinds[resource] || 'inventory').toLowerCase()+'…');
+    const rows = await api('/slide/inventory?resource='+encodeURIComponent(resource));
+    if (!target.isConnected || current !== generation) return;
+    const coverage=document.getElementById("backup-coverage")!;
+    if(resource==="agent") mountBackupCoverage({api,flyout},coverage,rows,openSlideResource);else coverage.innerHTML="";
+    let limit = 100;
+    const search = document.getElementById('slide-search') as HTMLInputElement;
+    const draw = () => {
+      const query = search.value.trim().toLowerCase();
+      const filtered = rows.filter((r: Item) => !query || JSON.stringify(r).toLowerCase().includes(query));
+      target.innerHTML = filtered.length ? `<p class="resource-note">${filtered.length} resources · Select one to explore its details and relationships.</p><div class="slide-list">${filtered.slice(0,limit).map((r: Item,i: number)=>`<button class="slide-resource-row" data-slide-detail="${i}" aria-haspopup="dialog"><span><b>${esc(slideName(r))}</b><small>${esc(slideFacts(r).join(' · ') || slideKinds[resource])}</small></span>${detailStatus(r.status || r.state || r.verify_boot_status || r.verify_fs_status || r.service_status)}<span aria-hidden="true">→</span></button>`).join('')}</div>${filtered.length>limit ? '<button class="secondary" id="slide-more">Show '+Math.min(100,filtered.length-limit)+' more</button>' : ''}` : '<div class="empty"><h3>No matching resources.</h3><p>Try another search or resource type.</p></div>';
+      target.querySelectorAll<HTMLElement>('[data-slide-detail]').forEach(b=>b.onclick=()=>void openSlideResource(resource,filtered[Number(b.dataset.slideDetail)]));
+      target.querySelector('#slide-more')?.addEventListener('click',()=>{limit+=100;draw();});
+    };
+    search.oninput = () => {limit=100;draw();};
+    draw();
   };
-  document
-    .getElementById("slide-resource")!
-    .addEventListener("change", () =>
-      load().catch((e) => notify(e.message, true)),
-    );
-  await load();
+  document.getElementById('slide-resource')!.addEventListener('change',()=>void load().catch(e=>notify(e.message,true)));
+  await Promise.all([load(),renderRestoreCleanup().catch(error=> {
+    const target=document.getElementById('restore-cleanup');
+    if (target) target.innerHTML='<p class="resource-notice">Cleanup status unavailable. '+esc((error as Error).message)+'</p>';
+  })]);
 }
 function recoveryEvidence(run: Item) {
   const rows = (run.state.members || [])
@@ -1877,7 +2041,7 @@ function recoveryEvidence(run: Item) {
             proof.passed,
           )
         : "Pending";
-      return `<tr><td><b>${esc(source?.label || member.source_device_id)}</b></td><td>${badge(member.backup_status || "Pending", member.backup_status === "succeeded")}</td><td>${esc(restored?.label || (member.virt_id ? "Created · awaiting check" : "Pending"))}</td><td>${result}</td></tr>`;
+      return `<tr><td><b>${esc(source?.label || member.source_device_id)}</b></td><td>${badge(member.backup_status || "Pending", member.backup_status === "succeeded")}</td><td>${esc(restored?.label || (proof?.passed ? "Historically verified · current inventory unavailable" : member.virt_id ? "Created · awaiting check" : "Pending"))}</td><td>${result}</td></tr>`;
     })
     .join("");
   return `<div class="table-wrap"><table><thead><tr><th>System</th><th>Backup</th><th>Restored instance</th><th>Application check</th></tr></thead><tbody>${rows}</tbody></table></div><details><summary>Detailed evidence</summary><pre>${pretty({ state: run.state, report: run.report })}</pre></details>`;
@@ -1887,12 +2051,14 @@ async function renderRecovery() {
   const [plans, runs, devices] = await Promise.all([
     api("/recovery/plans"),
     api("/recovery/runs"),
-    api("/devices"),
+    api("/devices?include_archived=true"),
   ]);
   fleet = devices;
   content(
-    `<button id="new-plan" class="primary" data-page-action>${icon("plus")}<span>New recovery plan</span></button><div class="section-head"><div><h2>Your recovery plans</h2><p>Each run creates a shared, isolated network for its restored machines.</p></div></div><div class="plan-grid">${plans.map((p: Item) => `<article class="plan"><span class="eyebrow">RECOVERY PLAN</span><h2>${esc(p.name)}</h2><p>${p.spec.members.length} systems · ${esc(p.spec.router_prefix)}</p><button data-run="${p.id}" class="primary">Run recovery test →</button><details><summary>View plan</summary><pre>${pretty(p.spec)}</pre></details></article>`).join("") || '<div class="empty"><h3>No recovery plans</h3><p>Link devices to their Slide agent IDs, then define application checks.</p></div>'}</div><div class="section-head"><h2>Runs & evidence</h2></div>${runs.map((r: Item) => `<details class="provider" ${r.status === "stopped" ? "" : "open"}><summary><b>${esc(r.state.name)}</b>${badge(r.status, r.status === "passed")}<small>${date(r.created)}</small></summary><div class="run-phase">${esc(r.phase.replaceAll("_", " "))}</div>${r.state.error ? `<div class="callout">${esc(r.state.error)}</div>` : ""}${recoveryEvidence(r)}<div class="toolbar">${r.status === "awaiting_clones" ? `<button data-verify="${r.id}" class="primary">Verify restored machines</button>` : ""}${r.status !== "running" && r.status !== "stopped" ? `<button data-stop="${r.id}" class="secondary">Stop restored VMs</button>` : ""}</div></details>`).join("")}`,
+    `<button id="new-plan" class="primary" data-page-action>${icon("plus")}<span>New recovery plan</span></button><div class="section-head"><div><h2>Your recovery plans</h2><p>Each run creates a shared, isolated network for its restored machines.</p></div></div><div class="plan-grid">${plans.map((p: Item) => `<article class="plan"><span class="eyebrow">RECOVERY PLAN</span><h2>${esc(p.name)}</h2><p>${p.spec.members.length} systems · ${esc(p.spec.router_prefix)}</p><button data-run="${p.id}" class="primary">Run recovery test →</button><button class="secondary" data-plan-detail="${p.id}">Readiness &amp; proof</button><p class="resource-note">${recoveryReadiness(p,runs,devices).ready} / ${p.spec.members.length} approved sources reporting · ${recoveryReadiness(p,runs,devices).verified?"Historical proof available":"No verified run"}</p></article>`).join("") || '<div class="empty"><h3>No recovery plans</h3><p>Link devices to their Slide agent IDs, then define application checks.</p></div>'}</div><div class="section-head"><h2>Runs & evidence</h2></div>${runs.map((r: Item) => `<details class="provider" ${r.status === "stopped" ? "" : "open"}><summary><b>${esc(r.state.name)}</b>${badge(r.status, r.status === "passed")}<small>${date(r.created)}</small></summary><div class="run-phase">${esc(r.phase.replaceAll("_", " "))}</div>${r.state.error ? `<div class="callout">${esc(r.state.error)}</div>` : ""}<button class="secondary" data-run-detail="${r.id}">Inspect timeline &amp; evidence</button><div class="toolbar">${r.status === "awaiting_clones" ? `<button data-verify="${r.id}" class="primary">Verify restored machines</button>` : ""}${r.status !== "running" && r.status !== "stopped" ? `<button data-stop="${r.id}" class="secondary">Stop restored VMs</button>` : ""}</div></details>`).join("")}`,
   );
+  document.querySelectorAll<HTMLElement>("[data-plan-detail]").forEach(b=>b.onclick=()=>void recoveryInspection.openPlan(b.dataset.planDetail!));
+  document.querySelectorAll<HTMLElement>("[data-run-detail]").forEach(b=>b.onclick=()=>void recoveryInspection.openRun(b.dataset.runDetail!));
   on("new-plan", newPlan);
   document.querySelectorAll<HTMLElement>("[data-run]").forEach(
     (el) =>
@@ -2035,16 +2201,17 @@ async function renderJobs() {
   content(
     `<div class="scroll"><table class="jobs-table"><thead><tr><th>Job</th><th>Machine</th><th>Status</th><th>By</th><th>When</th></tr></thead><tbody>${jobs.map((j: Item) => {
       const device = devices.find((d: Item) => d.id === j.device_id);
-      return `<tr><td><details><summary>${esc(j.kind)}</summary><pre>${pretty(j.result)}</pre></details></td><td>${device ? esc(device.label) : '<span class="placeholder">Removed machine</span>'}</td><td>${badge(j.status, j.status === "complete")}</td><td>${j.actor ? esc(j.actor) : '<span class="placeholder">—</span>'}</td><td>${date(j.created)}</td></tr>`;
+      return `<tr><td><button class="text-link" data-job-detail="${esc(j.id)}">${esc(j.kind)} →</button></td><td>${device ? esc(device.label) : '<span class="placeholder">Removed machine</span>'}</td><td>${badge(j.status, j.status === "complete")}</td><td>${j.actor ? esc(j.actor) : '<span class="placeholder">—</span>'}</td><td>${date(j.created)}</td></tr>`;
     }).join("") || '<tr><td colspan="5" class="placeholder">No jobs yet.</td></tr>'}</tbody></table></div><p class="muted jobs-note">The complete audit trail is in <a class="text-link" href="#activity">Activity</a>.</p>`,
   );
+  document.querySelectorAll<HTMLButtonElement>("[data-job-detail]").forEach(b => b.onclick = () => void runDetails.job(b.dataset.jobDetail!));
 }
 async function renderSettings() {
   loading("Loading settings…");
   if (role === "viewer") return management.renderAccount();
   const c = await api("/slide/connection");
   content(
-    `<div class="settings-grid"><article class="panel"><span class="eyebrow">SLIDE INTEGRATION</span><h2>Slide connection</h2><p>${c.connected ? "A Slide account is connected. Enter a new token to replace it." : "Add an account-scoped Slide API token."}</p><label>API origin<input id="slide-url" value="${esc(c.url || "https://api.slide.tech")}"></label><label>API token<input id="slide-token" type="password" autocomplete="new-password"></label><button id="save-slide" class="primary">Verify & connect</button></article><article class="panel"><span class="eyebrow">DEVICE ENROLLMENT</span><h2>Windows and Linux agents</h2><p>Install Speck as a Windows service or a Linux systemd service. Devices connect outbound over HTTPS.</p><button id="enrollment" class="secondary">Add a device</button></article></div>`,
+    `<div class="settings-grid"><article class="panel"><span class="eyebrow">SLIDE INTEGRATION</span><h2>Slide connection</h2><a class="text-link" href="${resourceHref("settings",{kind:"connection",id:"slide-settings"})}">Inspect integration health &amp; resources →</a><p>${c.connected ? "A Slide account is connected. Enter a new token to replace it." : "Add an account-scoped Slide API token."}</p><label>API origin<input id="slide-url" value="${esc(c.url || "https://api.slide.tech")}"></label><label>API token<input id="slide-token" type="password" autocomplete="new-password"></label><button id="save-slide" class="primary">Verify & connect</button></article><article class="panel"><span class="eyebrow">DEVICE ENROLLMENT</span><h2>Windows and Linux agents</h2><p>Install Speck as a Windows service or a Linux systemd service. Devices connect outbound over HTTPS.</p><button id="enrollment" class="secondary">Add a device</button></article></div>`,
   );
   on("save-slide", async () => {
     await api("/slide/connection", "PUT", {
@@ -2061,8 +2228,14 @@ async function renderSettings() {
       .querySelector(".settings-grid")!
       .insertAdjacentHTML(
         "beforeend",
-        `<article class="panel"><span class="eyebrow">AGENT UPDATES</span><h2>Automatic updates</h2><p>Keep Windows and Linux agents current with verified, signed releases. Updates wait for commands and remote sessions to finish.</p><label class="check"><input id="agent-updates-enabled" type="checkbox" ${updates.enabled ? "checked" : ""}> Automatically update agents</label><p>${updates.version ? `Published agent: <strong>${esc(updates.version)}</strong>` : "No agent release published yet."}</p><p>Agents reconnect after a brief service restart. If the new agent cannot reconnect, Speck attempts to restore the previous version.</p><button id="save-agent-updates" class="secondary">Save update policy</button><p>${(updates.devices || []).filter((d: Item) => d.status === "installing").length} updating · ${(updates.devices || []).filter((d: Item) => ["failed", "rollback_failed"].includes(d.status)).length} need attention</p></article>`,
+        `<article class="panel"><span class="eyebrow">AGENT UPDATES</span><h2>Automatic updates</h2><p>Keep Windows and Linux agents current with verified, signed releases. Updates wait for commands and remote sessions to finish.</p><label class="check"><input id="agent-updates-enabled" type="checkbox" ${updates.enabled ? "checked" : ""}> Automatically update agents</label><p>${updates.version ? `Published agent: <strong>${esc(updates.version)}</strong>` : "No agent release published yet."}</p><p>Agents reconnect after a brief service restart. If the new agent cannot reconnect, Speck attempts to restore the previous version.</p><button id="save-agent-updates" class="secondary">Save update policy</button><button id="inspect-agent-rollout" class="text-link">Inspect device rollout →</button><p>${(updates.devices || []).filter((d: Item) => d.status === "installing").length} updating · ${(updates.devices || []).filter((d: Item) => ["failed", "rollback_failed"].includes(d.status)).length} need attention</p></article>`,
       );
+    on('inspect-agent-rollout',()=>{
+      const rows=updates.rollout || updates.devices || [];
+      const pane=flyout('Agent rollout','<p class="resource-note">A signed release and approval are required. Recovery candidates remain excluded until separately approved. These are observed states; no update is started by opening this view.</p><div class="resource-related">'+rows.map((r:Item,i:number)=>`<button data-rollout-device="${i}"><span><b>${esc(r.label)}</b><small>${esc(r.platform || '')} · installed ${esc(r.installed || 'Not reported')} → ${esc(r.target || updates.version || 'No release')}</small></span><span>${esc(r.reason || r.status)} →</span></button>`).join('')+'</div>',{tone:'agents'});
+      const root=pane.querySelector<HTMLElement>('.resource-body')!;listWorkspace(root,'[data-rollout-device]','agent rollout');
+      root.querySelectorAll<HTMLButtonElement>('[data-rollout-device]').forEach(b=>b.onclick=()=>{const r=rows[Number(b.dataset.rolloutDevice)];const detail=flyout(r.label,detailFacts([['Platform',[r.platform,r.arch].filter(Boolean).join(' · ')],['Installed',r.installed],['Published target',r.target || updates.version],['Eligibility / pending reason',r.reason || r.status],['Last agent report',detailDate(r.last_seen)],['Attempted',detailDate(r.attempt?.attempted)],['Latest outcome',r.attempt?.status],['Last outcome update',detailDate(r.attempt?.updated)]])+technicalDetail(r.reported_update || r.attempt)+'<button class="secondary" data-rollout-machine>Open machine</button>',{tone:'agents'});detail.querySelector('[data-rollout-machine]')!.addEventListener('click',()=>void openDevice(r.device_id));});
+    });
     on("save-agent-updates", async () => {
       await api("/agent-updates", "PUT", {
         enabled: (
@@ -2088,9 +2261,19 @@ async function renderSettings() {
   }
 }
 startResponsive();
+let focusHomeCommand = false;
+const commandPalette=createCommandPalette({api,dialog,role:()=>role,navigation:()=>NAV_GROUPS.flatMap(([,items])=>items).map(([id,,title])=>({id,title})).filter((n:Item)=>role!=='viewer'||['home','fleet','alerts','activity','downloads','account'].includes(n.id)),plan:(prompt:string)=>home.plan(prompt)});
+window.addEventListener("keydown", event=>{
+  if(!(event.key.toLowerCase()==='k'&&(event.metaKey||event.ctrlKey))||!username||page.startsWith('remote/')||document.querySelector('dialog:modal'))return;
+  event.preventDefault();commandPalette.open();
+});
 window.addEventListener("hashchange", () => {
-  if (username) render();
-  else signedOut();
+  if (username) {
+    const next = (location.hash.slice(1) || "home").split("?")[0];
+    if(next===page&&next==="fleet"&&new URLSearchParams(location.hash.split("?")[1]||"").has("coverage")) drawFleet();
+    else if (next === page && !next.startsWith("remote/")) void restoreResource().catch(error => notify(error.message,true));
+    else void render();
+  } else { clearResourceHistory(); signedOut(); }
 });
 setInterval(async () => {
   if (
@@ -2108,7 +2291,7 @@ setInterval(async () => {
     return;
   polling = true;
   try {
-    await loadFleet();
+    await loadFleet(false, true);
     if (document.getElementById("fleet-rows")) renderFleetRows();
     refreshOpenMachine();
   } catch {

@@ -53,7 +53,7 @@ class Preferences(BaseModel):
     sort: str = "name"
     direction: str = "asc"
     highlight_agents: bool = False
-    agent_filter: Literal["all", "installed", "missing", "conflicts"] = "all"
+    agent_filter: Literal["all", "installed", "missing", "conflicts", "endpoints", "connectors", "candidates"] = "all"
 
     @model_validator(mode="after")
     def validate_columns(self):

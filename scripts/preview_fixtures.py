@@ -5,6 +5,7 @@ domains only; nothing here reaches a real provider.
 """
 
 import re
+import math
 
 GB = 1024**3
 
@@ -139,11 +140,32 @@ def provider_fixture(route, query, now):
     ]
     operations = [
         {"id": "op1", "created": now - 900, "actor": "demo", "operation": "reboot", "target": "build-runner", "connection_id": "c1",
-         "status": "complete", "result": "UPID:pve-2:0000:reboot"},
+         "resource_id":"201","kind":"qemu","status": "complete", "result": "UPID:pve-2:0000:reboot"},
         {"id": "op2", "created": now - 5400, "actor": "demo", "operation": "snapshot", "target": "clinic-portal", "connection_id": "c1",
          "status": "complete", "result": {"snapshot": "before-update"}},
     ]
 
+    for i, client in enumerate(clients):
+        client.update(state="online" if i < 3 else "last_seen", last_seen=now-30 if i<3 else now-day*3, observation_available=True,
+                      network_name="Office LAN" if i<2 else "Guest Wi-Fi", uplink_name="Office switch" if i<2 else "Lobby access point",
+                      port=i+4 if i<2 else None, vendor="Example devices", experience=98 if i<2 else 54,
+                      signal_dbm=-72 if i>=2 else None, ssid="Office Guest" if i>=2 else None, channel=36,
+                      link_mbps=1000 if i<2 else None, received_bytes=145000000*(i+1),sent_bytes=32000000,
+                      receive_rate=34000*(i+1),send_rate=19000, is_managed_gateway=True, console_id="console-1",site_id="site-1",uplink_id="switch-1" if i<2 else "ap-1")
+    site_rows = [{"id":"site-"+str(i),"console_id":"console-"+str(i),"name":name,"site_name":"default","state":"disconnected" if i==3 else "connected",
+                  "model":"UniFi Dream Machine Pro", "version":"5.1", "timezone":"America/New_York", "ip":"203.0.113."+str(i),
+                  "location":{"latitude":lat,"longitude":lon,"label":city,"source":"UniFi console location"} if lat else None,
+                  "is_managed_gateway":i==1,"counts":{"wiredClient":12*i,"wifiClient":8*i,"totalDevice":6*i,"offlineDevice":2 if i==3 else 0,"pendingUpdateDevice":1},
+                  "percentages":{"wanUptime":99.98 if i!=3 else 91.4,"txRetry":2.3},"isp":"Example Fiber",
+                  "wans":[{"name":"WAN","ip":"203.0.113."+str(i),"up":i!=3,"uptime":99.98,"isp":"Example Fiber","issues":0}]}
+                 for i,(name,lat,lon,city) in enumerate([("Main office",40.71,-74.00,"New York, NY"),("Warehouse",41.31,-72.93,"New Haven, CT"),("Research studio",42.36,-71.06,"Boston, MA"),("Remote lab",None,None,"Location unavailable")],1)]
+    if route == "/api/unifi/sites":
+        return {"sites":site_rows,"checked_at":now}
+    if re.fullmatch(r"/api/unifi/sites/[^/]+/[^/]+/clients",route):
+        return {"clients":[{**c,"is_managed_gateway":route.split('/')[4]=='console-1',"console_id":route.split('/')[4],"site_id":route.split('/')[5]} for c in clients],"checked_at":now}
+    if route.endswith('/metrics') and route.startswith('/api/infrastructure/connections/'):
+        return {"provider":"linode","timeframe":"day","checked_at":now,"note":"Synthetic provider readings. Guest memory requires a Speck agent.",
+                "series":[{"key":key,"label":label,"unit":unit,"points":[[now-86400+n*900,None if n in (30,31) else round(scale*(.35+.15*math.sin(n/4)+.2*math.sin(n/13)),2)] for n in range(97)]} for key,label,unit,scale in [("cpu","CPU utilization","%",80),("netin","IPv4 received","bit/s",3200000),("netout","IPv4 sent","bit/s",1700000),("disk","Disk I/O","blocks/s",2400)]]}
     if route == "/api/dns/status":
         return {"configured": True, "domains": len(domains), "zones_cached": 5, "oldest_zone_at": now - day * 2, "domains_fetched_at": now - 7200, "scan": {"running": False}}
     if route == "/api/dns/domains":
@@ -164,9 +186,13 @@ def provider_fixture(route, query, now):
     if route == "/api/network/map":
         return {"machines": machines, "ips": ips, "clients_checked": True, "client_error": None, "zones_cached": 5, "checked_at": now}
     if route == "/api/keys":
-        return entries
+        return [e | {"system_count": 1 if i < 3 else 0} for i, e in enumerate(entries)]
     if route == "/api/keys/services":
         return services
+    if route.endswith("/details") and any(route.startswith(prefix) for prefix in ("/api/keys/", "/api/ssh/keys/", "/api/context/files/")):
+        return {"events": [{"at": now - 300, "actor": "demo", "action": "vault.reveal"}, {"at": now - day, "actor": "demo", "action": "vault.updated"}], "last_access": {"at": now - 300, "actor": "demo"}, "systems": [{"label": "clinic-portal", "target_id": "proxmox:c1:qemu:101", "source": "Recorded by administrator", "created": now-day, "created_by": "demo", "note": "Application credential", "target": {"id": "proxmox:c1:qemu:101", "label": "clinic-portal", "resource": {"connection_id": "c1", "kind": "qemu", "id": "101"}}}]}
+    if route == "/api/keys/system-targets":
+        return [{"id": "proxmox:c1:qemu:101", "label": "clinic-portal", "description": "Proxmox · Main office"}]
     if route.startswith("/api/keys/"):
         name = route.rsplit("/", 1)[-1]
         entry = next((e for e in entries if e["name"] == name), None)

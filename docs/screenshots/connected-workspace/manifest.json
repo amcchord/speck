@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-27",
+  "source": "web/test/ui/home.spec.mjs, Chromium, actual built console, synthetic fixtures only",
+  "images": [
+    {
+      "file": "home-1440.png",
+      "width": 1440,
+      "height": 1645,
+      "viewport_width": 1440,
+      "sha256": "5f70f6babc6d16b60e575c0977d2e30fda09a4222a0bbefc3a896d013df6d2a5"
+    },
+    {
+      "file": "home-834.png",
+      "width": 834,
+      "height": 2127,
+      "viewport_width": 834,
+      "sha256": "789f26301ac2a94ca98d6b1e1ddfcbd99891254ac1c0936bb5caff43bc066111"
+    },
+    {
+      "file": "home-390.png",
+      "width": 390,
+      "height": 3099,
+      "viewport_width": 390,
+      "sha256": "76581d5750a7e97bd0871947b49c2cdce45deb2479bc10a8154f604218549bc2"
+    },
+    {
+      "file": "home-320.png",
+      "width": 320,
+      "height": 3281,
+      "viewport_width": 320,
+      "sha256": "faa8829d656fab888daf05fb24128b10a879beed1a04a1967cb2bb4a27b32a08"
+    }
+  ]
+}

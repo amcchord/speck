@@ -1,5 +1,11 @@
 # Speck screenshots
 
+**[Resource flyouts](resource-details/README.md)**: cloud and backup details,
+readable capacity and protection, and related resources on desktop, tablet and phone.
+
+**[Connected workspace](connected-workspace/README.md)**: the new Home command bar,
+UniFi / Proxmox / Speck relationships, automation entry points and expanded palette.
+
 **[Alerts and AI](alerts-ai/README.md)**: compact triage, understandable outcomes and reviewed diagnosis/repair drafts.
 
 **[Machine overview](machine-overview/README.md)**: compact machine facts, a 16:9 preview and health information above the fold.
@@ -116,3 +122,5 @@ The [capture manifest](manifest.json) records dimensions, SHA-256 digests and pr
 operational evidence and before screenshots stay in ignored `output/`.
 
 [Saved desktop previews](previews/README.md) show the last saved timestamp and desktop recovery guidance on desktop and mobile.
+
+[Infrastructure, LAN clients and interactive terminals](observability/README.md)

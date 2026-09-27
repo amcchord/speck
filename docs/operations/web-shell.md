@@ -112,3 +112,11 @@ Unicode typing and toggling that option. Exact served hashes, healthy service,
 unchanged credentials/identities/provider settings and all five successful agent
 updates were verified. Private evidence: `output/agent-updates/`. Source commits
 remain on local `codex/headless-webshell`; no shared Git history was pushed.
+
+## September 27 terminal expansion
+
+Agent 0.3.2 adds an interactive Windows PowerShell ConPTY session alongside the
+existing Linux PTY. Fleet embeds both in the Terminal tab; the batch editor is
+now in Scripts. Saved Windows RDP remains the screen-control default. See
+[observability and terminal qualification](observability.md) for platform limits,
+transport checks and release evidence.

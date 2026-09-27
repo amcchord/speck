@@ -303,3 +303,25 @@ nav button { min-height: 36px; padding: 7px 12px; }
 #integration-token-list > .text-link { margin-top: 10px; }
 .operators-table td { vertical-align: middle; }
 .jobs-note { font-size: 12px; margin: 12px 0 0; }
+
+/* Color identifies a work area; status retains its own label and meaning. */
+body[data-role] > #app > aside { background: var(--slate); }
+body[data-role] aside > nav { scrollbar-color: #5e7084 var(--slate); }
+body[data-role] nav [data-page="home"] > .icon,
+body[data-role] nav [data-page="assistant"] > .icon,
+body[data-role] nav [data-page="schedules"] > .icon,
+body[data-role] nav [data-page="software"] > .icon { color: #c7b7ed; }
+body[data-role] nav [data-page="network"] > .icon { color: #94bdf0; }
+body[data-role] nav [data-page="infrastructure"] > .icon { color: #e7b68f; }
+body[data-role] nav [data-page="fleet"] > .icon { color: #b5d6ae; }
+body[data-role] .tabbar, body[data-role] .more-sheet[open] { background: var(--slate); }
+body[data-role] nav button.active { background: #354353; color: #f0f4f8; }
+body[data-role] aside nav button:hover, body[data-role] .more-sheet nav button:hover { background: #304051; }
+body[data-role] .more-sheet nav button { background: #293746; }
+body[data-role] aside .nav-label, body[data-role] .more-sheet .nav-label { color: #a7b5c5; }
+body[data-workspace-page="home"] .workspace > header { margin-bottom: 12px; }
+body[data-workspace-page="home"] .workspace > header h1 { font-size: 20px; letter-spacing: -.5px; }
+body[data-workspace-page="network"] .infra-tabs [aria-selected="true"] { color: var(--blue); border-color: var(--blue); }
+body[data-workspace-page="infrastructure"] .infra-tabs [aria-selected="true"] { color: var(--copper); border-color: var(--copper); }
+body[data-workspace-page="schedules"] .schedule-card > .section-head .eyebrow,
+body[data-workspace-page="software"] .template-kind { color: var(--violet); }

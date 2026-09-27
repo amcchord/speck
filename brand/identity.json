@@ -7,13 +7,21 @@
     "forest": "#192e24",
     "fern": "#385d44",
     "lime": "#dcecab",
-    "paper": "#f4f5f0",
+    "paper": "#f5f6f8",
     "white": "#ffffff",
-    "ink": "#24382c",
-    "muted": "#5e6f61",
-    "line": "#dce3d8",
+    "ink": "#26313b",
+    "muted": "#626d79",
+    "line": "#dfe3e8",
     "success": "#35613f",
     "warning": "#795916",
-    "danger": "#993e32"
+    "danger": "#993e32",
+    "slate": "#202b38",
+    "blue": "#245d9f",
+    "blue-soft": "#edf4ff",
+    "copper": "#92512b",
+    "copper-soft": "#fcf1e8",
+    "violet": "#6750a4",
+    "violet-soft": "#f3effc",
+    "agent-soft": "#edf4ed"
   }
 }

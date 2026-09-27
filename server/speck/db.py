@@ -68,11 +68,13 @@ def initialize():
         CREATE TABLE IF NOT EXISTS preview_snapshots(device_id TEXT PRIMARY KEY REFERENCES devices(id),
           captured_at REAL NOT NULL,saved_at REAL NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,jpeg TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS templates(id TEXT PRIMARY KEY,name TEXT NOT NULL,platform TEXT NOT NULL,category TEXT NOT NULL,spec TEXT NOT NULL,revision INTEGER NOT NULL,updated REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS template_revisions(template_id TEXT NOT NULL,revision INTEGER NOT NULL,spec TEXT NOT NULL,created REAL NOT NULL,actor TEXT NOT NULL,PRIMARY KEY(template_id,revision));
         CREATE TABLE IF NOT EXISTS batches(id TEXT PRIMARY KEY,request_id TEXT UNIQUE NOT NULL,fingerprint TEXT NOT NULL,name TEXT NOT NULL,kind TEXT NOT NULL,actor TEXT NOT NULL,created REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS batch_jobs(batch_id TEXT NOT NULL REFERENCES batches(id),job_id TEXT UNIQUE NOT NULL REFERENCES jobs(id),device_id TEXT NOT NULL REFERENCES devices(id));
         CREATE TABLE IF NOT EXISTS patch_reports(device_id TEXT PRIMARY KEY REFERENCES devices(id),job_id TEXT NOT NULL,scanned REAL NOT NULL,report TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS ai_requests(id TEXT PRIMARY KEY,actor TEXT NOT NULL,created REAL NOT NULL);
         ''')
+        conn.execute("INSERT OR IGNORE INTO template_revisions SELECT id,revision,spec,updated,'Existing revision at history collection start' FROM templates")
         from speck.proxmox_connector import migrate as migrate_connectors
         migrate_connectors(conn)
         from speck.infrastructure import migrate as migrate_infrastructure
@@ -89,8 +91,8 @@ def initialize():
         migrate_integrations(conn)
         from speck.passkeys import migrate as migrate_passkeys
         migrate_passkeys(conn)
-        from speck import api_tokens, contexts, dns, ssh_keys, unifi, vault
-        for module in (api_tokens, vault, dns, unifi, ssh_keys, contexts):
+        from speck import api_tokens, contexts, dns, ssh_keys, unifi, vault, network_equipment, inspection, network_history
+        for module in (api_tokens, vault, dns, unifi, ssh_keys, contexts, network_equipment, inspection, network_history):
             module.migrate(conn)
         if not conn.execute('SELECT 1 FROM users LIMIT 1').fetchone():
             password = os.environ.get('SPECK_BOOTSTRAP_PASSWORD', '')

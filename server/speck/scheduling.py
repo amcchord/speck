@@ -7,7 +7,7 @@ import json
 import logging
 import time
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 
 from speck.config import seal, unseal
@@ -153,6 +153,52 @@ def schedules(user=Depends(require_user)):
 class State(BaseModel):
     enabled: bool
     next_run: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+
+
+@router.get('/{schedule_id}/history')
+def execution_history(schedule_id:str,before:float|None=Query(default=None,gt=0,allow_inf_nan=False),user=Depends(require_user)):
+    with db() as conn:
+        if not conn.execute('SELECT 1 FROM schedules WHERE id=?',(schedule_id,)).fetchone():
+            raise HTTPException(404,'Schedule not found')
+        rows=[dict(r) for r in conn.execute('SELECT * FROM schedule_runs WHERE schedule_id=? AND due<? ORDER BY due DESC LIMIT 101',(schedule_id,before or time.time()+1))]
+        for run in rows[:100]:
+            if run['batch_id']:
+                states={r[0] for r in conn.execute('SELECT j.status FROM batch_jobs bj JOIN jobs j ON j.id=bj.job_id WHERE batch_id=?',(run['batch_id'],))}
+                if states=={'complete'}:
+                    run['status']='complete'
+                elif states&{'queued','leased','running'}:
+                    run['status']='running' if states&{'leased','running'} else 'queued'
+                elif states:
+                    run['status']='unknown' if 'unknown' in states else 'failed'
+    return {'items':rows[:100],'next_cursor':rows[99]['due'] if len(rows)>100 else None}
+
+
+class ScheduleEdit(Schedule):
+    revision: int = Field(ge=1)
+
+
+@router.put("/{schedule_id}")
+def edit(schedule_id: str, body: ScheduleEdit, user=Depends(require_user)):
+    if not body.confirmed:
+        raise HTTPException(422, "Review and confirm this schedule")
+    with db(write=True) as conn:
+        row = conn.execute("SELECT * FROM schedules WHERE id=?", (schedule_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Schedule not found")
+        if user["role"] != "admin" and row["owner_id"] != user["user_id"]:
+            raise HTTPException(403, "Only its owner or an administrator can change this schedule")
+        if row["revision"] != body.revision:
+            raise HTTPException(409, "Schedule changed while you were reviewing it. Reopen and review the latest version.")
+        validate_schedule(conn, body)
+        conn.execute(
+            "UPDATE schedules SET name=?,spec=?,interval_seconds=?,next_run=?,updated=?,enabled=1,revision=revision+1,owner_id=? WHERE id=?",
+            (body.operation.name, seal(body.operation.model_dump_json()), body.interval_seconds,
+             body.first_run, time.time(), user["user_id"], schedule_id),
+        )
+        audit(conn, user["username"], "schedule.updated", detail={"schedule_id": schedule_id,
+              "revision": body.revision + 1, "device_ids": body.operation.device_ids,
+              "first_run": body.first_run, "interval_seconds": body.interval_seconds})
+    return {"id": schedule_id, "revision": body.revision + 1}
 
 
 @router.patch("/{schedule_id}")

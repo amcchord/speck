@@ -1097,3 +1097,68 @@ Next: merge `claude/ui-audit-mobile` to main. Optional: add Chromium phone captu
 Android sizing checks, and consider a phone-specific remote-control toolbar review with a
 live endpoint.
 
+## 2026-09-27 — Connected Home production release
+
+The user authorized publication of `db61a96` on `codex/connected-workspace`.
+Released `20260927T133224Z-connected-workspace-db61a96` after fetching main and
+confirming ancestry, preserving the previously deployed mobile release, verifying
+all 41 live backend Python files, and checking sole deployment ownership. The
+shared release lock covered a fresh baseline comparison, static backup and atomic
+index swap. Old hashed assets remain available to existing browser sessions.
+
+TypeScript/Vite, 41 web units and the full Chromium/WebKit suite passed (243 browser
+checks and one existing CDP touch skip). All 26 public static files match the
+release manifest. Backend PID, dependencies, environment and seven identity /
+configuration fingerprints remained unchanged; no service restart was required.
+
+Authenticated production acceptance passed in Chromium at 1440 pixels and WebKit
+at 834/390 pixels. Home loaded all sources and displayed real UniFi, Proxmox and
+Speck relationships. Search, machine/host details, exact-ID network drill-down,
+Fleet deep links, the command shortcut, Linux AI review handoff and schedule
+editor worked. No overflow, script errors, HTTP errors or operational writes were
+observed. AI requests and schedules were not submitted; test sessions were signed
+out. Real screenshots and evidence remain private in ignored
+`output/connected-workspace-release/`.
+
+Rollback web tree: `/var/lib/speck-rollback/20260927T133224Z-connected-workspace-db61a96/web`.
+No backend, native client, agent, provider or recovery changes. Existing platform
+qualification limits remain. Source and release records are local; no push or
+merge occurred. Future deployments must preserve `db61a96` until it reaches main.
+See [operations record](../operations/connected-workspace.md).
+
+## 2026-09-27 — Resource flyouts and faster return visits
+
+The user authorized improving non-system details and deploying the changes.
+Runtime `8a7e266` standardizes resource inspection on a shared flyout with
+semantic color, capacity, protection, relationships and collapsed technical
+fields. It adds bounded memory caching, shared pending reads, background refresh,
+freshness status, mutation invalidation and session isolation. Slide history is
+searchable with bounded rendering; Fleet host details are populated.
+
+TypeScript/Vite, 51 unit tests and 261 browser checks passed, with one existing
+WebKit CDP touch skip. Earlier failures exposed Safari focus and a live Fleet
+polling interaction, which were corrected. The first full release run passed 260
+checks and failed one WebKit phone-filter test because it sampled visibility
+before responsive enhancement; explicitly waiting for that control fixed the
+test race, and the complete rerun passed. No hosted CI run was requested.
+
+Published `20260927T151514Z-resource-details-8a7e266` after fetching main,
+confirming ancestry and preserving deployed Home source. Sole active deployment
+ownership, a shared release lock, matching baseline, rollback copy and an atomic
+index swap guarded publication. All 26 served files match. Backend PID 72151,
+41 source files, dependencies, environment and seven configuration/identity
+fingerprints remained intact through acceptance.
+
+Live Chromium desktop and WebKit tablet/phone acceptance passed: cloud and host
+details, Slide protection and appliance relationships, bounded snapshot history,
+public IPs, LAN clients, UniFi consoles and DNS records. No browser/HTTP errors,
+overflow or operational writes occurred. The isolated login sessions were signed
+out. One paired before/after measurement recorded return visits of 1293 → 19 ms
+(Infrastructure), 179 → 5 ms (Slide) and 789 → 34 ms (Network). These observations
+do not guarantee uncached provider latency.
+
+Rollback: `/var/lib/speck-rollback/20260927T151514Z-resource-details-8a7e266/web`.
+Private evidence and live captures: `output/resource-details-release/`.
+No restart, native/agent update, provider mutation, recovery operation, GitHub
+push or merge. Preserve `8a7e266` until merged. See
+[behavior and release](../operations/resource-details.md).

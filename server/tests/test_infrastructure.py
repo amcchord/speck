@@ -100,6 +100,8 @@ def test_cluster_identity_fresh_node_resolution_and_deduplication(client, upstre
     assert response.json()["status"] == "submitted", response.text
     assert calls[-1][0] == b and calls[-1][2] == "/nodes/host-b/qemu/101/status/start"
     assert "must-not-leak" not in response.text
+    receipt = next(r for r in client.get('/api/infrastructure/operations').json() if r['id'] == rid)
+    assert receipt['connection_id'] == b and receipt['resource_id'] == '101' and receipt['kind'] == 'qemu'
     rows[-1]["node"] = "host-a"
     repeated = action(client, b, request_id=rid)
     assert repeated.json() == response.json()

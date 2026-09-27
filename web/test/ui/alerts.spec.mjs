@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -63,18 +63,21 @@ for (const width of [1440, 834, 390, 320]) {
       await page.screenshot({ path: path.join(folder, `${info.project.name}-alerts-${width}.png`), fullPage: true });
     }
     await page.locator('#alert-details-0').click();
-    await expect(page.locator('#alert-details-0')).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('#alert-evidence-0')).toContainText('The operation may have run');
-    await expect(page.locator('#alert-job-0')).toContainText('<script>do not execute</script>');
-    await expect(page.locator('#alert-job-0 script')).toHaveCount(0);
-    await page.locator('#ack-0').click();
+    const flyout=page.locator('dialog.resource-flyout');
+    await expect(flyout).toBeVisible();
+    await expect(flyout).toContainText('The operation may have run');
+    await expect(flyout).toContainText('<script>do not execute</script>');
+    await expect(flyout.locator('script')).toHaveCount(0);
+    await flyout.getByRole('button',{name:'Acknowledge',exact:true}).click();
     await expect(page.locator('.alert-state').first()).toHaveText('Acknowledged');
     await page.locator('#alert-details-0').click();
-    await page.locator('#resolve-0').click();
+    await page.locator('dialog.resource-flyout').getByRole('button',{name:'Mark reviewed',exact:true}).click();
     await expect(page.locator('.alert-item')).toHaveCount(4);
     // Phones fold filters behind one button; the panel stays open while filters re-render the list.
     const filters = page.locator('.m-filter-toggle');
-    if (await filters.isVisible()) {
+    if (width <= 760) {
+      // Responsive enhancement runs on the next frame; wait for the stable phone UI.
+      await expect(filters).toBeVisible();
       await expect(page.locator('#alert-state')).toBeHidden();
       await filters.click();
     }

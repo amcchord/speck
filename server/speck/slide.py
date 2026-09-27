@@ -134,6 +134,34 @@ async def backup(body: BackupRequest, user=Depends(require_user)):
     return await Slide().request('POST', 'backup', body.model_dump())
 
 
+@router.get('/api/slide/coverage')
+async def coverage(user=Depends(require_user)):
+    """A bounded overview, never a claim that omitted provider history is empty."""
+    slide=Slide()
+    async def recent(resource):
+        rows, offset = [], 0
+        try:
+            # Slide accepts at most 50 records per request. Keep this overview
+            # bounded to two pages; deeper per-agent history has its own cursor.
+            for _ in range(2):
+                page = await slide.request('GET', resource, params={'limit': 50, 'offset': offset})
+                records = page.get('data')
+                if not isinstance(records, list) or any(not isinstance(row, dict) for row in records):
+                    raise ValueError('Invalid history page')
+                rows.extend(safe_provider(records[:50]))
+                cursor = (page.get('pagination') or {}).get('next_offset')
+                if cursor is None:
+                    return {'rows': rows, 'partial': False, 'observed_at': time.time()}
+                if type(cursor) is not int or cursor <= offset:
+                    raise ValueError('Invalid history cursor')
+                offset = cursor
+            return {'rows': rows, 'partial': True, 'observed_at': time.time()}
+        except (HTTPException, KeyError, TypeError, ValueError):
+            return {'rows': rows, 'partial': True, 'error': 'Provider evidence unavailable', 'observed_at': time.time()}
+    backups,snapshots=await asyncio.gather(recent('backup'),recent('snapshot'))
+    return {'backup':backups,'snapshot':snapshots,'note':'Overview uses the first 100 returned backup jobs and snapshots. Open a protected system for its paginated history. Missing evidence does not establish a failed or missing backup.'}
+
+
 class Member(BaseModel):
     device_id: str = Field(pattern=r'^[a-f0-9]{32}$')
     slide_agent_id: str = Field(pattern=r'^a_[a-z0-9]{12}$')
@@ -218,6 +246,10 @@ def run_load(run_id):
 
 
 def run_save(run_id, state, phase, status='running', report=None):
+    timeline = state.setdefault('timeline', [])
+    if not timeline or timeline[-1]['phase'] != phase or timeline[-1]['status'] != status:
+        timeline.append({'phase':phase,'status':status,'at':time.time()})
+        state['timeline'] = timeline[-100:]
     with db(write=True) as conn:
         conn.execute('UPDATE recovery_runs SET state=?,phase=?,status=?,updated=? WHERE id=?',
                      (json.dumps(state), phase, status, time.time(), run_id))
@@ -383,6 +415,7 @@ async def verify_run(run_id, spec, state):
                 'compared': member.compare_output, 'output_matches': matched,
                 'passed': matched if member.compare_output else True})
         report['passed'] = all(m['passed'] for m in report['members'])
+        report['verified_at'] = time.time()
         run_save(run_id, state, 'complete', 'passed' if report['passed'] else 'failed', report)
     except Exception as exc:
         state['error'] = str(exc)

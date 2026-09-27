@@ -53,7 +53,20 @@ async def build_map(user):
             clients = await unifi.cached_clients()
         except HTTPException as exc:
             client_error = str(exc.detail)
-    by_mac = {c["mac"].lower(): c for c in clients if c.get("mac")}
+    by_mac = {}
+    for c in clients:
+        key = fleet.mac(c.get("mac"))
+        if key:
+            by_mac.setdefault(key, []).append(c)
+    def machine_macs(machine):
+        return fleet.endpoint_macs(machine) | {
+            key for r in machine.get("resources") or []
+            for value in (r.get("identity") or {}).get("macs", []) if (key := fleet.mac(value))
+        }
+    mac_owners = {}
+    for machine in machines:
+        for key in machine_macs(machine):
+            mac_owners.setdefault(key, set()).add(machine["id"])
     by_ip = {c["ip"]: c for c in clients if c.get("ip")}
     with db() as conn:
         exposures = [dict(r) for r in conn.execute("SELECT public_ip,lan_ip,name,origin FROM unifi_exposures")]
@@ -65,15 +78,18 @@ async def build_map(user):
     out, ip_owner = [], {}
     for m in machines:
         addresses = {a.split("/")[0] for a in m.get("addresses") or [] if a}
-        macs = set()
+        macs = machine_macs(m)
         for resource in m.get("resources") or []:
             addresses |= {a for a in resource.get("addresses") or [] if a}
-            macs |= {x.lower() for x in (resource.get("identity") or {}).get("macs", [])}
         lan = {}
+        connections = []
         for mac in sorted(macs):
-            client = by_mac.get(mac)
+            matches = by_mac.get(mac, [])
+            client = matches[0] if len(matches) == 1 and len(mac_owners.get(mac, [])) == 1 else None
+            if client and client.get("console_id") and client.get("site_id") and client.get("uplink_id"):
+                connections.append({k: client.get(k) for k in ("id", "name", "mac", "ip", "console_id", "site_id", "uplink_id", "uplink_name", "port", "state", "last_seen")})
             if client and client.get("ip"):
-                lan[client["ip"]] = {"ip": client["ip"], "source": "unifi_mac", "mac": mac, "client": client["name"]}
+                lan[client["ip"]] = {"ip": client["ip"], "source": "unifi_mac", "mac": client["mac"], "client": client["name"]}
         for address in sorted(addresses):
             if lan_address(address):
                 lan.setdefault(address, {"ip": address, "source": "reported", "client": (by_ip.get(address) or {}).get("name")})
@@ -85,7 +101,7 @@ async def build_map(user):
             for exposure in by_lan.get(address, []):
                 publics[exposure["public_ip"]] = {"ip": exposure["public_ip"], "via": "unifi_nat", "mapping": exposure["name"], "lan_ip": address}
         records = [n | {"ip": ip} for ip in publics for n in names.get(ip, [])]
-        if not (lan or publics):
+        if not (lan or publics or connections):
             continue
         item = {
             "id": m["id"],
@@ -94,6 +110,7 @@ async def build_map(user):
             "kind": m.get("kind"),
             "state": m.get("state"),
             "endpoint_id": m.get("endpoint_id"),
+            "network_clients": connections,
             "lan": sorted(lan.values(), key=lambda x: x["ip"]),
             "public": sorted(publics.values(), key=lambda x: x["ip"]),
             "dns": sorted(records, key=lambda r: r["fqdn"]),

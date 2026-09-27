@@ -652,7 +652,10 @@ def test_vm_launch_uses_bridge_saves_password_and_reports_reach(client, monkeypa
     assert args["authorized_keys"][0].startswith("ssh-ed25519 ") and len(args["root_pass"]) >= 20
     saved = client.get("/api/keys/web-1-admin").json()
     assert saved["secrets"] == {"USERNAME": "root", "PASSWORD": args["root_pass"]} and saved["project"] == "shop"
-    assert saved["meta"] == {"vmid": 131, "node": "pve-2", "os": "debian13"}
+    assert saved["meta"] == {"vmid": 131, "node": "pve-2", "os": "debian13", "connection_id": "bridge"}
+    usage = client.get("/api/keys/web-1-admin/details").json()["systems"]
+    assert usage[0]["source"] == "VM provisioning" and usage[0]["label"] == "web-1"
+    assert client.get("/api/ssh/keys/deploy/details").json()["systems"][0]["target_id"] == "austinland:bridge:qemu:131"
     assert args["root_pass"] not in json.dumps(audit_rows("infrastructure.requested") + audit_rows("infrastructure.submitted"))
 
     async def inventory(refresh=False, user=None):
@@ -674,3 +677,74 @@ def test_network_address_classes():
     assert public("8.8.8.8") and public("2600:3c03::1") and not public("::2ca6:a490:55b3:558e") and not public("10.0.0.1")
     assert lan_address("192.168.1.5") and lan_address("fd00::5") and not lan_address("::2ca6:a490:55b3:558e")
     assert not lan_address("127.0.0.1") and not lan_address("169.254.1.1") and not lan_address("8.8.8.8")
+
+
+def test_key_details_are_scoped_metadata_and_do_not_reveal(client, monkeypatch):
+    from speck import contexts, ssh_keys
+    from speck.db import audit
+
+    client.post('/api/keys/static', json={'name': 'shop-db', 'value': 'full-secret-canary'})
+    client.post('/api/keys/static', json={'name': 'other-db', 'value': 'other-secret-canary'})
+    with db(write=True) as conn:
+        audit(conn, 'operator', 'vault.updated', detail={'name': 'shop-db', 'accidental_secret': 'audit-secret-canary'})
+    limited = bearer(token(client, ['keys:read'], 'shop-reader', key_prefixes=['shop-'])['token'])
+    result = limited.get('/api/keys/shop-db/details')
+    assert result.status_code == 200
+    assert all(value not in result.text for value in ('full-secret-canary', 'audit-secret-canary', 'other-db'))
+    assert result.json()['last_access'] is None
+    assert client.get('/api/keys').json()[1]['reveals'] == 0
+    assert limited.get('/api/keys/other-db/details').status_code == 404
+    assert limited.get('/api/keys/system-targets').status_code == 403
+    limited.get('/api/keys/shop-db')
+    result = limited.get('/api/keys/shop-db/details').json()
+    assert result['last_access']['actor'] == 'admin (API: shop-reader)'
+    assert result['last_access']['action'] == 'vault.reveal'
+    assert result['entry']['reveals'] == 1
+    assert len(audit_rows('vault.reveal')) == 1
+
+    client.post('/api/ssh/generate', json={'name': 'deploy'})
+    client.post('/api/context/import', json={'files': [{'filename': 'web.md', 'markdown': 'secret document canary'}]})
+    def forbidden(*args):
+        raise AssertionError('Metadata must not unseal private keys or handoff documents')
+    monkeypatch.setattr(ssh_keys, 'unseal', forbidden)
+    monkeypatch.setattr(contexts, 'unseal', forbidden)
+    assert client.get('/api/ssh/keys/deploy/details').status_code == 200
+    handoff = client.get('/api/context/files/web.md/details')
+    assert handoff.status_code == 200 and 'secret document canary' not in handoff.text
+    assert not audit_rows('context.read') and not audit_rows('ssh.private_revealed')
+
+
+def test_key_system_links_are_explicit_validated_and_removed_with_entry(client):
+    from speck.config import seal
+    client.post('/api/keys/static', json={'name': 'shop-db', 'value': 'sealed-canary'})
+    with db(write=True) as conn:
+        conn.execute("INSERT INTO infrastructure_connections VALUES('c-key','Demo cloud','linode',?,1)", (seal('{}'),))
+        conn.execute('INSERT INTO fleet_inventory_cache VALUES(?,?,?,?)', ('c-key', 'test', seal(json.dumps({'resources': [
+            {'provider':'linode','connection_id':'c-key','kind':'instance','id':'42','name':'shop-web','node':'us-east'}]})), time.time()))
+    targets = client.get('/api/keys/system-targets').json()
+    assert targets[0]['id'] == 'linode:c-key:instance:42'
+    body = {'target_id': targets[0]['id'], 'note': 'Backup credential'}
+    assert client.post('/api/keys/shop-db/systems', json=body).status_code == 200
+    link = client.get('/api/keys/shop-db/details').json()['systems'][0]
+    assert link['source'] == 'Recorded by administrator' and link['target']['label'] == 'shop-web'
+    assert client.get('/api/keys').json()[0]['system_count'] == 1
+    assert not audit_rows('vault.reveal')
+    assert client.post('/api/keys/shop-db/systems', json={'target_id':'nonexistent'}).status_code == 404
+    restricted = bearer(token(client, ['keys:write'], 'writer')['token'])
+    assert restricted.post('/api/keys/shop-db/systems', json=body).status_code == 403
+    assert client.delete('/api/keys/shop-db/systems', params={'target_id':targets[0]['id']}).status_code == 200
+    assert client.get('/api/keys/shop-db/details').json()['systems'] == []
+    client.post('/api/keys/shop-db/systems', json=body)
+    client.delete('/api/keys/shop-db')
+    with db() as conn:
+        assert conn.execute("SELECT count(*) FROM key_systems WHERE name='shop-db'").fetchone()[0] == 0
+
+
+def test_fast_ssh_inventory_does_not_wait_for_linode(client, monkeypatch):
+    from speck import ssh_keys
+    async def forbidden():
+        raise AssertionError('Local list must not call Linode')
+    monkeypatch.setattr(ssh_keys, 'linode_keys', forbidden)
+    client.post('/api/ssh/generate', json={'name': 'deploy'})
+    rows = client.get('/api/ssh/keys?registration=false').json()
+    assert rows[0]['name'] == 'deploy' and rows[0]['registration_checked'] is False

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.mjs';
 
 async function setup(page, {wide=false, viewer=false}={}) {
   await page.context().addCookies([{name:'speck-gallery',value:'1',url:'http://127.0.0.1:8761'}]);
@@ -20,7 +20,7 @@ async function setup(page, {wide=false, viewer=false}={}) {
     const machines=[['alpha','Alpha', 'Zen Clinic',12,'windows','running'],['beta','Beta','Alpha Clinic',65,'linux','offline'],['gamma','Gamma','North Clinic',32,'windows','running']].map(([id,label,client_name,cpu,platform,state])=>({...original,id,label,hostname:label,client_name,platform,state,online:state==='running',has_endpoint_agent:true,has_speck_agent:id!=='beta',telemetry:{...original.telemetry,cpu_percent:cpu}}));
     await route.fulfill({json:{machines,connections:[]}});
   });
-  await page.goto('/');await expect(page.locator('#fleet-rows tr')).toHaveCount(3);
+  await page.goto('/#fleet');await expect(page.locator('#fleet-rows tr')).toHaveCount(3);
   return {saved,getPrefs:()=>prefs};
 }
 const keys=page=>page.locator('th[data-column]').evaluateAll(items=>items.map(el=>el.dataset.column));

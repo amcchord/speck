@@ -1,3 +1,55 @@
+# Resource flyouts and repeat navigation — live September 27, 2026
+
+Static release `20260927T151514Z-resource-details-8a7e266` is live at
+https://speckrmm.com. Source `8a7e266` on `codex/connected-workspace` includes main
+`7ad0d63` and the deployed Home redesign. Shared flyouts cover infrastructure,
+Slide and network resources, with capacity, protection and related resources
+above collapsed technical fields. Fleet provider hosts now have useful details.
+Reusable inventory stays in a bounded session cache with background refresh and
+explicit freshness. Live telemetry polling and mutation preflights stay fresh.
+
+TypeScript/Vite, 51 web units and the full browser suite pass (261 passed, one
+existing WebKit CDP touch skip). Authenticated production checks passed in
+desktop Chromium and tablet/phone WebKit, with no script/HTTP errors or overflow.
+One paired measurement of repeat visits: Infrastructure 1293 → 19 ms, Slide
+179 → 5 ms, Network 789 → 34 ms. Cold reads still depend on provider speed.
+
+All 26 public files match the build. The live index matched its inspected
+baseline immediately before publication under the shared release lock.
+Backend source, dependencies, environment, PID and seven identity/configuration
+groups are unchanged. No provider actions, backups or endpoint commands were
+submitted during acceptance; temporary login sessions were signed out.
+
+Rollback: `/var/lib/speck-rollback/20260927T151514Z-resource-details-8a7e266/web`.
+Private evidence: ignored `output/resource-details-release/`.
+No GitHub push or merge occurred. Preserve `8a7e266` until it reaches main.
+See [behavior and release](../operations/resource-details.md) and
+[synthetic gallery](../screenshots/resource-details/README.md).
+
+---
+
+# Connected Home — live September 27, 2026
+
+The `codex/connected-workspace` branch adds a Home command bar, joined machine
+relationships, an expanded semantic palette, and direct entry to reviewed AI
+drafts and schedules. Source `db61a96` includes main `7ad0d63` and the previous
+mobile release. Static release `20260927T133224Z-connected-workspace-db61a96`
+is live at https://speckrmm.com. All 26 public files match the build; the backend
+kept its PID and source, configuration and identity fingerprints remained intact.
+
+The release web gate passes: 41 units and 243 browser checks, with one existing
+WebKit skip. Authenticated production checks passed in desktop Chromium and
+tablet/phone WebKit, including relationships, search, drill-down, AI review and
+the schedule editor. No AI generation or operational submission was made.
+Rollback: `/var/lib/speck-rollback/20260927T133224Z-connected-workspace-db61a96/web`.
+Private evidence: ignored `output/connected-workspace-release/`.
+
+No GitHub push or merge occurred. The next release must retain `db61a96` until it
+reaches main. See [behavior, validation and rollback](../operations/connected-workspace.md)
+and [synthetic screenshots](../screenshots/connected-workspace/README.md).
+
+---
+
 # Phone and tablet redesign — live September 24, 2026
 
 Every page was audited on iPhone- and iPad-sized screens against production

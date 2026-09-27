@@ -11,6 +11,8 @@ sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[1]
 from speck.operations import STARTERS
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 from preview_fixtures import provider_fixture
+from preview_workspace import workspace_fixture
+from preview_depth import depth_fixture
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -166,6 +168,8 @@ JOBS = [
 
 
 class Handler(BaseHTTPRequestHandler):
+    connected_workspace = False
+
     def log_message(self, fmt, *args):
         pass
 
@@ -183,6 +187,10 @@ class Handler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         route = url.path
         if route.startswith("/api/"):
+            if self.connected_workspace:
+                fixture = workspace_fixture(route, DEVICES, NOW)
+                if fixture is not None:
+                    return self.send(fixture)
             if route == "/api/auth/me":
                 return self.send(
                     {"username": "demo", "csrf": "preview-only", "role": "admin"}
@@ -229,6 +237,9 @@ class Handler(BaseHTTPRequestHandler):
                     )
                 ],
             }
+            fixture = depth_fixture(route, parse_qs(url.query), NOW)
+            if fixture is not None:
+                return self.send(fixture)
             fixture = provider_fixture(route, parse_qs(url.query), NOW)
             if fixture is not None:
                 return self.send(fixture)
@@ -306,8 +317,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8741)
+    parser.add_argument("--connected", action="store_true", help="Show synthetic agent, Proxmox and UniFi relationships")
     args = parser.parse_args()
+    Handler.connected_workspace = args.connected
     if not (ROOT / "web/dist/index.html").exists():
         raise SystemExit("Build first: ./scripts/build.sh")
     print(f"Speck screenshot preview: http://127.0.0.1:{args.port} (synthetic data; loopback only)", flush=True)
+    # Two browser workers can burst past the standard library's five-connection queue.
+    ThreadingHTTPServer.request_queue_size = 128
     ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()

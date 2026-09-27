@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.mjs';
 
 for (const width of [1440, 390, 320]) {
   test(`headless web shell at ${width}px`, async ({ page }, info) => {

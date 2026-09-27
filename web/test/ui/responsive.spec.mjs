@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.mjs';
 
 // Phone and tablet layouts against the synthetic preview. See docs/ui-ux-audit-mobile.md.
 const signIn = async (page, hash = 'fleet') => {
@@ -14,7 +14,7 @@ test.describe('phone', () => {
     await signIn(page);
     await expect(page.locator('aside')).toBeHidden();
     const bar = page.getByRole('navigation', { name: 'Primary navigation' });
-    await expect(bar.getByRole('button')).toHaveText([/^Fleet$/, /^Alerts\s*1$/, /^Infra$/, /^Keys$/, /^More$/], { useInnerText: true });
+    await expect(bar.getByRole('button')).toHaveText([/^Home$/, /^Fleet$/, /^Alerts\s*1$/, /^Infra$/, /^More$/], { useInnerText: true });
     const box = await bar.boundingBox();
     expect(box.y + box.height).toBeCloseTo(844, 0);
     // Title and refresh share the first row; the description is left to wider screens.
@@ -92,6 +92,7 @@ test.describe('phone', () => {
     await expect(loading).toBeVisible();
     await loading.getByRole('button', { name: 'Close' }).click();
     await page.goto('/#network');
+    await page.locator('#net-tab-domains').click();
     await page.waitForTimeout(1600);
     await expect(page.locator('.toast.error')).toHaveCount(0);
     await expect(page.getByRole('dialog', { name: 'New VM' })).toHaveCount(0);

@@ -33,6 +33,9 @@ def require_user(request: Request):
         api_tokens.enforce(user, request)
     else:
         user = session_for(request.cookies.get(COOKIE))
+        if not user.get('last_seen') or time.time() - user['last_seen'] >= 60:
+            with db(write=True) as conn:
+                conn.execute('UPDATE sessions SET last_seen=? WHERE token_hash=?', (time.time(), user['token_hash']))
     if not token and request.method not in ('GET', 'HEAD', 'OPTIONS'):
         if request.headers.get('origin') != origin():
             raise HTTPException(403, 'Origin rejected')
@@ -40,7 +43,7 @@ def require_user(request: Request):
             raise HTTPException(403, 'CSRF token rejected')
     path = request.url.path
     if user['role'] == 'viewer':
-        reads = {'/api/fleet', '/api/fleet/preferences', '/api/auth/me', '/api/devices', '/api/alerts', '/api/monitoring', '/api/audit/events', '/api/access/me',
+        reads = {'/api/fleet', '/api/fleet/preferences', '/api/auth/me', '/api/devices', '/api/alerts', '/api/monitoring', '/api/audit/events', '/api/access/me', '/api/access/sessions',
                  '/api/whoami', '/api/overview', '/api/search', '/api/guide'}
         personal = {'/api/fleet/preferences', '/api/auth/logout', '/api/access/password', '/api/access/sessions/revoke', '/api/access/totp/setup', '/api/access/totp/confirm', '/api/access/totp/disable'}
         if not ((request.method == 'GET' and path in reads) or path in personal or path == '/api/access/passkeys' or path.startswith('/api/access/passkeys/')):
@@ -93,8 +96,8 @@ def require_agent(request: Request):
 def issue_session(conn, row, response, passkey_id=None):
     token, csrf = secrets.token_urlsafe(40), secrets.token_urlsafe(32)
     conn.execute('DELETE FROM sessions WHERE expires<?', (time.time(),))
-    conn.execute('INSERT INTO sessions(token_hash,user_id,csrf,expires,passkey_id) VALUES(?,?,?,?,?)',
-                 (digest(token), row['id'], csrf, time.time() + 43200, passkey_id))
+    conn.execute('INSERT INTO sessions(token_hash,user_id,csrf,expires,passkey_id,created,last_seen) VALUES(?,?,?,?,?,?,?)',
+                 (digest(token), row['id'], csrf, time.time() + 43200, passkey_id, time.time(), time.time()))
     audit(conn, row['username'], 'session.login', detail={'method': 'passkey' if passkey_id else 'password'})
     response.set_cookie(COOKIE, token, httponly=True, secure=origin().startswith('https://'), samesite='strict', max_age=43200)
     return {'username': row['username'], 'csrf': csrf, 'role': row['role']}

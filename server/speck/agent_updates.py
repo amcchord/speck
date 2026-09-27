@@ -139,10 +139,27 @@ def record_checkin(conn, device_id, telemetry):
 
 @router.get('/api/agent-updates')
 def status(user=Depends(require_admin)):
+    release = published()
     with db() as conn:
         result = policy(conn)
         result['devices'] = [dict(r) for r in conn.execute('SELECT u.*,d.label FROM agent_updates u JOIN devices d ON d.id=u.device_id ORDER BY u.updated DESC')]
-    release = published()
+        rollout = []
+        for row in conn.execute('SELECT d.*,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id ORDER BY d.label'):
+            telemetry = json.loads(row['telemetry'] or '{}')
+            attempt = next((a for a in result['devices'] if a['device_id']==row['id']), None)
+            installed = telemetry.get('version')
+            target = (release or {}).get('version')
+            reason = ('Archived' if row['archived'] else 'Credential revoked' if row['revoked'] else
+                      'Approval required' if not row['approved'] else 'No published release' if not target else
+                      'Unsupported platform / architecture' if row['platform']+'-'+row['arch'] not in (release or {}).get('releases', {}) else
+                      'Current' if installed==target else 'Policy paused' if not result['enabled'] else
+                      'Previous attempt needs review' if attempt and attempt['version']==target and attempt['status'] in ('failed','rollback_failed') else
+                      'Agent offline' if time.time()-row['last_seen']>90 else
+                      'Waiting for active work' if busy(conn,row['id']) else 'Waiting for agent update check')
+            rollout.append({'device_id':row['id'],'label':row['label'],'platform':row['platform'],'arch':row['arch'],
+                            'installed':installed,'target':target,'reason':reason,'last_seen':row['last_seen'],
+                            'attempt':attempt,'reported_update':telemetry.get('agent_update')})
+        result['rollout'] = rollout
     result['version'] = (release or {}).get('version')
     return result
 

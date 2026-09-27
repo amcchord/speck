@@ -716,3 +716,358 @@ Private captures and release scripts are in ignored `output/ui-audit-mobile/` an
 `output/ui-audit-mobile-release/`; the
 [synthetic gallery](docs/screenshots/ui-audit-mobile/README.md) is committed.
 
+
+## Connected Home and expanded palette — September 27, 2026 (live)
+
+`codex/connected-workspace` starts from current main `7ad0d63`. Home becomes the
+default signed-in destination, with machine/host/IP/DNS search, Cmd/Ctrl+K,
+relationships between UniFi evidence, Proxmox hosts and Speck agents, alerts and
+upcoming schedules. AI drafting starts in Home and feeds the existing platform /
+endpoint context review; templates and schedules retain their existing review
+flows. Existing Fleet and assistant deep links continue to work.
+
+The console uses slate navigation, neutral surfaces, blue network, copper
+infrastructure, green agents and violet automation. Phone and tablet layouts
+retain the bottom bar / labeled rail. Identity conflicts, stale sources, empty
+inventory, partial failures and viewer restrictions remain explicit. Network
+drill-down carries the exact machine ID; no name or IP identity joins are added.
+
+Local validation: TypeScript/Vite, 41 web unit tests and the full Chromium/WebKit
+suite (243 passed, one existing WebKit CDP touch skip). The final selection-scroll
+refinement also passed all 22 Home browser checks. Screenshots at 320/390/834/1440
+were reviewed. Python preview compilation and synthetic fixture checks pass. The
+first iterations exposed navigation-selector and short-sidebar regressions; both
+were corrected before the passing full run. No GitHub CI run was requested.
+
+A loopback-only connected preview runs with `scripts/preview.py --connected`; it
+uses synthetic endpoints and documentation IP ranges. [Behavior and limits](docs/operations/connected-workspace.md),
+[gallery](docs/screenshots/connected-workspace/README.md). Local logs are in ignored
+`output/connected-workspace/`.
+
+User-authorized static release `20260927T133224Z-connected-workspace-db61a96` is
+live at https://speckrmm.com, source `db61a962fda4fed1fc9eb729d44c030c2dfd73e4`.
+Fetched main `7ad0d63` before the production build and publishing; ancestry and
+the previously deployed mobile source `b1cddc6` are preserved. This task was the
+sole active deployment owner and publication held the shared release lock. The
+live index matched the inspected baseline immediately before its atomic swap.
+All 26 public files match the build. The backend's 41 Python files, dependency
+manifest, environment, PID and seven configuration/identity groups are unchanged.
+Rollback web tree: `/var/lib/speck-rollback/20260927T133224Z-connected-workspace-db61a96/web`.
+
+The release build, 41 units and full Chromium/WebKit suite (243 passed, one
+existing skip) passed again. Authenticated production acceptance passed at 1440
+pixels in Chromium and 834/390 pixels in WebKit: all Home sources loaded, search,
+relationship cards, machine/Proxmox-host/network drill-down, Fleet links, command
+shortcut, AI review handoff and the schedule editor worked, with no overflow,
+script errors or HTTP errors. AI generation and operational submissions were not
+invoked. Test login sessions were signed out. Private deployment manifests, logs,
+and live screenshots remain in ignored `output/connected-workspace-release/`.
+No backend restart, agent change, provider operation, recovery action, GitHub push
+or merge occurred. Windows/Linux operational qualification remains unchanged.
+
+## Resource flyouts and faster repeat navigation — September 27, 2026
+
+The shared resource flyout replaces infrastructure modals and inline Slide JSON,
+and also covers DNS, public IPs, LAN clients and UniFi consoles. Cloud instances
+lead with compute, capacity, network and backup protection. Proxmox hosts show
+storage, networks and explicitly scoped guest relationships, including in Fleet.
+Slide shows schedules, retention, verification and recovery configuration;
+appliances link to their protected systems. Technical fields remain available in
+a collapsed, recursively formatted section. Actions retain their existing review
+and confirmation behavior. Desktop, tablet and phone layouts share the same
+structure, with focus restoration and protection against late responses.
+
+Reusable inventory reads now share a bounded memory-only session cache. Return
+visits show saved data immediately, with background refresh and explicit freshness,
+failure and Show latest controls. Mutations invalidate reads; logout clears data
+and open inspectors. Fresh mutation preflights, secrets and live operation reads
+are excluded. Fleet telemetry polling still reads current server data, while
+navigation no longer forces provider refreshes. Cold loads still depend on the
+provider. Slide status and inventory load concurrently; histories have search
+and bounded rendering.
+
+Implementation and limits: [resource details](docs/operations/resource-details.md).
+Reviewed synthetic captures: [gallery](docs/screenshots/resource-details/README.md).
+Private test and release evidence: ignored `output/resource-details-release/`.
+
+Local release validation passes: TypeScript/Vite, 51 web unit tests and the full
+Chromium/WebKit suite (261 passed, one existing CDP touch skip). The first full
+run exposed a WebKit test race that checked phone filters before the responsive
+enhancement frame; the test now waits for the visible phone control. Earlier
+focused runs caught and corrected stale Fleet polling, Safari focus restoration
+and session cleanup before the final passing run. Backend, native and agent
+sources are unchanged; their qualification limits remain unchanged. No hosted CI
+run was requested for this local static release.
+
+User-authorized static release `20260927T151514Z-resource-details-8a7e266` is live
+at https://speckrmm.com, source `8a7e26604200929391d1b68a2793f39fb60181b7`.
+Main `7ad0d63` was fetched and confirmed as an ancestor before the production
+build and publication; deployed Home source `db61a96` is preserved. This task
+was the sole active deployment owner. The shared release lock covered baseline
+verification, backup and publication; the index matched the inspected baseline
+immediately before the atomic swap. All 26 public files match the release.
+The service remains active with PID 72151; the backend's 41 source files,
+dependency manifest, environment and seven identity/configuration fingerprints
+remained unchanged through live acceptance.
+
+Authenticated production acceptance passed in Chromium at 1440 pixels and
+WebKit at 834/390 pixels. Cloud capacity/network/backups, Proxmox host facts and
+guest relationships, Slide schedules/appliances/protected systems/snapshots,
+network inspectors and DNS records loaded without script or HTTP errors or
+overflow. Resource reopening measured 32/50/45 ms. No provider actions, backup
+requests, remote sessions or endpoint commands were submitted. All temporary
+login sessions were signed out; live screenshots remain private.
+
+One paired production navigation measurement reduced repeat visits from
+1293 to 19 ms for Infrastructure, 179 to 5 ms for Slide and 789 to 34 ms for
+Network. Infrastructure inventory requests across the two visits fell from two
+to one. These are local browser observations, not latency guarantees; cold loads
+still depend on provider response time.
+
+Index SHA-256: `85fc1f272670ece8cac40358297321aa6674756600795f9a3653c910d7f77e59`.
+Rollback web tree: `/var/lib/speck-rollback/20260927T151514Z-resource-details-8a7e266/web`.
+No backend restart, agent/native update, provider configuration change, recovery
+action, GitHub push or merge occurred. Preserve `8a7e266` in future deployments
+until it reaches main. Windows/Linux operational qualification is unchanged.
+
+## 2026-09-27 — infrastructure, network and terminal overhaul
+
+Prepared on `codex/connected-workspace`, preserving deployed `8a7e266` and the
+connected workspace/Home release. Infrastructure now has connection inspectors,
+clickable operation receipts and provider-native history; Network opens on
+UniFi site health with an OpenStreetMap basemap and richer, site-scoped LAN
+observations. Terminal embeds a live shell, and agent 0.3.2 adds Windows ConPTY.
+Details and qualification: [observability](docs/operations/observability.md).
+Local core passed (214 backend, Linux race checks, platform builds, 51 web units,
+273 browser checks; one existing skip), plus 18 final focused browser checks.
+Real Windows ConPTY passed without changing enrollment. Release owner is the
+current connected-workspace task; deployment and acceptance follow below.
+
+Deployed source `3a282ac` as `20260927T173225Z-observability-3a282ac` under the
+shared release lock. The full live baseline and immediate pre-publish index
+matched; current origin/main and the newer deployed commits are ancestors. All
+27 public web hashes matched. Backend restarted with no active jobs/recovery.
+The signed agent 0.3.2 release was published after real Windows/Linux shell
+canaries passed state, Unicode, resize, Ctrl+C and clean reconnect.
+
+Live provider telemetry and UniFi observations passed; 17 Network sites have
+reported locations. Environment, identities, account/provider/connector/recovery
+configuration, SQLite integrity and service health were preserved. No schema
+change. Remaining eligible endpoint updates follow the existing idle-only policy.
+Rollback: `/var/lib/speck-rollback/20260927T173225Z-observability-3a282ac`.
+Private evidence: `output/operations-overhaul/`. Preserve this release in future
+deployments until it reaches main. No GitHub push/merge or hosted CI run occurred.
+
+During 0.3.2 automatic rollout, one Windows helper replacement failed and rolled
+back cleanly. Windows offers were temporarily held, leaving Linux offers active.
+Agent 0.3.3 hardens executable replacement against transient Windows image locks,
+waits for helper process exit, and runs the verified candidate as the updater.
+Windows file-lock, transaction/rollback and ConPTY tests passed on the lab host;
+Linux agent/connector race tests passed again. No failed update bypasses approval
+or changes endpoint identity; final release validation follows below.
+
+Final agent source is `e6fbfd2`, signed as 0.3.3. All ten approved endpoints
+(six Windows, four Linux) are online on 0.3.3, advertise interactive shells and
+have current update state; zero failed, installing or rollback-failed updates.
+Three legacy Windows updaters required a signed operator repair; installed
+hashes, retained backups and unchanged identities were verified. Six unapproved
+recovery candidates were untouched. Live 0.3.3 Windows/Linux sessions passed
+state, Unicode, resize, Ctrl+C, teardown and clean reconnect again. All platform
+offers are enabled; automatic-update policy is unchanged. The frontend/backend
+remain `3a282ac`, with no active validation shell and final database/configuration
+invariants intact. Preserve both release commits until they reach main.
+
+## Keys workspace — September 27, 2026
+
+The Keys page now shares the resource flyout used elsewhere. Vault entries show
+exact creation/update/reveal timestamps, actors, recent audited activity, related
+source credentials and recorded system associations. Providers, SSH identities
+and sealed handoffs have searchable views and detail inspectors. Local metadata
+search combines terms across names, projects, fields and linked system labels;
+vault rendering is bounded to 80 rows at a time. Inventory reads use the existing
+session-only stale-while-refresh cache. Secret values and handoff documents remain
+outside that cache.
+
+New metadata routes enforce existing vault scopes and name-prefix restrictions.
+Activity projects only timestamp/actor/action, never arbitrary audit payloads.
+System linking is an audited administrator-session action validated against local
+endpoint/provider inventory. Links describe recorded configuration, not verified
+runtime use. VM provisioning records administrator-credential and SSH-key
+associations for future creates; imported credentials are not matched by name.
+Reads outside Speck are not observed. SSH registration is now an explicit read
+instead of a dependency of loading Keys. Handoffs require an explicit reveal;
+handoff and SSH private-key displays expire after 90 seconds. Closing a vault
+flyout discards a late reveal response.
+
+Local validation: 217 backend tests, Ruff, 52 web unit tests, TypeScript/Vite,
+289 browser tests (one existing touch-only skip), plus 16 focused Chromium/WebKit
+checks after final refinements. These include 1440/768/390px layouts, a 500-entry
+vault, repeat navigation without refetching lists, metadata-only inspection,
+system links, access scopes and secret expiry/cancellation. No agent or native
+code changed; no new platform build or hosted CI claim is made. Synthetic visual
+review is in `docs/screenshots/keys/`.
+
+This task is the single deployment owner; the active-task inventory showed no
+other active Speck deployment. The inspected live release was the observability
+release from `3a282ac`, with agent 0.3.3 from `e6fbfd2`, and both remain ancestors.
+The baseline also hashes every vault entry/provider credential, SSH key and
+handoff so deployment can verify they remain unchanged. Production publication
+will use the shared deployment lock, a rollback snapshot and an immediate live
+index comparison. Final deployment acceptance is recorded below after release.
+
+### Production acceptance — Keys workspace
+
+Deployed `2b4cb275dfe9745d1b85888f17c4e01050f80b96` as
+`20260927T182901Z-keys-2b4cb27`. Before the production build and again before
+publication, origin/main was fetched and verified as an ancestor; all newer
+observability/agent work was preserved. Publication held the shared deployment
+lock and compared the live index to the inspected baseline immediately before
+its atomic replacement. A consistent database backup, server, web, downloads and
+configuration rollback snapshot was retained in the private operator record.
+
+All 27 public web assets match the build manifest. Service health is active.
+Authenticated metadata-only checks passed for all 43 vault entries, six
+providers, 13 SSH identities and six handoffs, with 280 locally known system
+targets. Inventory round trips measured 11–24 ms from this operator Mac; median
+individual detail reads were about 10 ms. These are observed API timings, not a
+guarantee for every network or browser. Repeat navigation and local search were
+separately verified in the browser suite.
+
+The database hashes of vault entries (including reveal counters), provider
+credentials, SSH keys and handoffs are unchanged after deployment and acceptance.
+Account/device identities, connections, recovery configuration, environment and
+requirements also match the baseline. No production credential was revealed,
+rotated, provisioned, revoked or linked for testing. Agent downloads are byte-for-byte
+unchanged and the automatic update version remains 0.3.3. GitHub CI was not run.
+Private manifests, backups and validation logs are under ignored
+`output/keys-workspace/` and the deployment record. The public index SHA-256 is
+`6db069fb15f54d4e2acd2b885d06fce5d076050f9cd90a1466586a1235e619f5`.
+
+## 2026-09-27 — Integration depth and network operations
+
+Production exploration stayed read-only and confirmed exact UniFi site/device
+identities, physical port and PoE data, live device statistics, topology/client
+observations, Linode attachments and Slide history. The implementation plan and
+capability boundaries are recorded in `docs/operations/integration-depth.md`.
+
+Added a shared equipment flyout with a physical port map, upstream/downstream
+navigation, connected clients, device health, radio and firmware detail. Machine
+uplinks use unique MAC evidence from the managed gateway; shared IPs never create
+these links. Admin PoE/restart controls require a fresh, expiring impact review,
+typed confirmation and an unchanged device/connection fingerprint. A durable
+claim prevents duplicate submission, including ambiguous results. No generic
+port-reset capability is claimed; the official API exposes POWER_CYCLE/RESTART.
+No production equipment was disrupted for testing.
+
+Linode disks, boot profiles, volumes and firewalls now have independent detail
+sections. Proxmox host storage, bridge and task entries are inspectable. Slide
+backup/snapshot history is scoped to the original connection and paginated.
+Equipment/provider detail uses bounded session-memory browser caching; secret
+reads and operation preflights remain excluded.
+
+Local validation: 231 backend tests, 52 web unit tests, 307 browser tests passed
+with one pre-existing touch-only skip. Eleven focused backend tests also passed
+after adapting textual PoE wattage observed in production. Final browser
+refinements and deployment acceptance are recorded below. Agent binaries and
+native apps are unchanged; agent/platform and iOS checks were not rerun. GitHub
+CI was not run. This task is the sole active deployment owner; live baseline
+matches release `2b4cb27`. Release will retain the shared lock, ancestry check,
+rollback snapshot and immediate pre-publication index comparison.
+
+### Production acceptance — Integration depth
+
+Deployed `a7f604aba5a7c5fd4e03ac5ced81e0ace2432c9c` as `20260927T192151Z-depth-a7f604a`. The production build and
+publication each fetched origin/main and verified ancestry, preserving the prior
+Keys, observability and agent releases. Publication held the shared lock, matched
+the inspected baseline and compared the live index immediately before its atomic
+replacement. A consistent database and complete server/web/download/config
+rollback snapshot is retained in the private release record.
+
+All 27 public web assets match the manifest and service health is active.
+Final Chromium/WebKit checks pass 36 tests on the release build. Production
+read-only acceptance discovered 17 network sites and 115 devices on the managed
+site, opened a 26-port switch with real statistics/topology, and verified
+46 machine-to-uplink relationships. Linode attachments and Slide's paginated
+backup/snapshot history passed authenticated API checks. A live Chromium session
+verified equipment navigation and cloud-disk details with zero page errors and
+zero mutations. Cold device detail took 4403 ms and a repeated read 19 ms from
+the operator Mac; these are observations, not a latency guarantee.
+
+Credentials (including reveal counters), recorded key-system links, identities,
+approvals, connections, recovery configuration, environment and requirements
+match the baseline. Agent downloads are byte-for-byte unchanged at 0.3.3.
+PoE cycling and restart were validated with mock providers; no disruptive
+production action was performed. Agent/native builds and GitHub CI were not run.
+Private logs, production screenshots, manifests and acceptance records remain
+in ignored `output/integration-depth/` and the private deployment record.
+Index SHA-256: `c73c658bd57b02eabecd7df6bd829a4e7b7610e87a05f2a8349d6f376a45a6de`.
+
+## 2026-09-27 — Port power and link speed
+
+Port tiles now show observed PoE wattage in place of repeated connector names.
+Reported zero remains `0 W`; missing or invalid readings display a dash. Port
+backgrounds distinguish sub-gigabit, gigabit, 2.5/5-gigabit and 10+-gigabit active
+links, with a legend and exact values in tooltips/accessibility labels. Down or
+unknown-speed ports remain neutral. Connector type remains in selected-port detail.
+
+This task is the sole active Speck deployment owner. The inspected production
+baseline remains `a7f604a` with index `c73c658bd57b02eabecd7df6bd829a4e7b7610e87a05f2a8349d6f376a45a6de`.
+The release is web-only; validation and publication results will be recorded below.
+
+The initial web-only release `20260927T192957Z-port-power-4c998e5` passed the
+TypeScript/Vite build, 18 Chromium/WebKit browser checks and 27 public asset
+checks. The service retained its PID and backend/configuration/agent hashes.
+Production mobile acceptance caught an existing site-card overflow caused by
+unrounded WAN uptime percentages. Rounded these to at most two decimals in site
+cards and detail; added the observed long-decimal shape to responsive coverage.
+The follow-up retains the port change and checks against that newly deployed
+index, with no backend restart.
+
+### Production acceptance — Port power and link speed
+
+Deployed `6a70fc88a3128709efb074a122d61c9d2e5fa507` as `20260927T193137Z-port-power-6a70fc8`. Both web-only
+publications fetched origin/main and verified ancestry, held the shared deployment
+lock, checked the inspected baseline immediately before atomic index replacement,
+and retained a web rollback snapshot. The final TypeScript/Vite build and all 18
+Chromium/WebKit checks passed, including the long-decimal mobile regression.
+
+All 27 public web assets match the manifest. Live read-only Chromium acceptance
+verified desktop and 390px phone layouts on a 26-port switch: 24 reported power
+readings, three observed speed/state colors, no page errors and no API mutations.
+The service PID remained 146686. Backend, credentials, configuration and agent
+downloads are unchanged; there was no restart or disruptive equipment action.
+Backend/agent/native tests and GitHub CI were not rerun for this web-only change.
+Private deployment records, screenshots and logs are under `output/port-power/`.
+Final index SHA-256: `23fb80017807254494ae9a44da02dbe7feff907d74309b1fecebc3ad37e64986`.
+
+
+## Connected product workspaces — September 27, 2026
+
+Deployed application source `ab5b26e` as `20260927T220455Z-product-final-ab5b26e`,
+covering all 22 areas in the product review: progressive loading, shared resource
+links and results, operational workspaces, richer integrations, endpoint inspection,
+backup/recovery evidence, global search, credential planning and file browsing.
+The [implementation record](docs/operations/product-upgrade-2026-09-27.md) maps each
+area to delivered behavior and records provider/retention/platform limits.
+
+Local validation: 248 backend tests, Ruff, TypeScript/Vite, 54 web units and 323
+Chromium/WebKit checks passed (one existing WebKit touch-drag skip). Linux agent
+and Proxmox connector race tests passed. Live Windows and Linux process, disk,
+software and directory reads completed successfully. All 17 production pages and
+17 deeper views passed desktop/phone checks without JavaScript errors. Live review
+caught and corrected Slide's 50-record page limit and detail-link tab selection;
+the final release has populated coverage/calendar evidence and verified deep links.
+
+Fetched main and verified ancestry before release builds. The sole deployment
+owner held the release lock and compared live baselines immediately before publish.
+Both deployed releases retained consistent rollback snapshots; final index is
+`3316d32e2d3e88f6d1739bd2dfee9debf02317143374d036017081578f72aab6`.
+Public hashes for all 27 build files and authenticated health passed. Credentials,
+connections, machine/install identities, recovery plans and agent downloads were
+preserved. No new restore, power operation, credential reveal/rotation or file-content
+transfer was used for acceptance. Agent binaries remain unchanged at 0.3.3.
+
+Equipment history is seven-day, bounded, encrypted and opt-in for continuous
+collection; observed samples start with this release. Backup coverage remains a
+clearly labeled bounded overview, with deeper paginated protected-system history.
+Private deployment, receipts and screenshots are under `output/product-upgrade/`.

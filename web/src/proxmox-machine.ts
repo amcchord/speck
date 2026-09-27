@@ -1,9 +1,10 @@
+import {mountPerformance} from "./performance";
+import {detailFacts,detailHero,technicalDetail} from "./resource-story";
 import "./proxmox-machine.css";
 import { openProviderConsole } from "./provider-console";
 import { captureProviderPreview, downloadScreen } from "./provider-preview";
 import {
   adapters,
-  chartPoints,
   disks,
   duration,
   guestAddresses,
@@ -11,7 +12,6 @@ import {
   number,
   object,
   percent,
-  sparkline,
 } from "./proxmox-model";
 type Item = Record<string, any>;
 
@@ -27,7 +27,7 @@ export function mountProxmoxMachine(
     detail: Item = {},
     guest: Item = {},
     catalog: Item = {},
-    tab = "overview",
+    tab = ["overview","hardware","network","performance","snapshots","activity"].includes(ui.initialTab) ? ui.initialTab : "overview",
     disposed = false;
   let preview: AbortController | null = null,
     previewImage = "",
@@ -74,6 +74,14 @@ export function mountProxmoxMachine(
       `${base}/read/${id}?args=${encodeURIComponent(JSON.stringify(args))}&kind=${resource.kind}&resource_id=${encodeURIComponent(resource.id)}`,
     );
 
+  root.addEventListener('click',event=>{
+    const button=(event.target as Element).closest<HTMLElement>('[data-pve-task]');
+    if(!button)return;
+    const t=list(detail.recent_tasks)[Number(button.dataset.pveTask)];
+    const pane=ui.flyout(t.type || 'Provider task',detailHero('Proxmox · Task',t.status || 'Running',resource.name)+detailFacts([['Task ID',t.upid],['User',t.user],['Started',date(t.starttime)],['Completed',date(t.endtime)],['Resource',t.id || resource.id]])+technicalDetail(t),{tone:'compute',subtitle:resource.connection_name});
+    const back=document.createElement('button');back.className='text-link';back.textContent='← Back to machine';back.onclick=()=>ui.openResource(resource);pane.querySelector('.resource-body').prepend(back);
+  });
+
   const observer = new MutationObserver(() => {
     if (!root.isConnected) dispose();
   });
@@ -118,7 +126,7 @@ export function mountProxmoxMachine(
               resource,
             )),
       );
-    bind("[data-pve-refresh]", () => load());
+    bind("[data-pve-refresh]", () => load(true));
     bind("[data-pve-agent]", () => {
       owner?.close();
       ui.openDevice(resource.agent.id);
@@ -274,19 +282,7 @@ export function mountProxmoxMachine(
     );
   }
   function tasks() {
-    return (
-      unavailable("recent_tasks") ||
-      table(
-        ["Task", "Result", "Started", "Duration"],
-        list(detail.recent_tasks).map((t) => [
-          String(t.type || "Task").replace(/^qm/, "VM "),
-          t.status || (t.endtime ? "Finished" : "Running"),
-          date(t.starttime),
-          t.endtime ? duration(t.endtime - t.starttime) : "In progress",
-        ]),
-        "No recent tasks reported.",
-      )
-    );
+    return unavailable("recent_tasks") || `<div class="resource-related">${list(detail.recent_tasks).map((t,i)=>`<button data-pve-task="${i}"><span><b>${esc(t.type || 'Task')}</b><small>${esc(date(t.starttime))} · ${esc(t.user)}</small></span><span>${esc(t.status || 'Running')}</span><span>→</span></button>`).join('') || note('No recent tasks reported.')}</div>`;
   }
   function network() {
     const interfaces = list(guestSection("network"));
@@ -362,12 +358,12 @@ export function mountProxmoxMachine(
     else if (tab === "network") body.innerHTML = network();
     else if (tab === "activity")
       body.innerHTML = section("Recent activity", tasks());
-    else if (tab === "performance" || tab === "snapshots") {
+    else if (tab === "performance") mountPerformance(ui,resource,body);
+    else if (tab === "snapshots") {
       body.innerHTML = note(`Loading ${tab}…`);
       try {
         const result = await read(
-          tab === "performance" ? "metrics" : "snapshots",
-          tab === "performance" ? { timeframe: "hour" } : {},
+          "snapshots", {},
         );
         if (!alive() || current !== tabGeneration) return;
         if (tab === "snapshots")
@@ -388,24 +384,7 @@ export function mountProxmoxMachine(
                 : "No snapshots reported.",
             ),
           );
-        else {
-          const rows = list(result)
-            .filter((r) => number(r.time) !== null)
-            .sort((a, b) => a.time - b.time);
-          const graph = (
-            title: string,
-            key: string,
-            scale: number,
-            format: (v: number) => string,
-            max?: number,
-          ) => {
-            const points = chartPoints(rows, key, scale),
-              path = sparkline(points, max),
-              values = points.filter((v): v is number => v !== null);
-            return `<article class="pve-chart"><h3>${esc(title)}</h3><strong>${values.length ? esc(format(values.at(-1)!)) : "Not reported"}</strong>${path ? `<svg viewBox="0 0 300 70" role="img" aria-label="${esc(title)} over the last hour"><path d="${path}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg><small>Peak ${esc(format(Math.max(...values)))}</small>` : note("Not enough samples for a chart.")}</article>`;
-          };
-          body.innerHTML = `<p class="pve-note">Last hour · Provider samples${rows.length ? ` · ${esc(date(rows[0].time))} – ${esc(date(rows.at(-1)!.time))}` : ""}</p><div class="pve-charts">${graph("CPU", "cpu", 100, (v) => v.toFixed(1) + "%", 100)}${graph("Memory", "mem", 1, bytes)}${graph("Network received", "netin", 1, (v) => bytes(v) + "/s")}${graph("Network sent", "netout", 1, (v) => bytes(v) + "/s")}${graph("Disk read", "diskread", 1, (v) => bytes(v) + "/s")}${graph("Disk write", "diskwrite", 1, (v) => bytes(v) + "/s")}</div>`;
-        }
+
       } catch (e) {
         if (alive() && current === tabGeneration)
           body.innerHTML =
@@ -414,7 +393,7 @@ export function mountProxmoxMachine(
       }
     }
   }
-  async function load() {
+  async function load(fresh = false) {
     const current = ++generation;
     tabGeneration++;
     preview?.abort();
@@ -424,8 +403,8 @@ export function mountProxmoxMachine(
       '<p class="pve-note" role="status">Loading Proxmox machine…</p>';
     try {
       const results = await Promise.allSettled([
-        ui.api(path),
-        ui.api(`${base}/catalog?kind=${resource.kind}`),
+        (fresh && ui.freshApi ? ui.freshApi : ui.api)(path),
+        (fresh && ui.freshApi ? ui.freshApi : ui.api)(`${base}/catalog?kind=${resource.kind}`),
       ]);
       if (!alive() || current !== generation) return;
       if (results[0].status === "rejected") throw results[0].reason;
@@ -442,6 +421,7 @@ export function mountProxmoxMachine(
       tabs.forEach((el, index) => {
         el.onclick = () => {
           tab = el.dataset.pveTab!;
+          ui.selectTab?.(tab);
           void renderTab();
         };
         el.onkeydown = (event) => {
@@ -459,7 +439,7 @@ export function mountProxmoxMachine(
         downloadScreen(previewImage, resource.name),
       );
       void renderTab();
-      if (canScreen()) capture();
+      if (canScreen() && tab === "overview") capture();
       let nextGuest: Item;
       if (
         resource.kind === "qemu" &&

@@ -1,18 +1,30 @@
+import { rememberResource, registerResource, resourceHref } from "./resource-navigation";
 import "./network.css";
+import {createEquipment} from "./network-equipment";
+import { mountSiteMap, mappedSites } from "./site-map";
+import { metricValue } from "./performance";
+import { capacity, detailDate } from "./resource-story";
 import { icon } from "./icons";
 import { expiresWithin, fqdn, parseRecordValues, relative } from "./network-model";
 import { cardify } from "./table-cards";
+import { detailHero, detailFacts, detailSection, technicalDetail } from "./resource-story";
 
 type Item = Record<string, any>;
+const sitePercent = (v: unknown) => typeof v === "number" && Number.isFinite(v)
+  ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) + "%" : "—";
 export function createNetwork(ui: Item) {
   const { api, esc, notify, content, loading, badge } = ui;
   const dialog: (title: string, html: string, options?: Item) => HTMLDialogElement = ui.dialog;
   const admin = () => ui.role() === "admin";
-  let tab = "domains";
+  const equipment = createEquipment(ui,openClient);
+  let tab = "sites";
+  let sites: Item[] | null = null, siteError = "", clientScope = "", clientView = "recent", clientLink = "all", clientSort = "activity", clientGeneration = 0;
+  const siteKey = (s: Item) => s.console_id+"|"+s.id;
   let domainQuery = "",
     domainFilter = "all",
     clientQuery = "",
     reachQuery = "",
+    reachMachine = "",
     reachFilter = "public";
   let status: Item = {},
     domains: Item[] = [],
@@ -32,7 +44,7 @@ export function createNetwork(ui: Item) {
   const owners = (ip: string) => (map.ips[ip]?.machines || []) as Item[];
   const ownerChips = (ip: string) =>
     owners(ip)
-      .map((m) => chip(m.label, "machine"))
+      .map((m) => `<a class="net-chip machine" href="${resourceHref(location.hash.slice(1),{kind:"machine",id:m.id})}">${esc(m.label)}</a>`)
       .join("");
   const expiresSoon = (d: Item) => expiresWithin(d.expires, 60);
   const none = '<span class="placeholder">—</span>';
@@ -41,26 +53,39 @@ export function createNetwork(ui: Item) {
     loading("Loading network…");
     window.clearTimeout(scanTimer);
     // The header refresh reloads every tab; UniFi clients come from a 30-second server cache.
-    clients = consoles = null;
+    clients = consoles = sites = null;
     const mapRequest = api("/network/map").catch(() => null);
-    [status, domains, pool, unifiStatus] = await Promise.all([
-      api("/dns/status"),
+    const metadata = Promise.all([
+      api("/dns/status").catch(() => ({})),
       api("/dns/domains").then((r: Item) => r.domains).catch(() => []),
       api("/unifi/pool").catch((e: Error) => ({ pool: [], error: e.message })),
       api("/unifi/status").catch(() => ({})),
     ]);
+    // Sites can render without waiting for DNS zones or the managed gateway.
     frame();
+    const body=document.getElementById('net-body');
     mapRequest.then((m: Item | null) => {
-      if (!m || !document.getElementById("net-body")) return;
-      map = m;
-      mapReady = true;
-      summary();
-      renderTab();
+      if (!m || body !== document.getElementById("net-body")) return;
+      map = m; mapReady = true; summary();
+      if(tab!=='sites'&&tab!=='consoles')renderTab();
     });
+    const values=await metadata;
+    if(body!==document.getElementById('net-body'))return;
+    [status, domains, pool, unifiStatus]=values;
+    document.getElementById('net-notices')!.innerHTML=notices();
+    document.getElementById('net-tab-domains')!.textContent=`Domains (${domains.length})`;
+    document.getElementById('net-tab-ips')!.textContent=`Public IPs (${pool.pool.length})`;
+    summary();
+    if(tab!=='sites'&&tab!=='consoles')renderTab();
+  }
+  function notices(){
+    return (status.configured===false?`<div class="callout">GoDaddy is not configured. ${admin() ? 'Add it under <a href="#keys">Keys → Providers</a>.' : "Ask an administrator to add it."}</div>`:'')+
+      (unifiStatus.configured===false?`<div class="callout">UniFi is not configured. ${admin() ? 'Add the Site Manager key under <a href="#keys">Keys → Providers</a>.' : ""}</div>`:unifiStatus.error?`<div class="callout">UniFi gateway unavailable: ${esc(unifiStatus.error)}</div>`:'');
   }
 
   function frame() {
     const tabs = [
+      ["sites", "Sites & health"],
       ["domains", `Domains (${domains.length})`],
       ["ips", `Public IPs (${pool.pool.length})`],
       ["reach", "Reachability"],
@@ -68,17 +93,7 @@ export function createNetwork(ui: Item) {
       ["consoles", "UniFi consoles"],
     ];
     content(
-      `${
-        !status.configured
-          ? `<div class="callout">GoDaddy is not configured. ${admin() ? 'Add it under <a href="#keys">Keys → Providers</a>.' : "Ask an administrator to add it."}</div>`
-          : ""
-      }${
-        !unifiStatus.configured
-          ? `<div class="callout">UniFi is not configured. ${admin() ? 'Add the Site Manager key under <a href="#keys">Keys → Providers</a>.' : ""}</div>`
-          : unifiStatus.error
-            ? `<div class="callout">UniFi gateway unavailable: ${esc(unifiStatus.error)}</div>`
-            : ""
-      }<div class="infra-tabs" role="tablist" aria-label="Network views">${tabs
+      `<div id="net-notices">${notices()}</div><div class="infra-tabs" role="tablist" aria-label="Network views">${tabs
         .map(
           ([id, label]) =>
             `<button role="tab" data-tab="${id}" id="net-tab-${id}" aria-selected="${tab === id}" class="${tab === id ? "active" : ""}">${esc(label)}</button>`,
@@ -108,6 +123,7 @@ export function createNetwork(ui: Item) {
   function renderTab() {
     const body = document.getElementById("net-body");
     if (!body) return;
+    if (tab === "sites") return sitesTab(body);
     if (tab === "domains") return domainsTab(body);
     if (tab === "ips") return ipsTab(body);
     if (tab === "reach") return reachTab(body);
@@ -279,31 +295,26 @@ export function createNetwork(ui: Item) {
   }
 
   async function openDomain(d: Item, fresh = false) {
+    rememberResource({kind:"domain",id:d.name || d.domain}, () => openDomain(d));
     // Reuse an open pane for the same domain so refreshes keep scroll position and feedback.
     let panel = pane?.open && pane.dataset.domain === d.domain ? pane : null;
     if (!panel) {
       closePane();
-      panel = dialog(d.domain, `<div class="net-pane" id="net-pane">${ui.loadingState ? ui.loadingState("Loading records…") : "Loading…"}</div>`, {
-        className: "device-drawer net-drawer",
-        modal: false,
+      panel = ui.flyout(d.domain, `<div class="net-pane" id="net-pane">${ui.loadingState ? ui.loadingState("Loading records…") : "Loading…"}</div>`, {
+        className: "net-drawer", tone: "network", subtitle: "DNS domain · GoDaddy",
       });
-      panel.dataset.domain = d.domain;
+      panel!.dataset.domain = d.domain;
       pane = panel;
-      const opened = panel;
-      const escape = (e: KeyboardEvent) => {
-        if (e.key === "Escape" && opened.open && !document.querySelector("dialog:modal")) opened.close();
-      };
-      document.addEventListener("keydown", escape);
-      opened.addEventListener("close", () => document.removeEventListener("keydown", escape));
     }
     let zone: Item;
     try {
-      zone = await api(`/dns/domains/${encodeURIComponent(d.domain)}/records${fresh ? "" : "?cached=true"}`);
+      zone = await (fresh ? ui.freshApi : api)(`/dns/domains/${encodeURIComponent(d.domain)}/records${fresh ? "" : "?cached=true"}`);
     } catch (err) {
+      if (!panel?.open) return;
       panel.querySelector("#net-pane")!.innerHTML = `<div class="empty" role="alert"><h2>Unable to load records</h2><p>${esc((err as Error).message)}</p></div>`;
       return;
     }
-    if (pane !== panel || !panel) return;
+    if (pane !== panel || !panel?.open) return;
     const groups = recordGroups(zone.records);
     const reach = [...new Set(zone.records.filter((r: Item) => ["A", "AAAA"].includes(r.type)).flatMap((r: Item) => owners(r.data).map((m) => m.label)))];
     panel.querySelector("#net-pane")!.innerHTML = `<div class="net-facts"><div><span>Expires</span><b>${esc(d.expires ? new Date(d.expires).toLocaleDateString() : "—")}</b></div><div><span>Renewal</span><b>${d.renewAuto ? "Automatic" : "Manual"}</b></div><div><span>Transfer lock</span><b>${d.locked ? "On" : "Off"}</b></div><div><span>Privacy</span><b>${d.privacy ? "On" : "Off"}</b></div><div><span>Records</span><b>${zone.records.length}</b></div><div><span>${zone.cached ? "Cached" : "Fetched"}</span><b>${esc(relative(zone.fetched_at))}</b></div></div>${
@@ -313,7 +324,7 @@ export function createNetwork(ui: Item) {
     }</div><div class="infra-table-wrap"><table class="net-table net-records"><thead><tr><th>Type</th><th>Name</th><th>Value</th><th>TTL</th>${admin() ? "<th></th>" : ""}</tr></thead><tbody>${groups
       .map(
         (g, i) =>
-          `<tr><td><b>${esc(g[0].type)}</b></td><td class="mono">${esc(g[0].name)}</td><td>${g
+          `<tr><td><b>${esc(g[0].type)}</b></td><td class="mono"><button class="text-link" data-record-inspect="${i}">${esc(g[0].name)}</button></td><td>${g
             .map(
               (r: Item) =>
                 `<div class="net-value"><span class="mono">${r.priority !== undefined && ["MX", "SRV"].includes(r.type) ? esc(r.priority) + " " : ""}${esc(r.data)}</span>${["A", "AAAA"].includes(r.type) ? ownerChips(r.data) : ""}</div>`,
@@ -325,6 +336,7 @@ export function createNetwork(ui: Item) {
           }</tr>`,
       )
       .join("")}</tbody></table></div>`;
+    panel.querySelectorAll<HTMLElement>("[data-record-inspect]").forEach(b=>b.onclick=()=>void openRecord(d.domain,groups[Number(b.dataset.recordInspect)][0].name,groups[Number(b.dataset.recordInspect)][0].type));
     cardify(panel);
     panel.querySelector("#net-refresh-zone")?.addEventListener("click", () => openDomain(d, true));
     panel.querySelector("#net-point")?.addEventListener("click", () => pointDialog(d));
@@ -336,6 +348,19 @@ export function createNetwork(ui: Item) {
       b.addEventListener("click", () => deleteSet(d, groups[+b.dataset.delete!])),
     );
   }
+
+  async function openRecord(domain:string,name:string,type:string){
+    rememberResource({kind:'dns-record',id:name,connection:domain,resourceKind:type},()=>openRecord(domain,name,type));
+    const detail:HTMLDialogElement=ui.flyout(fqdn(domain,name),'<p class="resource-note">Reading cached configuration…</p>',{tone:'network',subtitle:'DNS · '+type});
+    const [zone,relationships,events]=await Promise.all([api('/dns/domains/'+encodeURIComponent(domain)+'/records?cached=true'),api('/network/map').catch(()=>({ips:{}})),api('/dns/domains/'+encodeURIComponent(domain)+'/record-history?name='+encodeURIComponent(name)+'&rtype='+encodeURIComponent(type)).catch(()=>null)]);
+    if(!detail.open)return;const records=zone.records.filter((r:Item)=>r.name===name&&r.type===type),chain:Item[]=[];let current=name;const visited=new Set<string>();
+    for(let depth=0;depth<12;depth++){if(visited.has(current)){chain.push({name:current,type:'Loop',data:'Alias cycle in cached configuration'});break;}visited.add(current);const group=zone.records.filter((r:Item)=>r.name===current&&['A','AAAA','CNAME'].includes(r.type));chain.push(...group);const alias=group.find((r:Item)=>r.type==='CNAME');if(!alias)break;const target=String(alias.data).replace(/\.$/,'');if(target===domain)current='@';else if(target.endsWith('.'+domain))current=target.slice(0,-domain.length-1);else{chain.push({name:target,type:'External target',data:'Outside this cached zone; resolve explicitly below'});break;}}
+    const addresses=chain.filter(r=>['A','AAAA'].includes(r.type));
+    const descriptions:Item={A:'Maps this name to an IPv4 address.',AAAA:'Maps this name to an IPv6 address.',CNAME:'Aliases this name to another DNS name.',MX:'Routes mail to the named server; lower priority values are preferred.',TXT:'Publishes text used for policy, verification or application configuration.',SRV:'Describes a service endpoint, priority, weight and port.',CAA:'Controls which certificate authorities may issue certificates.',NS:'Delegates DNS queries to the named server.'};
+    detail.querySelector('.resource-body')!.innerHTML=detailHero('DNS record · '+type,null,descriptions[type] || 'Provider DNS configuration.')+detailFacts([['Zone',domain],['Name',fqdn(domain,name)],['Zone observed',detailDate(zone.fetched_at)],['Evidence','Cached provider configuration; not a live reachability test']])+detailSection('Record values',records.map((r:Item)=>detailFacts([['Value',r.data],['TTL',r.ttl+' seconds'],['Priority',r.priority]])).join('')||'<p>This record set no longer appears in the cached zone.</p>')+detailSection('Configured target path',chain.map(r=>`<p><b>${esc(r.name)}</b> · ${esc(r.type)} → ${esc(r.data)}</p>`).join('')||'<p>This record type does not directly map to an address.</p>')+detailSection('Known address relationships',addresses.map(r=>`<p><a href="${resourceHref(location.hash.slice(1),{kind:'public-ip',id:r.data})}">${esc(r.data)} · inspect mapping →</a></p>`+(relationships.ips?.[r.data]?.machines || []).map((m:Item)=>`<p><a href="${resourceHref(location.hash.slice(1),{kind:'machine',id:m.id})}">${esc(m.label)} →</a></p>`).join('')).join('')||'<p>No address-to-machine relationship in the returned inventory.</p>')+detailSection('Resolution check','<p class="resource-note">Resolve A/AAAA addresses from the Speck server. Results may differ from an endpoint or authoritative server, and do not verify a listening application.</p><button class="secondary" data-record-resolve>Resolve from Speck server</button><div data-record-resolution role="status"></div>')+detailSection('Changes recorded through Speck',events===null?'<p>Change history unavailable.</p>':events.map((v:Item)=>`<p>${esc(v.action)} · ${esc(v.actor)} · ${esc(detailDate(v.at))}</p>`).join('')||'<p>No matching changes recorded. Provider-side changes are not observed in this history.</p>');
+    const button=detail.querySelector<HTMLButtonElement>('[data-record-resolve]')!;button.onclick=async()=>{button.disabled=true;const out=detail.querySelector('[data-record-resolution]')!;out.textContent='Resolving…';try{const result=await api('/dns/domains/'+encodeURIComponent(domain)+'/resolve','POST',{name});out.innerHTML=detailFacts([['Outcome',result.outcome],['Addresses',result.addresses.join(', ')||'None returned'],['Checked',detailDate(result.checked_at)],['Elapsed',result.duration_ms+' ms']]);}catch(error){out.textContent=(error as Error).message;}finally{button.disabled=false;}};
+  }
+  registerResource('dns-record',ref=>openRecord(ref.connection!,ref.id,ref.resourceKind!));
 
   function confirmChange(title: string, html: string, action: string, typed = ""): Promise<boolean> {
     return new Promise((resolve) => {
@@ -468,7 +493,7 @@ export function createNetwork(ui: Item) {
         const info = map.ips[p.ip] || {};
         const names: string[] = info.dns || [];
         const lan = p.lan_ip || info.mapping?.lan_ip;
-        return `<tr class="net-ip-${p.status}"><td class="mono ip">${esc(p.ip)}</td><td>${chip(label[p.status] || p.status, tone[p.status])}</td><td>${p.assigned_to ? esc(p.assigned_to) : none}</td><td>${
+        return `<tr class="net-ip-${p.status}"><td class="mono ip"><button class="text-link" data-ip-detail="${i}" aria-haspopup="dialog">${esc(p.ip)}</button></td><td>${chip(label[p.status] || p.status, tone[p.status])}</td><td>${p.assigned_to ? esc(p.assigned_to) : none}</td><td>${
           lan ? `<span class="mono">${esc(lan)}</span>${ownerChips(lan)}${info.lan_client && !owners(lan).length ? chip(info.lan_client) : ""}` : none
         }</td><td>${names.slice(0, 3).map((n) => chip(n)).join("")}${names.length > 3 ? `<small>+${names.length - 3} more</small>` : ""}</td>${
           admin()
@@ -478,6 +503,7 @@ export function createNetwork(ui: Item) {
       })
       .join("")}</tbody></table></div>`;
     cardify(body);
+    body.querySelectorAll<HTMLButtonElement>('[data-ip-detail]').forEach(b=>b.onclick=()=>openIp(pool.pool[Number(b.dataset.ipDetail)]));
     body.querySelectorAll<HTMLButtonElement>("[data-map]").forEach((b) => b.addEventListener("click", () => mapDialog(pool.pool[+b.dataset.map!])));
     body.querySelectorAll<HTMLButtonElement>("[data-unmap]").forEach((b) => b.addEventListener("click", () => unmap(pool.pool[+b.dataset.unmap!])));
   }
@@ -558,8 +584,9 @@ export function createNetwork(ui: Item) {
       const q = reachQuery.toLowerCase();
       const rows = (map.machines as Item[]).filter(
         (m) =>
+          (!reachMachine || m.id === reachMachine) &&
           (reachFilter === "all" || (reachFilter === "dns" ? m.dns.length : m.public.length)) &&
-          (!q ||
+          (reachMachine || !q ||
             m.label.toLowerCase().includes(q) ||
             [...m.lan, ...m.public].some((a: Item) => a.ip.includes(q)) ||
             m.dns.some((n: Item) => n.fqdn.includes(q))),
@@ -582,6 +609,7 @@ export function createNetwork(ui: Item) {
       cardify(document.getElementById("net-reach-rows"));
     };
     body.querySelector<HTMLInputElement>("#net-reach-q")!.addEventListener("input", (e) => {
+      reachMachine = "";
       reachQuery = (e.target as HTMLInputElement).value.trim();
       draw();
     });
@@ -594,39 +622,59 @@ export function createNetwork(ui: Item) {
 
   // ---------------- LAN clients and consoles ----------------
 
+  async function loadSites() {
+    if(sites)return;
+    try { const response=await api('/unifi/sites');sites=Array.isArray(response.sites)?response.sites:[];siteError=''; }
+    catch { sites=[];siteError='Site health could not be loaded. Check UniFi permissions and connectivity.'; }
+  }
+  function setTab(next:string){
+    tab=next;
+    document.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach(b=>{if(!b.dataset.tab)return;b.classList.toggle('active',b.dataset.tab===next);b.setAttribute('aria-selected',String(b.dataset.tab===next));});
+    renderTab();
+  }
+  async function sitesTab(body:HTMLElement){
+    if(!sites){body.innerHTML=ui.loadingState('Loading sites and network health…');await loadSites();if(!body.isConnected||tab!=='sites')return;}
+    const rows=sites || [],connected=rows.filter(s=>s.state==='connected'),clientsCount=rows.reduce((n,s)=>n+(s.counts?.wifiClient || 0)+(s.counts?.wiredClient || 0),0);
+    body.innerHTML=`<div class="net-insights"><div><b>${rows.length}</b><span>Network sites</span></div><div><b>${connected.length}</b><span>Connected consoles</span></div><div><b>${clientsCount.toLocaleString()}</b><span>Reported clients</span></div><div><b>${rows.reduce((n,s)=>n+(s.counts?.offlineDevice || 0),0)}</b><span>Offline network devices</span></div></div>${siteError?'<p class="resource-notice">'+esc(siteError)+'</p>':''}<div data-site-map></div><div class="section-head"><div><h2>Explore your sites</h2><p>WAN health, devices and clients from each Network application.</p></div></div><div class="net-site-grid">${rows.map((site,i)=>`<button class="net-site-card" data-site-detail="${i}" aria-haspopup="dialog"><div><span class="site-card-title">${site.location?'<span class="site-number">'+(mappedSites(rows).indexOf(site)+1)+'</span>':''}${esc(site.name)}</span>${badge(site.state,site.state==='connected')}</div><small>${esc(site.location?.label || site.timezone || 'Location not reported')}</small><small>${esc(site.isp || 'ISP not reported')}${site.is_managed_gateway?' · Public IP management':''}</small><div class="site-card-stats"><span><b>${(site.counts?.wiredClient || 0)+(site.counts?.wifiClient || 0)}</b>Clients</span><span><b>${site.counts?.totalDevice ?? '—'}</b>Devices</span><span><b>${sitePercent(site.percentages?.wanUptime)}</b>WAN uptime</span></div></button>`).join('')}</div>${!rows.length&&!siteError?'<div class="empty"><h3>No Network sites reported</h3><p>Connect UniFi in Keys to explore sites, health and client relationships.</p></div>':''}`;
+    mountSiteMap(body.querySelector<HTMLElement>('[data-site-map]')!,rows,openSite);
+    body.querySelectorAll<HTMLButtonElement>('[data-site-detail]').forEach(b=>b.onclick=()=>openSite(rows[Number(b.dataset.siteDetail)]));
+  }
+  function openSite(site:Item){
+    rememberResource({kind:"site",id:String(site.id),connection:site.console_id}, () => openSite(site));
+    const counts=site.counts || {},health=site.percentages || {};
+    const d=ui.flyout(site.name,detailHero('UniFi · Site',site.state,site.location?.label || 'Location is not reported by this console.',[['Wired clients',counts.wiredClient],['Wi-Fi clients',counts.wifiClient],['Devices',counts.totalDevice]])+detailSection('WAN & connectivity',detailFacts([['ISP',site.isp],['Public address',site.ip],['WAN uptime',sitePercent(health.wanUptime)],['Wi-Fi retries',health.txRetry!==undefined?health.txRetry.toFixed(1)+'%':null]]))+detailSection('WAN interfaces',`<div class="resource-related">${(site.wans||[]).map((w:Item)=>`<div><span><b>${esc(w.name)}</b><small>${esc([w.ip,w.isp].filter(Boolean).join(' · ') || 'No address reported')}${w.issues?' · '+w.issues+' reported issues':''}</small></span>${badge(w.up===true?'Link up':w.up===false?'Link down':'Not reported',w.up===true)}</div>`).join('') || '<p class="resource-note">No WAN interface detail reported.</p>'}</div>`)+detailSection('Network health',detailFacts([['Offline devices',counts.offlineDevice],['Offline gateways',counts.offlineGatewayDevice],['Offline access points',counts.offlineWifiDevice],['Updates available',counts.pendingUpdateDevice],['Critical notifications',counts.criticalNotification]]))+detailSection('Console & location',detailFacts([['Model',site.model],['Software',site.version],['Time zone',site.timezone],['Coordinates',site.location?site.location.latitude.toFixed(4)+', '+site.location.longitude.toFixed(4):null],['Location source',site.location?.source],['Public IP management',site.is_managed_gateway?'Configured gateway':'Read-only site discovery']]))+(admin()?`<p><a href="${resourceHref(location.hash.slice(1),{kind:'provider',id:'unifi'})}">Integration credentials &amp; check history →</a></p>`:'')+'<section class="resource-actions"><div class="resource-action-buttons"><button class="primary" data-site-equipment>Explore network equipment</button><button class="secondary" data-site-clients>Explore LAN clients</button></div></section>',{tone:'network',subtitle:'Network · '+(site.site_name || 'Site')});
+    d.querySelector('[data-site-equipment]')!.addEventListener('click',()=>void equipment.openInventory(site));
+    d.querySelector('[data-site-clients]')!.addEventListener('click',()=>{d.close();clientScope=siteKey(site);clients=null;clientQuery='';clientLimit=PAGE;setTab('clients');});
+  }
   async function clientsTab(body: HTMLElement) {
+    const generation=++clientGeneration,scope=clientScope;
     if (!clients) {
-      body.innerHTML = ui.loadingState ? ui.loadingState("Loading LAN clients…") : "Loading…";
+      body.innerHTML = ui.loadingState("Loading site clients and connection evidence…");
       try {
-        clients = await api("/unifi/clients");
+        await loadSites();
+        const selected=(sites || []).find(s=>siteKey(s)===scope);
+        const response=await api(selected?'/unifi/sites/'+encodeURIComponent(selected.console_id)+'/'+encodeURIComponent(selected.id)+'/clients':'/unifi/clients');
+        if(generation!==clientGeneration||scope!==clientScope||!body.isConnected||tab!=='clients')return;
+        clients=Array.isArray(response)?response:response.clients || [];
       } catch (err) {
-        body.innerHTML = `<div class="empty" role="alert"><h2>LAN clients unavailable</h2><p>${esc((err as Error).message)}</p></div>`;
+        if(body.isConnected&&tab==='clients'&&generation===clientGeneration)body.innerHTML = `<div class="empty" role="alert"><h2>LAN clients unavailable</h2><p>${esc((err as Error).message)}</p><button class="secondary" id="client-reset-scope">Return to managed gateway</button></div>`;
+        body.querySelector('#client-reset-scope')?.addEventListener('click',()=>{clientScope='';clients=null;void clientsTab(body);});
         return;
       }
-      if (tab !== "clients") return;
     }
-    body.innerHTML = `<div class="infra-toolbar net-toolbar"><label class="infra-search">Search<input id="net-client-q" type="search" placeholder="Name, IP or MAC" value="${esc(clientQuery)}"></label></div><div id="net-client-rows"></div>`;
+    const selected=(sites||[]).find(s=>siteKey(s)===clientScope),observed=clients!.some(c=>c.observation_available),recent=clients!.filter(c=>c.state==='online');
+    body.innerHTML = `<div class="net-client-scope"><div><h2>${esc(selected?.name || pool.gateway_name || 'Managed gateway')}</h2><p>${observed?'Switch ports, wireless experience and traffic from the Network application.':'Basic inventory is available. Detailed observations are not reported by this connection.'}</p></div><label>Site<select id="net-client-site"><option value="">Managed gateway</option>${(sites||[]).map(s=>`<option value="${esc(siteKey(s))}" ${siteKey(s)===clientScope?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label></div><div class="net-insights"><div><b>${recent.length}</b><span>Seen in the last 3 minutes</span></div><div><b>${clients!.filter(c=>c.type==='WIRELESS').length}</b><span>Wi-Fi clients</span></div><div><b>${clients!.filter(c=>c.type==='WIRED').length}</b><span>Wired clients</span></div><div><b>${recent.filter(c=>typeof c.experience==='number'&&c.experience<60).length}</b><span>Low experience scores</span></div></div><div class="infra-toolbar net-toolbar"><label class="infra-search">Search<input id="net-client-q" type="search" placeholder="Name, IP, MAC, network, vendor or uplink" value="${esc(clientQuery)}"></label><label>Presence<select id="net-client-view"><option value="recent" ${clientView==='recent'?'selected':''}>Recently seen</option><option value="all" ${clientView==='all'?'selected':''}>All reported</option><option value="attention" ${clientView==='attention'?'selected':''}>Low experience</option></select></label><label>Connection<select id="net-client-link"><option value="all">All links</option><option value="WIRED" ${clientLink==='WIRED'?'selected':''}>Wired</option><option value="WIRELESS" ${clientLink==='WIRELESS'?'selected':''}>Wi-Fi</option></select></label><label>Sort<select id="net-client-sort"><option value="activity" ${clientSort==='activity'?'selected':''}>Last seen</option><option value="traffic" ${clientSort==='traffic'?'selected':''}>Traffic rate</option><option value="name" ${clientSort==='name'?'selected':''}>Name</option></select></label></div><div id="net-client-rows"></div>`;
     const draw = () => {
       const q = clientQuery.toLowerCase();
-      const rows = clients!.filter((c) => !q || c.name.toLowerCase().includes(q) || c.ip.includes(q) || c.mac.includes(q));
-      document.getElementById("net-client-rows")!.innerHTML = `<p class="muted net-count">${rows.length === clients!.length ? `${rows.length} clients` : `${rows.length} of ${clients!.length} clients`}</p><div class="infra-table-wrap"><table class="net-table net-compact"><thead><tr><th>Name</th><th>IP</th><th>MAC</th><th>Link</th><th>Connected</th><th>Speck machine</th></tr></thead><tbody>${rows
-        .slice(0, clientLimit)
-        .map(
-          (c) =>
-            `<tr><td>${esc(c.name || "Unnamed")}</td><td class="mono ip">${c.ip ? esc(c.ip) : none}</td><td class="mono ip">${esc(c.mac)}</td><td>${esc(c.type === "WIRELESS" ? "Wi-Fi" : c.type === "WIRED" ? "Wired" : c.type)}</td><td>${c.connected_at ? esc(relative(Date.parse(c.connected_at) / 1000)) : none}</td><td>${c.ip ? ownerChips(c.ip) : ""}</td></tr>`,
-        )
-        .join("")}</tbody></table></div>${rows.length > clientLimit ? `<button class="secondary net-more" id="net-clients-more">Show ${Math.min(PAGE, rows.length - clientLimit)} more of ${rows.length - clientLimit} remaining</button>` : ""}`;
+      const rows = clients!.filter(c=>(!q||[c.name,c.ip,c.mac,c.network_name,c.uplink_name,c.ssid,c.vendor].filter(Boolean).join(' ').toLowerCase().includes(q))&&(clientLink==='all'||c.type===clientLink)&&(clientView==='all'||clientView==='recent'&&(!observed||c.state==='online')||clientView==='attention'&&typeof c.experience==='number'&&c.experience<60&&c.state==='online')).sort((a,b)=>clientSort==='traffic'?((b.receive_rate||0)+(b.send_rate||0))-((a.receive_rate||0)+(a.send_rate||0)):clientSort==='name'?a.name.localeCompare(b.name):(b.last_seen||0)-(a.last_seen||0)||a.name.localeCompare(b.name));
+      document.getElementById("net-client-rows")!.innerHTML = `<p class="muted net-count">${rows.length} of ${clients!.length} clients · Presence uses the last reported observation.</p>${rows.length?`<div class="infra-table-wrap"><table class="net-table net-compact"><thead><tr><th>Client</th><th>Address</th><th>Network / uplink</th><th>Connection quality</th><th>Traffic / last seen</th><th>Speck evidence</th></tr></thead><tbody>${rows.slice(0,clientLimit).map((c,i)=>`<tr><td class="client-name"><button class="text-link" data-client-detail="${i}" aria-haspopup="dialog"><i class="client-presence ${c.state==='online'?'online':''}"></i>${esc(c.name || c.ip || c.mac || 'Unnamed client')}</button><small>${esc(c.vendor || c.mac)}</small></td><td class="mono ip">${esc(c.ip || '—')}<small>${esc(c.mac)}</small></td><td>${esc(c.network_name || c.ssid || 'Not reported')}<small>${esc(c.uplink_name || 'Uplink not reported')}${c.port?' · Port '+esc(c.port):''}</small></td><td>${esc(c.type==='WIRELESS'?'Wi-Fi':c.type==='WIRED'?'Wired':c.type)}${typeof c.experience==='number'?chip(c.experience+'% experience',c.experience<60?'warn':'good'):''}<small>${typeof c.signal_dbm==='number'?esc(c.signal_dbm)+' dBm':c.link_mbps?esc(c.link_mbps)+' Mbps link':'No quality reading'}</small></td><td>${typeof c.receive_rate==='number'?esc(metricValue((c.receive_rate||0)+(c.send_rate||0),'bytes/s')):'—'}<small>${c.last_seen?esc(relative(c.last_seen)):'Last seen not reported'}</small></td><td>${c.is_managed_gateway!==false&&c.ip?ownerChips(c.ip):'<span class="placeholder">Site-scoped</span>'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty"><h3>No matching clients</h3><p>Choose All reported or adjust the site and filters.</p></div>'}${rows.length>clientLimit?'<button class="secondary net-more" id="net-clients-more">Show '+Math.min(PAGE,rows.length-clientLimit)+' more</button>':''}`;
       cardify(document.getElementById("net-client-rows"));
-      document.getElementById("net-clients-more")?.addEventListener("click", () => {
-        clientLimit += PAGE;
-        draw();
-      });
+      body.querySelectorAll<HTMLElement>('[data-client-detail]').forEach(b=>b.onclick=()=>openClient(rows[Number(b.dataset.clientDetail)]));
+      body.querySelector('#net-clients-more')?.addEventListener('click',()=>{clientLimit+=PAGE;draw();});
     };
-    body.querySelector<HTMLInputElement>("#net-client-q")!.addEventListener("input", (e) => {
-      clientQuery = (e.target as HTMLInputElement).value.trim();
-      clientLimit = PAGE;
-      draw();
-    });
+    body.querySelector<HTMLInputElement>("#net-client-q")!.oninput=e=>{clientQuery=(e.target as HTMLInputElement).value.trim();clientLimit=PAGE;draw();};
+    for(const [id,set] of [['view',(v:string)=>clientView=v],['link',(v:string)=>clientLink=v],['sort',(v:string)=>clientSort=v]] as const)body.querySelector<HTMLSelectElement>('#net-client-'+id)!.onchange=e=>{set((e.target as HTMLSelectElement).value);clientLimit=PAGE;draw();};
+    body.querySelector<HTMLSelectElement>('#net-client-site')!.onchange=e=>{clientScope=(e.target as HTMLSelectElement).value;clients=null;clientLimit=PAGE;void clientsTab(body);};
     draw();
   }
 
@@ -643,10 +691,52 @@ export function createNetwork(ui: Item) {
     }
     body.innerHTML = `<p class="muted net-note">Every UniFi console on the Site Manager account. Speck manages public IPs on the highlighted gateway.</p><div class="net-consoles">${consoles!
       .map(
-        (c) =>
-          `<article class="card net-console ${c.is_managed_gateway ? "managed" : ""}"><div class="infra-card-heading"><h3>${esc(c.name)}</h3>${badge(c.state || "unknown", c.state === "connected")}</div><p>${esc(c.model || "UniFi console")}${c.version ? " · " + esc(c.version) : ""}</p><p class="mono">${esc(c.ip || "")}</p>${c.is_managed_gateway ? chip("Managed gateway", "good") : ""}</article>`,
+        (c, i) =>
+          `<article class="card net-console ${c.is_managed_gateway ? "managed" : ""}"><div class="infra-card-heading"><h3><button class="text-link" data-console-detail="${i}" aria-haspopup="dialog">${esc(c.name)}</button></h3>${badge(c.state || "unknown", c.state === "connected")}</div><p>${esc(c.model || "UniFi console")}${c.version ? " · " + esc(c.version) : ""}</p><p class="mono">${esc(c.ip || "")}</p>${c.is_managed_gateway ? chip("Managed gateway", "good") : ""}</article>`,
       )
       .join("")}</div>`;
+    body.querySelectorAll<HTMLElement>('[data-console-detail]').forEach(b=>b.onclick=()=>openConsole(consoles![Number(b.dataset.consoleDetail)]));
+  }
+
+  function machineLinks(ip: string) {
+    return detailSection('Machines reporting this address', owners(ip).length ? `<div class="resource-related">${owners(ip).map(m=>`<button data-network-machine="${esc(m.id)}"><span><b>${esc(m.label)}</b><small>Inspect identity and network evidence</small></span><span aria-hidden="true">→</span></button>`).join('')}</div>` : '<p class="resource-note">No machine in the loaded network map reports this address.</p>');
+  }
+  function bindMachineLinks(p: HTMLDialogElement) {
+    p.querySelectorAll<HTMLElement>('[data-network-machine]').forEach(b=>b.onclick=()=> { p.close(); void ui.openMachine(b.dataset.networkMachine); });
+  }
+  function openIp(p: Item) {
+    rememberResource({kind:"public-ip",id:p.ip}, () => openIp(p));
+    const info = map.ips[p.ip] || {}, lan = p.lan_ip || info.mapping?.lan_ip;
+    const labels: Item = {free:'Available',assigned:'Speck-managed mapping',in_use:'Other gateway rule',gateway:'Gateway address'};
+    const d = ui.flyout(p.ip, detailHero(p.status==='provider_reported'?'Provider · Reported address':'UniFi · Public address',labels[p.status] || (p.status==='provider_reported'?'Reported by a machine':p.status),p.status==='assigned' ? 'This address forwards inbound traffic to its mapped LAN host and supplies that host’s outbound address.' : 'Address allocation and gateway evidence from the connected UniFi network.') + detailSection('Routing',detailFacts([['Gateway',p.status==='provider_reported'?'No managed gateway mapping':pool.gateway_name],['Public address',p.ip],['Mapped LAN host',lan],['Mapping name',p.assigned_to],['Source',p.status==='assigned' ? 'Speck-managed UniFi NAT mapping' : 'UniFi gateway inventory']])) + detailSection('DNS names',detailFacts([['Names pointing here',info.dns?.length ? info.dns : 'No cached DNS names']])) + machineLinks(lan || p.ip) + `${admin() && ['free','assigned'].includes(p.status) ? '<section class="resource-actions"><h3>Mapping</h3><button class="secondary" data-ip-action>'+(p.status==='free' ? 'Map to host' : 'Remove mapping')+'</button></section>' : ''}` + technicalDetail(p),{tone:'network',subtitle:'Network · Public IP'});
+    bindMachineLinks(d);
+    d.querySelector('[data-ip-action]')?.addEventListener('click',()=> p.status==='free' ? mapDialog(p) : void unmap(p));
+  }
+  const clientMachines = (c:Item) => map.machines.filter((m:Item)=>(m.network_clients || []).some((n:Item)=>n.console_id===c.console_id&&n.site_id===c.site_id&&String(n.mac).replaceAll(':','').replaceAll('-','').toLowerCase()===String(c.mac).replaceAll(':','').replaceAll('-','').toLowerCase()));
+  function openClient(c: Item) {
+    rememberResource({kind:"lan-client",id:c.mac,connection:c.console_id,site:c.site_id}, () => openClient(c));
+    const signal=typeof c.signal_dbm==='number'?c.signal_dbm+' dBm':null;
+    const d = ui.flyout(c.name || c.ip || 'LAN client',detailHero('UniFi · LAN client',c.state==='online'?'Recently seen':c.state==='last_seen'?'Previously seen':null,'Connection, experience and traffic observed by this site’s Network application.',[['Experience',typeof c.experience==='number'?c.experience+'%':'Not reported'],['Signal / link',signal || (c.link_mbps?c.link_mbps+' Mbps':'Not reported')],['Traffic',typeof c.receive_rate==='number'?metricValue((c.receive_rate||0)+(c.send_rate||0),'bytes/s'):'Not reported']])+(c.uplink_id&&c.console_id&&c.site_id?'<section class="resource-actions"><button class="primary" data-client-uplink>Explore '+esc(c.uplink_name || 'uplink')+(c.port?' · Port '+esc(c.port):'')+' →</button></section>':'')+detailSection('Connection',detailFacts([['IP address',c.ip],['MAC address',c.mac],['Vendor',c.vendor],['Link',c.type==='WIRELESS'?'Wi-Fi':c.type==='WIRED'?'Wired':c.type],['Network',c.network_name],['VLAN',c.vlan],['Access point / switch',c.uplink_name],['Uplink model',c.uplink_model],['Switch port',c.port],['Connected since',c.connected_at?new Date(c.connected_at).toLocaleString():null],['Last seen',detailDate(c.last_seen)]]))+(c.type==='WIRELESS'?detailSection('Wireless experience',detailFacts([['SSID',c.ssid],['Signal',signal],['Radio',c.radio],['Channel',c.channel],['Experience score',typeof c.experience==='number'?c.experience+'%':null]])):'')+detailSection('Traffic observed by the network',detailFacts([['Received from client',capacity(c.received_bytes)],['Sent to client',capacity(c.sent_bytes)],['Current receive rate',typeof c.receive_rate==='number'?metricValue(c.receive_rate,'bytes/s'):null],['Current send rate',typeof c.send_rate==='number'?metricValue(c.send_rate,'bytes/s'):null]]))+'<p class="resource-note">Counters reflect the provider’s observation window. A connection start time does not establish current presence.</p>'+'<section class="resource-section" data-client-machines><h3>Related Speck machines</h3><p class="resource-note">Checking unique MAC address evidence…</p></section>'+technicalDetail(c),{tone:'network',subtitle:'Network · LAN client'});
+    bindMachineLinks(d);
+    void api('/network/map').then((result:Item)=>{
+      if(!d.open)return;map=result;
+      const related=clientMachines(c),target=d.querySelector('[data-client-machines]')!;
+      target.innerHTML='<h3>Related Speck machines</h3>'+(related.length?'<div class="resource-related">'+related.map((m:Item)=>'<button data-network-machine="'+esc(m.id)+'"><span><b>'+esc(m.label)+'</b><small>Unique MAC address match in this site</small></span>→</button>').join('')+'</div>':'<p class="resource-note">No unique machine match in the loaded network evidence. Private IP addresses can repeat across sites.</p>');bindMachineLinks(d);
+    }).catch(()=>{if(d.open)d.querySelector('[data-client-machines]')!.innerHTML='<h3>Related Speck machines</h3><p class="resource-note">Machine relationships are unavailable. Connection details remain visible.</p>';});
+    if(c.console_id&&c.site_id&&c.mac){const history=document.createElement('section');history.className='resource-section';history.innerHTML='<h3>Observed attachment history</h3><p>Reading retained observations…</p>';d.querySelector('.resource-body').append(history);void api('/unifi/sites/'+encodeURIComponent(c.console_id)+'/'+encodeURIComponent(c.site_id)+'/clients/'+encodeURIComponent(c.mac)+'/history').then((result:Item)=>{if(!d.open)return;history.innerHTML='<h3>Observed attachment history</h3><p class="resource-note">'+esc(result.note)+'</p>'+result.observations.map((o:Item)=>`<p><time>${esc(detailDate(o.at))}</time> · <a href="${resourceHref(location.hash.slice(1),{kind:'equipment',id:o.uplink_id,connection:c.console_id,site:c.site_id,tab:o.port?String(o.port):undefined})}">${esc(o.uplink_name || o.uplink_id)}${o.port?' · Port '+esc(o.port):''} →</a>${o.channel?' · channel '+esc(o.channel):''}${o.signal_dbm!=null?' · '+esc(o.signal_dbm)+' dBm':''}</p>`).join('')+(!result.observations.length?'<p>No retained attachment observations. Inspect its uplink to begin recording available evidence.</p>':'');}).catch(()=>{history.textContent='Attachment history unavailable.';});}
+    d.querySelector('[data-client-uplink]')?.addEventListener('click',()=>void equipment.openDevice(c,c.uplink_id,c.port,()=>openClient(c)));
+  }
+  function openConsole(c: Item) {
+    rememberResource({kind:"console",id:String(c.id)}, () => openConsole(c));
+    const pane: HTMLDialogElement = ui.flyout(c.name || 'UniFi console',detailHero('UniFi · Console',c.state,c.is_managed_gateway ? 'This gateway manages the public address pool and NAT mappings shown in Speck.' : 'A console discovered through the connected UniFi Site Manager account.') + detailSection('Console',detailFacts([['Model',c.model],['Software version',c.version],['Address',c.ip],['Gateway management',c.is_managed_gateway ? 'Managed by Speck' : 'Discovery only']])) + technicalDetail(c),{tone:'network',subtitle:'Network · UniFi console'});
+    const related = document.createElement('section'); related.className='resource-section'; related.innerHTML='<h3>Sites & equipment</h3><p class="resource-note">Reading sites on this console…</p>'; pane.querySelector('.resource-body')!.append(related);
+    void loadSites().then(()=>{
+      if(!pane.open)return;
+      const matches=(sites || []).filter((site:Item)=>site.console_id===c.id);
+      related.innerHTML='<h3>Sites & equipment</h3>'+(matches.length?'<div class="resource-related">'+matches.map((site:Item,i:number)=>`<button data-console-site="${i}"><span><b>${esc(site.name)}</b><small>Health, equipment and connected clients</small></span>→</button>`).join('')+'</div>':'<p class="resource-note">No Network sites were returned for this console. Check the integration’s read permissions and Network application availability.</p>');
+      related.querySelectorAll<HTMLButtonElement>('[data-console-site]').forEach(b=>b.onclick=()=>openSite(matches[Number(b.dataset.consoleSite)]));
+    }).catch(()=>{related.innerHTML='<h3>Sites & equipment</h3><p class="resource-note">Site inventory is unavailable.</p>';});
+
   }
 
   /** Map a free public IP to a LAN host chosen elsewhere (for example a new VM). */
@@ -679,5 +769,23 @@ export function createNetwork(ui: Item) {
     });
   }
 
-  return { render, closePane, exposeHost };
+  function showMachine(machine: Item) {
+    tab = "reach";
+    reachMachine = machine.id;
+    reachQuery = machine.label;
+    reachFilter = "all";
+    location.hash = "network";
+  }
+  function reset() {
+    window.clearTimeout(scanTimer); closePane(); clients = consoles = sites = null;
+    clientScope="";clientGeneration++;siteError="";
+    domains = []; status = {}; pool = {pool:[]}; unifiStatus = {};
+    map = {machines:[],ips:{}}; mapReady = false; reachMachine = "";
+  }
+  registerResource('console',async ref=>{const result=await api('/unifi/consoles');const c=(result.consoles || result).find((c:Item)=>String(c.id)===ref.id);if(!c)throw new Error('Console is not in current inventory');openConsole(c);});
+  registerResource('lan-client',async ref=>{const result=await api('/unifi/sites/'+encodeURIComponent(ref.connection || '')+'/'+encodeURIComponent(ref.site || '')+'/clients');const c=(result.clients || result).find((c:Item)=>c.mac===ref.id&&c.console_id===ref.connection&&c.site_id===ref.site);if(!c)throw new Error('Client is not in the current site inventory');openClient(c);});
+  registerResource("site", async ref => {await loadSites(); const site=(sites || []).find(s=>String(s.id)===ref.id && s.console_id===ref.connection); if(!site) throw new Error('Site is not in the current inventory'); openSite(site);});
+  registerResource("domain", async ref => {const result=await api('/dns/domains'); const d=(result.domains || []).find((d:Item)=>(d.name || d.domain)===ref.id); if(!d)throw new Error('Domain is not in the current inventory'); await openDomain(d);});
+  registerResource("public-ip", async ref => {pool=await api('/unifi/pool');map=await api('/network/map');const p=pool.pool.find((p:Item)=>p.ip===ref.id);if(!p&&!map.ips[ref.id])throw new Error('No current address or mapping evidence is available');openIp(p || {ip:ref.id,status:'provider_reported'});});
+  return { render, closePane, exposeHost, showMachine, reset, openEquipment: equipment.openDevice };
 }

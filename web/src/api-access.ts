@@ -1,3 +1,6 @@
+import { detailFacts, detailSection, detailDate, technicalDetail } from "./resource-story";
+import { rememberResource, registerResource, resourceHref } from "./resource-navigation";
+import { listWorkspace } from "./list-workspace";
 import "./network.css";
 import "./keys.css";
 import "./api-access.css";
@@ -54,7 +57,7 @@ export function createApiAccess(ui: Item) {
       ? `${shown.length ? `<div class="infra-table-wrap"><table class="net-table net-compact"><thead><tr><th>Name</th><th>Scopes</th><th>Owner</th><th>Last used</th><th>Expires</th><th>Status</th><th></th></tr></thead><tbody>${shown
           .map(
             (t, i) =>
-              `<tr class="${t.active ? "" : "api-inactive"}"><td><b>${esc(t.name)}</b>${t.key_prefixes.length ? `<small>Vault limited to ${t.key_prefixes.map((p: string) => esc(p) + "*").join(", ")}</small>` : ""}</td><td>${t.scopes
+              `<tr class="${t.active ? "" : "api-inactive"}"><td><button class="text-link" data-token-detail="${i}">${esc(t.name)}</button>${t.key_prefixes.length ? `<small>Vault limited to ${t.key_prefixes.map((p: string) => esc(p) + "*").join(", ")}</small>` : ""}</td><td>${t.scopes
                 .map((s: string) => chip(s, s.startsWith("keys") ? "warn" : s === "admin" ? "machine" : ""))
                 .join("")}</td><td>${esc(t.owner)}</td><td>${t.last_used ? esc(relative(t.last_used)) + `<small>${esc(t.last_ip || "")} · ${t.uses} requests</small>` : '<span class="muted">never</span>'}</td><td>${esc(relative(t.expires))}</td><td>${t.revoked ? chip("Revoked", "bad") : t.active ? chip("Active", "good") : chip("Expired", "warn")}</td><td class="net-row-actions">${t.active ? `<button class="secondary" data-revoke="${i}">Revoke</button>` : ""}</td></tr>`,
           )
@@ -65,6 +68,8 @@ export function createApiAccess(ui: Item) {
       drawTokens();
     });
     cardify(el);
+    listWorkspace(el,'tbody tr','API tokens');
+    el.querySelectorAll<HTMLButtonElement>('[data-token-detail]').forEach(b=>b.onclick=()=>void inspectToken(shown[Number(b.dataset.tokenDetail)]));
     el.querySelectorAll<HTMLButtonElement>("[data-revoke]").forEach((b) =>
       b.addEventListener("click", async () => {
         const t = shown[+b.dataset.revoke!];
@@ -85,6 +90,12 @@ export function createApiAccess(ui: Item) {
     );
   }
 
+  async function inspectToken(t:Item){
+    rememberResource({kind:'api-token',id:t.id},()=>inspectToken(t));
+    const pane:HTMLDialogElement=ui.flyout(t.name,detailSection('Effective access',detailFacts([['Owner',t.owner],['Scopes',t.scopes.join(', ')],['Vault prefixes',t.key_prefixes.length?t.key_prefixes.join(', ')+' (prefix match)':'No additional prefix restriction'],['State',t.revoked?'Revoked':t.active?'Active':'Expired']]))+'<p class="resource-note">Access is bounded by the owner’s current role and these scopes. Tokens cannot manage accounts, sessions, passkeys or other tokens, or open interactive remote sessions.</p>'+detailSection('Lifecycle',detailFacts([['Created',detailDate(t.created)],['Expires',detailDate(t.expires)],['Last used',detailDate(t.last_used)],['Last client IP',t.last_ip],['Requests observed',t.uses],['Revoked',detailDate(t.revoked)]]))+'<section class="resource-section" data-token-activity><h3>Recent activity</h3><p>Reading recorded requests…</p></section>',{tone:'credentials'});
+    try{const events=await api('/audit/events?actor='+encodeURIComponent(t.owner+' (API: '+t.name+')')+'&limit=30');if(!pane.open)return;pane.querySelector('[data-token-activity]')!.innerHTML='<h3>Recent activity</h3>'+events.items.map((event:Item)=>`<p><b>${esc(event.action)}</b> · ${detailDate(event.at)}${event.detail?.job_id?` <a href="${resourceHref(location.hash.slice(1),{kind:'job',id:event.detail.job_id})}">Inspect job →</a>`:''}</p>`).join('')+(!events.items.length?'<p class="resource-note">No audit events in this query. Request counters also include reads that do not create an audit event.</p>':'');}catch{if(pane.open)pane.querySelector('[data-token-activity]')!.textContent='Activity unavailable.';}
+  }
+  registerResource('api-token',async ref=>{const rows=await api('/tokens'),row=rows.find((t:Item)=>t.id===ref.id);if(!row)throw new Error('Token metadata is not available to this account');await inspectToken(row);});
   function tokenDialog() {
     const role = scopes.role as string;
     const allowed = (s: string) => role === "admin" || s === "read" || (s === "operate" && role === "operator");
