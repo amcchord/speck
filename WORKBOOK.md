@@ -942,3 +942,34 @@ unchanged and the automatic update version remains 0.3.3. GitHub CI was not run.
 Private manifests, backups and validation logs are under ignored
 `output/keys-workspace/` and the deployment record. The public index SHA-256 is
 `6db069fb15f54d4e2acd2b885d06fce5d076050f9cd90a1466586a1235e619f5`.
+
+## 2026-09-27 — Integration depth and network operations
+
+Production exploration stayed read-only and confirmed exact UniFi site/device
+identities, physical port and PoE data, live device statistics, topology/client
+observations, Linode attachments and Slide history. The implementation plan and
+capability boundaries are recorded in `docs/operations/integration-depth.md`.
+
+Added a shared equipment flyout with a physical port map, upstream/downstream
+navigation, connected clients, device health, radio and firmware detail. Machine
+uplinks use unique MAC evidence from the managed gateway; shared IPs never create
+these links. Admin PoE/restart controls require a fresh, expiring impact review,
+typed confirmation and an unchanged device/connection fingerprint. A durable
+claim prevents duplicate submission, including ambiguous results. No generic
+port-reset capability is claimed; the official API exposes POWER_CYCLE/RESTART.
+No production equipment was disrupted for testing.
+
+Linode disks, boot profiles, volumes and firewalls now have independent detail
+sections. Proxmox host storage, bridge and task entries are inspectable. Slide
+backup/snapshot history is scoped to the original connection and paginated.
+Equipment/provider detail uses bounded session-memory browser caching; secret
+reads and operation preflights remain excluded.
+
+Local validation: 231 backend tests, 52 web unit tests, 307 browser tests passed
+with one pre-existing touch-only skip. Eleven focused backend tests also passed
+after adapting textual PoE wattage observed in production. Final browser
+refinements and deployment acceptance are recorded below. Agent binaries and
+native apps are unchanged; agent/platform and iOS checks were not rerun. GitHub
+CI was not run. This task is the sole active deployment owner; live baseline
+matches release `2b4cb27`. Release will retain the shared lock, ancestry check,
+rollback snapshot and immediate pre-publication index comparison.

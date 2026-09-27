@@ -151,7 +151,7 @@ def provider_fixture(route, query, now):
                       port=i+4 if i<2 else None, vendor="Example devices", experience=98 if i<2 else 54,
                       signal_dbm=-72 if i>=2 else None, ssid="Office Guest" if i>=2 else None, channel=36,
                       link_mbps=1000 if i<2 else None, received_bytes=145000000*(i+1),sent_bytes=32000000,
-                      receive_rate=34000*(i+1),send_rate=19000, is_managed_gateway=True)
+                      receive_rate=34000*(i+1),send_rate=19000, is_managed_gateway=True, console_id="console-1",site_id="site-1",uplink_id="switch-1" if i<2 else "ap-1")
     site_rows = [{"id":"site-"+str(i),"console_id":"console-"+str(i),"name":name,"site_name":"default","state":"disconnected" if i==3 else "connected",
                   "model":"UniFi Dream Machine Pro", "version":"5.1", "timezone":"America/New_York", "ip":"203.0.113."+str(i),
                   "location":{"latitude":lat,"longitude":lon,"label":city,"source":"UniFi console location"} if lat else None,
@@ -162,7 +162,7 @@ def provider_fixture(route, query, now):
     if route == "/api/unifi/sites":
         return {"sites":site_rows,"checked_at":now}
     if re.fullmatch(r"/api/unifi/sites/[^/]+/[^/]+/clients",route):
-        return {"clients":[{**c,"is_managed_gateway":route.split('/')[4]=='console-1'} for c in clients],"checked_at":now}
+        return {"clients":[{**c,"is_managed_gateway":route.split('/')[4]=='console-1',"console_id":route.split('/')[4],"site_id":route.split('/')[5]} for c in clients],"checked_at":now}
     if route.endswith('/metrics') and route.startswith('/api/infrastructure/connections/'):
         return {"provider":"linode","timeframe":"day","checked_at":now,"note":"Synthetic provider readings. Guest memory requires a Speck agent.",
                 "series":[{"key":key,"label":label,"unit":unit,"points":[[now-86400+n*900,None if n in (30,31) else round(scale*(.35+.15*math.sin(n/4)+.2*math.sin(n/13)),2)] for n in range(97)]} for key,label,unit,scale in [("cpu","CPU utilization","%",80),("netin","IPv4 received","bit/s",3200000),("netout","IPv4 sent","bit/s",1700000),("disk","Disk I/O","blocks/s",2400)]]}

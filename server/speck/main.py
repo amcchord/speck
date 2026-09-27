@@ -511,6 +511,12 @@ for module in (api_tokens, vault, dns, unifi, network, ssh_keys, contexts, vms, 
 from speck.unifi_observability import router as unifi_observability_router  # noqa: E402
 app.include_router(unifi_observability_router)
 
+from speck.network_equipment import router as network_equipment_router  # noqa: E402
+app.include_router(network_equipment_router)
+
+from speck.provider_explorer import router as provider_explorer_router  # noqa: E402
+app.include_router(provider_explorer_router)
+
 downloads = Path(os.environ.get('SPECK_DOWNLOAD_DIR', 'output/downloads'))
 if downloads.exists():
     app.mount('/downloads', StaticFiles(directory=downloads), name='downloads')

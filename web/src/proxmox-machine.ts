@@ -1,3 +1,4 @@
+import {detailFacts,detailHero,technicalDetail} from "./resource-story";
 import "./proxmox-machine.css";
 import { openProviderConsole } from "./provider-console";
 import { captureProviderPreview, downloadScreen } from "./provider-preview";
@@ -73,6 +74,14 @@ export function mountProxmoxMachine(
     ui.api(
       `${base}/read/${id}?args=${encodeURIComponent(JSON.stringify(args))}&kind=${resource.kind}&resource_id=${encodeURIComponent(resource.id)}`,
     );
+
+  root.addEventListener('click',event=>{
+    const button=(event.target as Element).closest<HTMLElement>('[data-pve-task]');
+    if(!button)return;
+    const t=list(detail.recent_tasks)[Number(button.dataset.pveTask)];
+    const pane=ui.flyout(t.type || 'Provider task',detailHero('Proxmox · Task',t.status || 'Running',resource.name)+detailFacts([['Task ID',t.upid],['User',t.user],['Started',date(t.starttime)],['Completed',date(t.endtime)],['Resource',t.id || resource.id]])+technicalDetail(t),{tone:'compute',subtitle:resource.connection_name});
+    const back=document.createElement('button');back.className='text-link';back.textContent='← Back to machine';back.onclick=()=>ui.openResource(resource);pane.querySelector('.resource-body').prepend(back);
+  });
 
   const observer = new MutationObserver(() => {
     if (!root.isConnected) dispose();
@@ -274,19 +283,7 @@ export function mountProxmoxMachine(
     );
   }
   function tasks() {
-    return (
-      unavailable("recent_tasks") ||
-      table(
-        ["Task", "Result", "Started", "Duration"],
-        list(detail.recent_tasks).map((t) => [
-          String(t.type || "Task").replace(/^qm/, "VM "),
-          t.status || (t.endtime ? "Finished" : "Running"),
-          date(t.starttime),
-          t.endtime ? duration(t.endtime - t.starttime) : "In progress",
-        ]),
-        "No recent tasks reported.",
-      )
-    );
+    return unavailable("recent_tasks") || `<div class="resource-related">${list(detail.recent_tasks).map((t,i)=>`<button data-pve-task="${i}"><span><b>${esc(t.type || 'Task')}</b><small>${esc(date(t.starttime))} · ${esc(t.user)}</small></span><span>${esc(t.status || 'Running')}</span><span>→</span></button>`).join('') || note('No recent tasks reported.')}</div>`;
   }
   function network() {
     const interfaces = list(guestSection("network"));

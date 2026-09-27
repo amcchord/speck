@@ -12,6 +12,7 @@ from speck.operations import STARTERS
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 from preview_fixtures import provider_fixture
 from preview_workspace import workspace_fixture
+from preview_depth import depth_fixture
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -236,6 +237,9 @@ class Handler(BaseHTTPRequestHandler):
                     )
                 ],
             }
+            fixture = depth_fixture(route, parse_qs(url.query), NOW)
+            if fixture is not None:
+                return self.send(fixture)
             fixture = provider_fixture(route, parse_qs(url.query), NOW)
             if fixture is not None:
                 return self.send(fixture)
@@ -319,4 +323,6 @@ if __name__ == "__main__":
     if not (ROOT / "web/dist/index.html").exists():
         raise SystemExit("Build first: ./scripts/build.sh")
     print(f"Speck screenshot preview: http://127.0.0.1:{args.port} (synthetic data; loopback only)", flush=True)
+    # Two browser workers can burst past the standard library's five-connection queue.
+    ThreadingHTTPServer.request_queue_size = 128
     ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()

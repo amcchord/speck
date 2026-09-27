@@ -1,3 +1,4 @@
+import {mountProviderExplorer} from "./provider-explorer";
 import { columns, defaultPreferences, hasEndpoint, hasAgent, selectableMachine, machineState, agentLabel, kindLabel, cpu, memory, sortMachines } from "./fleet-model";
 import { editColumns } from "./fleet-columns";
 import { fleetToolbar, bindFleetPopovers, updateFilterChips } from "./fleet-toolbar";
@@ -1111,9 +1112,10 @@ async function showReach(d: Item) {
   if (!el || selected !== d.id || !m) return;
   // Show the strip only when it adds more than the address the pane already reports.
   const reported = primaryAddress(d).split("/")[0];
-  if (!m.public.length && !m.dns.length && m.lan.every((l: Item) => l.ip === reported)) return;
+  if (!m.network_clients?.length && !m.public.length && !m.dns.length && m.lan.every((l: Item) => l.ip === reported)) return;
   const chip = (text: string, tone = "") => `<span class="net-chip ${tone}">${esc(text)}</span>`;
-  el.innerHTML = `<dl><div><dt>LAN</dt><dd>${m.lan.map((l: Item) => `<span class="mono">${esc(l.ip)}</span>`).join(" ") || "—"}</dd></div><div><dt>Public</dt><dd>${m.public.map((p: Item) => `<span class="mono">${esc(p.ip)}</span>${p.via === "unifi_nat" ? chip("NAT") : ""}`).join(" ") || "—"}</dd></div><div><dt>DNS names</dt><dd>${m.dns.slice(0, 8).map((n: Item) => chip(n.fqdn)).join("") || "—"}${m.dns.length > 8 ? `<small>+${m.dns.length - 8} more</small>` : ""}</dd></div></dl><a class="text-link" href="#network">Network &amp; DNS</a>`;
+  el.innerHTML = `<dl><div><dt>LAN</dt><dd>${m.lan.map((l: Item) => `<span class="mono">${esc(l.ip)}</span>`).join(" ") || "—"}</dd></div><div><dt>Public</dt><dd>${m.public.map((p: Item) => `<span class="mono">${esc(p.ip)}</span>${p.via === "unifi_nat" ? chip("NAT") : ""}`).join(" ") || "—"}</dd></div><div><dt>DNS names</dt><dd>${m.dns.slice(0, 8).map((n: Item) => chip(n.fqdn)).join("") || "—"}${m.dns.length > 8 ? `<small>+${m.dns.length - 8} more</small>` : ""}</dd></div></dl><a class="text-link" href="#network">Network &amp; DNS</a>${m.network_clients?.length ? '<div class="machine-uplinks">'+m.network_clients.map((c:Item,i:number)=>'<button data-machine-uplink="'+i+'">'+esc(c.uplink_name || 'Network equipment')+(c.port?' · Port '+esc(c.port):'')+' →</button>').join('')+'</div><small>Matched by unique MAC address · provider observations</small>':''}`;
+  el.querySelectorAll<HTMLElement>('[data-machine-uplink]').forEach(b=>b.onclick=()=>{const c=m.network_clients[Number(b.dataset.machineUplink)];void network.openEquipment(c,c.uplink_id,c.port);});
 }
 async function renderDeviceContent() {
   disconnect();
@@ -1932,6 +1934,10 @@ async function openSlideResource(resource: string, row: Item) {
     finally { button.disabled = false; }
   });
   bindRelated();
+  if(resource==='agent'){
+    const history=document.createElement('div');pane.querySelector('.resource-body')!.append(history);
+    mountProviderExplorer({api,freshApi,flyout,notify,openResource:(r:Item)=>infrastructure.resourceDetail(r)}, {provider:'slide',kind:'protected',connection_id:'slide-settings',connection_name:'Slide (Settings)',id:row.agent_id,name:slideName(row)},history);
+  }
   const backup = pane.querySelector<HTMLButtonElement>('[data-slide-backup]');
   if (backup) backup.onclick = async () => {
     backup.disabled = true;

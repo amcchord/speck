@@ -1,3 +1,5 @@
+import {mountProviderExplorer} from "./provider-explorer";
+import {detailDate} from "./resource-story";
 import "./infrastructure.css";
 import { mountPerformance } from "./performance";
 import { openProviderConsole } from "./provider-console";
@@ -296,7 +298,7 @@ export function createInfrastructure(ui: Item) {
     });
   }
   function machinePanel(r: Item, root: HTMLElement) {
-    return mountProxmoxMachine(ui, r, root, (id, spec, current) => operationForm(
+    return mountProxmoxMachine({...ui,openResource:resourceDetail}, r, root, (id, spec, current) => operationForm(
       {id: current.connection_id, name: current.connection_name, provider: current.provider}, id, spec, current));
   }
   async function resourceDetail(r: Item) {
@@ -326,7 +328,16 @@ export function createInfrastructure(ui: Item) {
       const secondary = ([id]: [string, any]) => /delete|remove|destroy|rename|migrate|clone/.test(id);
       const action = ([id, s]: [string, any]) => `<button class="secondary ${/delete|remove|destroy/.test(id) ? 'is-destructive' : ''}" data-infra-action="${esc(id)}">${esc(s.label)}</button>`;
       const actions = `<section class="resource-actions"><h3>Management</h3><p class="resource-note">${resource.agent ? 'Linked to a Speck endpoint agent.' : resource.management === 'host_agent' ? 'Managed through an outbound Speck host connector.' : 'Managed through the provider. Endpoint commands and patching require a Speck agent.'}</p><div class="resource-action-buttons">${resource.agent ? '<button class="secondary" data-resource-agent>Open Speck agent</button>' : ''}${resource.kind === 'virt' ? '<button class="secondary" data-resource-console>Open provider console</button>' : ''}${allowed.filter(a=>!secondary(a)).map(action).join('')}</div>${allowed.some(secondary) ? '<details class="resource-more"><summary>More actions</summary><div class="resource-action-buttons">'+allowed.filter(secondary).map(action).join('')+'</div></details>' : ''}</section>`;
-      root.innerHTML = `<div class="resource-refresh"><span role="status">${busy ? 'Reading provider details…' : 'Provider details loaded'}</span><button class="text-link" data-resource-refresh ${busy ? 'disabled' : ''}>Refresh details</button></div>${errors.length ? '<p class="resource-notice">'+esc(errors.join(' '))+'</p>' : ''}${infrastructureStory(resource, detail, siblings, actions+(detail && ['linode','proxmox'].includes(resource.provider) ? '<section class="resource-performance"></section>' : ''))}${detail ? technicalDetail(detail) : ''}`;
+      root.innerHTML = `<div class="resource-refresh"><span role="status">${busy ? 'Reading provider details…' : 'Provider details loaded'}</span><button class="text-link" data-resource-refresh ${busy ? 'disabled' : ''}>Refresh details</button></div>${errors.length ? '<p class="resource-notice">'+esc(errors.join(' '))+'</p>' : ''}${infrastructureStory(resource, detail, siblings, actions+(detail && ['linode','proxmox'].includes(resource.provider) ? '<section class="resource-performance"></section>' : ''))}${!busy && (resource.provider==='linode'||resource.kind==='protected') ? '<div data-provider-explorer></div>' : ''}${detail ? technicalDetail(detail) : ''}`;
+      const explorer=root.querySelector<HTMLElement>('[data-provider-explorer]');
+      if(explorer)mountProviderExplorer({...ui,openResource:resourceDetail},resource,explorer);
+      root.querySelectorAll<HTMLElement>('[data-host-detail]').forEach(b=>b.onclick=()=>{
+        const kind=b.dataset.hostDetail!,row=detail![kind][Number(b.dataset.hostIndex)];
+        const title=kind==='storage'?row.storage:kind==='network'?row.iface:row.type || 'Provider task';
+        const facts=kind==='storage'?[['Type',row.type],['Used',bytes(row.used)],['Capacity',bytes(row.total)],['Content',row.content],['Shared',row.shared==null?null:row.shared===1],['Enabled',row.enabled==null?null:row.enabled===1],['Active',row.active==null?null:row.active===1]]:kind==='network'?[['Interface',row.iface],['Type',row.type],['Address',row.cidr || row.address],['Gateway',row.gateway],['Bridge ports',row.bridge_ports],['VLAN aware',row.bridge_vlan_aware],['Autostart',row.autostart==null?null:row.autostart===1],['Active',row.active==null?null:row.active===1]]:[['Operation',row.type],['Resource ID',row.id],['User',row.user],['Result',row.status || 'Running'],['Started',detailDate(row.starttime)],['Finished',detailDate(row.endtime)],['Task ID',row.upid]];
+        const p=ui.flyout(title,detailHero('Proxmox · '+kind.replaceAll('_',' '),null,resource.node || resource.name)+detailFacts(facts as [string,any][])+technicalDetail(row),{tone:'compute',subtitle:resource.connection_name});
+        const back=document.createElement('button');back.className='text-link';back.textContent='← Back to host';back.onclick=()=>void resourceDetail(resource);p.querySelector('.resource-body')!.prepend(back);
+      });
       const performanceRoot=root.querySelector<HTMLElement>('.resource-performance');
       if(performanceRoot) mountPerformance(ui,resource,performanceRoot);
       root.querySelector('[data-resource-refresh]')?.addEventListener('click',()=>void load(true));

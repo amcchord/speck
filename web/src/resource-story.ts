@@ -76,9 +76,11 @@ export function infrastructureStory(r: Item, detail: Item | null, inventory: Ite
     ]);
     body += section('Host', facts([['Processor',cpus.model],['Kernel',s.kversion || s.current_kernel?.release],['Uptime',present(s.uptime) ? `${Math.floor(s.uptime/86400)} days · ${Math.floor(s.uptime%86400/3600)} hours` : null],['Management',r.management==='host_agent' ? 'Speck host connector' : 'Provider connection']]));
     const storage = items(detail?.storage);
-    if (storage.length) body += section('Storage', `<div class="resource-related">${storage.map(v=>`<div><span><b>${e(v.storage || v.name)}</b><small>${e(v.type || 'Storage')} · ${e(capacity(v.used))} used / ${e(capacity(v.total))}</small></span>${detailStatus(v.active===1 ? 'Available' : v.active===0 ? 'Inactive' : 'Not reported')}</div>`).join('')}</div>`);
+    if (storage.length) body += section('Storage', `<div class="resource-related">${storage.map((v,i)=>`<button data-host-detail="storage" data-host-index="${i}"><span><b>${e(v.storage || v.name)}</b><small>${e(v.type || 'Storage')} · ${e(capacity(v.used))} used / ${e(capacity(v.total))}</small></span>${detailStatus(v.active===1 ? 'Available' : v.active===0 ? 'Inactive' : 'Not reported')}</button>`).join('')}</div>`);
     const networks = items(detail?.network);
-    if (networks.length) body += section('Host networks', facts(networks.slice(0,8).map(v=>[v.iface || 'Interface',[v.cidr || v.address,v.type,v.bridge_ports].filter(Boolean).join(' · ')])));
+    if (networks.length) body += section('Host networks', '<div class="resource-related">'+networks.map((v,i)=>`<button data-host-detail="network" data-host-index="${i}"><span><b>${e(v.iface || 'Interface')}</b><small>${e([v.cidr || v.address,v.type,v.bridge_ports].filter(Boolean).join(' · '))}</small></span>→</button>`).join('')+'</div>');
+    const tasks=items(detail?.recent_tasks);
+    body += section('Recent host activity',tasks.length?'<div class="resource-related">'+tasks.map((t,i)=>`<button data-host-detail="recent_tasks" data-host-index="${i}"><span><b>${e(t.type || 'Task')}${t.id?' · '+e(t.id):''}</b><small>${e(detailDate(t.starttime))} · ${e(t.user)}</small></span>${detailStatus(t.status || 'Running')}<span>→</span></button>`).join('')+'</div>':'<p class="resource-note">No recent host tasks reported.</p>');
     body += section('Hosted guests',guests.length ? resources(guests,'data-related-resource') : '<p class="resource-note">No guests for this host are present in the loaded inventory.</p>');
   } else {
     hero = detailHero(`${r.provider || 'Provider'} · ${types[r.kind] || 'Resource'}`, state, `${r.connection_name || 'Provider connection'}${r.node ? ' · '+r.node : ''}`, [

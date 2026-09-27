@@ -13,6 +13,7 @@ async function setup(page,{delay=0}={}) {
     if(path.endsWith('/inventory')) { counts.inventory++; if(delay)await new Promise(r=>setTimeout(r,delay));return route.fulfill({json:{connections:[{id:'cloud',name:'Example account',provider:'linode',status:'connected',resources:[cloud]},{id:'cluster',name:'Example cluster',provider:'proxmox',status:'connected',resources:[host,guest]}],checked_at:1790120000}}); }
     if(path.endsWith('/connectors'))return route.fulfill({json:[]});
     if(path.endsWith('/catalog'))return route.fulfill({json:{reboot:{label:'Reboot',method:'POST',danger:true,fields:[]},delete:{label:'Delete instance',method:'DELETE',danger:true,fields:[]}}});
+    if(path.endsWith('/explore'))return route.fulfill({json:{sections:{},checked_at:1790120000}});
     if(path.endsWith('/metrics'))return route.fulfill({json:{series:[]}});
     if(path.includes('/resources/')) { counts.detail++; if(delay)await new Promise(r=>setTimeout(r,delay));return route.fulfill({json:path.endsWith('pve-1') ? {resource:host,status:{cpu:0.04,memory:{total:68719476736,used:34359738368},cpuinfo:{cpus:16,model:'Example CPU'},uptime:86400},storage:[{storage:'local-zfs',total:1099511627776,used:536870912000,active:1,type:'zfspool'}],network:[{iface:'vmbr0',cidr:'192.0.2.10/24',type:'bridge',bridge_ports:'eno1'}]} : detail}); }
     return route.fulfill({json:[]});

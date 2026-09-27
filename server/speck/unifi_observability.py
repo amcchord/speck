@@ -137,7 +137,7 @@ def normalize_client(client, observation=None, devices=None):
         "last_seen": seen,
         "network_name": detail.get("network") or detail.get("last_connection_network_name"),
         "vlan": detail.get("gw_vlan", detail.get("vlan")),
-        "uplink_id": client.get("uplinkDeviceId"),
+        "uplink_id": device.get("id") or client.get("uplinkDeviceId"),
         "uplink_name": device.get("name") or detail.get("last_uplink_name"),
         "uplink_model": device.get("model"),
         "port": detail.get("sw_port") or detail.get("last_uplink_remote_port"),
@@ -182,6 +182,14 @@ async def enrich_managed_clients(clients):
         return await unifi.network("GET", path, params=params)
 
     observed, devices = await observations(request, short, sid)
+    scope = {}
+    try:
+        host = await unifi.gateway()
+        matches = [s for s in await cloud_sites() if s.get("hostId") == host["id"] and (s.get("meta") or {}).get("name") == short]
+        if len(matches) == 1:
+            scope = {"console_id": host["id"], "site_id": matches[0]["siteId"]}
+    except HTTPException:
+        pass  # Account discovery must not remove otherwise useful LAN observations.
     for client in clients:
         source = {
             "id": client["id"],
@@ -192,7 +200,7 @@ async def enrich_managed_clients(clients):
             "connectedAt": client["connected_at"],
             "uplinkDeviceId": client.get("uplink_id"),
         }
-        client.update(normalize_client(source, observed.get(client["mac"]), devices), is_managed_gateway=True)
+        client.update(normalize_client(source, observed.get(client["mac"]), devices), is_managed_gateway=True, **scope)
     return clients
 
 
