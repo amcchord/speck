@@ -211,3 +211,32 @@ def test_paused_history_still_expires_retained_observations(client):
     with db() as conn:
         for table in ("network_samples", "network_equipment_index", "network_client_history"):
             assert conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("fail_second", [False, True])
+def test_backup_coverage_respects_provider_page_limit_and_preserves_partial_evidence(client, monkeypatch, fail_second):
+    from speck.slide import Slide
+    from fastapi import HTTPException
+
+    calls = []
+    monkeypatch.setattr(Slide, "__init__", lambda self: None)
+
+    async def request(self, method, resource, body=None, params=None):
+        assert method == "GET" and params["limit"] == 50
+        calls.append((resource, params["offset"]))
+        if fail_second and params["offset"]:
+            raise HTTPException(502, "Provider unavailable")
+        return {
+            "data": [{"id": str(params["offset"] + i), "api_token": "never-return"} for i in range(50)],
+            "pagination": {"next_offset": params["offset"] + 50},
+        }
+
+    monkeypatch.setattr(Slide, "request", request)
+    response = client.get("/api/slide/coverage")
+    assert response.status_code == 200 and "never-return" not in response.text
+    for resource in ("backup", "snapshot"):
+        data = response.json()[resource]
+        assert len(data["rows"]) == (50 if fail_second else 100)
+        assert data["partial"] is True
+        assert bool(data.get("error")) == fail_second
+    assert len(calls) == 4

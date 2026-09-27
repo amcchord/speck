@@ -3,17 +3,17 @@ type Filter = { label: string; values: string[]; value: (row: HTMLElement) => st
 const views = new Map<string, {query:string;filters:string[];compact:boolean;offset:number}>();
 /** Consistent in-memory views. Search indexes displayed metadata, never hidden
  * secrets; saved filters expire with the authenticated page. */
-export function listWorkspace(root: HTMLElement, selector: string, name: string, options: {filters?:Filter[];size?:number;collapsible?:boolean} = {}) {
+export function listWorkspace(root: HTMLElement, selector: string, name: string, options: {filters?:Filter[];size?:number;collapsible?:boolean;label?:string} = {}) {
   root.querySelector('[data-list-controls]')?.remove();
   const rows = [...root.querySelectorAll<HTMLElement>(selector)];
   const index = new Map(rows.map(r=>[r,(r.textContent || '').toLocaleLowerCase()]));
   const filters=options.filters || [], size=options.size || 50;
   const state=views.get(name) || {query:'',filters:[],compact:false,offset:0};
   const controls=document.createElement('div'); controls.dataset.listControls=''; controls.className='list-workspace-controls';
-  controls.innerHTML=`<div class="toolbar"><label class="list-search">Search ${e(name)}<input type="search" placeholder="Search displayed names, status and details" value="${e(state.query)}"></label>${filters.map((f,i)=>`<label>${e(f.label)}<select data-list-filter="${i}"><option value="">All ${e(f.label.toLowerCase())}</option>${f.values.map(v=>`<option value="${e(v)}">${e(v)}</option>`).join('')}</select></label>`).join('')}<button class="secondary" data-list-density aria-pressed="${state.compact}">Compact rows</button><button class="text-link" data-list-reset>Reset view</button></div><div class="list-result-bar"><span role="status" data-list-count></span><div><button class="secondary" data-list-prev>Previous</button><button class="secondary" data-list-next>Next</button></div></div>`;
+  controls.innerHTML=`<div class="toolbar"><label class="list-search">Search ${e(options.label || name)}<input type="search" placeholder="Search displayed names, status and details" value="${e(state.query)}"></label>${filters.map((f,i)=>`<label>${e(f.label)}<select data-list-filter="${i}"><option value="">All ${e(f.label.toLowerCase())}</option>${f.values.map(v=>`<option value="${e(v)}">${e(v)}</option>`).join('')}</select></label>`).join('')}<button class="secondary" data-list-density aria-pressed="${state.compact}">Compact rows</button><button class="text-link" data-list-reset>Reset view</button></div><div class="list-result-bar"><span role="status" data-list-count></span><div><button class="secondary" data-list-prev>Previous</button><button class="secondary" data-list-next>Next</button></div></div>`;
   if(options.collapsible) {
     const details=document.createElement('details'); details.open=!!state.query||state.filters.some(Boolean);
-    const summary=document.createElement('summary'); summary.textContent='Search and filter '+name+' · '+rows.length+' loaded'; details.append(summary);
+    const summary=document.createElement('summary'); summary.textContent='Search and filter '+(options.label || name)+' · '+rows.length+' loaded'; details.append(summary);
     while(controls.firstChild)details.append(controls.firstChild);
     controls.append(details);
   }

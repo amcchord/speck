@@ -139,11 +139,25 @@ async def coverage(user=Depends(require_user)):
     """A bounded overview, never a claim that omitted provider history is empty."""
     slide=Slide()
     async def recent(resource):
+        rows, offset = [], 0
         try:
-            page=await slide.request('GET',resource,params={'limit':100,'offset':0})
-            return {'rows':safe_provider(page['data']),'partial':page.get('pagination',{}).get('next_offset') is not None,'observed_at':time.time()}
-        except (HTTPException,KeyError,TypeError):
-            return {'rows':[],'partial':True,'error':'Provider evidence unavailable'}
+            # Slide accepts at most 50 records per request. Keep this overview
+            # bounded to two pages; deeper per-agent history has its own cursor.
+            for _ in range(2):
+                page = await slide.request('GET', resource, params={'limit': 50, 'offset': offset})
+                records = page.get('data')
+                if not isinstance(records, list) or any(not isinstance(row, dict) for row in records):
+                    raise ValueError('Invalid history page')
+                rows.extend(safe_provider(records[:50]))
+                cursor = (page.get('pagination') or {}).get('next_offset')
+                if cursor is None:
+                    return {'rows': rows, 'partial': False, 'observed_at': time.time()}
+                if type(cursor) is not int or cursor <= offset:
+                    raise ValueError('Invalid history cursor')
+                offset = cursor
+            return {'rows': rows, 'partial': True, 'observed_at': time.time()}
+        except (HTTPException, KeyError, TypeError, ValueError):
+            return {'rows': rows, 'partial': True, 'error': 'Provider evidence unavailable', 'observed_at': time.time()}
     backups,snapshots=await asyncio.gather(recent('backup'),recent('snapshot'))
     return {'backup':backups,'snapshot':snapshots,'note':'Overview uses the first 100 returned backup jobs and snapshots. Open a protected system for its paginated history. Missing evidence does not establish a failed or missing backup.'}
 

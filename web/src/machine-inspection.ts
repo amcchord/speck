@@ -209,7 +209,7 @@ export function createMachineInspection(ui: Item) {
           ),
         ) +
         `<button class="text-link" data-inspection-receipt>Open collection receipt</button>`;
-      listWorkspace(target, "tbody tr", kind + " on " + d.id);
+      listWorkspace(target, "tbody tr", kind + " on " + d.id, {label:kind + " on " + d.label});
       target.querySelector<HTMLButtonElement>(
         "[data-inspection-receipt]",
       )!.onclick = () => ui.showJob(report.job_id);
