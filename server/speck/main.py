@@ -35,11 +35,14 @@ async def lifespan(app):
     management_task = asyncio.create_task(worker())
     from speck.restore_lifecycle import worker as restore_worker
     restore_task = asyncio.create_task(restore_worker())
+    from speck.network_history import worker as history_worker
+    history_task = asyncio.create_task(history_worker())
     try:
         yield
     finally:
         await stop_worker(management_task)
         await stop_worker(restore_task)
+        await stop_worker(history_task)
     from speck.remote import sessions, close_session
     from speck.slide import workers
     for session_id in list(sessions):
@@ -349,6 +352,9 @@ def job_result(job_id: str, body: JobResult, device=Depends(require_agent)):
         if body.status != 'running':
             from speck.operations import record_patch_result
             record_patch_result(conn, row, body.result)
+            from speck.inspection import record_result
+            if body.status == 'complete':
+                record_result(conn, row, body.result)
             audit(conn, 'agent', 'job.' + body.status, device['id'], {'job_id': job_id, 'kind': row['kind']})
     return {'ok': True}
 
@@ -459,6 +465,11 @@ async def agent_upload(transfer_id: str, request: Request, device=Depends(requir
         raise
     return {'ok': True, 'sha256': checksum, 'size': total}
 
+
+from speck.inspection import router as inspection_router  # noqa: E402
+app.include_router(inspection_router)
+from speck.network_history import router as history_router  # noqa: E402
+app.include_router(history_router)
 
 from speck.agent_updates import router as agent_update_router  # noqa: E402
 app.include_router(agent_update_router)

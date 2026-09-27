@@ -92,3 +92,12 @@ dialog.resource-flyout .net-pane { padding: 0; }
 .compact-list td {padding-top:7px!important;padding-bottom:7px!important;}
 [hidden] {display:none!important;}
 @media(max-width:600px){.resource-navigation{padding:0;gap:8px}.list-workspace-controls{padding:12px}.list-result-bar{align-items:start;flex-direction:column}.list-workspace-controls .toolbar>label{width:100%}}
+.command-palette {width:min(720px,calc(100vw - 24px));max-height:80vh;overflow:hidden;}
+.command-palette>.dialog-body {display:flex;flex-direction:column;min-height:0;}
+#workspace-command {width:100%;font-size:18px;padding:16px;}
+.command-results {max-height:48vh;overflow:auto;margin:12px 0;}
+.command-result {width:100%;display:flex;justify-content:space-between;text-align:left;gap:16px;padding:12px;border:0;background:transparent;}
+.command-result span:first-child {min-width:0;overflow-wrap:anywhere;}
+.command-result small {display:block;font-weight:400;color:var(--muted,#64748b);margin-top:4px;}
+.command-result[aria-selected=true] {background:#edf2ff;border-radius:8px;color:#1e40af;}
+.command-footer {display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--muted,#64748b);}

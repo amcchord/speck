@@ -4,7 +4,7 @@ import { icon } from './icons';
 export const filterOptions: Record<string, { label: string; options: Record<string, string> }> = {
   'fleet-filter': {label:'Status', options:{all:'All statuses',online:'Online',offline:'Offline',review:'Needs review'}},
   'fleet-os': {label:'Operating system', options:{all:'All systems',windows:'Windows',linux:'Linux'}},
-  'fleet-agent': {label:'Speck agent', options:{all:'All machines',installed:'With Speck agent',missing:'Without Speck agent',conflicts:'Identity needs review'}},
+  'fleet-agent': {label:'Speck agent', options:{all:'All machines',installed:'With Speck agent',missing:'Without Speck agent',conflicts:'Identity needs review',endpoints:'Approved endpoints',connectors:'Host connectors only',candidates:'Unapproved endpoint copies'}},
 };
 export function fleetToolbar(prefs: FleetPreferences, previews: boolean, viewer: boolean) {
   return `<div class="fleet-toolbar">

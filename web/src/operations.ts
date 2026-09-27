@@ -153,7 +153,7 @@ export function createOperations(ui: Item) {
       api("/batches"),
     ]);
     content(
-      `<button id="new-template" class="primary" data-page-action>${icon("plus")}<span>Create template</span></button><div class="section-head"><div><h2>Template library</h2><p class="muted">Reusable installers and scripts for Windows and Linux.</p></div></div><div class="template-grid">${library.map((t) => `<article class="template-card" data-platform="${esc(t.platform)}" data-category="${esc(t.category)}"><div class="template-card-top"><span class="template-kind">${t.category === "software" ? "Software" : "Script"}</span>${badge(t.platform)}${t.builtin ? "<small>STARTER</small>" : ""}</div><h2><button class="text-link" data-template-detail="${esc(t.id)}">${esc(t.name)}</button></h2><p>${esc(t.description || "Reusable fleet script")}</p><div class="template-meta"><span>${t.parameters.length} input${t.parameters.length === 1 ? "" : "s"}</span><span>${Math.ceil(t.timeout / 60)} min limit</span><span>v${t.revision}</span></div><div class="toolbar"><button class="primary" data-deploy="${t.id}">Deploy</button><button class="secondary" data-edit-template="${t.id}">${t.builtin ? "Customize" : "Edit"}</button></div></article>`).join("")}</div><div class="section-head"><h2>Recent deployments</h2></div><div class="operation-history">${
+      `<button id="software-inventory" class="secondary" data-page-action>Installed software</button><button id="new-template" class="primary" data-page-action>${icon("plus")}<span>Create template</span></button><div class="section-head"><div><h2>Template library</h2><p class="muted">Reusable installers and scripts for Windows and Linux.</p></div></div><div class="template-grid">${library.map((t) => `<article class="template-card" data-platform="${esc(t.platform)}" data-category="${esc(t.category)}"><div class="template-card-top"><span class="template-kind">${t.category === "software" ? "Software" : "Script"}</span>${badge(t.platform)}${t.builtin ? "<small>STARTER</small>" : ""}</div><h2><button class="text-link" data-template-detail="${esc(t.id)}">${esc(t.name)}</button></h2><p>${esc(t.description || "Reusable fleet script")}</p><div class="template-meta"><span>${t.parameters.length} input${t.parameters.length === 1 ? "" : "s"}</span><span>${Math.ceil(t.timeout / 60)} min limit</span><span>v${t.revision}</span></div><div class="toolbar"><button class="primary" data-deploy="${t.id}">Deploy</button><button class="secondary" data-edit-template="${t.id}">${t.builtin ? "Customize" : "Edit"}</button></div></article>`).join("")}</div><div class="section-head"><h2>Recent deployments</h2></div><div class="operation-history">${
         batches
           .filter((b: Item) => b.kind === "template")
           .slice(0, 10)
@@ -167,6 +167,7 @@ export function createOperations(ui: Item) {
     );
     listWorkspace(document.getElementById('content')!,'.template-card','templates',{filters:[{label:'Platform',values:['windows','linux'],value:r=>r.dataset.platform!},{label:'Type',values:['software','script'],value:r=>r.dataset.category!}]});
     document.querySelectorAll<HTMLButtonElement>('[data-template-detail]').forEach(b=>b.onclick=()=>void inspectTemplate(b.dataset.templateDetail!));
+    on("software-inventory",softwareInventory);
     on("new-template", () => templateEditor());
     bindBatches();
     document
@@ -184,11 +185,29 @@ export function createOperations(ui: Item) {
         (el) => (el.onclick = () => void deployDialog([], el.dataset.deploy)),
       );
   }
+  async function softwareInventory(){
+    const pane:HTMLDialogElement=ui.flyout('Installed software','<p class="resource-note">Reading collected endpoint inventories…</p>',{tone:'automation'});
+    try {
+      const [reports,devices]=await Promise.all([api('/software/inventory'),ui.devices()]);
+      if(!pane.open)return;
+      const packages=new Map<string,Item>();
+      for(const report of reports) for(const row of report.report.rows){const key=String(row.name).toLowerCase();const entry=packages.get(key)||{name:row.name,versions:new Set(),targets:[]};entry.versions.add(row.version || 'Not reported');entry.targets.push({id:report.device_id,label:report.label,version:row.version,collected:report.collected});packages.set(key,entry);}
+      const rows=[...packages.values()].sort((a,b)=>a.name.localeCompare(b.name));
+      const root=pane.querySelector<HTMLElement>('.resource-body')!;
+      root.innerHTML=detailFacts([['Reporting machines',reports.length+' / '+devices.filter((d:Item)=>d.approved&&!d.archived).length],['Software titles',rows.length],['Version coverage','Observed installations, not license entitlement']])+'<p class="resource-note">Inventories are collected on request from each machine’s Inventory tab. Windows covers machine-wide registry applications; Linux covers dpkg or RPM packages. Uncollected machines and per-user Windows apps are not counted.</p><details><summary>Collect from a machine</summary><div class="resource-related">'+devices.filter((d:Item)=>d.approved).map((d:Item)=>`<a href="${resourceHref(location.hash.slice(1),{kind:'machine',id:d.id,tab:'inventory'})}">${esc(d.label)} →</a>`).join('')+'</div></details><div class="scroll"><table><thead><tr><th>Software</th><th>Versions</th><th>Installations</th></tr></thead><tbody>'+rows.map((r,i)=>`<tr><td><button class="text-link" data-software-title="${i}">${esc(r.name)}</button></td><td>${[...r.versions].map(esc).join(', ')}</td><td>${r.targets.length}</td></tr>`).join('')+'</tbody></table></div>';
+      listWorkspace(root,'tbody tr','installed software');
+      root.querySelectorAll<HTMLButtonElement>('[data-software-title]').forEach(b=>b.onclick=()=>{const row=rows[Number(b.dataset.softwareTitle)];ui.flyout(row.name,detailSection('Observed installations','<div class="resource-related">'+row.targets.map((t:Item)=>`<a href="${resourceHref(location.hash.slice(1),{kind:'machine',id:t.id,tab:'inventory'})}"><span><b>${esc(t.label)}</b><small>${esc(t.version || 'Version not reported')} · ${date(t.collected)}</small></span>→</a>`).join('')+'</div>'),{tone:'automation'});});
+    }catch(error){if(pane.open)pane.querySelector('.resource-body')!.textContent=(error as Error).message;}
+  }
   async function inspectTemplate(id:string) {
     rememberResource({kind:'template',id},()=>inspectTemplate(id));
     const t=(await refreshTemplates()).find(t=>t.id===id);
     if(!t)throw new Error('Template is not available');
-    const pane:HTMLDialogElement=ui.flyout(t.name,detailSection('Purpose',`<p>${esc(t.description || 'No description recorded')}</p>`)+detailFacts([['Platform',t.platform],['Category',t.category],['Revision',t.revision],['Time limit',t.timeout+' seconds'],['Source',t.builtin?'Built-in starter':'Custom template']])+detailSection('Inputs',detailFacts(t.parameters.map((p:Item)=>[p.label,p.name+(p.required?' · required':' · optional')])) )+detailSection('Exact script',`<pre>${esc(t.script)}</pre>`)+`<section class="resource-section" data-template-usage><h3>Schedules & recent results</h3><p>Reading references…</p></section><div class="toolbar"><button class="primary" data-template-deploy>Review deployment</button><button class="secondary" data-template-edit>${t.builtin?'Customize':'Edit template'}</button></div><p class="resource-note">Schedules pin a revision. Publishing changes makes older schedules require a new review.</p>`,{tone:'automation',subtitle:'Template · Revision '+t.revision});
+    const pane:HTMLDialogElement=ui.flyout(t.name,detailSection('Purpose',`<p>${esc(t.description || 'No description recorded')}</p>`)+detailFacts([['Platform',t.platform],['Category',t.category],['Revision',t.revision],['Time limit',t.timeout+' seconds'],['Source',t.builtin?'Built-in starter':'Custom template']])+detailSection('Inputs',detailFacts(t.parameters.map((p:Item)=>[p.label,p.name+(p.required?' · required':' · optional')])) )+detailSection('Exact script',`<pre>${esc(t.script)}</pre>`)+`<section class="resource-section" data-template-revisions><h3>Revision history</h3><p>Reading retained revisions…</p></section><section class="resource-section" data-template-usage><h3>Schedules & recent results</h3><p>Reading references…</p></section><div class="toolbar"><button class="primary" data-template-deploy>Review deployment</button><button class="secondary" data-template-edit>${t.builtin?'Customize':'Edit template'}</button></div><p class="resource-note">Schedules pin a revision. Publishing changes makes older schedules require a new review.</p>`,{tone:'automation',subtitle:'Template · Revision '+t.revision});
+    void api('/templates/'+encodeURIComponent(id)+'/revisions').then((history:Item[])=>{
+      if(!pane.open)return;
+      pane.querySelector('[data-template-revisions]')!.innerHTML='<h3>Revision history</h3>'+history.map(h=>`<details class="resource-section"><summary>Revision ${h.revision} · ${esc(h.actor)} · ${date(h.created)}</summary><p>${esc(h.template.description || '')}</p><pre>${esc(h.template.script)}</pre></details>`).join('')+(history.length?'':'<p class="resource-note">No retained custom revisions. Built-in starters have a fixed revision.</p>');
+    }).catch(()=>{if(pane.open)pane.querySelector('[data-template-revisions]')!.textContent='Revision history is unavailable.';});
     pane.querySelector<HTMLButtonElement>('[data-template-deploy]')!.onclick=()=>void deployDialog([],id);
     pane.querySelector<HTMLButtonElement>('[data-template-edit]')!.onclick=()=>templateEditor(t);
     try {

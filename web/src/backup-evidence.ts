@@ -17,6 +17,6 @@ export function backupEvidence(sections:Item, agent:Item = {}, now=Date.now()/10
     failed:backups.filter(b=>/failed|error/i.test(b.status || '')).length,
     state:latestPoint===null?'No recovery point reported':agent.backup_schedule_active && interval>0 && now-latestPoint>interval*2?'Older than two backup intervals':'Recovery point recorded',
     source:successful&&successful===latestPoint?'Successful backup job':snapshot&&snapshot===latestPoint?'Provider snapshot inventory':'Protected-system metadata',
-    complete:sections.backup?.data?.next_offset==null && sections.snapshot?.data?.next_offset==null,
+    complete:!!sections.backup?.data && !!sections.snapshot?.data && sections.backup.data.next_offset==null && sections.snapshot.data.next_offset==null,
   };
 }

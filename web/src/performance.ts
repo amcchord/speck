@@ -22,6 +22,20 @@ export function performanceCards(series: Item[]): string {
     return `<article class="performance-card" data-chart="${i}"><div class="performance-heading"><h4>${e(s.label)}</h4><span>Peak ${last?e(metricValue(peak,s.unit)):'—'}</span></div><strong data-chart-value>${last?e(metricValue(last[1]!,s.unit)):'Not reported'}</strong><small data-chart-time>${last?e(new Date(last[0]*1000).toLocaleString()):'No provider readings for this interval'}</small>${last?`<svg viewBox="0 0 600 120" preserveAspectRatio="none" role="img" aria-label="${e(s.label)} over the selected interval"><path class="chart-grid" d="M0 28H600 M0 66H600 M0 112H600"/><path class="chart-line" d="${chartPath(points)}"/><line class="chart-cursor" y1="0" y2="112" hidden/></svg><div class="chart-axis"><span>${e(new Date(start*1000).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))}</span><span>${e(new Date(end!*1000).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}))}</span></div>`:'<div class="chart-empty">The provider did not report this measurement.</div>'}</article>`;
   }).join('');
 }
+export function bindPerformance(root:HTMLElement,series:Item[]) {
+  root.querySelectorAll<HTMLElement>('[data-chart]').forEach(card=>{
+    const s=series[Number(card.dataset.chart)],svg=card.querySelector('svg');if(!svg||!s?.points?.length)return;
+    const show=(index:number)=>{const p=s.points[index],ratio=(p[0]-s.points[0][0])/(s.points.at(-1)[0]-s.points[0][0]||1);
+      card.querySelector('[data-chart-value]')!.textContent=p[1]===null?'No reading':metricValue(p[1],s.unit);
+      card.querySelector('[data-chart-time]')!.textContent=new Date(p[0]*1000).toLocaleString();
+      const line=svg.querySelector('line')!;line.removeAttribute('hidden');line.setAttribute('x1',String(ratio*600));line.setAttribute('x2',String(ratio*600));
+      slider.value=String(index);slider.setAttribute('aria-valuetext',`${new Date(p[0]*1000).toLocaleString()}, ${p[1]===null?'No reading':metricValue(p[1],s.unit)}`);
+    };
+    const slider=document.createElement('input');slider.type='range';slider.min='0';slider.max=String(s.points.length-1);slider.value=slider.max;slider.setAttribute('aria-label','Inspect '+s.label+' reading');slider.oninput=()=>show(Number(slider.value));card.append(slider);
+    const pointer=(event:PointerEvent)=>{const box=svg.getBoundingClientRect(),ratio=Math.max(0,Math.min(1,(event.clientX-box.left)/box.width));const stamp=s.points[0][0]+ratio*(s.points.at(-1)[0]-s.points[0][0]);let index=0;s.points.forEach((p:any,i:number)=>{if(Math.abs(p[0]-stamp)<Math.abs(s.points[index][0]-stamp))index=i;});show(index);};
+    svg.addEventListener('pointermove',pointer);svg.addEventListener('pointerdown',pointer);show(s.points.length-1);
+  });
+}
 export function mountPerformance(ui: Item, resource: Item, root: HTMLElement) {
   let range='day',generation=0;
   const path=`/infrastructure/connections/${resource.connection_id}/resources/${resource.kind}/${encodeURIComponent(resource.id)}/metrics`;
@@ -34,18 +48,8 @@ export function mountPerformance(ui: Item, resource: Item, root: HTMLElement) {
       const data=await (fresh?ui.freshApi:ui.api)(path+'?timeframe='+range);
       if(!root.isConnected||generation!==current)return;
       const series=Array.isArray(data.series)?data.series:[];
-      content.innerHTML=`<div class="performance-grid">${performanceCards(series)}</div><p class="resource-note">${e(data.note || 'No provider history is available.')}</p>`;
-      root.querySelectorAll<HTMLElement>('[data-chart]').forEach(card=>{
-        const s=series[Number(card.dataset.chart)],svg=card.querySelector('svg');if(!svg)return;
-        svg.addEventListener('pointermove',event=>{
-          const box=svg.getBoundingClientRect(),ratio=Math.max(0,Math.min(1,(event.clientX-box.left)/box.width));
-          const stamp=s.points[0][0]+ratio*(s.points.at(-1)[0]-s.points[0][0]);
-          const p=s.points.reduce((nearest:any,next:any)=>Math.abs(next[0]-stamp)<Math.abs(nearest[0]-stamp)?next:nearest);
-          card.querySelector('[data-chart-value]')!.textContent=p[1]===null?'No reading':metricValue(p[1],s.unit);
-          card.querySelector('[data-chart-time]')!.textContent=new Date(p[0]*1000).toLocaleString();
-          const line=svg.querySelector('line')!;line.removeAttribute('hidden');line.setAttribute('x1',String(ratio*600));line.setAttribute('x2',String(ratio*600));
-        });
-      });
+      content.innerHTML=`<div class="performance-grid">${performanceCards(series)}</div><p class="resource-note">${e(data.note || 'No provider history is available.')} ${data.checked_at?'Fetched '+e(new Date(data.checked_at*1000).toLocaleString()):''}</p>`;
+      bindPerformance(content,series);
     }catch(error){if(root.isConnected&&current===generation)content.innerHTML='<p class="resource-notice">Performance history is unavailable. Check provider connectivity and read permissions, then refresh. Resource details remain available.</p>';}
   }
   root.querySelector('select')!.addEventListener('change',event=>{range=(event.target as HTMLSelectElement).value;void load();});

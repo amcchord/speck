@@ -254,6 +254,40 @@ def connections(user=Depends(require_user)):
     return {"connections": items, "domains_cached": count}
 
 
+@router.get('/domains/{domain}/record-history')
+def record_history(domain:str,name:str,rtype:str,user=Depends(require_user)):
+    domain,name,rtype=valid_domain(domain),valid_name(name),valid_type(rtype)
+    if not known_domain(domain):
+        raise HTTPException(404,'Domain is not in the connected inventory')
+    with db() as conn:
+        rows=conn.execute("SELECT at,actor,action,detail FROM audit WHERE action LIKE 'dns.%' AND json_valid(detail) AND json_extract(detail,'$.domain')=? AND json_extract(detail,'$.name')=? ORDER BY at DESC LIMIT 100",(domain,name)).fetchall()
+    return [{'at':r['at'],'actor':r['actor'],'action':r['action']} for r in rows if json.loads(r['detail']).get('type',rtype)==rtype]
+
+
+class ResolutionCheck(BaseModel):
+    name:str=Field(max_length=253)
+
+
+@router.post('/domains/{domain}/resolve')
+async def resolve_record(domain:str,body:ResolutionCheck,user=Depends(require_user)):
+    import socket
+    domain,name=valid_domain(domain),valid_name(body.name)
+    records,_=cached_records(domain)
+    if not known_domain(domain) or not any(r.get('name')==name for r in records or []):
+        raise HTTPException(404,'Choose a record in the connected zone inventory')
+    hostname=valid_domain(fqdn(domain,name))
+    started=time.time()
+    try:
+        result=await asyncio.wait_for(asyncio.get_running_loop().getaddrinfo(hostname,None,type=socket.SOCK_STREAM),5)
+        addresses=sorted({r[4][0] for r in result})
+        outcome='resolved'
+    except (TimeoutError,socket.gaierror):
+        addresses=[]
+        outcome='No address response within five seconds'
+    write_audit(user,'resolution.checked',domain,name=name)
+    return {'hostname':hostname,'addresses':addresses,'outcome':outcome,'checked_at':time.time(),'duration_ms':round((time.time()-started)*1000),'scope':'Speck server system resolver, A/AAAA lookup. This does not verify application availability or resolution from an endpoint.'}
+
+
 async def ip_targets():
     """Public IPs Speck knows: Linode instances and UniFi public-IP mappings."""
     from speck import infrastructure as infra

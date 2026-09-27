@@ -1,10 +1,10 @@
+import {mountPerformance} from "./performance";
 import {detailFacts,detailHero,technicalDetail} from "./resource-story";
 import "./proxmox-machine.css";
 import { openProviderConsole } from "./provider-console";
 import { captureProviderPreview, downloadScreen } from "./provider-preview";
 import {
   adapters,
-  chartPoints,
   disks,
   duration,
   guestAddresses,
@@ -12,7 +12,6 @@ import {
   number,
   object,
   percent,
-  sparkline,
 } from "./proxmox-model";
 type Item = Record<string, any>;
 
@@ -359,12 +358,12 @@ export function mountProxmoxMachine(
     else if (tab === "network") body.innerHTML = network();
     else if (tab === "activity")
       body.innerHTML = section("Recent activity", tasks());
-    else if (tab === "performance" || tab === "snapshots") {
+    else if (tab === "performance") mountPerformance(ui,resource,body);
+    else if (tab === "snapshots") {
       body.innerHTML = note(`Loading ${tab}…`);
       try {
         const result = await read(
-          tab === "performance" ? "metrics" : "snapshots",
-          tab === "performance" ? { timeframe: "hour" } : {},
+          "snapshots", {},
         );
         if (!alive() || current !== tabGeneration) return;
         if (tab === "snapshots")
@@ -385,24 +384,7 @@ export function mountProxmoxMachine(
                 : "No snapshots reported.",
             ),
           );
-        else {
-          const rows = list(result)
-            .filter((r) => number(r.time) !== null)
-            .sort((a, b) => a.time - b.time);
-          const graph = (
-            title: string,
-            key: string,
-            scale: number,
-            format: (v: number) => string,
-            max?: number,
-          ) => {
-            const points = chartPoints(rows, key, scale),
-              path = sparkline(points, max),
-              values = points.filter((v): v is number => v !== null);
-            return `<article class="pve-chart"><h3>${esc(title)}</h3><strong>${values.length ? esc(format(values.at(-1)!)) : "Not reported"}</strong>${path ? `<svg viewBox="0 0 300 70" role="img" aria-label="${esc(title)} over the last hour"><path d="${path}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg><small>Peak ${esc(format(Math.max(...values)))}</small>` : note("Not enough samples for a chart.")}</article>`;
-          };
-          body.innerHTML = `<p class="pve-note">Last hour · Provider samples${rows.length ? ` · ${esc(date(rows[0].time))} – ${esc(date(rows.at(-1)!.time))}` : ""}</p><div class="pve-charts">${graph("CPU", "cpu", 100, (v) => v.toFixed(1) + "%", 100)}${graph("Memory", "mem", 1, bytes)}${graph("Network received", "netin", 1, (v) => bytes(v) + "/s")}${graph("Network sent", "netout", 1, (v) => bytes(v) + "/s")}${graph("Disk read", "diskread", 1, (v) => bytes(v) + "/s")}${graph("Disk write", "diskwrite", 1, (v) => bytes(v) + "/s")}</div>`;
-        }
+
       } catch (e) {
         if (alive() && current === tabGeneration)
           body.innerHTML =

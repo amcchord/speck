@@ -1,3 +1,4 @@
+import { mountEquipmentHistory } from "./network-history";
 import { rememberResource, registerResource } from "./resource-navigation";
 import "./network-equipment.css";
 import {
@@ -274,6 +275,8 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
             data!.children.map((d: Item) => deviceLink(d)).join("") ||
               note("No directly downstream UniFi equipment reported."),
           );
+      } else if (tab === "history") {
+        mountEquipmentHistory(ui,endpoint,target,selectedPort);
       } else if (tab === "health") {
         const d = data!.device,
           s = data!.statistics || {},
@@ -424,7 +427,7 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
               "Device statistics are unavailable. Ports and other reported details remain visible.",
             )
           : "") +
-        `<div class="equipment-tabs" role="tablist" aria-label="Equipment views">${["ports", "clients", "equipment", "health", "activity"].map((t) => `<button role="tab" data-equipment-tab="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div><div data-equipment-content role="tabpanel"></div><footer class="equipment-footer">${e("Observed " + detailDate(data.checked_at))}${ui.role() === "admin" && d.state === "ONLINE" && d.supported === true ? '<button class="secondary" data-restart>Review device restart</button>' : ""}</footer>`;
+        `<div class="equipment-tabs" role="tablist" aria-label="Equipment views">${["ports", "clients", "equipment", "health", "history", "activity"].map((t) => `<button role="tab" data-equipment-tab="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div><div data-equipment-content role="tabpanel"></div><footer class="equipment-footer">${e("Observed " + detailDate(data.checked_at))}${ui.role() === "admin" && d.state === "ONLINE" && d.supported === true ? '<button class="secondary" data-restart>Review device restart</button>' : ""}</footer>`;
       root
         .querySelector("[data-equipment-back]")!
         .addEventListener("click", () =>

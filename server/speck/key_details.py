@@ -6,12 +6,13 @@ import time
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from speck.config import unseal
+from speck.config import seal, unseal
 from speck.db import audit, db
 
 
 def migrate(conn):
     conn.executescript("""
+    CREATE TABLE IF NOT EXISTS key_rotation_plans(kind TEXT NOT NULL,name TEXT NOT NULL,payload TEXT NOT NULL,updated REAL NOT NULL,actor TEXT NOT NULL,PRIMARY KEY(kind,name));
     CREATE TABLE IF NOT EXISTS key_systems(
       kind TEXT NOT NULL,name TEXT NOT NULL,target_id TEXT NOT NULL,label TEXT NOT NULL,
       source TEXT NOT NULL,note TEXT NOT NULL DEFAULT '',created REAL NOT NULL,created_by TEXT NOT NULL,
@@ -60,6 +61,8 @@ def details(kind, name):
         links = conn.execute('SELECT * FROM key_systems WHERE kind=? AND name=? ORDER BY label', (kind, name)).fetchall()
         known = {t['id']: t for t in targets(conn)} if links else {}
         result['systems'] = [dict(r) | {'target': known.get(r['target_id'])} for r in links]
+        plan = conn.execute('SELECT * FROM key_rotation_plans WHERE kind=? AND name=?', (kind,name)).fetchone()
+        result['rotation_plan'] = (json.loads(unseal(plan['payload'])) | {'updated':plan['updated'],'actor':plan['actor']}) if plan else {}
     result['coverage'] = 'Activity records access through Speck. Use outside Speck is not observed. System associations describe recorded configuration, not a live authentication check.'
     return result
 
@@ -68,6 +71,29 @@ class SystemLink(BaseModel):
     model_config = ConfigDict(extra='forbid')
     target_id: str = Field(min_length=1, max_length=512)
     note: str = Field(default='', max_length=500)
+
+
+class RotationPlan(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    owner: str = Field(default='',max_length=160)
+    purpose: str = Field(default='',max_length=1000)
+    next_review: str = Field(default='',max_length=10,pattern=r'^(|\d{4}-\d{2}-\d{2})$')
+    procedure: str = Field(default='',max_length=2000)
+
+
+def save_plan(kind,name,body,user):
+    if user.get('via') == 'token':
+        raise HTTPException(403,'Manage rotation plans from a signed-in administrator session')
+    if body.next_review:
+        from datetime import date
+        try:
+            date.fromisoformat(body.next_review)
+        except ValueError:
+            raise HTTPException(422,'Choose a valid review date') from None
+    with db(write=True) as conn:
+        conn.execute('INSERT OR REPLACE INTO key_rotation_plans VALUES(?,?,?,?,?)',(kind,name,seal(body.model_dump_json()),time.time(),user['username']))
+        audit(conn,user['username'],('vault' if kind=='vault' else 'ssh')+'.rotation_plan.updated',detail={'name':name})
+    return {'ok':True}
 
 
 def associate(conn, kind, name, target_id, label, actor, source='Recorded by administrator', note=''):

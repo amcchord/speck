@@ -76,6 +76,8 @@ def legacy_map(rows):
 async def inventory(console_id, site_id):
     base, path, short = await scope(console_id, site_id)
     rows, truncated = await pages(base, path + "/devices")
+    from speck.network_history import index_equipment
+    index_equipment(console_id, site_id, rows)
     return {"devices": [summary(r) for r in rows], "truncated": truncated, "checked_at": time.time()}
 
 
@@ -144,7 +146,8 @@ async def inspect(console_id, site_id, device_id):
     downstream = [c for c in normalized if c.get("uplink_id") in descendants]
     upstream_id = (safe.get("uplink") or {}).get("deviceId")
     upstream = next((r for r in topology if r["id"] == upstream_id), None)
-    return {
+    result = {
+        "power_budget": this_legacy.get("total_max_power"),
         "site": {"console_id": console_id, "id": site_id, "reference": short},
         "device": safe,
         "statistics": stats,
@@ -160,6 +163,10 @@ async def inspect(console_id, site_id, device_id):
         "truncated": truncated,
         "checked_at": time.time(),
     }
+
+    from speck.network_history import record
+    record(result)
+    return result
 
 
 @router.get("/sites/{console_id}/{site_id}/devices/{device_id}")

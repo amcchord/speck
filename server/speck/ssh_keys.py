@@ -167,6 +167,14 @@ def unlink_system(name: str, target_id: str, user=Depends(require_admin)):
     return key_details.unlink("ssh", name, target_id, user)
 
 
+@router.put('/keys/{name}/rotation-plan')
+def rotation_plan(name: str,body:key_details.RotationPlan,user=Depends(require_admin)):
+    with db() as conn:
+        if not conn.execute('SELECT 1 FROM ssh_keys WHERE name=?',(name,)).fetchone():
+            raise HTTPException(404,'SSH key not found')
+    return key_details.save_plan('ssh',name,body,user)
+
+
 @router.get("/keys/{name}/private")
 def reveal(name: str, user=Depends(key_readers)):
     """The OpenSSH private key. Administrators only; audited."""

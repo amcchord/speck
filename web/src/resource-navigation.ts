@@ -5,6 +5,7 @@ type Open = (ref: ResourceRef) => void | Promise<void>;
 const resolvers = new Map<string, Open>();
 const recent = new Map<string, () => void | Promise<void>>();
 let restoring = false;
+let pendingNavigation: string | null = null;
 const key = (ref: ResourceRef) => JSON.stringify(Object.fromEntries(Object.entries(ref).filter(([, v]) => v !== undefined).sort()));
 export function currentResource(): ResourceRef | null {
   try {
@@ -22,6 +23,7 @@ export function resourceHref(page: string, ref: ResourceRef) {
 export function registerResource(kind: string, open: Open) { resolvers.set(kind, open); }
 export function rememberResource(ref: ResourceRef, open: () => void | Promise<void>) {
   const id = key(ref);
+  pendingNavigation = id;
   recent.delete(id); recent.set(id, open);
   if (recent.size > 100) recent.delete(recent.keys().next().value!);
   if (!restoring && key(currentResource() || {kind:'',id:''}) !== id) {
@@ -44,6 +46,8 @@ export function bindResourceNavigation(pane: HTMLDialogElement) {
   const ref = currentResource();
   if (!ref) return;
   const id = key(ref), head = pane.querySelector('.dialog-head');
+  if (pendingNavigation !== id) return;
+  pendingNavigation = null;
   if (!head || head.querySelector('[data-resource-navigation]')) return;
   const controls = document.createElement('span');
   controls.dataset.resourceNavigation = '';
@@ -61,4 +65,4 @@ export function bindResourceNavigation(pane: HTMLDialogElement) {
       history.replaceState(null, '', location.hash.split('?')[0]);
   });
 }
-export function clearResourceHistory() { recent.clear(); }
+export function clearResourceHistory() { recent.clear(); pendingNavigation = null; }

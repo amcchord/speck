@@ -57,7 +57,7 @@ export function createHome(ui: Item) {
       ${staleSources.length || network?.client_error ? `<div class="home-notice" role="status">Some relationships may be out of date. ${esc(staleSources.map((c: Item) => c.name).join(", "))}${network?.client_error ? ' · UniFi client inventory unavailable' : ''}. Open a system to inspect its evidence.</div>` : ""}
       ${pending.length ? `<p class="resource-note" role="status">Loading ${esc(pending.join(" · "))}… Available information appears immediately.</p>` : ""}
       <div class="home-stats" aria-label="Environment summary">
-        <a href="#fleet" class="home-stat agents"><span>Machines</span><strong>${fleet ? rows.length : '—'}</strong><small>${fleet ? coverage + ' with an approved endpoint agent' : results[0] ? 'Inventory unavailable' : 'Loading inventory…'}</small></a>
+        <a href="#fleet?coverage=all" class="home-stat agents"><span>Machines</span><strong>${fleet ? rows.length : '—'}</strong><small>${fleet ? coverage + ' with an approved endpoint agent' : results[0] ? 'Inventory unavailable' : 'Loading inventory…'}</small></a>
         <button id="home-linked" class="home-stat compute"><span>Connected identities</span><strong>${fleet ? rows.filter(r => r.linked).length : '—'}</strong><small>Agents matched to provider resources</small></button>
         <a href="#alerts" class="home-stat attention"><span>Needs attention</span><strong>${alerts ? alerts.counts?.unacknowledged ?? 0 : '—'}</strong><small>${alerts ? (alerts.counts?.active ?? 0) + ' open alerts' : results[1] ? 'Alerts unavailable' : 'Loading alerts…'}</small></a>
         ${canOperate() ? `<a href="#schedules" class="home-stat automation"><span>Active automations</span><strong>${schedules ? active.length : '—'}</strong><small>${schedules ? 'Reviewed schedules' : results[3] ? 'Schedules unavailable' : 'Loading schedules…'}</small></a>` : `<a href="#activity" class="home-stat automation"><span>Activity</span><strong>${icon("history")}</strong><small>Changes and their evidence</small></a>`}
@@ -154,6 +154,7 @@ export function createHome(ui: Item) {
     if (!canOperate()) return;
     if (!ai) { try { ai = await read("/ai/settings"); } catch {} }
     if (!ai?.configured) { location.hash = "assistant"; return; }
+    if (!rows.length) { const data=await read("/fleet"); rows=relationships(data.machines || [],[]); }
     const devices = rows.filter(endpoint).filter(r => ['windows', 'linux'].includes(r.machine.platform));
     const modal = ui.dialog("Plan with AI", `<p>Choose a machine for context, or draft a reusable Windows or Linux script.</p><label>Task<textarea id="home-plan-task" rows="3" required></textarea></label><label>Context<select id="home-plan-context"><option value="platform:windows">Reusable script · Windows PowerShell</option><option value="platform:linux">Reusable script · Linux shell</option>${devices.map((r, i) => `<option value="device:${i}">${esc(r.machine.label)} · ${esc(r.machine.platform)}${r.machine.online ? '' : ' · Offline'}</option>`).join('')}</select></label><p class="muted">You’ll review the request and included machine health before sending it to OpenAI. Generated scripts can become reusable templates; schedules have a separate review.</p><div class="dialog-footer"><button id="home-plan-continue" class="primary">Review AI request ${icon("arrow")}</button></div>`);
     (modal.querySelector('#home-plan-task') as HTMLTextAreaElement).value = prompt;
@@ -170,5 +171,5 @@ export function createHome(ui: Item) {
       await ui.assist(device, task);
     });
   }
-  return { render };
+  return { render, plan };
 }

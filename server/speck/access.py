@@ -101,6 +101,17 @@ def account(user=Depends(require_user)):
     }
 
 
+@router.get('/sessions')
+def session_inventory(user=Depends(require_user)):
+    with db() as conn:
+        return [{'id': digest('public-session:' + r['token_hash'])[:24],
+                 'created': r['created'], 'last_seen': r['last_seen'], 'expires': r['expires'],
+                 'current': r['token_hash'] == user['token_hash'],
+                 'method': 'Passkey' if r['passkey_id'] else 'Password', 'role': user['role']}
+                for r in conn.execute('SELECT * FROM sessions WHERE user_id=? AND expires>? ORDER BY expires DESC',
+                                      (user['user_id'], time.time()))]
+
+
 class PasswordChange(Proof):
     new_password: str = Field(min_length=16, max_length=256)
 

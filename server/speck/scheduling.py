@@ -7,7 +7,7 @@ import json
 import logging
 import time
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 
 from speck.config import seal, unseal
@@ -153,6 +153,24 @@ def schedules(user=Depends(require_user)):
 class State(BaseModel):
     enabled: bool
     next_run: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+
+
+@router.get('/{schedule_id}/history')
+def execution_history(schedule_id:str,before:float|None=Query(default=None,gt=0,allow_inf_nan=False),user=Depends(require_user)):
+    with db() as conn:
+        if not conn.execute('SELECT 1 FROM schedules WHERE id=?',(schedule_id,)).fetchone():
+            raise HTTPException(404,'Schedule not found')
+        rows=[dict(r) for r in conn.execute('SELECT * FROM schedule_runs WHERE schedule_id=? AND due<? ORDER BY due DESC LIMIT 101',(schedule_id,before or time.time()+1))]
+        for run in rows[:100]:
+            if run['batch_id']:
+                states={r[0] for r in conn.execute('SELECT j.status FROM batch_jobs bj JOIN jobs j ON j.id=bj.job_id WHERE batch_id=?',(run['batch_id'],))}
+                if states=={'complete'}:
+                    run['status']='complete'
+                elif states&{'queued','leased','running'}:
+                    run['status']='running' if states&{'leased','running'} else 'queued'
+                elif states:
+                    run['status']='unknown' if 'unknown' in states else 'failed'
+    return {'items':rows[:100],'next_cursor':rows[99]['due'] if len(rows)>100 else None}
 
 
 class ScheduleEdit(Schedule):

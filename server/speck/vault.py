@@ -809,6 +809,15 @@ def link_system(name: str, body: key_details.SystemLink, user=Depends(writers)):
     return key_details.link("vault", name, body, user)
 
 
+@router.put("/{name}/rotation-plan")
+def rotation_plan(name: str, body: key_details.RotationPlan, user=Depends(writers)):
+    require_permitted(user,name)
+    with db() as conn:
+        if not load(conn,name):
+            raise HTTPException(404,'Key not found')
+    return key_details.save_plan('vault',name,body,user)
+
+
 @router.delete("/{name}/systems")
 def unlink_system(name: str, target_id: str, user=Depends(writers)):
     require_permitted(user, name)
