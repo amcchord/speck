@@ -1,6 +1,8 @@
 /** Only reusable inventory reads belong here. Secrets, sessions, live operations and
  * mutation preflights deliberately use the transport directly. Nothing is persisted. */
 export function readPolicy(path: string): number | null {
+  if (/^\/unifi\/sites(?:\/[^/]+\/[^/]+\/clients)?$/.test(path)) return 30000;
+  if (/^\/infrastructure\/connections\/[^/]+\/resources\/[^/]+\/[^/]+\/metrics\?timeframe=(hour|day|week|month)$/.test(path)) return 30000;
   if (/^\/fleet$/.test(path)) return 15000;
   if (/^\/(network\/map|infrastructure\/(inventory|connectors)|unifi\/(pool|status|clients|consoles)|slide\/(connection|restored-devices))$/.test(path)) return 30000;
   if (/^\/dns\/domains$/.test(path)) return 60000;

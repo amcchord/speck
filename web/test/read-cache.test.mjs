@@ -4,7 +4,7 @@ import {createReadCache, readPolicy} from '../src/read-cache.ts';
 
 test('cache allowlist excludes credentials, live operation reads and fresh preflights',()=>{
   for(const path of ['/keys','/vault/entries/1','/auth/me','/devices/1/preview','/ai/settings','/infrastructure/connections/c/read/power','/dns/domains/example.com/records','/fleet?refresh=true']) assert.equal(readPolicy(path),null,path);
-  for(const path of ['/fleet','/network/map','/slide/inventory?resource=restore%2Fvirt','/infrastructure/connections/c/resources/node/pve-1']) assert.ok(readPolicy(path)>0,path);
+  for(const path of ['/unifi/sites','/unifi/sites/console/site/clients','/infrastructure/connections/c/resources/instance/1/metrics?timeframe=day','/fleet','/network/map','/slide/inventory?resource=restore%2Fvirt','/infrastructure/connections/c/resources/node/pve-1']) assert.ok(readPolicy(path)>0,path);
 });
 test('fresh reads reuse isolated values and stale reads return immediately while one refresh runs',async()=>{
   let time=0,calls=0,resolve;

@@ -187,12 +187,13 @@ async def fetch_clients():
         for c in batch:
             items.append({"id": c.get("id"), "name": c.get("name") or "", "ip": c.get("ipAddress") or "",
                           "mac": (c.get("macAddress") or "").lower(), "type": c.get("type") or "",
-                          "connected_at": c.get("connectedAt") or ""})
+                          "connected_at": c.get("connectedAt") or "", "uplink_id": c.get("uplinkDeviceId")})
         offset += len(batch)
         if not batch or offset >= data.get("totalCount", 0) or offset >= 5000:
             break
     items.sort(key=lambda c: (c["name"].lower() or "~", c["ip"]))
-    return items
+    from speck.unifi_observability import enrich_managed_clients
+    return await enrich_managed_clients(items)
 
 
 async def cached_clients(max_age=60):

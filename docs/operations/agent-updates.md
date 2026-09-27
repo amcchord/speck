@@ -116,3 +116,10 @@ Automatic rollback failures were exercised in isolated tests, not by publishing
 a deliberately broken production release. Existing identity/account/provider/
 recovery/environment hashes and SQLite integrity match the pre-release snapshot.
 Private proof lives in `output/agent-updates/` in the task worktree.
+
+## Agent 0.3.2
+
+Adds Windows PowerShell through ConPTY and retains the same signed, idle-only
+update protocol. The private signing key stays on the operator host. See
+[observability](observability.md) for coordinated server/web deployment and
+Windows/Linux qualification.

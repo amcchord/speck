@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.mjs';
 
 // Phone and tablet layouts against the synthetic preview. See docs/ui-ux-audit-mobile.md.
 const signIn = async (page, hash = 'fleet') => {
@@ -92,6 +92,7 @@ test.describe('phone', () => {
     await expect(loading).toBeVisible();
     await loading.getByRole('button', { name: 'Close' }).click();
     await page.goto('/#network');
+    await page.locator('#net-tab-domains').click();
     await page.waitForTimeout(1600);
     await expect(page.locator('.toast.error')).toHaveCount(0);
     await expect(page.getByRole('dialog', { name: 'New VM' })).toHaveCount(0);

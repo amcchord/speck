@@ -11,11 +11,11 @@ def remote_options(device):
     caps = telemetry.get('capabilities')
     if not isinstance(caps, dict):
         caps = {}
-    shell = device['platform'] == 'linux' and caps.get('web_shell') is True
+    shell = device['platform'] in ('linux', 'windows') and caps.get('web_shell') is True
     config = json.loads(unseal(device['remote_secret'])) if device.get('remote_secret') else None
     desktop = caps.get('desktop')
     configured = (config or {}).get('protocol')
-    prefer_shell = desktop == 'headless' or not config or (desktop != 'available' and configured == 'ssh')
+    prefer_shell = not config or (device['platform'] == 'linux' and (desktop == 'headless' or (desktop != 'available' and configured == 'ssh')))
     protocol = 'shell' if shell and prefer_shell else configured
     return config, {
         'remote_protocol': protocol,

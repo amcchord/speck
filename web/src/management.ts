@@ -1,5 +1,6 @@
 import { available as passkeysAvailable, ceremony as passkeyCeremony } from "./passkeys";
 import { eventLabel } from "./activity-model";
+import { detailSection, detailFacts, technicalDetail } from "./resource-story";
 import { loadingState } from "./loading";
 import "./management.css";
 type Item = Record<string, any>;
@@ -433,10 +434,16 @@ export function createManagement(ui: Item) {
           result.items
             .map(
               (a: Item) =>
-                `<tr><td><details><summary title="${esc(a.action)}">${esc(eventLabel(a.action))}</summary><pre>${esc(JSON.stringify({ event: a.action, ...a.detail }, null, 2))}</pre></details></td><td>${esc(a.actor)}</td><td>${a.label ? esc(a.label) : '<span class="placeholder">—</span>'}</td><td>${date(a.at)}</td></tr>`,
+                `<tr><td><button class="text-link" data-audit-event="${a.id}" title="${esc(a.action)}">${esc(eventLabel(a.action))}</button></td><td>${esc(a.actor)}</td><td>${a.label ? esc(a.label) : '<span class="placeholder">—</span>'}</td><td>${date(a.at)}</td></tr>`,
             )
             .join(""),
         );
+      document.querySelectorAll<HTMLButtonElement>('[data-audit-event]').forEach(el => el.onclick = () => {
+        const event = items.find(a => String(a.id) === el.dataset.auditEvent); if (!event) return;
+        const device = devices.find((d: Item) => d.id === event.device_id);
+        const pane = ui.flyout(eventLabel(event.action), detailSection('Event', detailFacts([['Actor',event.actor],['When',date(event.at)],['Machine',event.label],['Event type',event.action],['Event ID',event.id]])) + detailSection('Evidence',detailFacts(Object.entries(event.detail || {}).filter(([,v]) => v !== null && typeof v !== 'object').map(([k,v]) => [k.replaceAll('_',' '),v]) as [string,any][])) + (device ? '<section class="resource-actions"><button data-audit-machine class="primary">Open machine</button></section>' : '') + technicalDetail(event.detail), {tone:'automation',subtitle:'Activity · Recorded event'});
+        pane.querySelector('[data-audit-machine]')?.addEventListener('click',()=>{pane.close();void ui.openDevice(device.id);});
+      });
       document.getElementById("audit-more")!.hidden = !next;
       document.getElementById("audit-count")!.textContent =
         count + " events loaded";

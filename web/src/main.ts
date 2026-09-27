@@ -604,13 +604,13 @@ const ops = createOperations({
     }
   },
 });
-const infrastructure = createInfrastructure({api, freshApi, flyout, resourceInventory: () => fleet.flatMap(m => m.resources || []), sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
+const infrastructure = createInfrastructure({api, freshApi, flyout, summary, resourceInventory: () => fleet.flatMap(m => m.resources || []), sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
   newVm: () => launchVm({ api, esc, notify, dialog, loadingState, exposeHost: (ip: string, name: string) => network.exposeHost(ip, name) })});
 const network = createNetwork({ api, freshApi, flyout, openMachine: async (id: string) => { if (!fleet.some(m => m.id === id)) await loadFleet(); await openDevice(id); }, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
 const keys = createKeys({ api, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
 const apiAccess = createApiAccess({ api, summary, esc, notify, dialog, content, loading, role: () => role, loadingState });
 const management = createManagement({
-  api,
+  api, flyout,
   esc,
   badge,
   date,
@@ -940,6 +940,7 @@ async function openDevice(id: string, initialTab = "overview") {
   activeDevicePanel = panel;
   highlightActiveMachine();
   const escape = (event: KeyboardEvent) => {
+    if (tab === "terminal" && panel.querySelector(".shell-workspace")?.contains(event.target as Node)) return;
     if (event.key !== "Escape" || !panel.open || document.querySelector("dialog:modal")) return;
     event.preventDefault();
     panel.close();
@@ -949,6 +950,7 @@ async function openDevice(id: string, initialTab = "overview") {
     document.removeEventListener("keydown", escape);
     if (activeDevicePanel !== panel) return;
     activeDevicePanel = null;
+    disconnect();
     detailVersion++;
     highlightActiveMachine();
     // Return to the machine after dismissal; navigation and replacement panes
@@ -1119,6 +1121,7 @@ async function renderDeviceContent() {
             "services",
             "network",
             "terminal",
+            "scripts",
             "files",
             "patches",
             "remote",
@@ -1227,6 +1230,16 @@ async function renderDeviceContent() {
       ),
     );
   } else if (tab === "terminal") {
+    if (!d.remote_shell_available) {
+      body.innerHTML=`<section class="terminal-intro"><span class="resource-eyebrow">Interactive terminal</span><h2>${d.platform==='windows'?'PowerShell':'Shell'}</h2><p>Update the Speck agent on this machine to enable a persistent interactive session with command history, completion and Ctrl+C.</p><p class="muted">${d.platform==='windows'?'Windows 10 / Server 2019 or newer is required for the pseudoconsole.':'Linux uses a native PTY through the agent.'}</p><button class="secondary" id="open-scripts">Open script runner</button></section>`;
+      on('open-scripts',()=>{tab='scripts';void renderDevice();});
+    } else {
+      const panel=activeDevicePanel,deviceID=d.id;
+      const {openWebShell}=await import('./web-shell');
+      if(!body.isConnected||panel!==activeDevicePanel||selected!==deviceID||tab!=='terminal')return;
+      remoteCleanup=openWebShell(body,{id:d.id,label:d.label,platform:d.platform,embedded:true},csrf,signedOut);
+    }
+  } else if (tab === "scripts") {
     body.innerHTML = `<p>Run as ${d.platform === "windows" ? "Local System using PowerShell" : "the agent service account using /bin/sh"}. Output is captured and audited.</p><textarea id="script" aria-label="Command" class="code" spellcheck="false" rows="7" placeholder="${d.platform === "windows" ? "Get-Service | Select-Object -First 10" : "systemctl --failed"}"></textarea><div class="toolbar"><select id="shell" aria-label="Command shell"><option value="auto">${d.platform === "windows" ? "PowerShell" : "Shell (/bin/sh)"}</option>${d.platform === "linux" ? '<option value="powershell">PowerShell (pwsh required)</option>' : ""}</select><button id="execute" class="primary">Run command →</button></div><div id="job-result"></div>`;
     on("execute", async () =>
       showJob(
@@ -1404,7 +1417,7 @@ async function renderRemotePage(id: string, attempt = 0, mode = "auto") {
     await loadFleet();
     const d = fleet.find((d) => d.id === id);
     if (!d) throw new Error("Machine not found");
-    if (!d.remote_configured)
+    if (!d.remote_configured && !(mode === "shell" && d.remote_shell_available))
       throw new Error(
         "Configure the machine’s Remote connection in Fleet first.",
       );
@@ -1412,7 +1425,7 @@ async function renderRemotePage(id: string, attempt = 0, mode = "auto") {
       const current = viewScope.checkpoint();
       const { openWebShell } = await import("./web-shell");
       current();
-      remoteCleanup = openWebShell(app, { id: d.id, label: d.label, configured_remote_protocol: d.configured_remote_protocol }, csrf, signedOut);
+      remoteCleanup = openWebShell(app, { id: d.id, label: d.label, platform: d.platform, configured_remote_protocol: d.configured_remote_protocol }, csrf, signedOut);
     } else {
       await connectRemote({ ...d, remote_protocol: d.configured_remote_protocol || d.remote_protocol }, attempt);
     }

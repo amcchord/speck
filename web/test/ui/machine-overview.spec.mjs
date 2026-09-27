@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.mjs';
 
 async function signIn(page, transform = d => d, role = 'admin') {
   await page.context().addCookies([{ name: 'speck-gallery', value: '1', url: 'http://127.0.0.1:8761' }]);
@@ -61,6 +61,8 @@ for (const width of [1440, 834, 760, 390, 320]) {
     expect(await page.evaluate(() => window.copiedIP)).toBe('192.0.2.24');
     await page.locator('#drawer-terminal').click();
     await expect(page.locator('[data-tab="terminal"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText('Update the Speck agent on this machine', {exact:false})).toBeVisible();
+    await page.locator('[data-tab="scripts"]').click();
     await expect(page.locator('#script')).toBeVisible();
     await page.locator('[data-tab="overview"]').click();
     await page.locator('#device-edit').click();

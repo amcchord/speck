@@ -1,8 +1,9 @@
 import "./infrastructure.css";
+import { mountPerformance } from "./performance";
 import { openProviderConsole } from "./provider-console";
 import { mountProxmoxMachine } from "./proxmox-machine";
 import { icon } from "./icons";
-import { infrastructureStory, relatedResources, technicalDetail } from "./resource-story";
+import { infrastructureStory, relatedResources, technicalDetail, detailHero, detailSection, detailFacts } from "./resource-story";
 type Item = Record<string, any>;
 export function createInfrastructure(ui: Item) {
   const { api, esc, on, value, notify, content, loading, badge, bytes, date } =
@@ -69,6 +70,7 @@ export function createInfrastructure(ui: Item) {
       api("/infrastructure/connectors"),
     ]);
     const rows = inventory.connections.flatMap((c: Item) => c.resources);
+    ui.summary?.(`<span><b>${rows.filter((r: Item)=>['running','online'].includes(r.status)).length}</b> running</span><span><b>${inventory.connections.length}</b> connections</span><span><b>${rows.filter((r: Item)=>r.agent).length}</b> linked agents</span>`);
     content(
       `${admin() && ui.newVm && inventory.connections.some((c: Item) => c.provider === "austinland") ? `<button class="primary" id="infra-new-vm" data-page-action>${icon("plus")}<span>New VM</span></button>` : ""}${admin() ? '<button class="secondary" id="infra-add" data-page-action>Add connection</button>' : ""}<div class="infra-tabs" role="tablist" aria-label="Infrastructure views">${[
         ["resources", `Resources (${rows.length})`],
@@ -99,7 +101,9 @@ export function createInfrastructure(ui: Item) {
   async function renderSection() {
     const body = document.getElementById("infra-body")!;
     if (section === "resources") {
-      body.innerHTML = `${inventory.connections
+      const all = inventory.connections.flatMap((c: Item)=>c.resources || []);
+      const running = all.filter((r: Item)=>['running','online'].includes(r.status));
+      body.innerHTML = `<section class="infra-landscape"><div class="infra-landscape-title"><span class="resource-eyebrow">Connected infrastructure</span><h2>Your estate, in context</h2><p>Explore a connection, follow a host to its guests, or inspect a machine’s performance.</p></div><div class="infra-totals"><div><strong>${running.length}</strong><span>Running / online</span></div><div><strong>${all.filter((r: Item)=>r.provider==='proxmox'&&r.kind==='node').length}</strong><span>Hypervisors</span></div><div><strong>${all.filter((r: Item)=>r.provider==='linode').length}</strong><span>Cloud instances</span></div><div><strong>${all.filter((r: Item)=>r.agent).length}</strong><span>Linked endpoints</span></div></div></section><div class="infra-scope-list" aria-label="Browse connections"><button class="infra-scope ${!connection?'selected':''}" data-infra-scope=""><b>All connections</b><span>${all.length} resources</span></button>${inventory.connections.filter((c:Item)=>c.resources?.length).map((c:Item)=>`<button class="infra-scope ${connection===c.id?'selected':''}" data-infra-scope="${esc(c.id)}"><b>${esc(c.name)}</b><span>${esc(labels[c.provider])} · ${c.resources.length} resources</span></button>`).join('')}</div>${inventory.connections
         .filter((c: Item) => c.status !== "connected")
         .map(
           (c: Item) =>
@@ -152,12 +156,15 @@ export function createInfrastructure(ui: Item) {
         },
         "change",
       );
+      body.querySelectorAll<HTMLButtonElement>('[data-infra-scope]').forEach(b=>b.onclick=()=>{
+        connection=b.dataset.infraScope!;provider='';query='';limit=PAGE;void renderSection();
+      });
       renderRows();
     } else if (section === "connections") {
       body.innerHTML = `<div class="infra-connections">${inventory.connections
         .map(
           (c: Item, i: number) =>
-            `<article class="card"><div class="infra-card-heading"><h2>${esc(c.name)}</h2>${badge(c.status, c.status === "connected")}</div><p>${labels[c.provider]} · ${c.connector ? "Outbound agent" : esc(c.url)}</p>${c.error ? `<p class="infra-error">${esc(c.error)}</p>` : ""}<div class="infra-actions">${button("infra-tools-" + i, "Manage")}${admin() ? c.managed_in_settings ? '<a class="secondary" href="#settings">Manage in Settings</a>' : button("infra-edit-" + i, "Edit") + button("infra-remove-" + i, "Disconnect") : ""}${admin() && c.connector ? button("infra-enroll-" + i, "Enroll host") : ""}</div>${agents
+            `<article class="card infra-connection-card" data-provider="${esc(c.provider)}"><div class="infra-card-heading"><span class="infra-provider-label">${esc(labels[c.provider])}</span>${badge(c.status, c.status === "connected")}</div><h2><button class="text-link" data-connection-detail="${i}">${esc(c.name)}</button></h2><p>${c.connector ? "Outbound connector" : esc(c.url)}</p><div class="infra-connection-counts"><span><b>${c.resources?.length || 0}</b> resources</span><span><b>${(c.resources || []).filter((r:Item)=>['running','online'].includes(r.status)).length}</b> running</span><span><b>${(c.resources || []).filter((r:Item)=>r.agent).length}</b> agent links</span></div>${c.error ? `<p class="infra-error">${esc(c.error)}</p>` : ""}<div class="infra-actions">${button("infra-tools-" + i, "Manage")}${admin() ? c.managed_in_settings ? '<a class="secondary" href="#settings">Manage in Settings</a>' : button("infra-edit-" + i, "Edit") + button("infra-remove-" + i, "Disconnect") : ""}${admin() && c.connector ? button("infra-enroll-" + i, "Enroll host") : ""}</div>${agents
               .filter((a) => a.connection_id === c.id)
               .map(
                 (a, j) =>
@@ -168,6 +175,7 @@ export function createInfrastructure(ui: Item) {
         .join(
           "",
         )}</div>${!inventory.connections.length ? '<div class="empty"><h2>Connect your infrastructure</h2><p>Add a Proxmox cluster, Linode account, Slide account or AustinLand bridge.</p></div>' : ""}`;
+      body.querySelectorAll<HTMLElement>('[data-connection-detail]').forEach(b=>b.onclick=()=>connectionDetail(inventory.connections[Number(b.dataset.connectionDetail)]));
       inventory.connections.forEach((c: Item, i: number) => {
         on("infra-tools-" + i, () => connectionTools(c));
         on("infra-edit-" + i, () => editConnection(c));
@@ -196,12 +204,26 @@ export function createInfrastructure(ui: Item) {
           ? `<div class="infra-table-wrap"><table class="infra-activity"><thead><tr><th>When</th><th>Operation</th><th>Target</th><th>By</th><th>Status</th><th>Result</th></tr></thead><tbody>${rows
               .map(
                 (r: Item) =>
-                  `<tr><td>${date(r.created)}</td><td>${esc(r.operation.replaceAll("-", " "))}</td><td>${esc(r.target)}</td><td>${esc(r.actor)}</td><td>${badge(r.status, r.status === "submitted")}</td><td>${esc(receiptSummary(r.result))}${r.result && typeof r.result === "object" && Object.keys(r.result).length > 1 ? `<details class="infra-raw"><summary>Details</summary><pre>${esc(JSON.stringify(r.result, null, 2))}</pre></details>` : ""}</td></tr>`,
+                  `<tr><td>${date(r.created)}</td><td><button class="text-link" data-receipt="${esc(r.id)}" aria-haspopup="dialog">${esc(r.operation.replaceAll("-", " "))} ↗</button></td><td>${esc(r.target)}</td><td>${esc(r.actor)}</td><td>${badge(r.status, r.status === "submitted")}</td><td>${esc(receiptSummary(r.result))}</td></tr>`,
               )
               .join("")}</tbody></table></div>`
           : '<div class="empty"><h2>No infrastructure changes yet</h2><p>Power, configuration and provisioning requests appear here with their receipts.</p></div>'
       }`;
+      body.querySelectorAll<HTMLButtonElement>('[data-receipt]').forEach(b=>b.onclick=()=>operationDetail(rows.find((r:Item)=>r.id===b.dataset.receipt)));
     }
+  }
+  function connectionDetail(c: Item) {
+    const members=c.resources || [];
+    const d=ui.flyout(c.name,detailHero(labels[c.provider]+' · Connection',c.status,'Provider access, resource coverage and connector health in one place.',[['Resources',members.length],['Running',members.filter((r:Item)=>['running','online'].includes(r.status)).length],['Linked agents',members.filter((r:Item)=>r.agent).length]])+detailSection('Connection',detailFacts([['Provider',labels[c.provider]],['Transport',c.connector?'Outbound connector':'Provider API'],['Origin',c.url],['Inventory checked',date(inventory.checked_at)]]))+detailSection('Host connectors',agents.filter(a=>a.connection_id===c.id).map(a=>`<div class="infra-agent"><span><b>${esc(a.hostname)}</b><small>Agent ${esc(a.version)} · ${date(a.last_seen)}</small></span>${badge(a.online?'online':'offline',a.online)}</div>`).join('')||'<p class="resource-note">This connection uses its provider API.</p>')+'<div class="resource-actions"><button class="primary" data-browse-connection>Browse resources</button><button class="secondary" data-manage-connection>Management tools</button></div>',{tone:c.provider==='slide'?'protection':'compute',subtitle:labels[c.provider]});
+    d.querySelector('[data-browse-connection]')!.addEventListener('click',()=>{d.close();connection=c.id;provider='';query='';section='resources';void render();});
+    d.querySelector('[data-manage-connection]')!.addEventListener('click',()=>void connectionTools(c));
+  }
+  function operationDetail(r: Item) {
+    if(!r)return;
+    const c=inventory.connections.find((c:Item)=>c.id===r.connection_id);
+    const matches=(c?.resources || []).filter((x:Item)=>r.resource_id&&String(x.id)===String(r.resource_id)&&(!r.kind||x.kind===r.kind));
+    const d=ui.flyout(r.operation.replaceAll('-',' '),detailHero('Infrastructure · Activity',r.status,r.status==='submitted'?'The provider accepted this request. Check the target to confirm its outcome.':r.status==='unknown'?'The outcome is unknown. Inspect the provider before attempting this operation again.':'The recorded outcome of this request.')+detailSection('Request',detailFacts([['Target',r.target],['Connection',c?.name || r.connection_id],['Requested by',r.actor],['Submitted',date(r.created)],['Updated',date(r.updated)],['Request ID',r.id]]))+detailSection('Provider receipt',`<p>${esc(receiptSummary(r.result))}</p>`+technicalDetail(r.result))+(matches.length===1?'<button class="primary" data-receipt-target>Inspect target</button>':'<p class="resource-note">An exact target link is not available in the current inventory.</p>'),{tone:'automation',subtitle:'Activity · '+r.target});
+    d.querySelector('[data-receipt-target]')?.addEventListener('click',()=>void resourceDetail(matches[0]));
   }
   // One readable line for a provider receipt; the full JSON stays behind Details.
   function receiptSummary(result: any): string {
@@ -255,14 +277,14 @@ export function createInfrastructure(ui: Item) {
         const key = r.connection_id + "/" + r.node;
         const heading =
           key !== group
-            ? `<tr class="infra-group"><th colspan="7">${esc(r.connection_name)} <span>›</span> ${esc(r.node || labels[r.provider])}</th></tr>`
+            ? `<tr class="infra-group"><th colspan="8">${esc(r.connection_name)} <span>›</span> ${esc(r.node || labels[r.provider])}</th></tr>`
             : "";
         group = key;
-        return `${heading}<tr class="${r.kind === "node" ? "infra-host-row" : ""}"><td><button class="text-link" id="infra-resource-${i}">${r.kind !== "node" && r.provider === "proxmox" ? '<span class="infra-branch" aria-hidden="true">↳</span>' : ""}${esc(r.name)}</button>${r.template ? "<small>Template</small>" : ""}</td><td>${esc(kinds[r.kind])}</td><td>${badge(r.status)}</td><td>${managementLabel(r)}</td><td>${r.max_memory ? `${r.memory ? bytes(r.memory) + " / " : ""}${bytes(r.max_memory)}` : "—"}<small>${r.max_disk ? bytes(r.max_disk) + " disk" : ""}</small></td><td>${esc(r.addresses?.join(", ") || r.id)}<small>${esc(r.pool || "")}</small></td><td>${r.agent ? button("infra-endpoint-" + i, "Open agent") : ""}</td></tr>`;
+        return `${heading}<tr class="${r.kind === "node" ? "infra-host-row" : ""}"><td><button class="text-link" id="infra-resource-${i}">${r.kind !== "node" && r.provider === "proxmox" ? '<span class="infra-branch" aria-hidden="true">↳</span>' : ""}${esc(r.name)}</button>${r.template ? "<small>Template</small>" : ""}</td><td>${esc(kinds[r.kind])}</td><td>${badge(r.status)}</td><td>${managementLabel(r)}</td><td>${typeof r.cpu==='number'?`<span class="infra-load">${Math.round(r.cpu*100)}%<i style="--load:${Math.min(100,Math.max(0,r.cpu*100))}%"></i></span>`:r.provider==='linode'?'<span class="placeholder">In details</span>':'—'}</td><td>${r.max_memory ? `${r.memory ? bytes(r.memory) + " / " : ""}${bytes(r.max_memory)}` : "—"}<small>${r.max_disk ? bytes(r.max_disk) + " disk" : ""}</small></td><td>${esc(r.addresses?.join(", ") || r.id)}<small>${esc(r.pool || "")}</small></td><td>${r.agent ? button("infra-endpoint-" + i, "Open agent") : ""}</td></tr>`;
       })
       .join("");
     document.getElementById("infra-resources")!.innerHTML = rows.length
-      ? `<div class="infra-table-wrap"><table class="infra-resource-table"><thead><tr><th>Host / guest</th><th>Type</th><th>State</th><th>Management</th><th>Memory / capacity</th><th>Address / ID</th><th>Agent</th></tr></thead><tbody>${html}</tbody></table></div>${rows.length > limit ? `<button class="secondary net-more" id="infra-more">Show ${Math.min(PAGE, rows.length - limit)} more of ${rows.length - limit} remaining</button>` : ""}<p class="muted">${rows.length} resources · Cluster › host › guest · Checked ${date(inventory.checked_at)}</p>`
+      ? `<div class="infra-table-wrap"><table class="infra-resource-table"><thead><tr><th>Host / guest</th><th>Type</th><th>State</th><th>Management</th><th>CPU</th><th>Memory / capacity</th><th>Address / ID</th><th>Agent</th></tr></thead><tbody>${html}</tbody></table></div>${rows.length > limit ? `<button class="secondary net-more" id="infra-more">Show ${Math.min(PAGE, rows.length - limit)} more of ${rows.length - limit} remaining</button>` : ""}<p class="muted">${rows.length} resources · Cluster › host › guest · Checked ${date(inventory.checked_at)}</p>`
       : '<div class="empty"><h2>No matching resources</h2><p>Adjust the filters or add a provider connection.</p></div>';
     rows.slice(0, limit).forEach((r: Item, i: number) => {
       on("infra-resource-" + i, () => resourceDetail(r));
@@ -304,7 +326,9 @@ export function createInfrastructure(ui: Item) {
       const secondary = ([id]: [string, any]) => /delete|remove|destroy|rename|migrate|clone/.test(id);
       const action = ([id, s]: [string, any]) => `<button class="secondary ${/delete|remove|destroy/.test(id) ? 'is-destructive' : ''}" data-infra-action="${esc(id)}">${esc(s.label)}</button>`;
       const actions = `<section class="resource-actions"><h3>Management</h3><p class="resource-note">${resource.agent ? 'Linked to a Speck endpoint agent.' : resource.management === 'host_agent' ? 'Managed through an outbound Speck host connector.' : 'Managed through the provider. Endpoint commands and patching require a Speck agent.'}</p><div class="resource-action-buttons">${resource.agent ? '<button class="secondary" data-resource-agent>Open Speck agent</button>' : ''}${resource.kind === 'virt' ? '<button class="secondary" data-resource-console>Open provider console</button>' : ''}${allowed.filter(a=>!secondary(a)).map(action).join('')}</div>${allowed.some(secondary) ? '<details class="resource-more"><summary>More actions</summary><div class="resource-action-buttons">'+allowed.filter(secondary).map(action).join('')+'</div></details>' : ''}</section>`;
-      root.innerHTML = `<div class="resource-refresh"><span role="status">${busy ? 'Reading provider details…' : 'Provider details loaded'}</span><button class="text-link" data-resource-refresh ${busy ? 'disabled' : ''}>Refresh details</button></div>${errors.length ? '<p class="resource-notice">'+esc(errors.join(' '))+'</p>' : ''}${infrastructureStory(resource, detail, siblings, actions)}${detail ? technicalDetail(detail) : ''}`;
+      root.innerHTML = `<div class="resource-refresh"><span role="status">${busy ? 'Reading provider details…' : 'Provider details loaded'}</span><button class="text-link" data-resource-refresh ${busy ? 'disabled' : ''}>Refresh details</button></div>${errors.length ? '<p class="resource-notice">'+esc(errors.join(' '))+'</p>' : ''}${infrastructureStory(resource, detail, siblings, actions+(detail && ['linode','proxmox'].includes(resource.provider) ? '<section class="resource-performance"></section>' : ''))}${detail ? technicalDetail(detail) : ''}`;
+      const performanceRoot=root.querySelector<HTMLElement>('.resource-performance');
+      if(performanceRoot) mountPerformance(ui,resource,performanceRoot);
       root.querySelector('[data-resource-refresh]')?.addEventListener('click',()=>void load(true));
       root.querySelector('[data-resource-agent]')?.addEventListener('click',()=> { root.closest('dialog')?.close(); void ui.openDevice(resource.agent.id); });
       root.querySelector('[data-resource-console]')?.addEventListener('click',()=>void openProviderConsole(ui,resource));

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.mjs';
 
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#DCECAB"/><text x="30" y="60" font-size="24">Saved desktop · test fixture</text></svg>';
 async function open(page, handler) {

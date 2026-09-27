@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.mjs';
 import fs from 'node:fs';
 
 // Synthetic data only. Addresses use documentation-style values that never reach a real network.
@@ -105,6 +105,7 @@ for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 960 });
     const writes = await setup(page);
     await page.goto('/#network');
+    await page.locator('#net-tab-domains').click();
     await expect(page.getByRole('heading', { name: 'Network & DNS', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'example-shop.com', exact: true })).toBeVisible();
     await expect(page.locator('#net-domain-rows').getByText('shop-web')).toBeVisible();

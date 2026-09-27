@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.mjs';
 const connection={id:'c1',name:'Example cluster',provider:'proxmox',connector:true,status:'connected',resources:[{id:'101',kind:'qemu',name:'Clinic server',management:'provider_only',status:'running',connection_id:'c1',connection_name:'Example cluster',provider:'proxmox',node:'pve-2',addresses:[],max_memory:8589934592}]};
 async function setup(page){
  await page.context().addCookies([{name:'speck-gallery',value:'1',url:'http://127.0.0.1:8761'}]);

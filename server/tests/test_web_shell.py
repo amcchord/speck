@@ -40,6 +40,8 @@ def agent_headers(headers, session):
     ('headless', 'linux', False, 'ssh', 'ssh'),
     ('unknown', 'linux', False, None, None),
     ('headless', 'windows', True, 'rdp', 'rdp'),
+    ('unknown', 'windows', True, None, 'shell'),
+    ('unknown', 'windows', False, None, None),
 ])
 def test_default_selection_preserves_desktops_and_old_agents(client, desktop, platform, shell, configured, expected):
     device, _ = machine(client, desktop=desktop, platform=platform, shell=shell)
@@ -74,8 +76,9 @@ def test_saved_connection_override_and_bounded_shell_job(client):
     assert client.post(f'/api/devices/{device}/remote/sessions', json={'cols': 99999}).status_code == 422
 
 
-def test_shell_duplex_resize_single_claim_and_no_recording(client):
-    device, headers = machine(client)
+@pytest.mark.parametrize('platform', ['linux', 'windows'])
+def test_shell_duplex_resize_single_claim_and_no_recording(client, platform):
+    device, headers = machine(client, platform=platform)
     session = start(client, device)
     with client.websocket_connect(f'wss://testserver/api/agent/tunnels/{session}', headers=agent_headers(headers, session)) as agent:
         agent.send_json({'type': 'ready'})

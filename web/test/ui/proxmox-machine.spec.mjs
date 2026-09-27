@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.mjs";
 const GiB = 1024 ** 3;
 const resource = {
   id: "101",

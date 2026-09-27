@@ -480,12 +480,12 @@ export function createOperations(ui: Item) {
       });
       if (!modal.isConnected) return;
       const out = modal.querySelector("#ai-result")!;
-      out.innerHTML = `<div class="ai-answer"><p>${esc(result.summary)}</p>${result.script ? `<h3>Suggested script</h3><pre>${esc(result.script)}</pre>` : ""}${result.caution ? `<p class="callout">${esc(result.caution)}</p>` : ""}<h3>Verify</h3><p>${esc(result.verification)}</p>${result.script ? `<div class="toolbar">${button("ai-use", alertTask ? "Review in terminal →" : "Use this script", true)}${button("ai-template", "Save as template")}</div>` : ""}</div>`;
+      out.innerHTML = `<div class="ai-answer"><p>${esc(result.summary)}</p>${result.script ? `<h3>Suggested script</h3><pre>${esc(result.script)}</pre>` : ""}${result.caution ? `<p class="callout">${esc(result.caution)}</p>` : ""}<h3>Verify</h3><p>${esc(result.verification)}</p>${result.script ? `<div class="toolbar">${button("ai-use", alertTask ? "Review script →" : "Use this script", true)}${button("ai-template", "Save as template")}</div>` : ""}</div>`;
       on("ai-use", async () => {
         modal.close();
         if (accept) accept(result.script);
         else if (d.id) {
-          await ui.openDevice(d.id, "terminal");
+          await ui.openDevice(d.id, "scripts");
           ui.setScript(result.script, alertTask ? {
             title: alertTask.alert.title,
             caution: result.caution,

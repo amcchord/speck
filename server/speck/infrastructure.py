@@ -778,12 +778,18 @@ async def execute(cfg, row, body, args):
 @router.get("/operations")
 def operations(user=Depends(require_user)):
     with db() as conn:
-        return [
-            dict(r) | {"result": json.loads(r["result"])}
-            for r in conn.execute(
-                "SELECT id,connection_id,actor,operation,target,status,result,created,updated FROM infrastructure_operations ORDER BY created DESC LIMIT 50"
-            )
-        ]
+        receipts = [dict(r) | {"result": json.loads(r["result"])} for r in conn.execute(
+            "SELECT id,connection_id,actor,operation,target,status,result,created,updated FROM infrastructure_operations ORDER BY created DESC LIMIT 50")]
+        # Historical receipts retained exact provider IDs in audit, not the display label.
+        evidence = {}
+        for r in conn.execute("SELECT detail FROM audit WHERE action='infrastructure.requested' ORDER BY id DESC LIMIT 2000"):
+            detail = json.loads(r["detail"])
+            evidence.setdefault(detail.get("id"), detail)
+        for receipt in receipts:
+            proof = evidence.get(receipt["id"], {})
+            if proof.get("connection_id") == receipt["connection_id"]:
+                receipt.update(resource_id=proof.get("resource_id"), kind=proof.get("kind"))
+        return receipts
 
 
 @router.post("/connections/{connection_id}/actions")
@@ -842,6 +848,7 @@ async def action(connection_id: str, body: Action, user=Depends(require_admin)):
                 "connection_id": connection_id,
                 "operation": body.operation,
                 "resource_id": body.resource_id,
+                "kind": body.kind,
             },
         )
     try:

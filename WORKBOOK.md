@@ -829,3 +829,16 @@ Rollback web tree: `/var/lib/speck-rollback/20260927T151514Z-resource-details-8a
 No backend restart, agent/native update, provider configuration change, recovery
 action, GitHub push or merge occurred. Preserve `8a7e266` in future deployments
 until it reaches main. Windows/Linux operational qualification is unchanged.
+
+## 2026-09-27 — infrastructure, network and terminal overhaul
+
+Prepared on `codex/connected-workspace`, preserving deployed `8a7e266` and the
+connected workspace/Home release. Infrastructure now has connection inspectors,
+clickable operation receipts and provider-native history; Network opens on
+UniFi site health with an OpenStreetMap basemap and richer, site-scoped LAN
+observations. Terminal embeds a live shell, and agent 0.3.2 adds Windows ConPTY.
+Details and qualification: [observability](docs/operations/observability.md).
+Local core passed (214 backend, Linux race checks, platform builds, 51 web units,
+273 browser checks; one existing skip), plus 18 final focused browser checks.
+Real Windows ConPTY passed without changing enrollment. Release owner is the
+current connected-workspace task; deployment and acceptance follow below.

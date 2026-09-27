@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-var Version = "0.3.1"
+var Version = "0.3.2"
 
 const FileLimit = int64(256 * 1024 * 1024)
 
