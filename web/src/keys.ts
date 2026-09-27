@@ -1,3 +1,4 @@
+import { rememberResource, registerResource } from "./resource-navigation";
 import "./network.css";
 import "./keys.css";
 import { icon } from "./icons";
@@ -247,6 +248,7 @@ export function createKeys(ui: Item) {
   }
 
   function openEntry(entry: Item) {
+    rememberResource({kind:"key",id:String(entry.name)}, () => openEntry(entry));
     let revealed: Record<string, string> | null = null;
     let timer = 0;
     const shown = new Set<string>();
@@ -562,8 +564,9 @@ export function createKeys(ui: Item) {
   }
 
   function openProvider(s: Item) {
+    rememberResource({kind:"provider",id:String(s.service)}, () => openProvider(s));
     const related = entries.filter(e => e.service === s.service);
-    const panel = sidePane(s.label, detailHero('Provider credentials', s.configured ? 'Configured' : 'Needs setup', s.description, [['Project entries', related.length], ['Mode', s.mode === 'mint' ? 'Minted' : s.mode === 'shared' ? 'Shared' : 'Service'], ['Last check', s.last_check ? s.last_check.ok ? 'Working' : 'Failed' : 'Not checked']]) + detailSection('Configuration', detailFacts([['Updated', when(s.updated)], ['Updated by', s.updated_by], ['Last checked', when(s.last_check?.checked_at)], ['Result', s.last_check?.detail || 'No check recorded']])) + detailSection('Stored fields', detailFacts(Object.entries({...s.hints, ...s.settings}).map(([key, value]) => [key, value]))) + detailSection('Related credentials', `<div class="resource-related">${related.map((e,i) => `<button data-provider-entry="${i}"><span><b>${esc(e.name)}</b><small>${esc(e.project || 'No project')} · ${esc(e.kind)}</small></span><span>→</span></button>`).join('') || '<p class="resource-note">No project credentials recorded for this service.</p>'}</div>`) + activity({...s, coverage: 'Provider checks and configuration changes are recorded here. Project credential access appears in each credential’s history.'}));
+    const panel = sidePane(s.label, detailHero('Provider credentials', s.configured ? 'Configured' : 'Needs setup', s.description, [['Project entries', related.length], ['Mode', s.mode === 'mint' ? 'Minted' : s.mode === 'shared' ? 'Shared' : 'Service'], ['Last check', s.last_check ? s.last_check.ok ? s.last_check.historical ? 'Previously passed' : 'Working' : 'Failed' : 'Not checked']]) + detailSection('Configuration', detailFacts([['Updated', when(s.updated)], ['Updated by', s.updated_by], ['Last checked', when(s.last_check?.checked_at)], ['Result', s.last_check?.detail || 'No check recorded']])) + detailSection('Stored fields', detailFacts(Object.entries({...s.hints, ...s.settings}).map(([key, value]) => [key, value]))) + detailSection('Related credentials', `<div class="resource-related">${related.map((e,i) => `<button data-provider-entry="${i}"><span><b>${esc(e.name)}</b><small>${esc(e.project || 'No project')} · ${esc(e.kind)}</small></span><span>→</span></button>`).join('') || '<p class="resource-note">No project credentials recorded for this service.</p>'}</div>`) + activity({...s, coverage: 'Provider checks and configuration changes are recorded here. Project credential access appears in each credential’s history.'}));
     panel.querySelectorAll<HTMLButtonElement>('[data-provider-entry]').forEach(b => b.addEventListener('click', () => openEntry(related[+b.dataset.providerEntry!])));
   }
 
@@ -610,6 +613,7 @@ export function createKeys(ui: Item) {
   }
 
   function openSSH(k: Item) {
+    rememberResource({kind:"ssh-key",id:String(k.name)}, () => openSSH(k));
     const i = sshKeys.indexOf(k);
     const body = sidePane(k.name, detailHero('SSH identity', k.has_private ? 'Private key sealed' : 'Public only', k.purpose || 'No purpose recorded', [['Algorithm', k.type.replace('ssh-', '')], ['Origin', k.origin === 'austinland' ? 'Imported' : 'Speck'], ['Created', relative(k.created)]]) + detailSection('Identity', detailFacts([['Fingerprint', k.fingerprint], ['Comment', k.comment], ['Created', when(k.created)], ['Created by', k.created_by], ['Last updated', 'Keys are immutable; created date applies'], ['Linode registration', k.registration_checked === false ? 'Not checked on this visit' : k.registered_as || 'Not registered']])) + `<div class="resource-action-buttons keys-detail-actions"><button class="secondary" data-ssh-copy="${i}">${icon('copy')}<span>Copy public key</span></button>${k.has_private ? `<button class="secondary" data-ssh-private="${i}">Reveal private key</button>` : ''}${k.registration_checked === false ? `<button class="secondary" data-ssh-check>Check Linode registration</button>` : ''}${!k.registered_as ? `<button class="secondary" data-ssh-register="${i}">Add to Linode</button>` : ''}<button class="secondary" data-ssh-delete="${i}">Delete</button></div><details class="resource-technical"><summary>Public key</summary><pre class="keys-value">${esc(k.public_key)}</pre></details><div data-key-metadata><p class="resource-note">Loading activity and system links…</p></div>`);
     const reloadSSH = metadata(body, 'ssh', k.name, '/ssh/keys/' + encodeURIComponent(k.name));
@@ -729,6 +733,7 @@ export function createKeys(ui: Item) {
   }
 
   function openHandoff(h: Item) {
+    rememberResource({kind:"handoff",id:String(h.filename)}, () => openHandoff(h));
     const panel = sidePane(h.machine + (h.domain ? " · " + h.domain : ""), detailHero('Machine handoff', 'Sealed document', 'Connection instructions and a system snapshot for another operator or agent.', [['Machine', h.machine], ['Domain', h.domain || 'Not recorded'], ['Size', (h.size / 1024).toFixed(1) + ' KB']]) + detailSection('Document', detailFacts([['Filename', h.filename], ['Stored', when(h.created)], ['Created by', h.created_by], ['Origin', h.origin], ['Provider', h.provider], ['Target', h.target]])) + `<div id="handoff-pane"></div><div data-key-metadata><p class="resource-note">Loading access history…</p></div>`);
     let markdown: string | null = null, timer = 0;
     const forget = () => { markdown = null; window.clearTimeout(timer); };
@@ -757,5 +762,8 @@ export function createKeys(ui: Item) {
     draw();
   }
 
+  registerResource("key", async ref => { const result=await api('/keys'); const row=(Array.isArray(result)?result:result.entries || []).find((r:Item)=>r.name===ref.id); if(!row) throw new Error('Credential metadata is unavailable'); openEntry(row); });
+  registerResource("provider", async ref => { const result=await api('/keys/services'); const row=(Array.isArray(result)?result:result.services || []).find((r:Item)=>r.service===ref.id); if(!row) throw new Error('Provider metadata is unavailable'); openProvider(row); });
+  registerResource("ssh-key", async ref => { const result=await api('/ssh/keys?registration=false'); const row=(Array.isArray(result)?result:result.keys || []).find((r:Item)=>r.name===ref.id); if(!row) throw new Error('SSH key metadata is unavailable'); openSSH(row); });
   return { render, closePane };
 }

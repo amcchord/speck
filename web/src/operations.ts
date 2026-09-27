@@ -1,3 +1,7 @@
+import { listWorkspace } from "./list-workspace";
+import { patchPosture } from "./posture";
+import { detailFacts, detailSection, technicalDetail } from "./resource-story";
+import { rememberResource, registerResource, resourceHref } from "./resource-navigation";
 import { loadingState } from "./loading";
 type Item = Record<string, any>;
 export function createOperations(ui: Item) {
@@ -35,48 +39,7 @@ export function createOperations(ui: Item) {
     });
     showBatch(result.id);
   }
-  function jobsHtml(batch: Item) {
-    return `<div class="run-heading"><div><h3>${esc(batch.name)}</h3><small>${date(batch.created)}</small></div><span>${batch.jobs.filter((j: Item) => j.status === "complete").length}/${batch.jobs.length} complete</span></div><div class="scroll"><table><thead><tr><th>Machine</th><th>Status</th><th>Result</th></tr></thead><tbody>${batch.jobs.map((j: Item) => `<tr><td>${esc(j.label)}</td><td>${badge(j.status)}</td><td>${j.result ? `<details><summary>${j.result.exit_code === 0 ? "Completed" : esc(j.result.error || "View output")}</summary><pre>${esc(j.result.stdout || "")}${j.result.stderr ? "\n" + esc(j.result.stderr) : ""}${j.result.error ? "\n" + esc(j.result.error) : ""}</pre></details>` : "Waiting for agent"}</td></tr>`).join("")}</tbody></table></div>`;
-  }
-  async function showBatch(id: string) {
-    const modal = dialog(
-      "Operation progress",
-      `<div id="batch-progress">${loadingState("Loading operation…")}</div><div class="dialog-footer">` +
-        button("cancel-queued", "Cancel queued jobs") +
-        "</div>",
-    );
-    modal.classList.add("operation-review");
-    on("cancel-queued", async () => {
-      const r = await api("/batches/" + id + "/cancel", "POST");
-      notify(`${r.cancelled} queued jobs cancelled. Running jobs continue.`);
-    });
-    const el = modal.querySelector("#batch-progress")!;
-    while (el.isConnected) {
-      try {
-        const batches = await api("/batches");
-        const b = batches.find((b: Item) => b.id === id);
-        if (!el.isConnected) return;
-        el.innerHTML = b
-          ? jobsHtml(b)
-          : "Operation no longer in recent history";
-        if (
-          b &&
-          !b.jobs.some((j: Item) =>
-            ["queued", "leased", "running"].includes(j.status),
-          )
-        ) {
-          (
-            modal.querySelector("#cancel-queued") as HTMLButtonElement
-          ).disabled = true;
-          return;
-        }
-      } catch (e) {
-        el.textContent = (e as Error).message;
-        return;
-      }
-      await new Promise((r) => setTimeout(r, 3000));
-    }
-  }
+  const showBatch = (id: string) => ui.showBatch(id);
   async function renderPatches() {
     ui.loading("Loading updates…");
     const [devices, reports, batches] = await Promise.all([
@@ -89,10 +52,11 @@ export function createOperations(ui: Item) {
       0,
     );
     content(
-      `<button id="patch-scan" class="primary" data-page-action>Scan selected</button><div class="panel operations-panel"><div class="section-head"><h2>Patch inventory</h2><label class="check"><input id="patch-select-all" type="checkbox"> Select online machines</label></div><div class="scroll"><table><thead><tr><th></th><th>Machine</th><th>Updates</th><th>Last scan</th><th>Reboot</th><th></th></tr></thead><tbody>${devices
+      `<button id="patch-scan" class="primary" data-page-action>Scan selected</button><button id="patch-schedule" class="secondary" data-page-action>Schedule selected scans</button><div class="panel operations-panel"><div class="section-head"><h2>Patch inventory</h2><label class="check"><input id="patch-select-all" type="checkbox"> Select online machines</label></div><div class="scroll"><table><thead><tr><th></th><th>Machine</th><th>Updates</th><th>Last scan</th><th>Reboot</th><th></th></tr></thead><tbody>${devices
         .map((d: Item) => {
           const r = reports.find((r: Item) => r.device_id === d.id);
-          return `<tr><td><input type="checkbox" data-patch-target="${d.id}" aria-label="Select ${esc(d.label)}" ${d.approved && d.online && d.telemetry?.capabilities?.managed_operations ? "" : "disabled"}></td><td><b>${esc(d.label)}</b><small>${esc(d.telemetry?.host?.platform || d.platform)}</small></td><td>${r ? badge(String(r.report.total) + " available", r.report.total === 0) : '<span class="muted">Not scanned</span>'}</td><td>${r ? date(r.scanned) : "—"}</td><td>${r?.report.reboot_required ? badge("Required") : "—"}</td><td><button class="secondary" data-patch-detail="${d.id}">Review</button></td></tr>`;
+          const posture = patchPosture(d,r);
+          return `<tr data-posture="${esc(posture.state)}" data-platform="${esc(d.platform)}" data-site="${esc(d.site || d.client_name || 'Unassigned')}" data-severity="${esc(r?.report?.updates?.some((u:Item)=>/critical|security/i.test(u.severity || '')) ? 'Security / critical' : 'Other / not reported')}"><td><input type="checkbox" data-patch-target="${d.id}" aria-label="Select ${esc(d.label)}" ${posture.eligible ? "" : "disabled"}></td><td><b>${esc(d.label)}</b><small>${esc(d.telemetry?.host?.platform || d.platform)}</small></td><td>${badge(posture.state, posture.state === "Current") + `<small>${r ? esc(r.report.total)+" updates in last scan" : "No inventory reported"}${posture.reason ? " · "+esc(posture.reason) : ""}</small>`}</td><td>${r ? date(r.scanned) : "—"}</td><td>${r?.report.reboot_required ? badge("Required") : "—"}</td><td><button class="secondary" data-patch-detail="${d.id}">Review</button></td></tr>`;
         })
         .join(
           "",
@@ -113,10 +77,18 @@ export function createOperations(ui: Item) {
       .addEventListener("change", (e) =>
         document
           .querySelectorAll<HTMLInputElement>(
-            "[data-patch-target]:not(:disabled)",
+            "tr:not([hidden]) [data-patch-target]:not(:disabled)",
           )
           .forEach((x) => (x.checked = (e.target as HTMLInputElement).checked)),
       );
+    const patchRoot=document.querySelector<HTMLElement>('.operations-panel')!;
+    listWorkspace(patchRoot,'tbody tr','patches',{filters:[
+      {label:'Posture',values:['Current','Updates available','Stale scan','Never scanned','Ineligible','Unsupported'],value:r=>r.dataset.posture!},
+      {label:'Platform',values:['windows','linux'],value:r=>r.dataset.platform!},
+      {label:'Site',values:[...new Set(devices.map((d:Item)=>d.site || d.client_name || 'Unassigned'))] as string[],value:r=>r.dataset.site!},
+      {label:'Severity',values:['Security / critical','Other / not reported'],value:r=>r.dataset.severity!},
+    ]});
+    on('patch-schedule',()=>ui.newSchedule({device_ids:[...document.querySelectorAll<HTMLInputElement>('[data-patch-target]:checked')].map(e=>e.dataset.patchTarget),name:'Scheduled patch inventory'}));
     on("patch-scan", () =>
       scan(
         [
@@ -126,7 +98,7 @@ export function createOperations(ui: Item) {
         ].map((e) => e.dataset.patchTarget!),
       ),
     );
-    ui.summary?.(`<span><b>${total}</b> available updates</span><span><b>${reports.filter((r: Item) => r.report.reboot_required).length}</b> need a reboot</span><span><b>${devices.filter((d: Item) => !reports.some((r: Item) => r.device_id === d.id)).length}</b> not scanned</span>`);
+    ui.summary?.(`<span><b>${total}</b> updates in recorded scans</span><span><b>${reports.filter((r: Item) => r.report.reboot_required).length}</b> need a reboot</span><span><b>${devices.filter((d: Item) => !reports.some((r: Item) => r.device_id === d.id)).length}</b> not scanned</span>`);
     document
       .querySelectorAll<HTMLButtonElement>("[data-patch-detail]")
       .forEach(
@@ -145,7 +117,13 @@ export function createOperations(ui: Item) {
     const reports = await api("/patches");
     if (!el.isConnected) return;
     const r = reports.find((r: Item) => r.device_id === d.id);
-    el.innerHTML = `<div class="section-head"><h3>Available updates</h3>${button("device-scan", "Scan now")}</div>${r ? `<p>Scanned ${date(r.scanned)} · ${esc(r.report.manager)}${r.report.reboot_required ? " · Reboot required" : ""}</p><div class="scroll"><table><thead><tr><th><input id="updates-all" type="checkbox" aria-label="Select all displayed updates"></th><th>Update</th><th>Type</th></tr></thead><tbody>${r.report.updates.map((u: Item) => `<tr><td><input type="checkbox" data-update="${esc(u.id)}" aria-label="Select ${esc(u.title)}"></td><td><b>${esc(u.title)}</b><small>${esc(u.version || "")} ${esc((u.kb || []).join(", "))}</small></td><td>${esc(u.severity || "Update")}</td></tr>`).join("")}</tbody></table></div>${r.report.truncated ? "<p>Showing the first 150 updates. Install these, then scan again for the rest.</p>" : ""}<div class="toolbar">${button("install-updates", "Install selected", true)}<small>No automatic reboot.</small></div>` : '<div class="empty"><h3>Start with a scan</h3><p>Find available updates without installing them.</p></div>'}`;
+    el.innerHTML = `<div class="section-head"><h3>Available updates</h3>${button("device-scan", "Scan now")}</div>${r ? `<p>Scanned ${date(r.scanned)} · ${esc(r.report.manager)}${r.report.reboot_required ? " · Reboot required" : ""}</p><div class="scroll"><table><thead><tr><th><input id="updates-all" type="checkbox" aria-label="Select all displayed updates"></th><th>Update</th><th>Type</th></tr></thead><tbody>${r.report.updates.map((u: Item) => `<tr><td><input type="checkbox" data-update="${esc(u.id)}" aria-label="Select ${esc(u.title)}"></td><td><button class="text-link" data-update-detail="${esc(u.id)}">${esc(u.title)}</button><small>${esc(u.version || "")} ${esc((u.kb || []).join(", "))}</small></td><td>${esc(u.severity || "Update")}</td></tr>`).join("")}</tbody></table></div>${r.report.truncated ? "<p>Showing the first 150 updates. Install these, then scan again for the rest.</p>" : ""}<div class="toolbar">${button("install-updates", "Install selected", true)}<small>No automatic reboot.</small></div>` : '<div class="empty"><h3>Start with a scan</h3><p>Find available updates without installing them.</p></div>'}`;
+    if(r && patchPosture(d,r).state==='Stale scan') el.insertAdjacentHTML('afterbegin','<p class="resource-notice">This inventory is more than 24 hours old. Scan again before making a remediation decision.</p>');
+    el.querySelectorAll<HTMLButtonElement>('[data-update-detail]').forEach(b=>b.onclick=()=>{
+      const u=r.report.updates.find((u:Item)=>u.id===b.dataset.updateDetail);
+      const affected=reports.filter((report:Item)=>report.report?.updates?.some((x:Item)=>x.id===u.id || (u.kb?.length && x.kb?.some((k:string)=>u.kb.includes(k)))));
+      const pane:HTMLDialogElement=ui.flyout(u.title,detailSection('Update',detailFacts([['Severity',u.severity],['Version',u.version],['KB references',(u.kb || []).join(', ')],['Manager',r.report.manager],['Observed',date(r.scanned)]]))+detailSection('Affected systems in recorded scans','<div class="resource-related">'+affected.map((report:Item)=>`<a href="${resourceHref(location.hash.slice(1),{kind:'machine',id:report.device_id,tab:'patches'})}">${esc(report.device_id)} →</a>`).join('')+'</div>')+technicalDetail(u),{tone:'protection'});
+    });
     on("device-scan", () => scan([d.id]));
     document
       .getElementById("updates-all")
@@ -175,7 +153,7 @@ export function createOperations(ui: Item) {
       api("/batches"),
     ]);
     content(
-      `<button id="new-template" class="primary" data-page-action>${icon("plus")}<span>Create template</span></button><div class="section-head"><div><h2>Template library</h2><p class="muted">Reusable installers and scripts for Windows and Linux.</p></div></div><div class="template-grid">${library.map((t) => `<article class="template-card"><div class="template-card-top"><span class="template-kind">${t.category === "software" ? "Software" : "Script"}</span>${badge(t.platform)}${t.builtin ? "<small>STARTER</small>" : ""}</div><h2>${esc(t.name)}</h2><p>${esc(t.description || "Reusable fleet script")}</p><div class="template-meta"><span>${t.parameters.length} input${t.parameters.length === 1 ? "" : "s"}</span><span>${Math.ceil(t.timeout / 60)} min limit</span><span>v${t.revision}</span></div><div class="toolbar"><button class="primary" data-deploy="${t.id}">Deploy</button><button class="secondary" data-edit-template="${t.id}">${t.builtin ? "Customize" : "Edit"}</button></div></article>`).join("")}</div><div class="section-head"><h2>Recent deployments</h2></div><div class="operation-history">${
+      `<button id="new-template" class="primary" data-page-action>${icon("plus")}<span>Create template</span></button><div class="section-head"><div><h2>Template library</h2><p class="muted">Reusable installers and scripts for Windows and Linux.</p></div></div><div class="template-grid">${library.map((t) => `<article class="template-card" data-platform="${esc(t.platform)}" data-category="${esc(t.category)}"><div class="template-card-top"><span class="template-kind">${t.category === "software" ? "Software" : "Script"}</span>${badge(t.platform)}${t.builtin ? "<small>STARTER</small>" : ""}</div><h2><button class="text-link" data-template-detail="${esc(t.id)}">${esc(t.name)}</button></h2><p>${esc(t.description || "Reusable fleet script")}</p><div class="template-meta"><span>${t.parameters.length} input${t.parameters.length === 1 ? "" : "s"}</span><span>${Math.ceil(t.timeout / 60)} min limit</span><span>v${t.revision}</span></div><div class="toolbar"><button class="primary" data-deploy="${t.id}">Deploy</button><button class="secondary" data-edit-template="${t.id}">${t.builtin ? "Customize" : "Edit"}</button></div></article>`).join("")}</div><div class="section-head"><h2>Recent deployments</h2></div><div class="operation-history">${
         batches
           .filter((b: Item) => b.kind === "template")
           .slice(0, 10)
@@ -187,6 +165,8 @@ export function createOperations(ui: Item) {
         '<div class="empty">Per-machine deployment results will appear here.</div>'
       }</div>`,
     );
+    listWorkspace(document.getElementById('content')!,'.template-card','templates',{filters:[{label:'Platform',values:['windows','linux'],value:r=>r.dataset.platform!},{label:'Type',values:['software','script'],value:r=>r.dataset.category!}]});
+    document.querySelectorAll<HTMLButtonElement>('[data-template-detail]').forEach(b=>b.onclick=()=>void inspectTemplate(b.dataset.templateDetail!));
     on("new-template", () => templateEditor());
     bindBatches();
     document
@@ -204,6 +184,21 @@ export function createOperations(ui: Item) {
         (el) => (el.onclick = () => void deployDialog([], el.dataset.deploy)),
       );
   }
+  async function inspectTemplate(id:string) {
+    rememberResource({kind:'template',id},()=>inspectTemplate(id));
+    const t=(await refreshTemplates()).find(t=>t.id===id);
+    if(!t)throw new Error('Template is not available');
+    const pane:HTMLDialogElement=ui.flyout(t.name,detailSection('Purpose',`<p>${esc(t.description || 'No description recorded')}</p>`)+detailFacts([['Platform',t.platform],['Category',t.category],['Revision',t.revision],['Time limit',t.timeout+' seconds'],['Source',t.builtin?'Built-in starter':'Custom template']])+detailSection('Inputs',detailFacts(t.parameters.map((p:Item)=>[p.label,p.name+(p.required?' · required':' · optional')])) )+detailSection('Exact script',`<pre>${esc(t.script)}</pre>`)+`<section class="resource-section" data-template-usage><h3>Schedules & recent results</h3><p>Reading references…</p></section><div class="toolbar"><button class="primary" data-template-deploy>Review deployment</button><button class="secondary" data-template-edit>${t.builtin?'Customize':'Edit template'}</button></div><p class="resource-note">Schedules pin a revision. Publishing changes makes older schedules require a new review.</p>`,{tone:'automation',subtitle:'Template · Revision '+t.revision});
+    pane.querySelector<HTMLButtonElement>('[data-template-deploy]')!.onclick=()=>void deployDialog([],id);
+    pane.querySelector<HTMLButtonElement>('[data-template-edit]')!.onclick=()=>templateEditor(t);
+    try {
+      const [schedules,batches]=await Promise.all([api('/schedules'),api('/batches')]);
+      if(!pane.open)return;
+      const use=schedules.filter((s:Item)=>s.operation.template_id===id), runs=batches.filter((b:Item)=>b.template_id===id);
+      pane.querySelector('[data-template-usage]')!.innerHTML='<h3>Schedules & recent results</h3><div class="resource-related">'+use.map((s:Item)=>`<a href="${resourceHref(location.hash.slice(1),{kind:'schedule',id:s.id})}">${esc(s.name)} · revision ${esc(s.operation.template_revision)} →</a>`).join('')+runs.map((b:Item)=>`<a href="${resourceHref(location.hash.slice(1),{kind:'batch',id:b.id})}">${esc(b.name)} · ${date(b.created)} →</a>`).join('')+'</div>'+(!use.length&&!runs.length?'<p class="resource-note">No references in the returned schedule and recent operation inventory.</p>':'');
+    }catch{if(pane.open)pane.querySelector('[data-template-usage]')!.textContent='Usage history is unavailable. Template details remain available.';}
+  }
+  registerResource('template',ref=>inspectTemplate(ref.id));
   function templateEditor(source: Item = {}) {
     const t: Item = {
       name: "",

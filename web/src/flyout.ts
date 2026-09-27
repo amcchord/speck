@@ -1,3 +1,4 @@
+import { bindResourceNavigation } from "./resource-navigation";
 import './resource-detail.css';
 type Options = { className?: string; tone?: string; subtitle?: string };
 
@@ -18,6 +19,7 @@ export function createFlyout(dialog: (title: string, html: string, options?: any
     const opener = active?.contains(candidate) ? originalOpener : candidate;
     active?.close(); active?.remove();
     const pane = dialog(title, `<div class="resource-body">${html}</div>`, {className:`device-drawer resource-flyout ${options.className || ''}`,modal:false});
+    bindResourceNavigation(pane);
     active = pane;
     originalOpener = opener;
     pane.dataset.tone = options.tone || 'compute';

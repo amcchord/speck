@@ -1,3 +1,4 @@
+import { rememberResource, registerResource } from "./resource-navigation";
 import "./network-equipment.css";
 import {
   capacity,
@@ -50,6 +51,7 @@ const kind = (d: Item) => {
 };
 export function createEquipment(ui: Item, openClient: (c: Item) => void) {
   async function openInventory(site: Item) {
+    rememberResource({kind:"equipment-list",id:String(site.site_id || site.id),connection:site.console_id}, () => openInventory(site));
     const pane = ui.flyout(
       site.name || "Network equipment",
       note("Reading adopted devices…"),
@@ -124,6 +126,7 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
     selectedPort?: number,
     back?: () => void,
   ) {
+    rememberResource({kind:"equipment",id,site:String(site.site_id || site.id),connection:site.console_id,tab:selectedPort ? String(selectedPort) : undefined}, () => openDevice(site,id,selectedPort,back));
     const pane = ui.flyout(
       "Network equipment",
       note("Reading device, ports and connection evidence…"),
@@ -580,5 +583,7 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
     }
     await load();
   }
+  registerResource("equipment-list", ref => openInventory({console_id:ref.connection,site_id:ref.id}));
+  registerResource("equipment", ref => openDevice({console_id:ref.connection,site_id:ref.site},ref.id,ref.tab ? Number(ref.tab) : undefined));
   return { openInventory, openDevice };
 }

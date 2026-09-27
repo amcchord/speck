@@ -1,3 +1,7 @@
+import { backupEvidence } from "./backup-evidence";
+import { detailFacts, detailSection, detailDate } from "./resource-story";
+import { bindResourceNavigation, rememberResource, registerResource, restoreResource, clearResourceHistory, currentResource } from "./resource-navigation";
+import { createRunDetails } from "./run-detail";
 import {mountProviderExplorer} from "./provider-explorer";
 import { columns, defaultPreferences, hasEndpoint, hasAgent, selectableMachine, machineState, agentLabel, kindLabel, cpu, memory, sortMachines } from "./fleet-model";
 import { editColumns } from "./fleet-columns";
@@ -489,6 +493,7 @@ function loading(label: string) {
   document.getElementById("content")?.setAttribute("aria-busy", "true");
 }
 async function render(manualRefresh = false) {
+  const initialInspection = JSON.stringify(currentResource());
   if (manualRefresh) readCache.clear();
   pageReads = new Map();
   if (page === "fleet" && document.getElementById("fleet-rows")) {
@@ -507,6 +512,7 @@ async function render(manualRefresh = false) {
     await renderRemotePage(id, 0, mode);
     return;
   }
+  page = page.split("?")[0];
   if (
     ![
       "home",
@@ -576,13 +582,16 @@ async function render(manualRefresh = false) {
       focusHomeCommand = false;
       document.getElementById("home-query")?.focus();
     }
+    if (initialInspection !== "null" && initialInspection === JSON.stringify(currentResource())) await restoreResource();
     void management.updateIndicator().catch(() => {});
   } catch (err) {
     if (!(err instanceof StaleViewError) && username) content(loadError(err));
   }
 }
+const runDetails = createRunDetails({api, flyout, openDevice, role: () => role, notify});
+registerResource("machine", async ref => { await loadFleet(); await openDevice(ref.id, ref.tab || "overview"); });
 const ops = createOperations({
-  api,
+  api, flyout, showBatch: runDetails.batch, showJob: runDetails.job, role: () => role, newSchedule: (seed:Item) => management.newSchedule(seed),
   summary,
   esc,
   badge,
@@ -619,7 +628,7 @@ const keys = createKeys({ api, freshApi, flyout, openKeySystem: async (target: a
 }, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
 const apiAccess = createApiAccess({ api, summary, esc, notify, dialog, content, loading, role: () => role, loadingState });
 const management = createManagement({
-  api, flyout,
+  api, flyout, showBatch: runDetails.batch, showJob: runDetails.job,
   esc,
   badge,
   date,
@@ -845,7 +854,7 @@ function renderFleetRows() {
     if (!fleet.some((d) => d.id === id && selectableMachine(d))) fleetSelection.delete(id);
   });
   const summary = document.getElementById("fleet-summary");
-  if (summary) summary.innerHTML = `<span><i class="status-dot"></i><b>${fleet.filter((d) => ["online","running","active"].includes(machineState(d).toLowerCase())).length}</b> online</span><span><b>${fleet.length}</b> machines</span><span><b>${fleet.filter(hasAgent).length}</b> with Speck agent</span>`;
+  if (summary) summary.innerHTML = `<span><i class="status-dot"></i><b>${fleet.filter((d) => ["online","running","active"].includes(machineState(d).toLowerCase())).length}</b> online</span><span><b>${fleet.length}</b> machines</span><span><b>${fleet.filter(d => (d.has_endpoint_agent ?? hasAgent(d)) && d.approved && !d.revoked).length}</b> approved endpoints</span>`;
   const sourceStatus = document.getElementById("fleet-source-status");
   if (sourceStatus) sourceStatus.innerHTML = fleetSources.filter(c => c.stale).map(c => `<p class="fleet-stale">${esc(c.name)}: ${esc(c.error)} ${c.checked_at ? "Last checked " + date(c.checked_at) : ""}</p>`).join("");
   document.querySelector(".fleet-table")?.classList.toggle("with-previews", showPreviews);
@@ -933,6 +942,7 @@ function highlightActiveMachine() {
   });
 }
 async function openDevice(id: string, initialTab = "overview") {
+  rememberResource({kind:"machine",id,tab:initialTab}, () => openDevice(id,initialTab));
   if (activeDevicePanel?.open && selected === id && tab === initialTab) {
     activeDevicePanel.querySelector<HTMLButtonElement>(".close")?.focus();
     return;
@@ -945,6 +955,7 @@ async function openDevice(id: string, initialTab = "overview") {
   tab = role === "viewer" ? "overview" : initialTab;
   const panel = dialog("Machine details", `<div id="detail">${loadingState("Loading machine…")}</div>`,
     { className: "device-drawer", modal: false });
+  bindResourceNavigation(panel);
   panel.id = "machine-details";
   activeDevicePanel = panel;
   highlightActiveMachine();
@@ -1166,6 +1177,8 @@ async function renderDeviceContent() {
     (el) =>
       (el.onclick = () => {
         tab = el.dataset.tab!;
+        const targetTab = tab;
+        rememberResource({kind:"machine",id:d.id,tab:targetTab}, () => openDevice(d.id,targetTab));
         renderDevice();
       }),
   );
@@ -1920,6 +1933,7 @@ function slideFacts(r: Item) {
 }
 let slideResource = "agent";
 async function openSlideResource(resource: string, row: Item) {
+  rememberResource({kind:"slide",id:String(row[resource.split("/").at(-1)!+"_id"] || row.id),resourceKind:resource},()=>openSlideResource(resource,row));
   const pane = flyout(slideName(row), `<div class="slide-detail">${slideStory(resource,row)}</div>${resource === 'agent' ? '<section class="resource-actions"><h3>Backup operations</h3><p class="resource-note">Request a new backup through the connected Slide account.</p><button class="secondary" data-slide-backup>Request backup</button></section>' : ''}`, {tone:"protection",subtitle:"Slide · "+(slideKinds[resource] || 'Resource')});
   const bindRelated = () => pane.querySelectorAll<HTMLButtonElement>('[data-slide-related]').forEach(button => button.onclick = async () => {
     button.disabled = true;
@@ -1936,7 +1950,11 @@ async function openSlideResource(resource: string, row: Item) {
   bindRelated();
   if(resource==='agent'){
     const history=document.createElement('div');pane.querySelector('.resource-body')!.append(history);
-    mountProviderExplorer({api,freshApi,flyout,notify,openResource:(r:Item)=>infrastructure.resourceDetail(r)}, {provider:'slide',kind:'protected',connection_id:'slide-settings',connection_name:'Slide (Settings)',id:row.agent_id,name:slideName(row)},history);
+    mountProviderExplorer({api,freshApi,flyout,notify,openResource:(r:Item)=>infrastructure.resourceDetail(r),onEvidence:(sections:Item,checked:number)=>{
+      const evidence=backupEvidence(sections,row),target=pane.querySelector('[data-protection-summary]');
+      if(!pane.open||!target)return;
+      target.innerHTML=detailSection('Protection evidence',detailFacts([['Latest recorded recovery point',detailDate(evidence.latestPoint)],['Evidence source',evidence.source],['Latest successful backup job',detailDate(evidence.successful)],['Latest provider-verified point',detailDate(evidence.verified)],['Coverage',evidence.state],['Failed jobs in loaded history',evidence.failed],['History checked',detailDate(checked)]]))+'<p class="resource-note">Provider snapshot verification does not prove application recovery. '+(evidence.complete?'Showing all returned history.':'Summary uses the loaded history; more records are available below.')+'</p>';
+    }}, {provider:'slide' ,kind:'protected',connection_id:'slide-settings',connection_name:'Slide (Settings)',id:row.agent_id,name:slideName(row)},history);
   }
   const backup = pane.querySelector<HTMLButtonElement>('[data-slide-backup]');
   if (backup) backup.onclick = async () => {
@@ -1959,6 +1977,12 @@ async function openSlideResource(resource: string, row: Item) {
     }
   }
 }
+registerResource('slide',async ref=>{
+  const kind=ref.resourceKind || 'agent', rows=await api('/slide/inventory?resource='+encodeURIComponent(kind));
+  const row=rows.find((r:Item)=>String(r[kind.split('/').at(-1)!+'_id'] || r.id)===ref.id);
+  if(!row)throw new Error('This Slide resource is not in the current inventory. Historical recovery evidence remains available in Recovery lab.');
+  await openSlideResource(kind,row);
+});
 async function renderSlide() {
   loading("Loading Slide…");
   const cfg = await api("/slide/connection");
@@ -1966,7 +1990,7 @@ async function renderSlide() {
     content('<div class="empty"><h2>Connect your Slide account.</h2><p>Add an API token in Settings to see live backup and recovery data.</p><a class="primary" href="#settings">Open settings →</a></div>');
     return;
   }
-  content(`<div class="section-head"><div><h2>Backup & recovery inventory</h2><p>Explore protection, capacity and recovery evidence.</p></div><select id="slide-resource" aria-label="Slide resource type">${Object.entries(slideKinds).map(([key,label])=>'<option value="'+key+'" '+(slideResource===key?'selected':'')+'>'+esc(label)+'</option>').join('')}</select></div><article id="restore-cleanup" class="panel"></article><label class="slide-search">Find a resource<input id="slide-search" type="search" placeholder="Name, address or resource ID"></label><div id="slide-data"></div>`);
+  content(`<div class="section-head"><div><h2>Backup & recovery inventory</h2><p>Explore protection, capacity and recovery evidence.</p></div><select id="slide-resource" aria-label="Slide resource type">${Object.entries(slideKinds).map(([key,label])=>'<option value="'+key+'" '+(slideResource===key?'selected':'')+'>'+esc(label)+'</option>').join('')}</select></div><label class="slide-search">Find a resource<input id="slide-search" type="search" placeholder="Name, address or resource ID"></label><div id="slide-data"></div><details class="resource-section"><summary>Restored-machine cleanup</summary><article id="restore-cleanup" class="panel"></article></details>`);
   let generation = 0;
   const load = async () => {
     const current = ++generation;
@@ -2007,7 +2031,7 @@ function recoveryEvidence(run: Item) {
             proof.passed,
           )
         : "Pending";
-      return `<tr><td><b>${esc(source?.label || member.source_device_id)}</b></td><td>${badge(member.backup_status || "Pending", member.backup_status === "succeeded")}</td><td>${esc(restored?.label || (member.virt_id ? "Created · awaiting check" : "Pending"))}</td><td>${result}</td></tr>`;
+      return `<tr><td><b>${esc(source?.label || member.source_device_id)}</b></td><td>${badge(member.backup_status || "Pending", member.backup_status === "succeeded")}</td><td>${esc(restored?.label || (proof?.passed ? "Historically verified · current inventory unavailable" : member.virt_id ? "Created · awaiting check" : "Pending"))}</td><td>${result}</td></tr>`;
     })
     .join("");
   return `<div class="table-wrap"><table><thead><tr><th>System</th><th>Backup</th><th>Restored instance</th><th>Application check</th></tr></thead><tbody>${rows}</tbody></table></div><details><summary>Detailed evidence</summary><pre>${pretty({ state: run.state, report: run.report })}</pre></details>`;
@@ -2017,7 +2041,7 @@ async function renderRecovery() {
   const [plans, runs, devices] = await Promise.all([
     api("/recovery/plans"),
     api("/recovery/runs"),
-    api("/devices"),
+    api("/devices?include_archived=true"),
   ]);
   fleet = devices;
   content(
@@ -2165,9 +2189,10 @@ async function renderJobs() {
   content(
     `<div class="scroll"><table class="jobs-table"><thead><tr><th>Job</th><th>Machine</th><th>Status</th><th>By</th><th>When</th></tr></thead><tbody>${jobs.map((j: Item) => {
       const device = devices.find((d: Item) => d.id === j.device_id);
-      return `<tr><td><details><summary>${esc(j.kind)}</summary><pre>${pretty(j.result)}</pre></details></td><td>${device ? esc(device.label) : '<span class="placeholder">Removed machine</span>'}</td><td>${badge(j.status, j.status === "complete")}</td><td>${j.actor ? esc(j.actor) : '<span class="placeholder">—</span>'}</td><td>${date(j.created)}</td></tr>`;
+      return `<tr><td><button class="text-link" data-job-detail="${esc(j.id)}">${esc(j.kind)} →</button></td><td>${device ? esc(device.label) : '<span class="placeholder">Removed machine</span>'}</td><td>${badge(j.status, j.status === "complete")}</td><td>${j.actor ? esc(j.actor) : '<span class="placeholder">—</span>'}</td><td>${date(j.created)}</td></tr>`;
     }).join("") || '<tr><td colspan="5" class="placeholder">No jobs yet.</td></tr>'}</tbody></table></div><p class="muted jobs-note">The complete audit trail is in <a class="text-link" href="#activity">Activity</a>.</p>`,
   );
+  document.querySelectorAll<HTMLButtonElement>("[data-job-detail]").forEach(b => b.onclick = () => void runDetails.job(b.dataset.jobDetail!));
 }
 async function renderSettings() {
   loading("Loading settings…");
@@ -2227,8 +2252,11 @@ window.addEventListener("keydown", (event) => {
   else { focusHomeCommand = true; location.hash = "home"; }
 });
 window.addEventListener("hashchange", () => {
-  if (username) render();
-  else signedOut();
+  if (username) {
+    const next = (location.hash.slice(1) || "home").split("?")[0];
+    if (next === page && !next.startsWith("remote/")) void restoreResource().catch(error => notify(error.message,true));
+    else void render();
+  } else { clearResourceHistory(); signedOut(); }
 });
 setInterval(async () => {
   if (

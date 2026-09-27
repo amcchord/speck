@@ -130,6 +130,7 @@ def save_template(body: Template, user=Depends(require_user)):
             (template_id, body.name, body.platform, body.category, seal(body.model_dump_json()), 1, time.time()),
         )
         audit(conn, user["username"], "template.created", detail={"template_id": template_id, "name": body.name})
+        conn.execute("INSERT INTO template_revisions VALUES(?,?,?,?,?)", (template_id, 1, seal(body.model_dump_json()), time.time(), user["username"]))
     return {"id": template_id, "revision": 1}
 
 
@@ -145,7 +146,16 @@ def update_template(template_id: str, body: Template, user=Depends(require_user)
             (body.name, body.platform, body.category, seal(body.model_dump_json()), revision, time.time(), template_id),
         )
         audit(conn, user["username"], "template.updated", detail={"template_id": template_id, "revision": revision})
+        conn.execute("INSERT INTO template_revisions VALUES(?,?,?,?,?)", (template_id, revision, seal(body.model_dump_json()), time.time(), user["username"]))
     return {"id": template_id, "revision": revision}
+
+
+@router.get("/templates/{template_id}/revisions")
+def template_history(template_id: str, user=Depends(require_user)):
+    with db() as conn:
+        return [{"revision": r["revision"], "created": r["created"], "actor": r["actor"],
+                 "template": json.loads(unseal(r["spec"]))} for r in conn.execute(
+            "SELECT * FROM template_revisions WHERE template_id=? ORDER BY revision DESC LIMIT 100", (template_id,))]
 
 
 def render_script(template, parameters):
@@ -298,6 +308,12 @@ def enqueue_batch(conn, body, prepared, actor, now):
     return batch_id
 
 
+def batch_metadata(conn, row):
+    event = conn.execute("SELECT detail FROM audit WHERE action='batch.created' AND json_valid(detail) AND json_extract(detail,'$.batch_id')=? ORDER BY at DESC LIMIT 1", (row['id'],)).fetchone()
+    evidence = json.loads(event['detail']) if event else {}
+    return {'actor': row['actor'], 'template_id': evidence.get('template_id'), 'template_revision': evidence.get('template_revision')}
+
+
 @router.get("/batches")
 def list_batches(user=Depends(require_user)):
     with db(write=True) as conn:
@@ -315,7 +331,7 @@ def list_batches(user=Depends(require_user)):
                 )
             ]
             result.append(
-                {"id": row["id"], "name": row["name"], "kind": row["kind"], "created": row["created"], "jobs": jobs}
+                {"id": row["id"], "name": row["name"], "kind": row["kind"], "created": row["created"], "jobs": jobs, **batch_metadata(conn, row)}
             )
     return result
 
@@ -327,7 +343,8 @@ def batch_detail(batch_id: str, user=Depends(require_user)):
         if not row:
             raise HTTPException(404, "Operation not found")
         jobs = [public_job(j) for j in conn.execute("SELECT j.*,d.label FROM batch_jobs bj JOIN jobs j ON j.id=bj.job_id JOIN devices d ON d.id=bj.device_id WHERE bj.batch_id=? ORDER BY d.label", (batch_id,))]
-    return {"id": row["id"], "name": row["name"], "kind": row["kind"], "created": row["created"], "jobs": jobs}
+        metadata = batch_metadata(conn, row)
+    return {"id": row["id"], "name": row["name"], "kind": row["kind"], "created": row["created"], "jobs": jobs, **metadata}
 
 
 @router.post("/batches/{batch_id}/cancel")

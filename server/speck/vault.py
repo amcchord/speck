@@ -274,6 +274,14 @@ def services_status():
     with db() as conn:
         rows = {r["service"]: r for r in conn.execute("SELECT * FROM vault_providers")}
         app_store = load(conn, APP_STORE_MASTER)
+        historical_checks = {}
+        for event in conn.execute("SELECT at,detail FROM audit WHERE action='vault.provider.checked' AND json_valid(detail) ORDER BY at DESC"):
+            evidence = json.loads(event["detail"])
+            service = evidence.get("service")
+            if service and service not in historical_checks:
+                historical_checks[service] = {"checked_at": event["at"], "ok": evidence.get("ok"),
+                    "detail": "Historical provider check recorded in Activity. Current connectivity has not been rechecked.", "historical": True}
+    checks = historical_checks | CHECKS
     out = []
     for service, spec in PROVIDERS.items():
         row = rows.get(service)
@@ -295,7 +303,7 @@ def services_status():
                 "updated_by": row["updated_by"] if row else None,
                 "configuration_error": error,
                 "arbiter": service in ARBITER,
-                "last_check": CHECKS.get(service),
+                "last_check": checks.get(service),
             }
         )
     error = provider_errors("app-store-connect", {})
@@ -316,7 +324,7 @@ def services_status():
             "configuration_error": error,
             "arbiter": True,
             "master_entry": APP_STORE_MASTER,
-            "last_check": CHECKS.get("app-store-connect"),
+            "last_check": checks.get("app-store-connect"),
         }
     )
     for item in out:

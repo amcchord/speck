@@ -1,3 +1,6 @@
+import { listWorkspace } from "./list-workspace";
+import { rememberResource, registerResource, resourceHref } from "./resource-navigation";
+import { operationOutput } from "./run-detail";
 import { available as passkeysAvailable, ceremony as passkeyCeremony } from "./passkeys";
 import { eventLabel } from "./activity-model";
 import { detailSection, detailFacts, technicalDetail } from "./resource-story";
@@ -79,7 +82,7 @@ export function createManagement(ui: Item) {
           const state = a.resolved ? "Resolved" : a.acknowledged ? "Acknowledged" : "Needs attention";
           const age = Math.max(0, Date.now() / 1000 - a.opened);
           const when = age < 60 ? "Just now" : age < 3600 ? Math.floor(age / 60) + "m ago" : age < 86400 ? Math.floor(age / 3600) + "h ago" : Math.floor(age / 86400) + "d ago";
-          return `<article class="alert-item"><div class="alert-row"><div class="alert-main"><button id="alert-details-${i}" class="alert-title" aria-expanded="false" aria-controls="alert-evidence-${i}"><span class="alert-marker ${a.resolved ? "resolved" : esc(a.severity)}" title="${esc(a.severity)}" aria-label="${esc(a.severity)}"></span><span>${esc(a.title)}</span><span class="alert-chevron" aria-hidden="true">›</span></button><p class="alert-description" title="${esc(a.explanation || "Expand for alert details")}">${esc(a.explanation || "Expand for alert details")}</p></div><div class="alert-machine"><button id="alert-device-${i}" class="text-link">${esc(a.label || "Retired machine")}</button><small class="alert-state">${state}${a.maintenance_until > Date.now() / 1000 ? " · Maintenance" : ""}</small></div><time class="alert-age" datetime="${new Date(a.opened * 1000).toISOString()}" title="${date(a.opened)}">${when}</time><div class="alert-actions">${canManage() && manageable ? `${button("diagnose-" + i, "AI diagnose")}${!a.resolved ? button("fix-" + i, "AI fix") : ""}` : `<small>${canManage() ? "Machine unavailable" : esc(a.severity)}</small>`}</div></div><div id="alert-evidence-${i}" class="alert-evidence" hidden><p>${esc(a.explanation || a.title)}</p><div class="alert-evidence-meta"><span>Opened ${date(a.opened)}</span>${a.acknowledged ? `<span>Acknowledged by ${esc(a.ack_actor)} · ${date(a.acknowledged)}</span>` : ""}${a.resolved ? `<span>Resolved by ${esc(a.resolve_actor)} · ${date(a.resolved)}</span>` : ""}</div>${a.job ? `<div class="alert-evidence-meta"><span>Job <code>${esc(a.job.id)}</code></span><span>${esc(a.job.kind)} · ${esc(a.job.status)}</span><span>Requested by ${esc(a.job.actor)}</span></div>` : ""}<div id="alert-job-${i}"></div><div class="alert-review-actions">${!a.resolved && canManage() ? `${!a.acknowledged ? button("ack-" + i, "Acknowledge") : ""}${a.key.startsWith("job:") ? button("resolve-" + i, "Mark reviewed") : ""}` : ""}<small>${esc(a.resolution_hint || "Health alerts clear after recovery. Closing a job alert does not fix the machine.")}</small></div></div></article>`;
+          return `<article class="alert-item" data-severity="${esc(a.severity)}" data-type="${esc(a.key.split(':')[0])}" data-site="${esc(device?.site || 'Unassigned')}" data-age="${age>86400?'Older than a day':'Last 24 hours'}"><div class="alert-row"><div class="alert-main"><button id="alert-details-${i}" class="alert-title" aria-expanded="false" aria-controls="alert-evidence-${i}"><span class="alert-marker ${a.resolved ? "resolved" : esc(a.severity)}" title="${esc(a.severity)}" aria-label="${esc(a.severity)}"></span><span>${esc(a.title)}</span><span class="alert-chevron" aria-hidden="true">›</span></button><p class="alert-description" title="${esc(a.explanation || "Expand for alert details")}">${esc(a.explanation || "Expand for alert details")}</p></div><div class="alert-machine"><button id="alert-device-${i}" class="text-link">${esc(a.label || "Retired machine")}</button><small class="alert-state">${state}${a.maintenance_until > Date.now() / 1000 ? " · Maintenance" : ""}</small></div><time class="alert-age" datetime="${new Date(a.opened * 1000).toISOString()}" title="${date(a.opened)}">${when}</time><div class="alert-actions">${canManage() && manageable ? `${button("diagnose-" + i, "AI diagnose")}${!a.resolved ? button("fix-" + i, "AI fix") : ""}` : `<small>${canManage() ? "Machine unavailable" : esc(a.severity)}</small>`}</div></div><div id="alert-evidence-${i}" class="alert-evidence" hidden><p>${esc(a.explanation || a.title)}</p><div class="alert-evidence-meta"><span>Opened ${date(a.opened)}</span>${a.acknowledged ? `<span>Acknowledged by ${esc(a.ack_actor)} · ${date(a.acknowledged)}</span>` : ""}${a.resolved ? `<span>Resolved by ${esc(a.resolve_actor)} · ${date(a.resolved)}</span>` : ""}</div>${a.job ? `<div class="alert-evidence-meta"><span>Job <code>${esc(a.job.id)}</code></span><span>${esc(a.job.kind)} · ${esc(a.job.status)}</span><span>Requested by ${esc(a.job.actor)}</span></div>` : ""}<div id="alert-job-${i}"></div><div class="alert-review-actions">${!a.resolved && canManage() ? `${!a.acknowledged ? button("ack-" + i, "Acknowledge") : ""}${a.key.startsWith("job:") ? button("resolve-" + i, "Mark reviewed") : ""}` : ""}<small>${esc(a.resolution_hint || "Health alerts clear after recovery. Closing a job alert does not fix the machine.")}</small></div></div></article>`;
         }).join("")}</div><small class="management-footnote">${data.items.length} matching alert${data.items.length === 1 ? "" : "s"}. AI drafts are reviewed before execution.</small>`
       : empty(
           alertState === "active" && !alertDevice ? "All clear" : "No matching alerts",
@@ -97,6 +100,12 @@ export function createManagement(ui: Item) {
       alertCursor = data.next_cursor;
       await renderAlerts();
     });
+    listWorkspace(list,'.alert-item','alerts',{filters:[
+      {label:'Severity',values:[...new Set(data.items.map((a:Item)=>a.severity))] as string[],value:r=>r.dataset.severity!},
+      {label:'Type',values:[...new Set(data.items.map((a:Item)=>a.key.split(':')[0]))] as string[],value:r=>r.dataset.type!},
+      {label:'Site',values:[...new Set(devices.map((d:Item)=>d.site || 'Unassigned'))] as string[],value:r=>r.dataset.site!},
+      {label:'Age',values:['Last 24 hours','Older than a day'],value:r=>r.dataset.age!},
+    ]});
     data.items.forEach((a: Item, i: number) => {
       on("alert-device-" + i, () => ui.openDevice(a.device_id));
       on("ack-" + i, async () => {
@@ -110,28 +119,21 @@ export function createManagement(ui: Item) {
       const device = devices.find((d: Item) => d.id === a.device_id);
       on("diagnose-" + i, () => ui.assistAlert(device, a, "diagnose"));
       on("fix-" + i, () => ui.assistAlert(device, a, "fix"));
-      let evidenceLoaded = false;
-      on("alert-details-" + i, async () => {
-        const panel = document.getElementById("alert-evidence-" + i)!;
-        panel.hidden = !panel.hidden;
-        document.getElementById("alert-details-" + i)!.setAttribute("aria-expanded", String(!panel.hidden));
-        if (panel.hidden || evidenceLoaded || !a.job || !canManage()) return;
-        const output = document.getElementById("alert-job-" + i)!;
-        output.innerHTML = loadingState("Loading job evidence…");
-        try {
-          const detail = await api("/alerts/" + encodeURIComponent(a.id));
-          if (!output.isConnected) return;
-          const j = detail.job;
-          const result = j?.result;
-          output.innerHTML = `${j?.script ? `<details><summary>Original script${j.script_truncated ? " (excerpt)" : ""}</summary><pre>${esc(j.script)}</pre></details>` : ""}<details open><summary>Job output${result?.exit_code != null ? " · exit " + esc(result.exit_code) : ""}${result?.truncated ? " (excerpt)" : ""}</summary><pre>${esc([result?.stdout, result?.stderr, result?.error].filter(Boolean).join("\n") || "No output was returned by the agent.")}</pre></details>`;
-          evidenceLoaded = true;
-        } catch (error) {
-          output.textContent = "Could not load job evidence. Collapse and expand to retry.";
-          throw error;
-        }
-      });
+      on("alert-details-" + i, () => inspectAlert(a,device));
     });
   }
+
+  async function inspectAlert(a:Item,device?:Item) {
+    rememberResource({kind:'alert',id:a.id},()=>inspectAlert(a,device));
+    const check=a.key.startsWith('job:')?'Inspect the exact job result and current machine state. An uncertain completion does not establish failure; avoid repeating an action until verified.':a.key.includes('offline')?'Check the last agent report, gateway path and maintenance window before restarting services.':a.key.includes('disk')?'Inspect affected volumes and growth before deleting data.':a.key.includes('service')?'Inspect startup mode, dependencies and recent service failures before restarting.':'Compare the current reading with the configured threshold and inspect related machine activity.';
+    const pane:HTMLDialogElement=ui.flyout(a.title,detailSection('Condition',`<p>${esc(a.explanation || a.title)}</p>`)+detailFacts([['Severity',a.severity],['Machine',a.label],['Opened',date(a.opened)],['Last observation',date(a.updated)],['Acknowledged',a.acknowledged?date(a.acknowledged)+' · '+a.ack_actor:'Not acknowledged'],['Resolved',a.resolved?date(a.resolved)+' · '+a.resolve_actor:'No recovery recorded']])+detailSection('First checks',`<p>${esc(check)}</p><p class="resource-note">${esc(a.resolution_hint || 'Health alerts clear when recovery is observed. Acknowledging an alert does not change the machine.')}</p>`)+`<div class="toolbar"><button class="secondary" data-alert-machine>Inspect machine</button>${a.job?'<button class="secondary" data-alert-job>Open job result</button>':''}${device&&canManage()?'<button class="secondary" data-alert-maintenance>Review maintenance</button>':''}</div><section class="resource-section" data-alert-evidence></section><div class="toolbar">${!a.resolved&&canManage()?`${!a.acknowledged?'<button class="secondary" data-alert-ack>Acknowledge</button>':''}${a.key.startsWith('job:')?'<button class="secondary" data-alert-resolve>Mark reviewed</button>':''}`:''}</div>`,{tone:'attention',subtitle:'Alert · Evidence and investigation'});
+    pane.querySelector<HTMLButtonElement>('[data-alert-machine]')!.onclick=()=>ui.openDevice(a.device_id);
+    pane.querySelector<HTMLButtonElement>('[data-alert-job]')?.addEventListener('click',()=>void ui.showJob(a.job.id));
+    pane.querySelector<HTMLButtonElement>('[data-alert-maintenance]')?.addEventListener('click',()=>void organize(device!));
+    for(const [attr,action] of [['ack','acknowledge'],['resolve','resolve']]) pane.querySelector<HTMLButtonElement>('[data-alert-'+attr+']')?.addEventListener('click',async()=>{try{await api('/alerts/'+a.id,'POST',{action});pane.close();await renderAlerts();}catch(error){notify((error as Error).message,true);}});
+    if(a.job&&canManage())try {const detail=await api('/alerts/'+encodeURIComponent(a.id));if(pane.open)pane.querySelector('[data-alert-evidence]')!.innerHTML='<h3>Job evidence</h3>'+operationOutput(detail.job?.result);} catch {if(pane.open)pane.querySelector('[data-alert-evidence]')!.textContent='Job evidence is unavailable. Inspect the machine before retrying.';}
+  }
+  registerResource('alert',async ref=>{const data=await api('/alerts/'+encodeURIComponent(ref.id));await inspectAlert(data.alert || data);});
 
   async function editPolicy(device?: Item) {
     const policies = await api("/monitoring");
@@ -244,7 +246,7 @@ export function createManagement(ui: Item) {
           ? `<div class="schedule-grid">${schedules
               .map(
                 (s: Item, i: number) =>
-                  `<article class="panel schedule-card"><div class="section-head"><span class="eyebrow">${s.operation.kind === "patch.scan" ? "PATCH INVENTORY" : "SCRIPT / SOFTWARE"}</span>${badge(s.enabled ? "Active" : "Paused", !!s.enabled)}</div><h2>${esc(s.name)}</h2><p>${s.interval_seconds ? "Every " + (s.interval_seconds / 3600).toLocaleString() + " hours" : "One-time operation"} · ${s.operation.device_ids.length} machine${s.operation.device_ids.length === 1 ? "" : "s"}</p><dl class="schedule-facts"><div><dt>Next run</dt><dd>${s.enabled ? date(s.next_run) : "Paused"}</dd></div><div><dt>Owner</dt><dd>${esc(s.owner)}</dd></div>${s.operation.template_revision ? `<div><dt>Template</dt><dd>Revision ${s.operation.template_revision}</dd></div>` : ""}</dl><details><summary>Target machines</summary><ul>${s.operation.device_ids.map((id: string) => `<li>${esc(devices.find((d: Item) => d.id === id)?.label || id)}</li>`).join("")}</ul></details><div class="schedule-runs">${
+                  `<article class="panel schedule-card"><div class="section-head"><span class="eyebrow">${s.operation.kind === "patch.scan" ? "PATCH INVENTORY" : "SCRIPT / SOFTWARE"}</span>${badge(s.enabled ? "Active" : "Paused", !!s.enabled)}</div><h2><button class="text-link" data-schedule-detail="${esc(s.id)}">${esc(s.name)}</button></h2><p>${s.interval_seconds ? "Every " + (s.interval_seconds / 3600).toLocaleString() + " hours" : "One-time operation"} · ${s.operation.device_ids.length} machine${s.operation.device_ids.length === 1 ? "" : "s"}</p><dl class="schedule-facts"><div><dt>Next run</dt><dd>${s.enabled ? date(s.next_run) : "Paused"}</dd></div><div><dt>Owner</dt><dd>${esc(s.owner)}</dd></div>${s.operation.template_revision ? `<div><dt>Template</dt><dd>Revision ${s.operation.template_revision}</dd></div>` : ""}</dl><details><summary>Target machines</summary><ul>${s.operation.device_ids.map((id: string) => `<li>${esc(devices.find((d: Item) => d.id === id)?.label || id)}</li>`).join("")}</ul></details><div class="schedule-runs">${
                     s.runs
                       .slice(0, 4)
                       .map(
@@ -261,7 +263,9 @@ export function createManagement(ui: Item) {
             )
       }`,
     );
-    on("new-schedule", newSchedule);
+    listWorkspace(document.getElementById('content')!,'.schedule-card','schedules');
+    document.querySelectorAll<HTMLButtonElement>('[data-schedule-detail]').forEach(b=>b.onclick=()=>void inspectSchedule(b.dataset.scheduleDetail!));
+    on("new-schedule", () => newSchedule());
     schedules.forEach((s: Item, i: number) =>
       on("schedule-state-" + i, async () => {
         if (s.enabled) {
@@ -293,29 +297,24 @@ export function createManagement(ui: Item) {
         ),
       );
   }
-  async function showBatch(id: string) {
-    const batch = await api("/batches/" + id);
-    if (!batch)
-      throw new Error(
-        "This operation is older than the recent history window. Use Activity to inspect its jobs.",
-      );
-    dialog(
-      batch.name,
-      batch.jobs
-        .map(
-          (j: Item) =>
-            `<article class="panel"><h3>${esc(j.label)} ${badge(j.status)}</h3><pre>${esc(j.result ? JSON.stringify(j.result, null, 2) : "Waiting for result")}</pre></article>`,
-        )
-        .join(""),
-    );
+  async function inspectSchedule(id:string) {
+    rememberResource({kind:'schedule',id},()=>inspectSchedule(id));
+    const [items,devices]=await Promise.all([api('/schedules'),api('/devices?include_archived=true')]);
+    const s=items.find((s:Item)=>s.id===id);if(!s)throw new Error('Schedule is not in the returned inventory');
+    const runs=s.runs || [], next=Array.from({length:s.interval_seconds?5:1},(_,i)=>s.next_run+i*s.interval_seconds);
+    const pane:HTMLDialogElement=ui.flyout(s.name,detailFacts([['State',s.enabled?'Active':'Paused'],['Owner',s.owner],['Created',date(s.created)],['Updated',date(s.updated)],['Revision',s.revision],['Time zone',Intl.DateTimeFormat().resolvedOptions().timeZone],['Concurrency','One operation per target; busy targets skip the run'],['Catch-up','Missed by more than five minutes: skipped']])+detailSection('Next planned times',s.enabled?next.map(t=>'<p>'+date(t)+'</p>').join(''):'<p>Paused. Resume requires a new future time.</p>')+detailSection('Targets','<div class="resource-related">'+s.operation.device_ids.map((id:string)=>`<a href="${resourceHref(location.hash.slice(1),{kind:'machine',id})}">${esc(devices.find((d:Item)=>d.id===id)?.label || id)} →</a>`).join('')+'</div>')+(s.operation.template_id?detailSection('Template',`<a href="${resourceHref(location.hash.slice(1),{kind:'template',id:s.operation.template_id})}">Inspect pinned template · revision ${esc(s.operation.template_revision)} →</a>`):'')+detailSection('Execution history',runs.map((r:Item)=>`<article class="resource-section">${badge(r.status)} <time>${date(r.due)}</time><p>${esc(r.reason || 'Targets report results individually.')}</p>${r.batch_id?`<a href="${resourceHref(location.hash.slice(1),{kind:'batch',id:r.batch_id})}">Open operation →</a>`:''}</article>`).join('') || '<p>No executions recorded.</p>')+`<div class="toolbar"><button class="secondary" data-schedule-duplicate>Duplicate with review</button>${isAdmin()||s.owner===ui.username()?'<button class="secondary" data-schedule-edit>Edit with review</button>':''}</div>`,{tone:'automation',subtitle:'Schedule · Targets, timing and results'});
+    pane.querySelector<HTMLButtonElement>('[data-schedule-duplicate]')!.onclick=()=>void newSchedule({...s.operation,name:s.name+' · copy'});
+    pane.querySelector<HTMLButtonElement>('[data-schedule-edit]')?.addEventListener('click',()=>void newSchedule({...s.operation,name:s.name,edit_id:s.id,revision:s.revision,interval_seconds:s.interval_seconds}));
   }
-  async function newSchedule() {
+  registerResource('schedule',ref=>inspectSchedule(ref.id));
+  const showBatch = (id: string) => ui.showBatch(id);
+  async function newSchedule(seed:Item = {}) {
     const [templates, devices] = await Promise.all([
       api("/templates"),
       api("/devices"),
     ]);
     const modal = dialog(
-      "New schedule",
+      seed.edit_id ? "Edit schedule" : "New schedule",
       `<label>Name<input id="schedule-name" maxlength="100" placeholder="Daily update inventory"></label><label>Operation<select id="schedule-operation"><option value="scan">Scan available patches</option>${templates.map((t: Item) => `<option value="${t.id}">${esc(t.name)} · ${esc(t.platform)}</option>`).join("")}</select></label><div id="schedule-parameters"></div><div class="form-grid"><label>First run (your local time)<input type="datetime-local" id="schedule-first" value="${localTime()}"></label><label>Repeat<select id="schedule-interval"><option value="86400">Every day</option><option value="3600">Every hour</option><option value="604800">Every week</option><option value="0">Once</option></select></label></div><h3>Target machines</h3><div id="schedule-targets" class="schedule-targets"></div><p>Targets are fixed when saved. A run is skipped if any target is offline, busy or retired. A changed template pauses the schedule for review.</p>${button("schedule-review", "Review schedule", true)}`,
     );
     modal.classList.add("wide");
@@ -334,7 +333,11 @@ export function createManagement(ui: Item) {
         )
         .join("");
     };
+    if(seed.template_id) (modal.querySelector('#schedule-operation') as HTMLSelectElement).value=seed.template_id;
     choices();
+    if(seed.interval_seconds!=null) (modal.querySelector('#schedule-interval') as HTMLSelectElement).value=String(seed.interval_seconds);
+    if(seed.name) (modal.querySelector('#schedule-name') as HTMLInputElement).value=seed.name;
+    if(seed.device_ids) modal.querySelectorAll<HTMLInputElement>('[data-schedule-target]').forEach(b=>{b.checked=!b.disabled&&seed.device_ids.includes(b.dataset.scheduleTarget);});
     on("schedule-operation", choices, "change");
     on("schedule-review", async () => {
       const template = templates.find(
@@ -372,10 +375,10 @@ export function createManagement(ui: Item) {
         `<h3>${esc(body.operation.name)}</h3><p>First run ${date(review.first_run)}. ${review.interval_seconds ? "Repeats every " + review.interval_seconds / 3600 + " hours." : "Runs once."}</p><p>${review.targets.length} selected machine${review.targets.length === 1 ? "" : "s"}:</p><ul>${review.targets.map((t: Item) => `<li>${esc(t.label)}</li>`).join("")}</ul><details><summary>Review exact scripts</summary>${review.targets.map((t: Item) => `<h3>${esc(t.label)}</h3><pre>${esc(t.script)}</pre>`).join("")}</details><div class="dialog-footer">${button("schedule-create", "Create schedule", true)}</div>`,
       );
       on("schedule-create", async () => {
-        await api("/schedules", "POST", body);
+        await api(seed.edit_id ? "/schedules/"+seed.edit_id : "/schedules", seed.edit_id ? "PUT" : "POST", {...body,...(seed.edit_id?{revision:seed.revision}:{})});
         confirm.close();
         modal.close();
-        notify("Schedule created");
+        notify(seed.edit_id?"Schedule updated with a new reviewed start time":"Schedule created");
         await renderSchedules();
       });
     });
@@ -441,7 +444,9 @@ export function createManagement(ui: Item) {
       document.querySelectorAll<HTMLButtonElement>('[data-audit-event]').forEach(el => el.onclick = () => {
         const event = items.find(a => String(a.id) === el.dataset.auditEvent); if (!event) return;
         const device = devices.find((d: Item) => d.id === event.device_id);
-        const pane = ui.flyout(eventLabel(event.action), detailSection('Event', detailFacts([['Actor',event.actor],['When',date(event.at)],['Machine',event.label],['Event type',event.action],['Event ID',event.id]])) + detailSection('Evidence',detailFacts(Object.entries(event.detail || {}).filter(([,v]) => v !== null && typeof v !== 'object').map(([k,v]) => [k.replaceAll('_',' '),v]) as [string,any][])) + (device ? '<section class="resource-actions"><button data-audit-machine class="primary">Open machine</button></section>' : '') + technicalDetail(event.detail), {tone:'automation',subtitle:'Activity · Recorded event'});
+        const pane = ui.flyout(eventLabel(event.action), detailSection('Event', detailFacts([['Actor',event.actor],['When',date(event.at)],['Machine',event.label],['Event type',event.action],['Event ID',event.id]])) + detailSection('Evidence',detailFacts(Object.entries(event.detail || {}).filter(([,v]) => v !== null && typeof v !== 'object').map(([k,v]) => [k.replaceAll('_',' '),v]) as [string,any][])) + (device ? '<section class="resource-actions"><button data-audit-machine class="primary">Open machine</button></section>' : '') + (event.detail?.job_id ? '<section class="resource-actions"><button data-audit-job class="secondary">Open job result</button></section>' : '') + (event.detail?.batch_id ? '<section class="resource-actions"><button data-audit-batch class="secondary">Open operation</button></section>' : '') + technicalDetail(event.detail), {tone:'automation',subtitle:'Activity · Recorded event'});
+        pane.querySelector('[data-audit-job]')?.addEventListener('click',()=>void ui.showJob(event.detail.job_id));
+        pane.querySelector('[data-audit-batch]')?.addEventListener('click',()=>void ui.showBatch(event.detail.batch_id));
         pane.querySelector('[data-audit-machine]')?.addEventListener('click',()=>{pane.close();void ui.openDevice(device.id);});
       });
       document.getElementById("audit-more")!.hidden = !next;

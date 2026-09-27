@@ -23,21 +23,25 @@ export function createHome(ui: Item) {
   const open = (id: string) => ui.openMachine(rows.find(r => r.machine.id === id)?.machine);
 
   async function render() {
-    ui.loading("Connecting your workspace…");
     const current = ui.checkpoint();
-    query = ""; filter = "all"; offset = 0;
-    const results = await Promise.allSettled([
-      read("/fleet"), read("/alerts?state=active&limit=5"),
-      ...(canOperate() ? [read("/network/map"), read("/schedules"), read("/ai/settings")] : []),
-    ]);
-    current();
-    const data = (i: number) => results[i]?.status === "fulfilled" ? (results[i] as PromiseFulfilledResult<any>).value : null;
-    const fleet = data(0), alerts = data(1), network = data(2), schedules: Item[] | null = data(3);
+    const results: any[] = [];
+    const sources = ["Machine inventory", "Alerts", "Network relationships", "Schedules", "AI availability"];
+    const paths = ["/fleet", "/alerts?state=active&limit=5", ...(canOperate() ? ["/network/map", "/schedules", "/ai/settings"] : [])];
+    rows = []; ai = null; fleetAvailable = false; networkAvailable = false;
+    function paint() {
+      current();
+      const focused = document.activeElement instanceof HTMLElement ? document.activeElement.id : "";
+      const input = document.getElementById("home-query") as HTMLInputElement | null;
+      if (input) query = input.value;
+      const scroll = window.scrollY;
+      const data = (i: number) => results[i]?.status === "fulfilled" ? results[i].value : null;
+      const fleet = data(0), alerts = data(1), network = data(2), schedules: Item[] | null = data(3);
     ai = data(4);
     fleetAvailable = Boolean(fleet); networkAvailable = Boolean(network);
     rows = relationships(fleet?.machines || [], network?.machines || []);
     selected = rows.find(r => r.machine.id === selected)?.machine.id || rows.find(r => r.linked)?.machine.id || rows[0]?.machine.id || "";
-    const failures = [!fleet && "Machine inventory", !alerts && "Alerts", canOperate() && !network && "Network relationships", canOperate() && !schedules && "Schedules"].filter(Boolean);
+    const failures = paths.map((_,i) => results[i]?.status === "rejected" ? sources[i] : "").filter(Boolean);
+    const pending = paths.map((_,i) => !results[i] ? sources[i] : "").filter(Boolean);
     const staleSources = (fleet?.connections || []).filter((c: Item) => c.stale || c.status === "unavailable");
     const active = schedules?.filter(s => s.enabled) || [];
     const upcoming = [...active].sort((a, b) => (a.next_run || Infinity) - (b.next_run || Infinity)).slice(0, 3);
@@ -47,15 +51,16 @@ export function createHome(ui: Item) {
         <div class="home-intro"><span class="eyebrow">YOUR WORKSPACE</span><h2 id="home-heading">What needs your attention?</h2><p>Find a system, follow its connections, or turn a task into a plan.</p></div>
         <form id="home-command" role="search" class="home-command"><div class="home-command-input">${icon("search")}<label class="sr-only" for="home-query">Find a machine, IP, domain, or describe a task</label><input id="home-query" type="search" autocomplete="off" placeholder="Find a machine, IP, domain, or describe a task…" aria-controls="home-results"><kbd>⌘ / Ctrl K</kbd></div>${canOperate() ? `<button type="button" id="home-ask" class="primary home-ai-button">${icon("spark")}<span>Plan with AI</span></button>` : '<button type="submit" class="primary">Find</button>'}</form>
         <div class="home-shortcuts"><span>Jump to</span><a href="#fleet">${icon("fleet")}Fleet</a><a href="#alerts">${icon("alerts")}Alerts</a>${canOperate() ? '<a href="#network">'+icon("globe")+'Network & DNS</a><button id="home-schedule-shortcut">'+icon("calendar")+'Create a schedule</button>' : '<a href="#activity">'+icon("history")+'Activity</a>'}</div>
-        ${canOperate() && !ai?.configured ? `<p class="home-ai-status">${ai ? 'Connect OpenAI in Settings to draft plans with AI.' : 'AI availability could not be checked.'} <a href="#assistant">Open AI assistant →</a></p>` : ""}
+        ${canOperate() && !ai?.configured ? `<p class="home-ai-status">${ai ? 'Connect OpenAI in Settings to draft plans with AI.' : results[4] ? 'AI availability could not be checked.' : 'Checking AI availability…'} <a href="#assistant">Open AI assistant →</a></p>` : ""}
       </section>
       ${failures.length ? `<div class="home-notice" role="status">Could not load: ${esc(failures.join(", "))}. Available sources are shown below. Use Refresh to retry.</div>` : ""}
       ${staleSources.length || network?.client_error ? `<div class="home-notice" role="status">Some relationships may be out of date. ${esc(staleSources.map((c: Item) => c.name).join(", "))}${network?.client_error ? ' · UniFi client inventory unavailable' : ''}. Open a system to inspect its evidence.</div>` : ""}
+      ${pending.length ? `<p class="resource-note" role="status">Loading ${esc(pending.join(" · "))}… Available information appears immediately.</p>` : ""}
       <div class="home-stats" aria-label="Environment summary">
-        <a href="#fleet" class="home-stat agents"><span>Machines</span><strong>${fleet ? rows.length : '—'}</strong><small>${fleet ? coverage + ' with an approved endpoint agent' : 'Inventory unavailable'}</small></a>
+        <a href="#fleet" class="home-stat agents"><span>Machines</span><strong>${fleet ? rows.length : '—'}</strong><small>${fleet ? coverage + ' with an approved endpoint agent' : results[0] ? 'Inventory unavailable' : 'Loading inventory…'}</small></a>
         <button id="home-linked" class="home-stat compute"><span>Connected identities</span><strong>${fleet ? rows.filter(r => r.linked).length : '—'}</strong><small>Agents matched to provider resources</small></button>
-        <a href="#alerts" class="home-stat attention"><span>Needs attention</span><strong>${alerts ? alerts.counts?.unacknowledged ?? 0 : '—'}</strong><small>${alerts ? (alerts.counts?.active ?? 0) + ' open alerts' : 'Alerts unavailable'}</small></a>
-        ${canOperate() ? `<a href="#schedules" class="home-stat automation"><span>Active automations</span><strong>${schedules ? active.length : '—'}</strong><small>${schedules ? 'Reviewed schedules' : 'Schedules unavailable'}</small></a>` : `<a href="#activity" class="home-stat automation"><span>Activity</span><strong>${icon("history")}</strong><small>Changes and their evidence</small></a>`}
+        <a href="#alerts" class="home-stat attention"><span>Needs attention</span><strong>${alerts ? alerts.counts?.unacknowledged ?? 0 : '—'}</strong><small>${alerts ? (alerts.counts?.active ?? 0) + ' open alerts' : results[1] ? 'Alerts unavailable' : 'Loading alerts…'}</small></a>
+        ${canOperate() ? `<a href="#schedules" class="home-stat automation"><span>Active automations</span><strong>${schedules ? active.length : '—'}</strong><small>${schedules ? 'Reviewed schedules' : results[3] ? 'Schedules unavailable' : 'Loading schedules…'}</small></a>` : `<a href="#activity" class="home-stat automation"><span>Activity</span><strong>${icon("history")}</strong><small>Changes and their evidence</small></a>`}
       </div>
       <div class="home-layout">
         <section class="home-panel home-environment" aria-labelledby="home-environment-title">
@@ -78,6 +83,7 @@ export function createHome(ui: Item) {
       </div>
       <p class="home-footnote">Relationships use recorded identity and network evidence.${fleet?.checked_at ? ' Inventory checked ' + date(fleet.checked_at) + '.' : ''} Select a machine to inspect the links.</p>
     </div>`);
+    (document.getElementById("home-query") as HTMLInputElement).value = query;
     drawResults();
     document.getElementById("home-query")!.addEventListener("input", () => { query = (document.getElementById("home-query") as HTMLInputElement).value; offset = 0; drawResults(); });
     on("home-command", (event: Event) => { event.preventDefault(); document.querySelector<HTMLButtonElement>("[data-home-machine]")?.focus(); }, "submit");
@@ -87,6 +93,15 @@ export function createHome(ui: Item) {
     on("home-schedule-shortcut", () => ui.newSchedule());
     on("home-linked", () => setFilter("linked"));
     document.querySelectorAll<HTMLButtonElement>("[data-home-filter]").forEach(b => b.onclick = () => setFilter(b.dataset.homeFilter!));
+      if (focused.startsWith("home-")) document.getElementById(focused)?.focus({preventScroll:true});
+      window.scrollTo({top:scroll, behavior:"instant"});
+    }
+    paint();
+    await Promise.all(paths.map(async (path, i) => {
+      try { results[i] = {status:"fulfilled", value:await read(path)}; }
+      catch (reason) { results[i] = {status:"rejected", reason}; }
+      paint();
+    }));
   }
 
   function setFilter(next: string) {
@@ -137,6 +152,7 @@ export function createHome(ui: Item) {
 
   async function plan(prompt: string, deviceId = "") {
     if (!canOperate()) return;
+    if (!ai) { try { ai = await read("/ai/settings"); } catch {} }
     if (!ai?.configured) { location.hash = "assistant"; return; }
     const devices = rows.filter(endpoint).filter(r => ['windows', 'linux'].includes(r.machine.platform));
     const modal = ui.dialog("Plan with AI", `<p>Choose a machine for context, or draft a reusable Windows or Linux script.</p><label>Task<textarea id="home-plan-task" rows="3" required></textarea></label><label>Context<select id="home-plan-context"><option value="platform:windows">Reusable script · Windows PowerShell</option><option value="platform:linux">Reusable script · Linux shell</option>${devices.map((r, i) => `<option value="device:${i}">${esc(r.machine.label)} · ${esc(r.machine.platform)}${r.machine.online ? '' : ' · Offline'}</option>`).join('')}</select></label><p class="muted">You’ll review the request and included machine health before sending it to OpenAI. Generated scripts can become reusable templates; schedules have a separate review.</p><div class="dialog-footer"><button id="home-plan-continue" class="primary">Review AI request ${icon("arrow")}</button></div>`);

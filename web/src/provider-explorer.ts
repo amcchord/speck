@@ -207,6 +207,7 @@ export function mountProviderExplorer(ui: Item, r: Item, root: HTMLElement) {
       const response = await (fresh ? ui.freshApi : ui.api)(base + "/explore");
       if (!root.isConnected || current !== generation) return;
       const all = response.sections as Item;
+      ui.onEvidence?.(all,response.checked_at);
       root.innerHTML =
         `<div class="resource-refresh"><span>${e("Provider detail · " + detailDate(response.checked_at))}</span><button class="text-link" data-explore-refresh>Refresh</button></div>` +
         Object.entries(all)
@@ -276,6 +277,8 @@ export function mountProviderExplorer(ui: Item, r: Item, root: HTMLElement) {
                 rows = [...rows, ...next.rows];
                 cursor = next.next_offset;
                 all[key].data.rows = rows;
+                all[key].data.next_offset = cursor;
+                ui.onEvidence?.(all,response.checked_at);
                 draw();
               } catch (err) {
                 if (target.isConnected) {

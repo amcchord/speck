@@ -1,3 +1,4 @@
+import { rememberResource, registerResource, resourceHref } from "./resource-navigation";
 import "./network.css";
 import {createEquipment} from "./network-equipment";
 import { mountSiteMap, mappedSites } from "./site-map";
@@ -43,7 +44,7 @@ export function createNetwork(ui: Item) {
   const owners = (ip: string) => (map.ips[ip]?.machines || []) as Item[];
   const ownerChips = (ip: string) =>
     owners(ip)
-      .map((m) => chip(m.label, "machine"))
+      .map((m) => `<a class="net-chip machine" href="${resourceHref(location.hash.slice(1),{kind:"machine",id:m.id})}">${esc(m.label)}</a>`)
       .join("");
   const expiresSoon = (d: Item) => expiresWithin(d.expires, 60);
   const none = '<span class="placeholder">—</span>';
@@ -294,6 +295,7 @@ export function createNetwork(ui: Item) {
   }
 
   async function openDomain(d: Item, fresh = false) {
+    rememberResource({kind:"domain",id:d.name || d.domain}, () => openDomain(d));
     // Reuse an open pane for the same domain so refreshes keep scroll position and feedback.
     let panel = pane?.open && pane.dataset.domain === d.domain ? pane : null;
     if (!panel) {
@@ -624,6 +626,7 @@ export function createNetwork(ui: Item) {
     body.querySelectorAll<HTMLButtonElement>('[data-site-detail]').forEach(b=>b.onclick=()=>openSite(rows[Number(b.dataset.siteDetail)]));
   }
   function openSite(site:Item){
+    rememberResource({kind:"site",id:String(site.id),connection:site.console_id}, () => openSite(site));
     const counts=site.counts || {},health=site.percentages || {};
     const d=ui.flyout(site.name,detailHero('UniFi · Site',site.state,site.location?.label || 'Location is not reported by this console.',[['Wired clients',counts.wiredClient],['Wi-Fi clients',counts.wifiClient],['Devices',counts.totalDevice]])+detailSection('WAN & connectivity',detailFacts([['ISP',site.isp],['Public address',site.ip],['WAN uptime',sitePercent(health.wanUptime)],['Wi-Fi retries',health.txRetry!==undefined?health.txRetry.toFixed(1)+'%':null]]))+detailSection('WAN interfaces',`<div class="resource-related">${(site.wans||[]).map((w:Item)=>`<div><span><b>${esc(w.name)}</b><small>${esc([w.ip,w.isp].filter(Boolean).join(' · ') || 'No address reported')}${w.issues?' · '+w.issues+' reported issues':''}</small></span>${badge(w.up===true?'Link up':w.up===false?'Link down':'Not reported',w.up===true)}</div>`).join('') || '<p class="resource-note">No WAN interface detail reported.</p>'}</div>`)+detailSection('Network health',detailFacts([['Offline devices',counts.offlineDevice],['Offline gateways',counts.offlineGatewayDevice],['Offline access points',counts.offlineWifiDevice],['Updates available',counts.pendingUpdateDevice],['Critical notifications',counts.criticalNotification]]))+detailSection('Console & location',detailFacts([['Model',site.model],['Software',site.version],['Time zone',site.timezone],['Coordinates',site.location?site.location.latitude.toFixed(4)+', '+site.location.longitude.toFixed(4):null],['Location source',site.location?.source],['Public IP management',site.is_managed_gateway?'Configured gateway':'Read-only site discovery']]))+'<section class="resource-actions"><div class="resource-action-buttons"><button class="primary" data-site-equipment>Explore network equipment</button><button class="secondary" data-site-clients>Explore LAN clients</button></div></section>',{tone:'network',subtitle:'Network · '+(site.site_name || 'Site')});
     d.querySelector('[data-site-equipment]')!.addEventListener('click',()=>void equipment.openInventory(site));
@@ -688,6 +691,7 @@ export function createNetwork(ui: Item) {
     p.querySelectorAll<HTMLElement>('[data-network-machine]').forEach(b=>b.onclick=()=> { p.close(); void ui.openMachine(b.dataset.networkMachine); });
   }
   function openIp(p: Item) {
+    rememberResource({kind:"public-ip",id:p.ip}, () => openIp(p));
     const info = map.ips[p.ip] || {}, lan = p.lan_ip || info.mapping?.lan_ip;
     const labels: Item = {free:'Available',assigned:'Speck-managed mapping',in_use:'Other gateway rule',gateway:'Gateway address'};
     const d = ui.flyout(p.ip, detailHero('UniFi · Public address',labels[p.status] || p.status,p.status==='assigned' ? 'This address forwards inbound traffic to its mapped LAN host and supplies that host’s outbound address.' : 'Address allocation and gateway evidence from the connected UniFi network.') + detailSection('Routing',detailFacts([['Gateway',pool.gateway_name],['Public address',p.ip],['Mapped LAN host',lan],['Mapping name',p.assigned_to],['Source',p.status==='assigned' ? 'Speck-managed UniFi NAT mapping' : 'UniFi gateway inventory']])) + detailSection('DNS names',detailFacts([['Names pointing here',info.dns?.length ? info.dns : 'No cached DNS names']])) + machineLinks(lan || p.ip) + `${admin() && ['free','assigned'].includes(p.status) ? '<section class="resource-actions"><h3>Mapping</h3><button class="secondary" data-ip-action>'+(p.status==='free' ? 'Map to host' : 'Remove mapping')+'</button></section>' : ''}` + technicalDetail(p),{tone:'network',subtitle:'Network · Public IP'});
@@ -696,6 +700,7 @@ export function createNetwork(ui: Item) {
   }
   const clientMachines = (c:Item) => map.machines.filter((m:Item)=>(m.network_clients || []).some((n:Item)=>n.console_id===c.console_id&&n.site_id===c.site_id&&String(n.mac).replaceAll(':','').replaceAll('-','').toLowerCase()===String(c.mac).replaceAll(':','').replaceAll('-','').toLowerCase()));
   function openClient(c: Item) {
+    rememberResource({kind:"lan-client",id:c.mac,connection:c.console_id,site:c.site_id}, () => openClient(c));
     const signal=typeof c.signal_dbm==='number'?c.signal_dbm+' dBm':null;
     const d = ui.flyout(c.name || c.ip || 'LAN client',detailHero('UniFi · LAN client',c.state==='online'?'Recently seen':c.state==='last_seen'?'Previously seen':null,'Connection, experience and traffic observed by this site’s Network application.',[['Experience',typeof c.experience==='number'?c.experience+'%':'Not reported'],['Signal / link',signal || (c.link_mbps?c.link_mbps+' Mbps':'Not reported')],['Traffic',typeof c.receive_rate==='number'?metricValue((c.receive_rate||0)+(c.send_rate||0),'bytes/s'):'Not reported']])+(c.uplink_id&&c.console_id&&c.site_id?'<section class="resource-actions"><button class="primary" data-client-uplink>Explore '+esc(c.uplink_name || 'uplink')+(c.port?' · Port '+esc(c.port):'')+' →</button></section>':'')+detailSection('Connection',detailFacts([['IP address',c.ip],['MAC address',c.mac],['Vendor',c.vendor],['Link',c.type==='WIRELESS'?'Wi-Fi':c.type==='WIRED'?'Wired':c.type],['Network',c.network_name],['VLAN',c.vlan],['Access point / switch',c.uplink_name],['Uplink model',c.uplink_model],['Switch port',c.port],['Connected since',c.connected_at?new Date(c.connected_at).toLocaleString():null],['Last seen',detailDate(c.last_seen)]]))+(c.type==='WIRELESS'?detailSection('Wireless experience',detailFacts([['SSID',c.ssid],['Signal',signal],['Radio',c.radio],['Channel',c.channel],['Experience score',typeof c.experience==='number'?c.experience+'%':null]])):'')+detailSection('Traffic observed by the network',detailFacts([['Received from client',capacity(c.received_bytes)],['Sent to client',capacity(c.sent_bytes)],['Current receive rate',typeof c.receive_rate==='number'?metricValue(c.receive_rate,'bytes/s'):null],['Current send rate',typeof c.send_rate==='number'?metricValue(c.send_rate,'bytes/s'):null]]))+'<p class="resource-note">Counters reflect the provider’s observation window. A connection start time does not establish current presence.</p>'+'<section class="resource-section" data-client-machines><h3>Related Speck machines</h3><p class="resource-note">Checking unique MAC address evidence…</p></section>'+technicalDetail(c),{tone:'network',subtitle:'Network · LAN client'});
     bindMachineLinks(d);
@@ -707,7 +712,16 @@ export function createNetwork(ui: Item) {
     d.querySelector('[data-client-uplink]')?.addEventListener('click',()=>void equipment.openDevice(c,c.uplink_id,c.port,()=>openClient(c)));
   }
   function openConsole(c: Item) {
-    ui.flyout(c.name || 'UniFi console',detailHero('UniFi · Console',c.state,c.is_managed_gateway ? 'This gateway manages the public address pool and NAT mappings shown in Speck.' : 'A console discovered through the connected UniFi Site Manager account.') + detailSection('Console',detailFacts([['Model',c.model],['Software version',c.version],['Address',c.ip],['Gateway management',c.is_managed_gateway ? 'Managed by Speck' : 'Discovery only']])) + technicalDetail(c),{tone:'network',subtitle:'Network · UniFi console'});
+    rememberResource({kind:"console",id:String(c.id)}, () => openConsole(c));
+    const pane: HTMLDialogElement = ui.flyout(c.name || 'UniFi console',detailHero('UniFi · Console',c.state,c.is_managed_gateway ? 'This gateway manages the public address pool and NAT mappings shown in Speck.' : 'A console discovered through the connected UniFi Site Manager account.') + detailSection('Console',detailFacts([['Model',c.model],['Software version',c.version],['Address',c.ip],['Gateway management',c.is_managed_gateway ? 'Managed by Speck' : 'Discovery only']])) + technicalDetail(c),{tone:'network',subtitle:'Network · UniFi console'});
+    const related = document.createElement('section'); related.className='resource-section'; related.innerHTML='<h3>Sites & equipment</h3><p class="resource-note">Reading sites on this console…</p>'; pane.querySelector('.resource-body')!.append(related);
+    void loadSites().then(()=>{
+      if(!pane.open)return;
+      const matches=(sites || []).filter((site:Item)=>site.console_id===c.id);
+      related.innerHTML='<h3>Sites & equipment</h3>'+(matches.length?'<div class="resource-related">'+matches.map((site:Item,i:number)=>`<button data-console-site="${i}"><span><b>${esc(site.name)}</b><small>Health, equipment and connected clients</small></span>→</button>`).join('')+'</div>':'<p class="resource-note">No Network sites were returned for this console. Check the integration’s read permissions and Network application availability.</p>');
+      related.querySelectorAll<HTMLButtonElement>('[data-console-site]').forEach(b=>b.onclick=()=>openSite(matches[Number(b.dataset.consoleSite)]));
+    }).catch(()=>{related.innerHTML='<h3>Sites & equipment</h3><p class="resource-note">Site inventory is unavailable.</p>';});
+
   }
 
   /** Map a free public IP to a LAN host chosen elsewhere (for example a new VM). */
@@ -753,5 +767,8 @@ export function createNetwork(ui: Item) {
     domains = []; status = {}; pool = {pool:[]}; unifiStatus = {};
     map = {machines:[],ips:{}}; mapReady = false; reachMachine = "";
   }
+  registerResource("site", async ref => {await loadSites(); const site=(sites || []).find(s=>String(s.id)===ref.id && s.console_id===ref.connection); if(!site) throw new Error('Site is not in the current inventory'); openSite(site);});
+  registerResource("domain", async ref => {const result=await api('/dns/domains'); const d=(result.domains || []).find((d:Item)=>(d.name || d.domain)===ref.id); if(!d)throw new Error('Domain is not in the current inventory'); await openDomain(d);});
+  registerResource("public-ip", async ref => {pool=await api('/unifi/pool');map=await api('/network/map');const p=pool.pool.find((p:Item)=>p.ip===ref.id);if(!p)throw new Error('Address is not in the current pool');openIp(p);});
   return { render, closePane, exposeHost, showMachine, reset, openEquipment: equipment.openDevice };
 }
