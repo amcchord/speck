@@ -1022,3 +1022,20 @@ unrounded WAN uptime percentages. Rounded these to at most two decimals in site
 cards and detail; added the observed long-decimal shape to responsive coverage.
 The follow-up retains the port change and checks against that newly deployed
 index, with no backend restart.
+
+### Production acceptance — Port power and link speed
+
+Deployed `6a70fc88a3128709efb074a122d61c9d2e5fa507` as `20260927T193137Z-port-power-6a70fc8`. Both web-only
+publications fetched origin/main and verified ancestry, held the shared deployment
+lock, checked the inspected baseline immediately before atomic index replacement,
+and retained a web rollback snapshot. The final TypeScript/Vite build and all 18
+Chromium/WebKit checks passed, including the long-decimal mobile regression.
+
+All 27 public web assets match the manifest. Live read-only Chromium acceptance
+verified desktop and 390px phone layouts on a 26-port switch: 24 reported power
+readings, three observed speed/state colors, no page errors and no API mutations.
+The service PID remained 146686. Backend, credentials, configuration and agent
+downloads are unchanged; there was no restart or disruptive equipment action.
+Backend/agent/native tests and GitHub CI were not rerun for this web-only change.
+Private deployment records, screenshots and logs are under `output/port-power/`.
+Final index SHA-256: `23fb80017807254494ae9a44da02dbe7feff907d74309b1fecebc3ad37e64986`.
