@@ -166,6 +166,7 @@
   display: inline-block;
   width: 9px;
   height: 9px;
+  margin-right: 4px;
   border-radius: 2px;
   background: #5e6d7e;
 }

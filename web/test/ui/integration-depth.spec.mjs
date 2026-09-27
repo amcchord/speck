@@ -3,6 +3,7 @@ async function login(page){await page.context().addCookies([{name:'speck-gallery
 for(const width of [1440,834,390])test(`equipment relationships and reviewed PoE at ${width}px`,async({page},info)=>{
  await page.setViewportSize({width,height:1000});await login(page);
  const errors=[],writes=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.method()!=='GET')writes.push(r.url())});
+ await page.route('**/api/unifi/sites',async route=>{const response=await route.fetch();const data=await response.json();data.sites[0].percentages.wanUptime=99.79170000553131;await route.fulfill({json:data});});
  await page.goto('/#network');await page.getByRole('button',{name:'Inspect Main office',exact:true}).click();
  await page.getByRole('button',{name:'Explore network equipment',exact:true}).click();
  let pane=page.locator('.resource-flyout');await expect(pane).toContainText('Office switch');

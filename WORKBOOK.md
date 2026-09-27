@@ -1013,3 +1013,12 @@ unknown-speed ports remain neutral. Connector type remains in selected-port deta
 This task is the sole active Speck deployment owner. The inspected production
 baseline remains `a7f604a` with index `c73c658bd57b02eabecd7df6bd829a4e7b7610e87a05f2a8349d6f376a45a6de`.
 The release is web-only; validation and publication results will be recorded below.
+
+The initial web-only release `20260927T192957Z-port-power-4c998e5` passed the
+TypeScript/Vite build, 18 Chromium/WebKit browser checks and 27 public asset
+checks. The service retained its PID and backend/configuration/agent hashes.
+Production mobile acceptance caught an existing site-card overflow caused by
+unrounded WAN uptime percentages. Rounded these to at most two decimals in site
+cards and detail; added the observed long-decimal shape to responsive coverage.
+The follow-up retains the port change and checks against that newly deployed
+index, with no backend restart.
