@@ -1,4 +1,4 @@
-import { rememberResource, registerResource } from "./resource-navigation";
+import { rememberResource, registerResource, bindResourceNavigation } from "./resource-navigation";
 import {mountProviderExplorer} from "./provider-explorer";
 import {detailDate} from "./resource-story";
 import "./infrastructure.css";
@@ -302,12 +302,13 @@ export function createInfrastructure(ui: Item) {
       renderRows();
     });
   }
-  function machinePanel(r: Item, root: HTMLElement) {
-    return mountProxmoxMachine({...ui,openResource:resourceDetail}, r, root, (id, spec, current) => operationForm(
+  function machinePanel(r: Item, root: HTMLElement, initialTab = "overview", selectTab?: (tab: string) => void) {
+    return mountProxmoxMachine({...ui,openResource:resourceDetail,initialTab,selectTab}, r, root, (id, spec, current) => operationForm(
       {id: current.connection_id, name: current.connection_name, provider: current.provider}, id, spec, current));
   }
-  async function resourceDetail(r: Item) {
-    rememberResource({kind:"infrastructure",id:String(r.id),connection:r.connection_id,provider:r.provider,resourceKind:r.kind}, () => resourceDetail(r));
+  async function resourceDetail(r: Item, initialTab = "overview") {
+    const reference = {kind:"infrastructure",id:String(r.id),connection:r.connection_id,provider:r.provider,resourceKind:r.kind};
+    rememberResource({...reference,tab:initialTab}, () => resourceDetail(r,initialTab));
     const d = ui.flyout(r.name, '<div class="infra-detail-root"></div>', {
       className: "infra-dialog", tone: r.provider === "slide" ? "protection" : "compute",
       subtitle: [labels[r.provider], r.connection_name, r.node !== r.name ? r.node : ""].filter(Boolean).join(" · "),
@@ -315,7 +316,10 @@ export function createInfrastructure(ui: Item) {
     const root = d.querySelector(".infra-detail-root") as HTMLElement;
     if (r.provider === "proxmox" && ["qemu", "lxc"].includes(r.kind)) {
       root.classList.add("pve-root");
-      machinePanel(r, root);
+      machinePanel(r, root, initialTab, selectedTab => {
+        rememberResource({...reference,tab:selectedTab}, () => resourceDetail(r,selectedTab));
+        bindResourceNavigation(d);
+      });
     } else void resourcePanel(r, root);
   }
   async function resourcePanel(initial: Item, root: HTMLElement) {
@@ -594,7 +598,7 @@ export function createInfrastructure(ui: Item) {
     const result = await api("/infrastructure/inventory");
     const resource = (result.resources || result.connections?.flatMap((c:Item)=>c.resources || []) || []).find((r:Item)=>String(r.id)===ref.id && r.connection_id===ref.connection && r.kind===ref.resourceKind);
     if (!resource) throw new Error("Resource is not in the current provider inventory. Refresh Infrastructure to inspect collection health.");
-    await resourceDetail(resource);
+    await resourceDetail(resource,ref.tab || "overview");
   });
   return { render, resourceDetail, machinePanel, resourcePanel, reset: () => { inventory = {connections:[]}; agents = []; } };
 }

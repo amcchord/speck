@@ -1116,7 +1116,11 @@ function renderProviderMachine(d: Item) {
   if (proxmox && role !== "viewer") {
     const body = document.getElementById("device-body")!;
     body.innerHTML = '<div class="pve-root"></div>';
-    infrastructure.machinePanel(proxmox, body.querySelector<HTMLElement>(".pve-root")!);
+    infrastructure.machinePanel(proxmox, body.querySelector<HTMLElement>(".pve-root")!, tab, targetTab => {
+      tab = targetTab;
+      rememberResource({kind:"machine",id:d.id,tab:targetTab}, () => openDevice(d.id,targetTab));
+      if (activeDevicePanel) bindResourceNavigation(activeDevicePanel);
+    });
   } else if (d.resources?.length && role !== "viewer") {
     const resource = d.resources.find((r: Item) => r.kind === "node") || d.resources[0];
     const body = document.getElementById("device-body")!;
@@ -1200,6 +1204,7 @@ async function renderDeviceContent() {
         tab = el.dataset.tab!;
         const targetTab = tab;
         rememberResource({kind:"machine",id:d.id,tab:targetTab}, () => openDevice(d.id,targetTab));
+        if (activeDevicePanel) bindResourceNavigation(activeDevicePanel);
         renderDevice();
       }),
   );
@@ -1208,6 +1213,8 @@ async function renderDeviceContent() {
     on("drawer-screen", () => launchRemote(d));
     on("drawer-terminal", () => {
       tab = "terminal";
+      rememberResource({kind:"machine",id:d.id,tab}, () => openDevice(d.id,"terminal"));
+      if (activeDevicePanel) bindResourceNavigation(activeDevicePanel);
       return renderDevice();
     });
     on("drawer-ai", () => ops.assistDialog(d));

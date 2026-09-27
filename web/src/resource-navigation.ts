@@ -6,6 +6,7 @@ const resolvers = new Map<string, Open>();
 const recent = new Map<string, () => void | Promise<void>>();
 let restoring = false;
 let pendingNavigation: string | null = null;
+const identity = (ref: ResourceRef) => key({...ref,tab:undefined});
 const key = (ref: ResourceRef) => JSON.stringify(Object.fromEntries(Object.entries(ref).filter(([, v]) => v !== undefined).sort()));
 export function currentResource(): ResourceRef | null {
   try {
@@ -58,10 +59,10 @@ export function bindResourceNavigation(pane: HTMLDialogElement) {
   }
   const copy = document.createElement('button'); copy.textContent = 'Copy link'; copy.className = 'text-link';
   const url = location.href;
-  copy.onclick = async () => { try { await navigator.clipboard.writeText(url); copy.textContent = 'Link copied'; } catch { copy.textContent = 'Copy from address bar'; } };
+  copy.onclick = async () => { try { await navigator.clipboard.writeText(currentResource() && identity(currentResource()!) === identity(ref) ? location.href : url); copy.textContent = 'Link copied'; } catch { copy.textContent = 'Copy from address bar'; } };
   controls.append(copy); head.insertBefore(controls, head.querySelector('.close'));
   pane.addEventListener('close', () => {
-    if (!restoring && !document.querySelector('dialog.device-drawer[open]') && key(currentResource() || {kind:'',id:''}) === id)
+    if (!restoring && !document.querySelector('dialog.device-drawer[open]') && identity(currentResource() || {kind:'',id:''}) === identity(ref))
       history.replaceState(null, '', location.hash.split('?')[0]);
   });
 }

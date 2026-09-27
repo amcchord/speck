@@ -44,3 +44,33 @@ test('DNS record inspection separates cached configuration and explicit resoluti
   await expect(pane).toContainText('origin.example.test');await expect(pane).toContainText('Cached provider configuration');expect(checks).toBe(0);
   await pane.getByRole('button',{name:'Resolve from Speck server'}).click();await expect(pane.locator('[data-record-resolution]')).toContainText('resolved');expect(checks).toBe(1);
 });
+
+
+test('copying a machine link follows the selected tab and closing clears it',async({page})=>{
+  await signIn(page);
+  await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.copiedDetail=value;}}}));
+  await page.goto('/#fleet');await page.locator('[data-device="frontdesk"]').first().click();
+  await page.locator('[data-tab="files"]').click();
+  await page.getByRole('button',{name:'Copy link',exact:true}).click();
+  const copied=await page.evaluate(()=>window.copiedDetail);
+  expect(JSON.parse(new URLSearchParams(new URL(copied).hash.split('?')[1]).get('inspect')).tab).toBe('files');
+  await page.goto(copied);await page.reload();await expect(page.locator('#browse')).toBeVisible();
+  await page.locator('[data-tab="services"]').click();
+  await page.locator('#machine-details').getByRole('button',{name:'Close',exact:true}).click();
+  await expect.poll(()=>page.url()).not.toContain('inspect=');
+});
+
+test('equipment links retain tab and selected port across reload and Back',async({page})=>{
+  await signIn(page);
+  await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.copiedDetail=value;}}}));
+  const ref={kind:'equipment',id:'switch-1',site:'site-1',connection:'console-1'};
+  await page.goto('/#network?inspect='+encodeURIComponent(JSON.stringify(ref)));
+  await page.locator('[data-port="4"]').click();await page.locator('[data-equipment-tab="health"]').click();
+  await page.getByRole('button',{name:'Copy link',exact:true}).click();
+  const copied=await page.evaluate(()=>window.copiedDetail);
+  expect(JSON.parse(new URLSearchParams(new URL(copied).hash.split('?')[1]).get('inspect')).tab).toBe('health:4');
+  await page.reload();await expect(page.locator('[data-equipment-tab="health"]')).toHaveAttribute('aria-selected','true');
+  await page.locator('[data-equipment-tab="ports"]').click();await expect(page.locator('[data-port="4"]')).toHaveAttribute('aria-pressed','true');
+  await page.locator('[data-port="8"]').click();await page.goBack();await expect(page.locator('[data-port="4"]')).toHaveAttribute('aria-pressed','true');
+  await page.goBack();await expect(page.locator('[data-equipment-tab="health"]')).toHaveAttribute('aria-selected','true');
+});

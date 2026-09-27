@@ -27,7 +27,7 @@ export function mountProxmoxMachine(
     detail: Item = {},
     guest: Item = {},
     catalog: Item = {},
-    tab = "overview",
+    tab = ["overview","hardware","network","performance","snapshots","activity"].includes(ui.initialTab) ? ui.initialTab : "overview",
     disposed = false;
   let preview: AbortController | null = null,
     previewImage = "",
@@ -421,6 +421,7 @@ export function mountProxmoxMachine(
       tabs.forEach((el, index) => {
         el.onclick = () => {
           tab = el.dataset.pveTab!;
+          ui.selectTab?.(tab);
           void renderTab();
         };
         el.onkeydown = (event) => {
@@ -438,7 +439,7 @@ export function mountProxmoxMachine(
         downloadScreen(previewImage, resource.name),
       );
       void renderTab();
-      if (canScreen()) capture();
+      if (canScreen() && tab === "overview") capture();
       let nextGuest: Item;
       if (
         resource.kind === "qemu" &&

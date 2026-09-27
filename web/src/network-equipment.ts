@@ -1,5 +1,5 @@
 import { mountEquipmentHistory } from "./network-history";
-import { rememberResource, registerResource } from "./resource-navigation";
+import { rememberResource, registerResource, bindResourceNavigation } from "./resource-navigation";
 import "./network-equipment.css";
 import {
   capacity,
@@ -126,8 +126,10 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
     id: string,
     selectedPort?: number,
     back?: () => void,
+    initialTab = "ports",
   ) {
-    rememberResource({kind:"equipment",id,site:String(site.site_id || site.id),connection:site.console_id,tab:selectedPort ? String(selectedPort) : undefined}, () => openDevice(site,id,selectedPort,back));
+    const initialPort = selectedPort;
+    rememberResource({kind:"equipment",id,site:String(site.site_id || site.id),connection:site.console_id,tab:initialTab+":"+(initialPort ?? "")}, () => openDevice(site,id,initialPort,back,initialTab));
     const pane = ui.flyout(
       "Network equipment",
       note("Reading device, ports and connection evidence…"),
@@ -142,8 +144,13 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
     const root = pane.querySelector(".resource-body") as HTMLElement;
     const endpoint = path(site) + "/devices/" + encodeURIComponent(id);
     let data: Item | null = null,
-      tab = "ports",
+      tab = initialTab,
       version = 0;
+    const rememberSelection = () => {
+      const port = selectedPort, selectedTab = tab;
+      rememberResource({kind:"equipment",id,site:String(site.site_id || site.id),connection:site.console_id,tab:selectedTab+":"+(port ?? "")}, () => openDevice(site,id,port,back,selectedTab));
+      bindResourceNavigation(pane);
+    };
     const deviceLink = (d: Item, label?: string) =>
       `<button class="equipment-relation" data-hop="${e(d.id)}"><span><b>${e(label || d.name)}</b><small>${e(d.model || "Network device")}${d.parent_port ? " · Port " + e(d.parent_port) : ""}</small></span>${status(d.state)}<span aria-hidden="true">→</span></button>`;
     function clients(rows: Item[]) {
@@ -243,6 +250,7 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
           (b) =>
             (b.onclick = () => {
               selectedPort = Number(b.dataset.port);
+              rememberSelection();
               void drawTab();
             }),
         );
@@ -440,6 +448,7 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
         (b) =>
           (b.onclick = () => {
             tab = b.dataset.equipmentTab!;
+            rememberSelection();
             void drawTab();
           }),
       );
@@ -587,6 +596,11 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
     await load();
   }
   registerResource("equipment-list", ref => openInventory({console_id:ref.connection,site_id:ref.id}));
-  registerResource("equipment", ref => openDevice({console_id:ref.connection,site_id:ref.site},ref.id,ref.tab ? Number(ref.tab) : undefined));
+  registerResource("equipment", ref => {
+    const [selection, port] = (ref.tab || "ports:").split(":");
+    const selectedTab = ["ports","clients","equipment","health","history","activity"].includes(selection) ? selection : "ports";
+    const selectedPort = Number(port || (/^\d+$/.test(selection) ? selection : "")) || undefined;
+    return openDevice({console_id:ref.connection,site_id:ref.site},ref.id,selectedPort,undefined,selectedTab);
+  });
   return { openInventory, openDevice };
 }

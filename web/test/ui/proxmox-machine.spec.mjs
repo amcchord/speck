@@ -407,3 +407,12 @@ test("infrastructure opens the same organized VM overview", async ({
     pane.getByRole("tab", { name: "Hardware", exact: true }),
   ).toBeVisible();
 });
+
+
+test('provider performance tab has a durable detail link',async({page})=>{
+  await setup(page);
+  await page.goto('/#infrastructure');await page.getByRole('button',{name:'Clinic server',exact:true}).click();
+  await page.locator('[data-pve-tab="performance"]').click();
+  expect(JSON.parse(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('inspect')).tab).toBe('performance');
+  await page.reload();await expect(page.locator('[data-pve-tab="performance"]')).toHaveAttribute('aria-selected','true');
+});
