@@ -1039,3 +1039,35 @@ downloads are unchanged; there was no restart or disruptive equipment action.
 Backend/agent/native tests and GitHub CI were not rerun for this web-only change.
 Private deployment records, screenshots and logs are under `output/port-power/`.
 Final index SHA-256: `23fb80017807254494ae9a44da02dbe7feff907d74309b1fecebc3ad37e64986`.
+
+
+## Connected product workspaces — September 27, 2026
+
+Deployed application source `ab5b26e` as `20260927T220455Z-product-final-ab5b26e`,
+covering all 22 areas in the product review: progressive loading, shared resource
+links and results, operational workspaces, richer integrations, endpoint inspection,
+backup/recovery evidence, global search, credential planning and file browsing.
+The [implementation record](docs/operations/product-upgrade-2026-09-27.md) maps each
+area to delivered behavior and records provider/retention/platform limits.
+
+Local validation: 248 backend tests, Ruff, TypeScript/Vite, 54 web units and 323
+Chromium/WebKit checks passed (one existing WebKit touch-drag skip). Linux agent
+and Proxmox connector race tests passed. Live Windows and Linux process, disk,
+software and directory reads completed successfully. All 17 production pages and
+17 deeper views passed desktop/phone checks without JavaScript errors. Live review
+caught and corrected Slide's 50-record page limit and detail-link tab selection;
+the final release has populated coverage/calendar evidence and verified deep links.
+
+Fetched main and verified ancestry before release builds. The sole deployment
+owner held the release lock and compared live baselines immediately before publish.
+Both deployed releases retained consistent rollback snapshots; final index is
+`3316d32e2d3e88f6d1739bd2dfee9debf02317143374d036017081578f72aab6`.
+Public hashes for all 27 build files and authenticated health passed. Credentials,
+connections, machine/install identities, recovery plans and agent downloads were
+preserved. No new restore, power operation, credential reveal/rotation or file-content
+transfer was used for acceptance. Agent binaries remain unchanged at 0.3.3.
+
+Equipment history is seven-day, bounded, encrypted and opt-in for continuous
+collection; observed samples start with this release. Backup coverage remains a
+clearly labeled bounded overview, with deeper paginated protected-system history.
+Private deployment, receipts and screenshots are under `output/product-upgrade/`.
