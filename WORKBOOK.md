@@ -798,3 +798,34 @@ focused runs caught and corrected stale Fleet polling, Safari focus restoration
 and session cleanup before the final passing run. Backend, native and agent
 sources are unchanged; their qualification limits remain unchanged. No hosted CI
 run was requested for this local static release.
+
+User-authorized static release `20260927T151514Z-resource-details-8a7e266` is live
+at https://speckrmm.com, source `8a7e26604200929391d1b68a2793f39fb60181b7`.
+Main `7ad0d63` was fetched and confirmed as an ancestor before the production
+build and publication; deployed Home source `db61a96` is preserved. This task
+was the sole active deployment owner. The shared release lock covered baseline
+verification, backup and publication; the index matched the inspected baseline
+immediately before the atomic swap. All 26 public files match the release.
+The service remains active with PID 72151; the backend's 41 source files,
+dependency manifest, environment and seven identity/configuration fingerprints
+remained unchanged through live acceptance.
+
+Authenticated production acceptance passed in Chromium at 1440 pixels and
+WebKit at 834/390 pixels. Cloud capacity/network/backups, Proxmox host facts and
+guest relationships, Slide schedules/appliances/protected systems/snapshots,
+network inspectors and DNS records loaded without script or HTTP errors or
+overflow. Resource reopening measured 32/50/45 ms. No provider actions, backup
+requests, remote sessions or endpoint commands were submitted. All temporary
+login sessions were signed out; live screenshots remain private.
+
+One paired production navigation measurement reduced repeat visits from
+1293 to 19 ms for Infrastructure, 179 to 5 ms for Slide and 789 to 34 ms for
+Network. Infrastructure inventory requests across the two visits fell from two
+to one. These are local browser observations, not latency guarantees; cold loads
+still depend on provider response time.
+
+Index SHA-256: `85fc1f272670ece8cac40358297321aa6674756600795f9a3653c910d7f77e59`.
+Rollback web tree: `/var/lib/speck-rollback/20260927T151514Z-resource-details-8a7e266/web`.
+No backend restart, agent/native update, provider configuration change, recovery
+action, GitHub push or merge occurred. Preserve `8a7e266` in future deployments
+until it reaches main. Windows/Linux operational qualification is unchanged.

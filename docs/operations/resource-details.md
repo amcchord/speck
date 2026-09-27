@@ -76,3 +76,24 @@ Private release evidence is kept in ignored `output/resource-details-release/`.
 Provider operations, backup submissions, remote sessions and endpoint actions are
 not part of production UI acceptance. Existing Windows/Linux qualification limits
 remain unchanged.
+
+Released September 27 as `20260927T151514Z-resource-details-8a7e266`, source
+`8a7e266`, preserving main and the deployed Home release. Build, 51 units and
+261 browser checks pass, with one existing skip. Live desktop Chromium and
+tablet/phone WebKit acceptance passed without errors or operational writes.
+All 26 public files match; the backend, environment, PID and identity/configuration
+fingerprints stayed unchanged. [Full release record](../../WORKBOOK.md).
+
+Measured return visits in one paired production run:
+
+| Page | Before | After |
+| --- | ---: | ---: |
+| Infrastructure | 1293 ms | 19 ms |
+| Slide | 179 ms | 5 ms |
+| Network | 789 ms | 34 ms |
+
+These are observed navigation timings, not latency guarantees. Cold loads remain
+provider-dependent. Rollback static tree:
+`/var/lib/speck-rollback/20260927T151514Z-resource-details-8a7e266/web`.
+Source is committed locally; future releases must preserve `8a7e266` until it is
+merged to main. No push or GitHub merge was performed.
