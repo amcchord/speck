@@ -207,9 +207,9 @@ def checkin(body: Checkin, request: Request):
 
 
 @app.get('/api/devices')
-def devices(include_archived: bool = False, user=Depends(require_user)):
+def devices(include_archived: bool = False, user=Depends(require_user), device_id: str | None = None):
     with db() as conn:
-        rows = conn.execute('SELECT d.*,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id WHERE (? OR d.archived=0) ORDER BY d.label', (include_archived,)).fetchall()
+        rows = conn.execute('SELECT d.*,i.revoked FROM devices d JOIN installations i ON i.id=d.installation_id WHERE (? OR d.archived=0) AND (? IS NULL OR d.id=?) ORDER BY d.label', (include_archived, device_id, device_id)).fetchall()
         from speck.monitoring import policy_for
         monitoring = {row['id']: policy_for(conn, row['id']).enabled for row in rows}
     result = []
@@ -228,6 +228,14 @@ def devices(include_archived: bool = False, user=Depends(require_user)):
         obj['preview'] = screen_info(obj)
         result.append(obj)
     return result
+
+
+@app.get('/api/devices/{device_id}')
+def device_detail(device_id: str, user=Depends(require_user)):
+    rows = devices(include_archived=True, user=user, device_id=device_id)
+    if not rows:
+        raise HTTPException(404, 'Machine not found')
+    return rows[0]
 
 
 class DeviceUpdate(BaseModel):
@@ -293,14 +301,14 @@ def submit_job(device_id: str, body: JobRequest, user=Depends(require_user)):
 @app.get('/api/jobs')
 def jobs(device_id: str | None = None, user=Depends(require_user)):
     with db() as conn:
-        rows = conn.execute('SELECT * FROM jobs WHERE (? IS NULL OR device_id=?) ORDER BY created DESC LIMIT 100', (device_id, device_id)).fetchall()
+        rows = conn.execute('SELECT j.*,d.label,d.platform,d.site FROM jobs j LEFT JOIN devices d ON d.id=j.device_id WHERE (? IS NULL OR device_id=?) ORDER BY j.created DESC LIMIT 100', (device_id, device_id)).fetchall()
     return [public_job(row) for row in rows]
 
 
 @app.get('/api/jobs/{job_id}')
 def job(job_id: str, user=Depends(require_user)):
     with db() as conn:
-        row = conn.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
+        row = conn.execute('SELECT j.*,d.label,d.platform,d.site FROM jobs j LEFT JOIN devices d ON d.id=j.device_id WHERE j.id=?', (job_id,)).fetchone()
     if not row:
         raise HTTPException(404, 'Job not found')
     return public_job(row)
@@ -515,8 +523,8 @@ app.include_router(integrations_router)
 from speck.fleet import router as fleet_router  # noqa: E402
 app.include_router(fleet_router)
 
-from speck import agent_api, api_tokens, contexts, dns, network, ssh_keys, unifi, vault, vms  # noqa: E402
-for module in (api_tokens, vault, dns, unifi, network, ssh_keys, contexts, vms, agent_api):
+from speck import agent_api, api_tokens, contexts, dns, network, ssh_keys, unifi, vault, vms, workspaces, ux_metrics, maintenance, recovery_report  # noqa: E402
+for module in (api_tokens, vault, dns, unifi, network, ssh_keys, contexts, vms, agent_api, workspaces, ux_metrics, maintenance, recovery_report):
     app.include_router(module.router)
 
 from speck.unifi_observability import router as unifi_observability_router  # noqa: E402

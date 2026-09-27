@@ -1,3 +1,7 @@
+import {createCustomerWorkspaces} from "./customer-workspaces";
+import {createMaintenance} from "./maintenance";
+import {configureMetrics,clearMetrics,measureJourney,qualityPage,startJourney} from "./ux-quality";
+import { serviceStartup } from "./inspection-model";
 import { resourceHref } from "./resource-navigation";
 import {mountBackupCoverage} from "./backup-coverage";
 import {createRecoveryInspection,recoveryReadiness} from "./recovery-inspection";
@@ -24,7 +28,7 @@ import { createNetwork } from "./network";
 import { createKeys } from "./keys";
 import { createApiAccess } from "./api-access";
 import { launchVm } from "./vm-launch";
-import { integrationSettings } from "./integrations";
+import { integrationDirectory, integrationSettings } from "./integrations";
 import { machinePresence } from "./presence";
 import Guacamole from "guacamole-common-js";
 import "../../brand/tokens.css";
@@ -79,7 +83,7 @@ function saveFleetPreferences() {
   });
 }
 async function loadFleet(force = false, fresh = false) {
-  const [result, prefs] = await Promise.all([api("/fleet" + (force ? "?refresh=true" : ""), "GET", undefined, undefined, true, fresh), fleetPrefsLoaded ? Promise.resolve(null) : api("/fleet/preferences")]);
+  const [result, prefs] = await Promise.all([api("/fleet?compact=true" + (force ? "&refresh=true" : ""), "GET", undefined, undefined, true, fresh), fleetPrefsLoaded ? Promise.resolve(null) : api("/fleet/preferences")]);
   if (prefs) { fleetPrefs = { ...defaultPreferences(), ...prefs }; fleetPrefsLoaded = true; fleetCoverage = fleetPrefs.agent_filter; fleetSort = prefs.sort; showPreviews = prefs.visible.includes("preview"); }
   fleetSources = result.connections;
   fleet = result.machines;
@@ -107,7 +111,8 @@ function editFleetColumns() {
 let activeDevicePanel: HTMLDialogElement | null = null;
 let fleetScroll = { x: 0, y: 0, table: 0 };
 function clearFleetState() {
-  clearResourceHistory(); clearListViews();
+  signInStarted=null;pageFailed.clear();
+  clearMetrics(); clearResourceHistory(); clearListViews(); home.reset(); commandPalette.reset();
   readCache.clear();
   pageReads.clear();
   document.querySelectorAll<HTMLDialogElement>('dialog').forEach(d => { d.close(); d.remove(); });
@@ -179,12 +184,19 @@ const badge = (s: string, good = false) => {
 
 const readCache = createReadCache((path, signal) => requestApi(path, "GET", undefined, signal));
 let pageReads = new Map<string, number>();
+let staleMeasured=false;
+let pageFailed=new Set<string>();
+let signInStarted:number|null=null;
+let pendingReads = new Map<Map<string,number>,number>();
 function freshness() {
   const el = document.getElementById("page-freshness");
   if (!el) return;
+  if (pendingReads.get(pageReads) || document.querySelector("#content .loading-state")) { el.textContent = "Loading sources…"; return; }
+  if(pageFailed.size){el.innerHTML='Some sources unavailable · available evidence retained <button class="text-link" id="retry-page-sources">Retry</button>';document.getElementById("retry-page-sources")!.onclick=()=>void render(true);return;}
   const states = [...pageReads].map(([path, used]) => ({...readCache.state(path), used})).filter(s => s.at);
   if (!states.length) { el.innerHTML = ""; return; }
   const failed = states.some(s => s.failed), expired = states.some(s => s.expired), pending = states.some(s => s.pending), changed = states.some(s => s.revision! > s.used);
+  if((failed || expired) && !staleMeasured){staleMeasured=true;measureJourney("stale_evidence",page,0,failed?"failed":"unknown");}
   const seconds = Math.max(0, Math.floor((Date.now() - Math.min(...states.map(s => s.at!))) / 1000));
   const age = seconds < 5 ? "just now" : seconds < 60 ? `${seconds}s ago` : `${Math.floor(seconds / 60)}m ago`;
   el.dataset.state = failed ? "failed" : pending ? "updating" : "ready";
@@ -198,6 +210,7 @@ const freshApi = (path: string) => api(path, "GET", undefined, undefined, true, 
 async function api(path: string, method = "GET", body?: any, signal?: AbortSignal, scoped = true, fresh = false): Promise<any> {
   const current = scoped ? viewScope.checkpoint() : () => {};
   const reads = pageReads;
+  if (method === "GET") { pendingReads.set(reads,(pendingReads.get(reads)||0)+1); freshness(); }
   if (fresh && /^\/dns\/domains\/[^/]+\/records$/.test(path)) readCache.invalidate(path+"?cached=true");
   if (method === "GET" && /^\/keys\/[^/?]+(?:\/env)?$/.test(path) && !/^\/keys\/(services|system-targets)$/.test(path)) readCache.invalidate('/keys');
   // Console creation/cleanup changes only an ephemeral session, not inventory.
@@ -207,14 +220,14 @@ async function api(path: string, method = "GET", body?: any, signal?: AbortSigna
     const policy = method === "GET" && username ? readPolicy(path) : null;
     const cached = policy !== null && !fresh ? readCache.peek(path) : undefined;
     const result = policy !== null ? await readCache.read(path, {signal, fresh}) : await requestApi(path, method, body, signal);
-    current();
+    current(); if(reads===pageReads)pageFailed.delete(path);
     if (policy !== null && reads === pageReads) {
       reads.set(path, cached?.revision ?? readCache.state(path).revision ?? 0);
       freshness();
     }
     return result;
-  } catch (error) { current(); throw error; }
-  finally { if (mutates) readCache.clear(); }
+  } catch (error) { current();if(method==="GET"&&reads===pageReads)pageFailed.add(path);throw error; }
+  finally { if (method === "GET") { const count=(pendingReads.get(reads)||1)-1;if(count)pendingReads.set(reads,count);else pendingReads.delete(reads);freshness(); } if (mutates) readCache.clear(); }
 }
 async function requestApi(path: string, method = "GET", body?: any, signal?: AbortSignal): Promise<any> {
   const owner = csrf;
@@ -321,6 +334,7 @@ function login() {
     cancelButton.hidden = !cancellable;
     const buttons = Array.from(app.querySelectorAll<HTMLButtonElement>("button:not(#passkey-cancel)"));
     buttons.forEach(button => button.disabled = true);
+    signInStarted=performance.now();
     try { await action(authController.signal); }
     finally {
       authBusy = false; authController = null; cancelButton.hidden = true;
@@ -405,10 +419,10 @@ async function desktopSignIn() {
 
 // Navigation grouped by purpose; the first group is the everyday view.
 const NAV_GROUPS: [string, [string, string, string][]][] = [
-  ["", [["home", "home", "Home"], ["fleet", "fleet", "Fleet"], ["alerts", "alerts", "Alerts"]]],
-  ["Automation", [["schedules", "calendar", "Schedules"], ["patches", "patch", "Patches"], ["software", "package", "Software & scripts"]]],
+  ["", [["home", "home", "Home"], ["fleet", "fleet", "Fleet"], ["workspaces","globe","Customers & sites"], ["alerts", "alerts", "Alerts"]]],
+  ["Automation", [["maintenance","calendar","Maintenance"], ["schedules", "calendar", "Schedules"], ["patches", "patch", "Patches"], ["software", "package", "Software & scripts"]]],
   ["Infrastructure", [["infrastructure", "network", "Infrastructure"], ["network", "globe", "Network & DNS"], ["slide", "slide", "Slide"], ["recovery", "recovery", "Recovery lab"]]],
-  ["Administration", [["keys", "key", "Keys"], ["api", "code", "API & agents"], ["activity", "history", "Activity"], ["settings", "settings", "Settings"], ["downloads", "download", "Downloads"]]],
+  ["Administration", [["keys", "key", "Keys"], ["api", "code", "API & agents"], ["activity", "history", "Activity"], ["quality","history","UX reliability"], ["settings", "settings", "Settings"], ["downloads", "download", "Downloads"]]],
 ];
 // Pages without live data have nothing to refresh.
 const STATIC_PAGES = ["assistant", "downloads", "settings", "account"];
@@ -421,7 +435,7 @@ function shell(title: string, subtitle: string) {
   document.body.dataset.workspacePage = page;
   const allowed = ([id]: [string, string, string]) => role !== "viewer" || ["home", "fleet", "alerts", "activity", "downloads", "settings"].includes(id);
   const navButton = ([id, symbol, label]: [string, string, string]) =>
-    `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol as Parameters<typeof icon>[0])}<span>${label}</span>${RAIL_LABELS[id] ? `<span class="rail-label" aria-hidden="true">${RAIL_LABELS[id]}</span>` : ""}</button>`;
+    `<button aria-label="${esc(label)}" data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol as Parameters<typeof icon>[0])}<span>${label}</span>${RAIL_LABELS[id] ? `<span class="rail-label" aria-hidden="true">${RAIL_LABELS[id]}</span>` : ""}</button>`;
   const groups = NAV_GROUPS.map(([group, items]) => {
     const visible = items.filter(allowed);
     return visible.length ? `<div class="nav-group">${group ? `<span class="nav-label">${group}</span>` : ""}${visible.map(navButton).join("")}</div>` : "";
@@ -430,6 +444,12 @@ function shell(title: string, subtitle: string) {
   const primary = [...everyPage.filter(([id]) => PRIMARY_PAGES.includes(id)), ...everyPage.filter(([id]) => !PRIMARY_PAGES.includes(id))].slice(0, 4);
   const inMore = !primary.some(([id]) => id === page);
   app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#home" aria-label="Speck home">${wordmark(true)}<img class="brand-mark" src="/assets/brand/speck-mark-lime.svg" alt="" width="28" height="28"><span class="version">0.2</span></a><nav aria-label="Main navigation">${groups}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : '<div id="page-summary" class="fleet-summary page-summary" aria-label="Summary"></div>'}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}<div id="page-freshness" class="page-freshness" role="status" aria-live="polite"></div></div><div class="header-actions"><button id="workspace-search" class="secondary icon-button" aria-label="Search workspace" title="Search workspace (Ctrl / ⌘ K)">${icon("search")}</button><div class="page-actions">${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div>${STATIC_PAGES.includes(page) ? "" : `<button id="refresh" class="secondary icon-button" aria-label="Refresh" title="Refresh">${icon("refresh")}</button>`}</div></header><section id="content" tabindex="-1"></section></main><nav class="tabbar" aria-label="Primary navigation">${primary.map(navButton).join("")}<button id="more-open" class="${inMore ? "active" : ""}" aria-haspopup="dialog" ${inMore ? 'aria-current="page"' : ""}>${icon("more")}<span>More</span></button></nav><dialog class="more-sheet" id="more-sheet" aria-label="All pages" tabindex="-1"><div class="more-head"><span class="brand">${wordmark(true)}</span><button class="sheet-close" id="more-close" aria-label="Close">${icon("close")}</button></div><nav aria-label="All pages">${groups}</nav><div class="more-account"><span><b>${esc(username)}</b><small>${esc(role)}</small></span><button class="secondary" data-page="account">Account & access</button><button class="secondary" id="more-logout">${icon("logout")}<span>Sign out</span></button></div></dialog>`;
+  const workspace=new URLSearchParams(location.hash.split("?")[1] || "").get("workspace");
+  if(workspace&&page!=="workspaces"){
+    const context=document.createElement("p");context.className="workspace-context resource-note";
+    context.innerHTML='<a href="#workspaces?workspace='+encodeURIComponent(workspace)+'">Return to customer workspace →</a> · This page shows global inventory.';
+    app.querySelector('main > header')!.after(context);
+  }
   on("workspace-search",()=>commandPalette.open());
   const sheet = document.getElementById("more-sheet") as HTMLDialogElement;
   document.getElementById("more-open")!.onclick = () => {
@@ -442,7 +462,8 @@ function shell(title: string, subtitle: string) {
     (el) =>
       (el.onclick = () => {
         (document.getElementById("more-sheet") as HTMLDialogElement | null)?.close();
-        location.hash = el.dataset.page!;
+        const workspace=new URLSearchParams(location.hash.split("?")[1] || "").get("workspace");
+        location.hash = el.dataset.page!+(workspace?"?workspace="+encodeURIComponent(workspace):"");
       }),
   );
   document.querySelector<HTMLAnchorElement>(".skip-link")!.onclick = (e) => {
@@ -462,6 +483,7 @@ function shell(title: string, subtitle: string) {
   if (page === "fleet") on("add", enrollmentDialog);
 }
 function content(html: string) {
+  if(page!=="home" && !html.includes('class="loading-state') && !html.includes('role="alert"')) usefulContent();
   const el = document.getElementById("content");
   if (!el) return;
   fleetInteractionsCleanup();
@@ -502,9 +524,11 @@ function loading(label: string) {
   document.getElementById("content")?.setAttribute("aria-busy", "true");
 }
 async function render(manualRefresh = false) {
+  journeyStarted=performance.now();firstContent=false;
+  const started=journeyStarted;
   const initialInspection = JSON.stringify(currentResource());
   if (manualRefresh) readCache.clear();
-  pageReads = new Map();
+  pageReads = new Map(); staleMeasured=false;pageFailed=new Set();
   if (page === "fleet" && document.getElementById("fleet-rows")) {
     fleetScroll = { x: scrollX, y: scrollY, table: document.querySelector(".fleet-table-wrap")!.scrollLeft };
   }
@@ -525,6 +549,7 @@ async function render(manualRefresh = false) {
   if (
     ![
       "home",
+      "workspaces", "maintenance", "quality",
       "fleet",
       "alerts",
       "schedules",
@@ -547,6 +572,7 @@ async function render(manualRefresh = false) {
     page = "home";
   const titles: Record<string, string[]> = {
     home: ["Home", ""],
+    workspaces:["Customers & sites",""],maintenance:["Maintenance","Reviewed routines and reusable runbooks."],quality:["UX reliability",""],
     fleet: ["Fleet", ""],
     alerts: ["Alerts", "Health checks from every agent. Expand an alert for evidence and review actions."],
     schedules: ["Schedules", "Reviewed scans and templates that run on a schedule."],
@@ -569,6 +595,7 @@ async function render(manualRefresh = false) {
   try {
     await {
       home: home.render,
+      workspaces:customers.render,maintenance:maintenance.render,quality:()=>qualityPage({api,content}),
       fleet: () => renderFleet(manualRefresh),
       alerts: management.renderAlerts,
       schedules: management.renderSchedules,
@@ -592,9 +619,10 @@ async function render(manualRefresh = false) {
       document.getElementById("home-query")?.focus();
     }
     if (initialInspection !== "null" && initialInspection === JSON.stringify(currentResource())) await restoreResource();
+    if(started===journeyStarted) measureJourney("enrichment",page,performance.now()-started);
     void management.updateIndicator().catch(() => {});
   } catch (err) {
-    if (!(err instanceof StaleViewError) && username) content(loadError(err));
+    if (!(err instanceof StaleViewError) && username && started===journeyStarted) {measureJourney("enrichment",page,performance.now()-journeyStarted,"failed"); content(loadError(err));}
   }
 }
 const machineInspection = createMachineInspection({api,flyout,dialog,notify,showJob:(id:string)=>runDetails.job(id),openDevice,openNetwork:(d:Item)=>network.showMachine(d)});
@@ -656,9 +684,14 @@ const management = createManagement({
   username: () => username,
   refresh: render,
 });
+const customers=createCustomerWorkspaces({api,content,loading,dialog,notify});
+const maintenance=createMaintenance({api,content,loading,dialog,notify,newSchedule:(seed:Item)=>management.newSchedule(seed),showBatch:runDetails.batch});
+configureMetrics(body=>username && role!=="viewer" ? requestApi("/ux/measurements","POST",body) : Promise.resolve());
+let journeyStarted=performance.now(),firstContent=false;
+function usefulContent(){if(!firstContent){firstContent=true;measureJourney("first_content",page,performance.now()-journeyStarted);}}
 const home = createHome({
-  api, esc, content, on, date, loading, dialog,
-  checkpoint: () => viewScope.checkpoint(), role: () => role,
+  api, esc, content, on, date, loading, dialog, useful:usefulContent,
+  checkpoint: () => viewScope.checkpoint(), role: () => role, search:(query:string)=>commandPalette.open(query),
   newSchedule: () => management.newSchedule(),
   openNetwork: (machine: Item) => network.showMachine(machine),
   openMachine: async (machine: Item | undefined) => {
@@ -719,7 +752,7 @@ async function renderFleet(manualRefresh = false) {
 }
 function drawFleet() {
   const subset=new URLSearchParams(location.hash.split("?")[1] || "").get("coverage");
-  if(subset && ["all","endpoints","connectors","candidates","missing","conflicts"].includes(subset)){fleetCoverage=subset;fleetFilter="all";fleetPlatform="all";fleetQuery="";fleetPage=0;history.replaceState(null,"",location.hash.split("?")[0]);}
+  if(subset && ["all","endpoints","connectors","candidates","missing","conflicts"].includes(subset)){fleetCoverage=subset;fleetFilter="all";fleetPlatform="all";fleetQuery="";fleetPage=0;const params=new URLSearchParams(location.hash.split("?")[1] || "");params.delete("coverage");history.replaceState(null,"",location.hash.split("?")[0]+(params.size?"?"+params:""));}
   const previousTable = document.querySelector<HTMLElement>(".fleet-table-wrap");
   if (previousTable) fleetScroll = { x: scrollX, y: scrollY, table: previousTable.scrollLeft };
   content(`${fleetToolbar(fleetPrefs, showPreviews, role === "viewer")}
@@ -863,12 +896,14 @@ function visibleFleet() {
     (fleetFilter === "all" || fleetFilter === "online" && ["online","running","active"].includes(machineState(d).toLowerCase()) || fleetFilter === "offline" && ["offline","stopped","off"].includes(machineState(d).toLowerCase()) || fleetFilter === "review" && (hasEndpoint(d) && !d.approved || d.identity_issues?.length || d.client_conflict))), fleetSort, fleetPrefs.direction, primaryAddress);
 }
 function renderFleetRows() {
+  if(signInStarted!==null){measureJourney("signin_to_fleet","fleet",performance.now()-signInStarted);signInStarted=null;}
   fleetSelection.forEach((id) => {
     if (!fleet.some((d) => d.id === id && selectableMachine(d))) fleetSelection.delete(id);
   });
   const summary = document.getElementById("fleet-summary");
-  if (summary) summary.innerHTML = `<span><i class="status-dot"></i><b>${fleet.filter((d) => ["online","running","active"].includes(machineState(d).toLowerCase())).length}</b> online</span><button class="text-link" data-coverage-count="all"><b>${fleet.length}</b> machines</button><button class="text-link" data-coverage-count="endpoints"><b>${fleet.filter(selectableMachine).length}</b> approved endpoints</button><button class="text-link" data-coverage-count="connectors"><b>${fleet.filter(d=>hasAgent(d)&&!hasEndpoint(d)).length}</b> host connectors</button><button class="text-link" data-coverage-count="candidates"><b>${fleet.filter(d=>hasEndpoint(d)&&!d.approved).length}</b> unapproved copies</button>`;
+  if (summary) summary.innerHTML = `<button class="text-link" data-fleet-online><i class="status-dot"></i><b>${fleet.filter((d) => ["online","running","active"].includes(machineState(d).toLowerCase())).length}</b> online</button><button class="text-link" data-coverage-count="all"><b>${fleet.length}</b> discovered identities</button><button class="text-link" data-coverage-count="endpoints"><b>${fleet.filter(selectableMachine).length}</b> managed endpoints</button><button class="text-link" data-coverage-count="connectors"><b>${fleet.filter(d=>hasAgent(d)&&!hasEndpoint(d)).length}</b> host connectors</button><button class="text-link" data-coverage-count="candidates"><b>${fleet.filter(d=>hasEndpoint(d)&&!d.approved).length}</b> unapproved identities</button>`;
   summary?.querySelectorAll<HTMLElement>('[data-coverage-count]').forEach(b=>b.onclick=()=>{fleetCoverage=b.dataset.coverageCount!;fleetFilter='all';fleetPlatform='all';fleetQuery='';drawFleet();});
+  summary?.querySelector<HTMLElement>("[data-fleet-online]")?.addEventListener("click",()=>{fleetCoverage="all";fleetFilter="online";fleetPlatform="all";fleetQuery="";drawFleet();});
   const sourceStatus = document.getElementById("fleet-source-status");
   if (sourceStatus) sourceStatus.innerHTML = fleetSources.filter(c => c.stale).map(c => `<p class="fleet-stale">${esc(c.name)}: ${esc(c.error)} ${c.checked_at ? "Last checked " + date(c.checked_at) : ""}</p>`).join("");
   document.querySelector(".fleet-table")?.classList.toggle("with-previews", showPreviews);
@@ -888,7 +923,7 @@ function renderFleetRows() {
         // Providers can report memory above 100% (ballooning); show the capped share and keep the raw value on hover.
         const usage = (value: any) => value != null && Number.isFinite(Number(value)) ? (Number(value) > 100 ? `<span title="${Number(value).toFixed(0)}% reported">100%</span>` : Number(value).toFixed(0) + "%") : none;
         const cells: Record<string,string> = {
-          name: `<button data-device="${esc(d.id)}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon">${icon(d.platform === "windows" ? "windows" : d.platform === "linux" ? "linux" : "monitor")}</span><b>${esc(d.label)}</b></button>`,
+          name: `<button data-device="${esc(d.id)}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon">${icon(d.platform === "windows" ? "windows" : d.platform === "linux" ? "linux" : "monitor")}</span><b>${esc(d.label)}</b>${d.restored_from ? '<span class="badge neutral copy-badge">Recovery copy</span>' : ''}</button>`,
           status: badge(status), client: `${d.client_name ? esc(d.client_name) : '<span class="placeholder">Unassigned</span>'}${d.client_conflict ? ' <span title="Conflicting client memberships">⚠</span>' : ''}`,
           agent: `<span class="agent-indicator ${hasAgent(d) ? "installed" : ""}">${hasAgent(d) ? "● " : "○ "}${esc(agentLabel(d))}</span>${d.identity_issues?.length ? ' <span title="Identity needs review">⚠</span>' : ''}`,
           location: d.location || d.site ? esc(d.location || d.site) : none, app: hasEndpoint(d) ? `<span title="${esc(active ? [active.title,active.process,active.user].filter(Boolean).join(" · ") : presence.desktop)}">${esc(presence.table)}</span>` : none,
@@ -899,9 +934,7 @@ function renderFleetRows() {
       })
       .join("") ||
     `<tr class="fleet-empty-row"><td colspan="${activeColumns().length + 2}"><div class="empty"><h3>No matching machines</h3><p>Try another search or filter.</p></div></td></tr>`;
-  document.getElementById("fleet-count")!.textContent = rows.length
-    ? `${fleetPage * 50 + 1}–${Math.min(rows.length, fleetPage * 50 + 50)} of ${rows.length} machines`
-    : "0 machines";
+  document.getElementById("fleet-count")!.textContent = `${rows.length} shown / ${fleet.length} discovered · ${rows.length ? fleetPage*50+1 : 0}–${Math.min((fleetPage+1)*50,rows.length)} in this page`;
   (document.getElementById("fleet-prev") as HTMLButtonElement).disabled =
     fleetPage === 0;
   (document.getElementById("fleet-next") as HTMLButtonElement).disabled =
@@ -1157,6 +1190,12 @@ async function renderDeviceContent() {
   const d = fleet.find((x) => x.id === selected)!;
   if (!d) return;
   if (!hasEndpoint(d)) { renderProviderMachine(d); return; }
+  if (d.telemetry_compact) {
+    const machineId = d.id;
+    const full = await api('/devices/' + encodeURIComponent(machineId));
+    if (selected !== machineId || !activeDevicePanel?.open) return;
+    Object.assign(d, full, {telemetry_compact:false});
+  }
   const t = d.telemetry || {},
     names =
       role === "viewer" || d.archived
@@ -1243,9 +1282,12 @@ async function renderDeviceContent() {
   } else if (tab === "inventory") {
     await machineInspection.inventory(d,body);
   } else if (tab === "services") {
-    body.innerHTML = `<div class="toolbar"><input id="service-search" aria-label="Filter services" placeholder="Filter services…"><small>${(t.services || []).length} services</small></div><div class="scroll"><table><thead><tr><th>Service</th><th>State / startup</th><th>Control</th></tr></thead><tbody id="services"></tbody></table></div>`;
+    body.innerHTML = `<div class="toolbar"><input id="service-search" aria-label="Filter services" placeholder="Filter services…"><label>State<select id="service-state"><option value="">All states</option><option value="running">Running / active</option><option value="stopped">Stopped / inactive</option><option value="failed">Failed</option></select></label><small id="service-count"></small></div><div class="scroll"><table><thead><tr><th>Service</th><th>State / startup</th><th>Control</th></tr></thead><tbody id="services"></tbody></table></div>`;
     const rows = () => {
-      document.getElementById("services")!.innerHTML = (t.services || [])
+      const matching = (t.services || []).filter((s:Item) => !value("service-state") || (value("service-state")==="running" ? ["running","active"].includes(s.state || s.status) : value("service-state")==="stopped" ? ["stopped","inactive"].includes(s.state || s.status) : (s.state || s.status)==="failed"));
+      const visible = matching.filter((s:Item)=>JSON.stringify(s).toLowerCase().includes(value("service-search").toLowerCase()));
+      document.getElementById("service-count")!.textContent = `${visible.length} of ${(t.services || []).length} services · on-demand services may be stopped normally`;
+      document.getElementById("services")!.innerHTML = visible
         .filter((s: Item) =>
           JSON.stringify(s)
             .toLowerCase()
@@ -1253,7 +1295,7 @@ async function renderDeviceContent() {
         )
         .map(
           (s: Item, i: number) =>
-            `<tr><td><button class="text-link" data-service-detail="${esc(s.name)}">${esc(s.name)}</button><small>${esc(s.display_name || s.description)}</small></td><td>${badge(s.state || s.status || "unknown", ["running", "active"].includes(s.state || s.status))}<small>${esc(s.start_type || s.detail || "Startup not reported")}</small></td><td><select data-service="${esc(s.name)}" aria-label="Control ${esc(s.name)}"><option value="">Action…</option><option>start</option><option>stop</option><option>restart</option></select></td></tr>`,
+            `<tr><td><button class="text-link" data-service-detail="${esc(s.name)}">${esc(s.name)}</button><small>${esc(s.display_name || s.description)}</small></td><td>${badge(s.state || s.status || "unknown", ["running", "active"].includes(s.state || s.status))}<small>${esc(serviceStartup(s.start_type ?? s.detail, d.platform))}</small></td><td><select data-service="${esc(s.name)}" aria-label="Control ${esc(s.name)}"><option value="">Action…</option><option>start</option><option>stop</option><option>restart</option></select></td></tr>`,
         )
         .join("");
       document.querySelectorAll<HTMLButtonElement>('[data-service-detail]').forEach(b=>b.onclick=()=>machineInspection.service(d,(t.services || []).find((s:Item)=>s.name===b.dataset.serviceDetail)));
@@ -1271,6 +1313,7 @@ async function renderDeviceContent() {
       );
     };
     rows();
+    on("service-state", rows, "change");
     document.getElementById("service-search")!.addEventListener("input", rows);
   } else if (tab === "network") {
     const n = t.network || {};
@@ -1293,7 +1336,9 @@ async function renderDeviceContent() {
       const panel=activeDevicePanel,deviceID=d.id;
       const {openWebShell}=await import('./web-shell');
       if(!body.isConnected||panel!==activeDevicePanel||selected!==deviceID||tab!=='terminal')return;
-      remoteCleanup=openWebShell(body,{id:d.id,label:d.label,platform:d.platform,embedded:true},csrf,signedOut);
+      body.innerHTML=`<section class="terminal-intro"><h2>Interactive ${d.platform==='windows'?'PowerShell':'terminal'}</h2><p>Commands run as ${d.platform==='windows'?'Local System':'the agent service account (normally root)'}. This opens a persistent session; it does not execute a prepared script. Session activity is audited.</p><button id="terminal-connect" class="primary">Connect terminal</button><button id="open-scripts" class="secondary">Run a script instead</button></section>`;
+      on('open-scripts',()=>{tab='scripts';void renderDevice();});
+      on('terminal-connect',()=>{if(body.isConnected&&selected===deviceID)remoteCleanup=openWebShell(body,{id:d.id,label:d.label,platform:d.platform,embedded:true},csrf,signedOut);});
     }
   } else if (tab === "scripts") {
     body.innerHTML = `<p>Run as ${d.platform === "windows" ? "Local System using PowerShell" : "the agent service account using /bin/sh"}. Output is captured and audited.</p><textarea id="script" aria-label="Command" class="code" spellcheck="false" rows="7" placeholder="${d.platform === "windows" ? "Get-Service | Select-Object -First 10" : "systemctl --failed"}"></textarea><div class="toolbar"><select id="shell" aria-label="Command shell"><option value="auto">${d.platform === "windows" ? "PowerShell" : "Shell (/bin/sh)"}</option>${d.platform === "linux" ? '<option value="powershell">PowerShell (pwsh required)</option>' : ""}</select><button id="execute" class="primary">Run command →</button></div><div id="job-result"></div>`;
@@ -1324,7 +1369,7 @@ async function renderDeviceContent() {
   } else if (tab === "files") {
     mountFiles({api,flyout,dialog,showJob:runDetails.job},d,body);
   } else if (tab === "remote") {
-    body.innerHTML = `<div class="remote-intro"><h2>Remote access</h2><p>${d.remote_protocol === "shell" ? "Open an interactive web shell through the agent. No SSH setup is needed." : d.remote_protocol === "ssh" ? "Open an SSH terminal through the agent." : d.remote_protocol === "vnc" ? "Open a VNC desktop through the agent." : "Open an RDP desktop through the agent, with speaker output and microphone input."}</p><div class="toolbar"><button id="connect" class="primary">Open browser session</button><button id="remote-config" class="secondary">Connection settings</button>${d.remote_shell_available && d.remote_protocol !== "shell" ? `<a class="secondary" href="#remote/${d.id}?mode=shell">Open web shell</a>` : ""}</div>${d.remote_protocol === "rdp" ? `<a class="text-link" href="/api/devices/${d.id}/remote/native.rdp">Download native RDP fallback ↗</a><small>The native viewer needs a LAN or VPN route to this machine.</small>` : ""}<div class="callout">RDP creates or reconnects a desktop session. Windows client editions may lock the local console. Linux needs an RDP or VNC desktop service; headless Linux machines open a web shell with an updated agent.</div></div>`;
+    body.innerHTML = `<div class="remote-intro"><h2>${["shell","ssh"].includes(d.remote_protocol) ? "Interactive terminal" : "View / control desktop"}</h2><p>${d.remote_protocol === "shell" ? "Open an interactive web shell through the agent. No SSH setup is needed." : d.remote_protocol === "ssh" ? "Open an SSH terminal through the agent." : d.remote_protocol === "vnc" ? "Open a VNC desktop through the agent." : "Open an RDP desktop through the agent, with speaker output and microphone input."}</p><div class="toolbar"><button id="connect" class="primary">${["shell","ssh"].includes(d.remote_protocol) ? "Connect terminal" : "Connect desktop"}</button><button id="remote-config" class="secondary">Connection settings</button>${d.remote_shell_available && d.remote_protocol !== "shell" ? `<a class="secondary" href="#remote/${d.id}?mode=shell">Open web shell</a>` : ""}</div>${d.remote_protocol === "rdp" ? `<a class="text-link" href="/api/devices/${d.id}/remote/native.rdp">Download native RDP fallback ↗</a><small>The native viewer needs a LAN or VPN route to this machine.</small>` : ""}<div class="callout">${d.remote_protocol==="rdp" ? "RDP creates or reconnects a desktop session and may lock the local Windows console." : d.remote_protocol==="vnc" ? "VNC can interact with the visible desktop and its signed-in user." : "An interactive terminal runs commands under the configured SSH account or agent service account. No session starts until you choose Connect."}</div></div>`;
     on("remote-config", () => configureRemote(d));
     on("connect", () => launchRemote(d));
   }
@@ -1374,14 +1419,16 @@ function dialog(title: string, html: string, options: { className?: string; moda
 async function enrollmentDialog() {
   const d = dialog(
     "Add a device",
-    `<p>Create a single-use enrollment token. It expires in 15 minutes.</p><label>Device name<input id="enroll-label" placeholder="Front desk PC"></label><button id="enroll" class="primary">Create enrollment</button><div id="enroll-result"></div>`,
+    `<p><b>Manage a Windows or Linux machine</b> with the endpoint agent. To operate Speck from your own desktop, <a href="#downloads">download the operator app</a>.</p><details open><summary>Before creating an enrollment</summary><ol><li>Choose a unique machine name. Keep restored copies separate from their originals.</li><li>Windows: run PowerShell as Administrator. Linux: run the installer as root on a systemd host.</li><li>Download and inspect the <a href="/downloads/install-windows.ps1">Windows installer</a> or <a href="/downloads/install-linux.sh">Linux installer</a>. The agent needs outbound HTTPS to this server.</li><li>When ready, create a single-use token, install within 15 minutes, then verify connection, approval and the first report in Fleet.</li></ol></details><label>Device name<input id="enroll-label" placeholder="Front desk PC"></label><button id="enroll" class="primary">Create enrollment</button><div id="enroll-result"></div>`,
   );
   on("enroll", async () => {
-    const r = await api("/enrollments", "POST", {
+    (d.querySelector("#enroll") as HTMLButtonElement).disabled=true;
+    try { const r = await api("/enrollments", "POST", {
       label: value("enroll-label"),
     });
     d.querySelector("#enroll-result")!.innerHTML =
-      `<div class="callout">Keep this token private. It can enroll one device.</div><label>Enrollment token<input readonly value="${esc(r.token)}"></label><p>Download and inspect an installer, then run it as Administrator or root. Enter this token when prompted.</p><div class="toolbar"><a class="secondary" href="/downloads/install-windows.ps1">Windows installer ↓</a><a class="secondary" href="/downloads/install-linux.sh">Linux installer ↓</a></div><small>Server: ${esc(r.server)}</small>`;
+      `<div class="callout">Keep this token private. It can enroll one device.</div><label>Enrollment token<input readonly value="${esc(r.token)}"></label><p>Download and inspect an installer, then run it as Administrator or root. Enter this token when prompted.</p><div class="toolbar"><a class="secondary" href="/downloads/install-windows.ps1">Windows installer ↓</a><a class="secondary" href="/downloads/install-linux.sh">Linux installer ↓</a></div><small>Server: ${esc(r.server)}</small><p>Installation progress: token created → installer connects → new identity appears → review approval → first health report.</p><a class="secondary" href="#fleet">Check connection and first report in Fleet →</a>`;
+    } catch(error){(d.querySelector("#enroll") as HTMLButtonElement).disabled=false;throw error;}
   });
 }
 async function editDevice(d: Item) {
@@ -1522,6 +1569,7 @@ async function connectRemote(d: Item, attempt = 0) {
   useReliableImageDecoder(guacDisplay, Guacamole, navigator.userAgent);
   display.appendChild(guacDisplay.getElement());
   const status = document.getElementById("remote-status")!;
+  const finishFrame=startJourney("session_first_frame","browser");
   let connectionState = 0, screenReady = false, flushed = false;
   const overlay = document.getElementById("remote-startup")!;
   const sample = document.createElement("canvas");
@@ -1530,6 +1578,7 @@ async function connectRemote(d: Item, attempt = 0) {
   guacDisplay.statisticWindow = 1000;
   guacDisplay.onstatistics = () => { flushed = true; };
   const showScreen = () => {
+    finishFrame(flushed?"ready":"unknown");
     screenReady = true;
     guacDisplay.statisticWindow = 0;
     overlay.hidden = true;
@@ -1538,6 +1587,7 @@ async function connectRemote(d: Item, attempt = 0) {
     if (document.hasFocus()) display.focus();
   };
   const showFailure = (message: string) => {
+    finishFrame("failed");
     overlay.hidden = false;
     overlay.setAttribute("data-error", "");
     display.setAttribute("aria-busy", "false");
@@ -1565,7 +1615,7 @@ async function connectRemote(d: Item, attempt = 0) {
     stalled: () => showFailure("The desktop hasn’t appeared yet"),
     canRecover: attempt === 0,
   });
-  modal.addEventListener("close", () => { startup.stop(); guacDisplay.onstatistics = null; });
+  modal.addEventListener("close", () => { finishFrame("cancelled");startup.stop(); guacDisplay.onstatistics = null; });
   client.onstatechange = (state: number) => {
     connectionState = state;
     status.textContent = (
@@ -1993,35 +2043,41 @@ registerResource('slide',async ref=>{
 });
 async function renderSlide() {
   loading("Loading Slide…");
-  const cfg = await api("/slide/connection");
-  if (!cfg.connected) {
+  const [cfg,connections] = await Promise.all([api("/slide/connection"),api("/infrastructure/connections")]);
+  const slideConnections=connections.filter((c:Item)=>c.provider==="slide");
+  slideResource=new URLSearchParams(location.hash.split("?")[1] || "").get("view") || "agent";
+  let connectionId=new URLSearchParams(location.hash.split("?")[1] || "").get("connection") || "slide-settings";
+  if(slideConnections.length&&!slideConnections.some((c:Item)=>c.id===connectionId))connectionId=slideConnections[0].id;
+  if (!cfg.connected && !slideConnections.length) {
     content('<div class="empty"><h2>Connect your Slide account.</h2><p>Add an API token in Settings to see live backup and recovery data.</p><a class="primary" href="#settings">Open settings →</a></div>');
     return;
   }
-  content(`<div class="section-head"><div><h2>Backup & recovery inventory</h2><p>Explore protection, capacity and recovery evidence.</p></div><select id="slide-resource" aria-label="Slide resource type">${Object.entries(slideKinds).map(([key,label])=>'<option value="'+key+'" '+(slideResource===key?'selected':'')+'>'+esc(label)+'</option>').join('')}</select></div><div id="backup-coverage"></div><label class="slide-search">Find a resource<input id="slide-search" type="search" placeholder="Name, address or resource ID"></label><div id="slide-data"></div><details class="resource-section"><summary>Restored-machine cleanup</summary><article id="restore-cleanup" class="panel"></article></details>`);
+  content(`<div class="section-head"><div><h2>Backup & recovery inventory</h2><p>Each connection is an independent account scope. Coverage and resource details use the selected connection.</p><label>Provider connection<select id="slide-connection">${slideConnections.map((c:Item)=>`<option value="${esc(c.id)}" ${c.id===connectionId?"selected":""}>${esc(c.name)}${c.id==="slide-settings"?" · configured in Settings":" · configured in Infrastructure"}</option>`).join("")}</select></label></div><select id="slide-resource" aria-label="Slide resource type">${Object.entries(slideKinds).map(([key,label])=>'<option value="'+key+'" '+(slideResource===key?'selected':'')+'>'+esc(label)+'</option>').join('')}</select></div><div id="backup-coverage"></div><label class="slide-search">Find a resource<input id="slide-search" type="search" placeholder="Name, address or resource ID"></label><div id="slide-data"></div><details class="resource-section"><summary>Restored-machine cleanup</summary><article id="restore-cleanup" class="panel"></article></details>`);
   let generation = 0;
   const load = async () => {
     const current = ++generation;
     slideResource = value('slide-resource');
     const resource = slideResource, target = document.getElementById('slide-data')!;
     target.innerHTML = loadingState('Loading '+(slideKinds[resource] || 'inventory').toLowerCase()+'…');
-    const rows = await api('/slide/inventory?resource='+encodeURIComponent(resource));
+    const rows = await api('/slide/inventory?resource='+encodeURIComponent(resource)+(connectionId==='slide-settings'?'':'&connection_id='+encodeURIComponent(connectionId)));
+    const openScoped=(kind:string,row:Item)=>connectionId==='slide-settings'?openSlideResource(kind,row):infrastructure.resourceDetail({connection_id:connectionId,provider:'slide',kind:({agent:'protected',device:'box','restore/virt':'virt'} as Item)[kind] || kind,id:row[kind.split('/').at(-1)!+'_id'] || row.id,name:slideName(row)});
     if (!target.isConnected || current !== generation) return;
     const coverage=document.getElementById("backup-coverage")!;
-    if(resource==="agent") mountBackupCoverage({api,flyout},coverage,rows,openSlideResource);else coverage.innerHTML="";
+    if(resource==="agent") {mountBackupCoverage({api,flyout,connection:connectionId},coverage,rows,openScoped);target.innerHTML="";(document.querySelector(".slide-search") as HTMLElement).hidden=true;return;}else {coverage.innerHTML="";(document.querySelector(".slide-search") as HTMLElement).hidden=false;}
     let limit = 100;
     const search = document.getElementById('slide-search') as HTMLInputElement;
     const draw = () => {
       const query = search.value.trim().toLowerCase();
       const filtered = rows.filter((r: Item) => !query || JSON.stringify(r).toLowerCase().includes(query));
       target.innerHTML = filtered.length ? `<p class="resource-note">${filtered.length} resources · Select one to explore its details and relationships.</p><div class="slide-list">${filtered.slice(0,limit).map((r: Item,i: number)=>`<button class="slide-resource-row" data-slide-detail="${i}" aria-haspopup="dialog"><span><b>${esc(slideName(r))}</b><small>${esc(slideFacts(r).join(' · ') || slideKinds[resource])}</small></span>${detailStatus(r.status || r.state || r.verify_boot_status || r.verify_fs_status || r.service_status)}<span aria-hidden="true">→</span></button>`).join('')}</div>${filtered.length>limit ? '<button class="secondary" id="slide-more">Show '+Math.min(100,filtered.length-limit)+' more</button>' : ''}` : '<div class="empty"><h3>No matching resources.</h3><p>Try another search or resource type.</p></div>';
-      target.querySelectorAll<HTMLElement>('[data-slide-detail]').forEach(b=>b.onclick=()=>void openSlideResource(resource,filtered[Number(b.dataset.slideDetail)]));
+      target.querySelectorAll<HTMLElement>('[data-slide-detail]').forEach(b=>b.onclick=()=>void openScoped(resource,filtered[Number(b.dataset.slideDetail)]));
       target.querySelector('#slide-more')?.addEventListener('click',()=>{limit+=100;draw();});
     };
     search.oninput = () => {limit=100;draw();};
     draw();
   };
-  document.getElementById('slide-resource')!.addEventListener('change',()=>void load().catch(e=>notify(e.message,true)));
+  document.getElementById('slide-connection')!.addEventListener('change',()=>{connectionId=value('slide-connection');const params=new URLSearchParams(location.hash.split('?')[1] || '');params.set('connection',connectionId);history.replaceState(null,'','#slide?'+params);void load().catch(error=>notify(error.message,true));});
+  document.getElementById('slide-resource')!.addEventListener('change',()=>{const params=new URLSearchParams(location.hash.split('?')[1] || '');params.set('view',value('slide-resource'));history.pushState(null,'','#slide?'+params);void load().catch(e=>notify(e.message,true));});
   await Promise.all([load(),renderRestoreCleanup().catch(error=> {
     const target=document.getElementById('restore-cleanup');
     if (target) target.innerHTML='<p class="resource-notice">Cleanup status unavailable. '+esc((error as Error).message)+'</p>';
@@ -2211,7 +2267,7 @@ async function renderSettings() {
   if (role === "viewer") return management.renderAccount();
   const c = await api("/slide/connection");
   content(
-    `<div class="settings-grid"><article class="panel"><span class="eyebrow">SLIDE INTEGRATION</span><h2>Slide connection</h2><a class="text-link" href="${resourceHref("settings",{kind:"connection",id:"slide-settings"})}">Inspect integration health &amp; resources →</a><p>${c.connected ? "A Slide account is connected. Enter a new token to replace it." : "Add an account-scoped Slide API token."}</p><label>API origin<input id="slide-url" value="${esc(c.url || "https://api.slide.tech")}"></label><label>API token<input id="slide-token" type="password" autocomplete="new-password"></label><button id="save-slide" class="primary">Verify & connect</button></article><article class="panel"><span class="eyebrow">DEVICE ENROLLMENT</span><h2>Windows and Linux agents</h2><p>Install Speck as a Windows service or a Linux systemd service. Devices connect outbound over HTTPS.</p><button id="enrollment" class="secondary">Add a device</button></article></div>`,
+    `<div class="toolbar settings-sections" role="navigation" aria-label="Settings sections"><a class="secondary" href="#account">Account & access</a><a class="secondary" href="#api">AI / API clients</a><button class="secondary" id="settings-integrations">Integration directory</button><button class="secondary" data-settings-group="agents">Endpoint agent policy</button><button class="secondary" data-settings-group="all">All settings</button></div><p class="resource-note">Endpoint agents manage Windows/Linux machines. AI and API clients use separately scoped credentials to access Speck.</p><div class="settings-grid"><article class="panel"><span class="eyebrow">SLIDE INTEGRATION</span><h2>Slide connection</h2><a class="text-link" href="${resourceHref("settings",{kind:"connection",id:"slide-settings"})}">Inspect integration health &amp; resources →</a><p>${c.connected ? "A Slide account is connected. Enter a new token to replace it." : "Add an account-scoped Slide API token."}</p><label>API origin<input id="slide-url" value="${esc(c.url || "https://api.slide.tech")}"></label><label>API token<input id="slide-token" type="password" autocomplete="new-password"></label><button id="save-slide" class="primary">Verify & connect</button></article><article class="panel"><span class="eyebrow">DEVICE ENROLLMENT</span><h2>Windows and Linux agents</h2><p>Install Speck as a Windows service or a Linux systemd service. Devices connect outbound over HTTPS.</p><button id="enrollment" class="secondary">Add a device</button></article></div>`,
   );
   on("save-slide", async () => {
     await api("/slide/connection", "PUT", {
@@ -2222,6 +2278,8 @@ async function renderSettings() {
     await renderSettings();
   });
   on("enrollment", enrollmentDialog);
+  on('settings-integrations',()=>integrationDirectory({api,flyout}));
+  document.querySelectorAll<HTMLButtonElement>('[data-settings-group]').forEach(b=>b.onclick=()=>{document.querySelectorAll<HTMLElement>('.settings-grid>article').forEach(card=>card.hidden=b.dataset.settingsGroup!=='all'&&!/DEVICE ENROLLMENT|AGENT UPDATES/.test(card.textContent || ''));});
   if (role === "admin") {
     const updates = await api("/agent-updates");
     document
@@ -2267,11 +2325,13 @@ window.addEventListener("keydown", event=>{
   if(!(event.key.toLowerCase()==='k'&&(event.metaKey||event.ctrlKey))||!username||page.startsWith('remote/')||document.querySelector('dialog:modal'))return;
   event.preventDefault();commandPalette.open();
 });
-window.addEventListener("hashchange", () => {
+window.addEventListener("hashchange", event => {
+  const params=(url:string)=>{const p=new URLSearchParams(new URL(url).hash.split("?")[1] || "");p.delete("inspect");return p.toString();};
+  const changedView=params(event.oldURL)!==params(event.newURL);
   if (username) {
     const next = (location.hash.slice(1) || "home").split("?")[0];
     if(next===page&&next==="fleet"&&new URLSearchParams(location.hash.split("?")[1]||"").has("coverage")) drawFleet();
-    else if (next === page && !next.startsWith("remote/")) void restoreResource().catch(error => notify(error.message,true));
+    else if (next === page && !next.startsWith("remote/") && !changedView) void restoreResource().catch(error => notify(error.message,true));
     else void render();
   } else { clearResourceHistory(); signedOut(); }
 });

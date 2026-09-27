@@ -7,7 +7,7 @@ export function readPolicy(path: string): number | null {
   if (/^\/infrastructure\/connections\/[^/]+\/resources\/[^/]+\/[^/?]+\/explore$/.test(path)) return 30000;
   if (/^\/(schedules|patches|recovery\/(plans|runs))$/.test(path)) return 15000;
   if (/^\/(slide\/coverage|unifi\/equipment\/index)$/.test(path)) return 30000;
-  if (/^\/fleet$/.test(path)) return 15000;
+  if (/^\/fleet(?:\?compact=true)?$/.test(path)) return 15000;
   if (/^\/(network\/map|infrastructure\/(inventory|connectors)|unifi\/(pool|status|clients|consoles)|slide\/(connection|restored-devices))$/.test(path)) return 30000;
   if (/^\/dns\/domains$/.test(path)) return 60000;
   if (/^\/slide\/inventory\?resource=(agent|device|snapshot|backup|network|restore(%2[fF]|\/)virt|restore(%2[fF]|\/)file|restore(%2[fF]|\/)image)$/.test(path)) return 30000;

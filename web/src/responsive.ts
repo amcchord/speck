@@ -145,7 +145,7 @@ function enhance() {
   queued = false;
   document.querySelectorAll<HTMLElement>(".infra-tabs, .device-drawer .tabs").forEach(revealActiveTab);
   document.querySelectorAll<HTMLTableElement>("#content table, dialog table").forEach(listTable);
-  document.querySelectorAll<HTMLElement>("#content .infra-toolbar, #content .alerts-toolbar, #content .audit-filters").forEach(foldToolbar);
+  document.querySelectorAll<HTMLElement>("#content .infra-toolbar, #content .audit-filters").forEach(foldToolbar);
 }
 
 /** Watch the document so tables and toolbars rendered later by any page are enhanced too. */
@@ -157,3 +157,10 @@ export function startResponsive() {
   }).observe(document.body, { childList: true, subtree: true });
   enhance();
 }
+
+// Arrow keys traverse horizontally clipped tab sets and keep the chosen tab visible.
+document.addEventListener('keydown',event=>{
+ const target=event.target as HTMLElement;if(!target.matches('[role="tab"],.tabs [data-tab]')||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+ const tabs=[...target.parentElement!.querySelectorAll<HTMLButtonElement>('button')];const at=tabs.indexOf(target as HTMLButtonElement),next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(at+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+ event.preventDefault();tabs[next].focus();tabs[next].click();tabs[next].scrollIntoView({block:'nearest',inline:'nearest'});
+});

@@ -1,3 +1,4 @@
+import {workspaceTab,setWorkspaceTab} from "./resource-navigation";
 import { rememberResource, registerResource, bindResourceNavigation } from "./resource-navigation";
 import {mountProviderExplorer} from "./provider-explorer";
 import {detailDate} from "./resource-story";
@@ -67,6 +68,7 @@ export function createInfrastructure(ui: Item) {
     return `<p>${esc(summary(data))}</p>`;
   }
   async function render() {
+    section=workspaceTab(section,["resources","connections","history"]);
     loading("Loading infrastructure…");
     [inventory, agents] = await Promise.all([
       api("/infrastructure/inventory"),
@@ -90,7 +92,7 @@ export function createInfrastructure(ui: Item) {
     on("infra-new-vm", () => ui.newVm());
     ["resources", "connections", "history"].forEach((s) =>
       on("infra-tab-" + s, async () => {
-        section = s;
+        section = s; setWorkspaceTab(section);
         await renderSection();
         document.querySelectorAll("[role=tab]").forEach((el) => {
           const active = el.id === "infra-tab-" + s;

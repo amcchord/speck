@@ -116,11 +116,11 @@ async def connect(body: Connection, user=Depends(require_user)):
 
 
 @router.get('/api/slide/inventory')
-async def inventory(resource: str = 'agent', agent_id: str | None = None, user=Depends(require_user)):
+async def inventory(resource: str = 'agent', agent_id: str | None = None, connection_id: str | None = None, user=Depends(require_user)):
     if resource not in RESOURCES:
         raise HTTPException(422, 'Unsupported Slide resource')
     params = {'agent_id': agent_id} if agent_id else None
-    return safe_provider(await Slide().listing(resource, params))
+    return safe_provider(await scoped_slide(connection_id).listing(resource, params))
 
 
 class BackupRequest(BaseModel):
@@ -134,10 +134,20 @@ async def backup(body: BackupRequest, user=Depends(require_user)):
     return await Slide().request('POST', 'backup', body.model_dump())
 
 
+def scoped_slide(connection_id):
+    if not connection_id or connection_id == 'slide-settings':
+        return Slide()
+    from speck.infrastructure import get_connection
+    cfg = get_connection(connection_id)
+    if cfg['provider'] != 'slide':
+        raise HTTPException(422, 'Choose a Slide connection')
+    return Slide({'url': cfg['url'], 'token': cfg['token']})
+
+
 @router.get('/api/slide/coverage')
-async def coverage(user=Depends(require_user)):
+async def coverage(connection_id: str | None = None, user=Depends(require_user)):
     """A bounded overview, never a claim that omitted provider history is empty."""
-    slide=Slide()
+    slide=scoped_slide(connection_id)
     async def recent(resource):
         rows, offset = [], 0
         try:

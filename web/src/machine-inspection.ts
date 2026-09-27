@@ -1,3 +1,4 @@
+import { serviceStartup } from "./inspection-model";
 import {
   escapeDetail as e,
   capacity,
@@ -13,7 +14,7 @@ type Item = Record<string, any>;
 const table = (head: string[], rows: string[][]) =>
   rows.length
     ? `<div class="scroll"><table><thead><tr>${head.map((h) => "<th>" + e(h) + "</th>").join("")}</tr></thead><tbody>${rows.map((r) => "<tr>" + r.map((c) => "<td>" + c + "</td>").join("") + "</tr>").join("")}</tbody></table></div>`
-    : '<p class="resource-note">No rows in the returned report. Collection may be unavailable or empty.</p>';
+    : '<p class="resource-note">The completed report contains no rows. Open its receipt to review the collection scope.</p>';
 export function createMachineInspection(ui: Item) {
   async function collect(
     d: Item,
@@ -127,7 +128,7 @@ export function createMachineInspection(ui: Item) {
       facts([
         ["Service", s.name],
         ["State", s.state || s.status],
-        ["Startup type", s.start_type || s.startup],
+        ["Startup type", serviceStartup(s.start_type ?? s.startup,d.platform)],
         ["Detail", s.detail || s.description],
         ["Observed", detailDate(d.last_seen)],
         ["Machine", d.label],
@@ -145,15 +146,16 @@ export function createMachineInspection(ui: Item) {
     pane
       .querySelectorAll<HTMLButtonElement>("[data-service-action]")
       .forEach((b) => {
-        b.disabled = !d.online || !d.approved || d.archived;
+        b.disabled = !d.online || !d.approved || d.archived || d.revoked || (b.dataset.serviceAction==="start" && ["running","active"].includes(s.state || s.status)) || (["stop","restart"].includes(b.dataset.serviceAction!) && ["stopped","inactive"].includes(s.state || s.status));
         b.onclick = () =>
           void serviceControl(d, s.name, b.dataset.serviceAction!);
       });
   }
   async function inventory(d: Item, root: HTMLElement) {
     root.innerHTML =
-      '<h3>Endpoint inventory</h3><p class="resource-note">Read-only reports are collected on request. Each report keeps its collection time and job evidence.</p><div class="toolbar"><label>Inventory<select data-inspection-kind><option value="processes">Processes</option><option value="software">Installed software</option><option value="disks">Disks & volumes</option></select></label><button class="primary" data-inspection-collect>Review collection</button></div><div data-inspection-report></div>';
+      '<h3>Endpoint inventory</h3><p class="resource-note">Read-only reports are collected on request. Each report keeps its collection time and job evidence.</p><div class="toolbar"><label>Inventory<select data-inspection-kind><option value="processes">Processes</option><option value="software">Installed software</option><option value="disks">Disks & volumes</option></select></label><button class="primary" data-inspection-collect>Review collection</button><button class="secondary" data-inspection-bundle>Review diagnostic bundle</button></div><div data-inspection-report></div>';
     const target = root.querySelector<HTMLElement>("[data-inspection-report]")!;
+    root.querySelector("[data-inspection-bundle]")!.addEventListener("click",()=>void collect(d,"bundle","",()=>void inventory(d,root)));
     let reports: Item[] = [];
     const draw = () => {
       const kind = root.querySelector<HTMLSelectElement>(
@@ -193,7 +195,7 @@ export function createMachineInspection(ui: Item) {
               ];
       const present = columns.filter((k) => rows.some((row) => row[k] != null));
       target.innerHTML =
-        `<p class="resource-note">Collected ${e(detailDate(report.collected))} · ${e(report.report.scope)}. ${rows.length >= report.report.limit ? "Collection reached its row limit; inventory is partial." : ""}</p>` +
+        `<p class="resource-note">Collected ${e(detailDate(report.collected))} · ${Date.now()/1000-report.collected>86400 ? "Stale (over 24 hours) · " : ""}${e(report.report.scope)}. ${kind==="processes" ? d.platform==="windows" ? "CPU seconds are cumulative process time, not current utilization." : "Linux CPU percentage is the process lifetime average reported by ps." : ""} ${rows.length >= report.report.limit ? "Collection reached its row limit; inventory is partial." : ""}</p>` +
         table(
           present.map((k) => k.replaceAll("_", " ")),
           rows.map((row, i) =>

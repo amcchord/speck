@@ -73,14 +73,10 @@ for (const width of [1440, 834, 390, 320]) {
     await page.locator('#alert-details-0').click();
     await page.locator('dialog.resource-flyout').getByRole('button',{name:'Mark reviewed',exact:true}).click();
     await expect(page.locator('.alert-item')).toHaveCount(4);
-    // Phones fold filters behind one button; the panel stays open while filters re-render the list.
-    const filters = page.locator('.m-filter-toggle');
-    if (width <= 760) {
-      // Responsive enhancement runs on the next frame; wait for the stable phone UI.
-      await expect(filters).toBeVisible();
-      await expect(page.locator('#alert-state')).toBeHidden();
-      await filters.click();
-    }
+    // One shared disclosure controls search and all filters at every width.
+    await expect(page.locator('.m-filter-toggle')).toHaveCount(0);
+    await expect(page.locator('#alert-state')).toBeHidden();
+    await page.locator('[data-list-controls] summary').click();
     await page.locator('#alert-state').selectOption('resolved');
     await expect(page.locator('.alert-item')).toHaveCount(1);
     await expect(page.locator('[id^="fix-"]')).toHaveCount(0);

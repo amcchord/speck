@@ -51,8 +51,8 @@ const kind = (d: Item) => {
       : "Network device";
 };
 export function createEquipment(ui: Item, openClient: (c: Item) => void) {
-  async function openInventory(site: Item) {
-    rememberResource({kind:"equipment-list",id:String(site.site_id || site.id),connection:site.console_id}, () => openInventory(site));
+  async function openInventory(site: Item, initialFilter="all", initialKind="all") {
+    rememberResource({kind:"equipment-list",id:String(site.site_id || site.id),connection:site.console_id,tab:initialFilter+":"+initialKind}, () => openInventory(site,initialFilter,initialKind));
     const pane = ui.flyout(
       site.name || "Network equipment",
       note("Reading adopted devices…"),
@@ -79,10 +79,10 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
             ],
           ],
         ) +
-        `<label class="equipment-search">Find equipment<input type="search" placeholder="Name, address, MAC or model"></label><div data-equipment-list></div>`;
+        `<label class="equipment-search">Find equipment<input type="search" placeholder="Name, address, MAC or model"></label><div class="toolbar"><label>Status<select data-equipment-status><option value="all">All states</option><option value="offline">Offline</option><option value="online">Online</option><option value="unknown">Unknown / not reported</option><option value="updates">Updates available</option></select></label><label>Device type<select data-equipment-kind><option value="all">All types</option><option>Access point</option><option>Switch</option><option>Network device</option></select></label></div><p data-equipment-count role="status"></p><div data-equipment-list></div>`;
       const draw = () => {
         const q = root.querySelector("input")!.value.toLowerCase(),
-          rows = data.devices
+          rows = data.devices.filter((d:Item)=>{const state=root.querySelector<HTMLSelectElement>("[data-equipment-status]")!.value,type=root.querySelector<HTMLSelectElement>("[data-equipment-kind]")!.value;return(state==="all" || state==="offline"&&["OFFLINE","DISCONNECTED"].includes(d.state) || state==="unknown"&&!["ONLINE","OFFLINE","DISCONNECTED"].includes(d.state) || state==="online"&&d.state==="ONLINE" || state==="updates"&&d.firmwareUpdatable)&&(type==="all"||kind(d)===type);})
             .filter((d: Item) =>
               [d.name, d.macAddress, d.ipAddress, d.model]
                 .join(" ")
@@ -90,6 +90,7 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
                 .includes(q),
             )
             .sort((a: Item, b: Item) => a.name.localeCompare(b.name));
+        root.querySelector("[data-equipment-count]")!.textContent=rows.length+" of "+data.devices.length+" devices match · provider observations";
         root.querySelector("[data-equipment-list]")!.innerHTML =
           `<div class="equipment-list">${rows.map((d: Item, i: number) => `<button data-equipment="${i}"><span class="equipment-symbol">${kind(d) === "Switch" ? "▦" : "◉"}</span><span><b>${e(d.name)}</b><small>${e(kind(d) + " · " + d.model)}</small><small>${e(d.ipAddress)} · ${e(d.macAddress)}</small></span>${status(d.state)}</button>`).join("")}</div>` +
           (rows.length ? "" : note("No matching equipment.")) +
@@ -105,11 +106,12 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
                   site,
                   rows[Number(b.dataset.equipment)].id,
                   undefined,
-                  () => void openInventory(site),
+                  () => void openInventory(site,initialFilter,initialKind),
                 )),
           );
       };
       root.querySelector("input")!.oninput = draw;
+      root.querySelector<HTMLSelectElement>("[data-equipment-status]")!.value=initialFilter;root.querySelector<HTMLSelectElement>("[data-equipment-kind]")!.value=initialKind;root.querySelectorAll("select").forEach(s=>s.onchange=()=>{initialFilter=root.querySelector<HTMLSelectElement>("[data-equipment-status]")!.value;initialKind=root.querySelector<HTMLSelectElement>("[data-equipment-kind]")!.value;rememberResource({kind:"equipment-list",id:String(site.site_id || site.id),connection:site.console_id,tab:initialFilter+":"+initialKind},()=>openInventory(site,initialFilter,initialKind));draw();});
       draw();
     } catch (err) {
       if (pane.open)
@@ -412,7 +414,7 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
       pane.querySelector(".dialog-head h2")!.firstChild!.textContent =
         d.name || "Network equipment";
       root.innerHTML =
-        `<div class="resource-refresh"><button class="text-link" data-equipment-back>${back ? "← Back" : "← All equipment"}</button><button class="text-link" data-equipment-refresh>Refresh observations</button></div>` +
+        `<div class="resource-refresh"><button class="text-link" data-equipment-back>← Equipment inventory</button><button class="text-link" data-equipment-refresh>Refresh observations</button></div>` +
         hero("UniFi · " + kind(d), d.state, d.model, [
           ["CPU", pct(s.cpuUtilizationPct)],
           ["Memory", pct(s.memoryUtilizationPct)],
@@ -595,7 +597,7 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
     }
     await load();
   }
-  registerResource("equipment-list", ref => openInventory({console_id:ref.connection,site_id:ref.id}));
+  registerResource("equipment-list", ref => openInventory({console_id:ref.connection,site_id:ref.id},...(ref.tab || "all:all").split(":") as [string,string]));
   registerResource("equipment", ref => {
     const [selection, port] = (ref.tab || "ports:").split(":");
     const selectedTab = ["ports","clients","equipment","health","history","activity"].includes(selection) ? selection : "ports";
