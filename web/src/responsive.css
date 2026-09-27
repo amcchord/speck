@@ -205,3 +205,4 @@ td .primary, td .secondary, td .quick-action { white-space: nowrap; }
 #slide-connection{min-width:0;max-width:100%;width:100%}
 .section-head:has(#slide-connection) > div{min-width:0}
 #backup-coverage .resource-related > button{min-width:0;white-space:normal;overflow-wrap:anywhere}
+#slide-connection{display:block;overflow:hidden;text-overflow:ellipsis}

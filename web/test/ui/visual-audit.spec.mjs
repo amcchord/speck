@@ -15,7 +15,7 @@ for (const width of [1440, 834, 760, 390, 320]) {
       await page.screenshot({ path: path.join(dir, name + '.png'), fullPage: true });
     };
     const geometry = async (page) => {
-      const overflow = await page.evaluate(() => [...document.querySelectorAll('main *')].filter(el => {const r=el.getBoundingClientRect();return r.width>0&&r.right>innerWidth+.5;}).slice(0,8).map(el=>({tag:el.tagName,id:el.id,class:el.className,right:el.getBoundingClientRect().right})));
+      const overflow = await page.evaluate(expectedWidth => [...document.querySelectorAll('body,main,main *')].filter(el => {const r=el.getBoundingClientRect();return r.width>0&&(r.right>expectedWidth||el.scrollWidth>el.clientWidth+1);}).slice(0,12).map(el=>({tag:el.tagName,id:el.id,class:el.className,right:el.getBoundingClientRect().right,width:el.clientWidth,scroll:el.scrollWidth})),width);
       expect(await page.evaluate(() => document.documentElement.scrollWidth),JSON.stringify(overflow)).toBeLessThanOrEqual(width);
       const dialogs = page.locator('dialog[open]');
       for (const dialog of await dialogs.all()) {
