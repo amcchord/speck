@@ -973,3 +973,31 @@ native apps are unchanged; agent/platform and iOS checks were not rerun. GitHub
 CI was not run. This task is the sole active deployment owner; live baseline
 matches release `2b4cb27`. Release will retain the shared lock, ancestry check,
 rollback snapshot and immediate pre-publication index comparison.
+
+### Production acceptance — Integration depth
+
+Deployed `a7f604aba5a7c5fd4e03ac5ced81e0ace2432c9c` as `20260927T192151Z-depth-a7f604a`. The production build and
+publication each fetched origin/main and verified ancestry, preserving the prior
+Keys, observability and agent releases. Publication held the shared lock, matched
+the inspected baseline and compared the live index immediately before its atomic
+replacement. A consistent database and complete server/web/download/config
+rollback snapshot is retained in the private release record.
+
+All 27 public web assets match the manifest and service health is active.
+Final Chromium/WebKit checks pass 36 tests on the release build. Production
+read-only acceptance discovered 17 network sites and 115 devices on the managed
+site, opened a 26-port switch with real statistics/topology, and verified
+46 machine-to-uplink relationships. Linode attachments and Slide's paginated
+backup/snapshot history passed authenticated API checks. A live Chromium session
+verified equipment navigation and cloud-disk details with zero page errors and
+zero mutations. Cold device detail took 4403 ms and a repeated read 19 ms from
+the operator Mac; these are observations, not a latency guarantee.
+
+Credentials (including reveal counters), recorded key-system links, identities,
+approvals, connections, recovery configuration, environment and requirements
+match the baseline. Agent downloads are byte-for-byte unchanged at 0.3.3.
+PoE cycling and restart were validated with mock providers; no disruptive
+production action was performed. Agent/native builds and GitHub CI were not run.
+Private logs, production screenshots, manifests and acceptance records remain
+in ignored `output/integration-depth/` and the private deployment record.
+Index SHA-256: `c73c658bd57b02eabecd7df6bd829a4e7b7610e87a05f2a8349d6f376a45a6de`.

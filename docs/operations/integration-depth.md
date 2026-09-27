@@ -90,3 +90,13 @@ GitHub CI was not run for this release.
 
 Synthetic previews: [switch ports](../screenshots/integration-depth/switch-ports.png)
 and [mobile PoE review](../screenshots/integration-depth/poe-review-mobile.png).
+
+## Released
+
+Release `20260927T192151Z-depth-a7f604a` is live at https://speckrmm.com. The final
+36 browser checks pass. All 27 public assets match; authenticated read-only API
+and Chromium checks pass with no page errors or mutations. Forty-six machines
+have observed uplink links. The live equipment read took 4.4 seconds cold and
+19 ms on repeat; subsequent browser navigation uses session memory. Credentials,
+configuration and agent downloads remain unchanged. Deployment and rollback
+evidence is recorded in WORKBOOK.md and the private release record.
