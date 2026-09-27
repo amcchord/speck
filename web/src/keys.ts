@@ -775,5 +775,6 @@ export function createKeys(ui: Item) {
   registerResource("key", async ref => { const result=await api('/keys'); const row=(Array.isArray(result)?result:result.entries || []).find((r:Item)=>r.name===ref.id); if(!row) throw new Error('Credential metadata is unavailable'); openEntry(row); });
   registerResource("provider", async ref => { const result=await api('/keys/services'); const row=(Array.isArray(result)?result:result.services || []).find((r:Item)=>r.service===ref.id); if(!row) throw new Error('Provider metadata is unavailable'); openProvider(row); });
   registerResource("ssh-key", async ref => { const result=await api('/ssh/keys?registration=false'); const row=(Array.isArray(result)?result:result.keys || []).find((r:Item)=>r.name===ref.id); if(!row) throw new Error('SSH key metadata is unavailable'); openSSH(row); });
+  registerResource("handoff", async ref => { const result=await api('/context/files'); const row=result.find((r:Item)=>r.filename===ref.id); if(!row) throw new Error('Handoff metadata is unavailable'); openHandoff(row); });
   return { render, closePane };
 }

@@ -53,12 +53,12 @@ def script_for(platform, body):
             )
         return "$ErrorActionPreference='Stop'; " + scripts[body.kind]
     scripts = {
-        "software": "if command -v dpkg-query >/dev/null 2>&1; then dpkg-query -W -f='${Package}\\t${Version}\\t${Architecture}\\n' | head -n 2000; elif command -v rpm >/dev/null 2>&1; then rpm -qa --qf '%{NAME}\\t%{VERSION}-%{RELEASE}\\t%{ARCH}\\n' | head -n 2000; else echo 'No supported package inventory tool' >&2; exit 2; fi",
-        "processes": "ps -eo pid=,ppid=,pcpu=,pmem=,comm= --sort=-pcpu | head -n 250",
+        "software": "if command -v dpkg-query >/dev/null 2>&1; then inventory=$(dpkg-query -W -f='${Package}\\t${Version}\\t${Architecture}\\n') || exit $?; printf '%s\\n' \"$inventory\" | head -n 2000; elif command -v rpm >/dev/null 2>&1; then inventory=$(rpm -qa --qf '%{NAME}\\t%{VERSION}-%{RELEASE}\\t%{ARCH}\\n') || exit $?; printf '%s\\n' \"$inventory\" | head -n 2000; else echo 'No supported package inventory tool' >&2; exit 2; fi",
+        "processes": "inventory=$(ps -eo pid=,ppid=,pcpu=,pmem=,comm= --sort=-pcpu) || exit $?; printf '%s\\n' \"$inventory\" | head -n 250",
         "disks": "lsblk -J -b -o NAME,TYPE,SIZE,FSTYPE,MOUNTPOINT,MODEL",
         "service": "systemctl show --no-pager --property=Id,Description,ActiveState,SubState,UnitFileState,MainPID,User,Requires,Wants,After,Result,ExecMainStatus,MemoryCurrent,CPUUsageNSec -- "
         + shlex.quote(body.service)
-        + '\nprintf "\\nRECENT JOURNAL (last day, at most 20 entries)\\n"\njournalctl --no-pager -n 20 --since "1 day ago" -u '
+        + ' || exit $?\nprintf "\\nRECENT JOURNAL (last day, at most 20 entries)\\n"\njournalctl --no-pager -n 20 --since "1 day ago" -u '
         + shlex.quote(body.service),
     }
     return scripts[body.kind]

@@ -175,3 +175,39 @@ def test_schedule_history_pages_without_duplicating_boundaries(client):
     second = client.get("/api/schedules/" + sid + "/history", params={"before": first["next_cursor"]}).json()
     assert len(second["items"]) == 2
     assert not {r["due"] for r in first["items"]} & {r["due"] for r in second["items"]}
+
+
+@pytest.mark.parametrize("kind,tool", [("software", "dpkg-query"), ("processes", "ps"), ("service", "systemctl")])
+def test_linux_inspection_does_not_report_command_failure_as_empty_success(tmp_path, kind, tool):
+    import os
+    import subprocess
+    from speck.inspection import Inspection, script_for
+
+    command = tmp_path / tool
+    command.write_text("#!/bin/sh\nexit 7\n")
+    command.chmod(0o755)
+    result = subprocess.run(
+        ["/bin/sh", "-c", script_for("linux", Inspection(kind=kind, service="sshd.service"))],
+        env={**os.environ, "PATH": str(tmp_path)},
+        capture_output=True,
+    )
+    assert result.returncode == 7
+    assert result.stdout == b""
+
+
+def test_paused_history_still_expires_retained_observations(client):
+    import asyncio
+    from speck.network_history import collect_due, RETENTION
+    from speck.config import seal
+
+    old = time.time() - RETENTION - 1
+    with db(write=True) as conn:
+        conn.execute("INSERT INTO network_samples VALUES(?,?,?,?,?)", ("c", "s", "d", old, seal("{}")))
+        conn.execute("INSERT INTO network_equipment_index VALUES(?,?,?,?,?)", ("c", "s", "d", old, seal("{}")))
+        conn.execute(
+            "INSERT INTO network_client_history VALUES(?,?,?,?,?)", ("c", "s", "00:00:00:00:00:01", old, seal("{}"))
+        )
+    asyncio.run(collect_due())
+    with db() as conn:
+        for table in ("network_samples", "network_equipment_index", "network_client_history"):
+            assert conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == 0

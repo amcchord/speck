@@ -230,9 +230,22 @@ async def configure(console_id: str, site_id: str, device_id: str, body: Collect
     return {"enabled": body.enabled, "interval": INTERVAL, "retention_days": 7}
 
 
+def prune_history():
+    # Expire observations even when every collection is paused.
+    with db(write=True) as conn:
+        cutoff = time.time() - RETENTION
+        for table, column in (
+            ("network_samples", "at"),
+            ("network_client_history", "at"),
+            ("network_equipment_index", "seen"),
+        ):
+            conn.execute(f"DELETE FROM {table} WHERE {column}<?", (cutoff,))
+
+
 async def collect_due():
     from speck.network_equipment import inspect
 
+    prune_history()
     with db() as conn:
         rows = [
             dict(r)

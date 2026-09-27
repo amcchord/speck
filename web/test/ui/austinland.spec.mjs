@@ -190,7 +190,7 @@ for (const width of [1440, 390]) {
     await page.screenshot({ path: `${shots}/keys-entry-revealed-${width}-${info.project.name}.png` });
     await pane.getByRole('button', { name: 'Hide values' }).click();
     await expect(pane.getByText('synthetic-pw')).toHaveCount(0);
-    await pane.getByRole('button', { name: 'Edit' }).click();
+    await pane.getByRole('button', { name: 'Edit', exact: true }).click();
     const edit = page.getByRole('dialog', { name: 'Edit shop-database' });
     await edit.getByText('Paste .env lines').click();
     await edit.locator('#keys-dotenv').fill('export PGUSER=app\nPGHOST="db.example.test"\n9BAD=x');

@@ -18,7 +18,11 @@ export function createRunDetails(ui: Item) {
     rememberResource({kind:'job',id}, () => job(id));
     const pane: HTMLDialogElement = flyout('Job details', '<p class="resource-note">Reading operation evidence…</p>', {tone:'automation'});
     const target = pane.querySelector('.resource-body')!;
+    let refreshTimer = 0, loading = false;
+    pane.addEventListener('close', () => clearTimeout(refreshTimer));
     async function load() {
+      if (loading) return;
+      clearTimeout(refreshTimer); loading = true;
       try {
         const j = await api('/jobs/'+encodeURIComponent(id));
         if (!pane.open || !target.isConnected) return;
@@ -29,8 +33,8 @@ export function createRunDetails(ui: Item) {
           `<details class="resource-technical"><summary>Request and receipt</summary>${technicalDetail(j)}</details><button class="secondary" data-run-refresh>Refresh evidence</button>`;
         target.querySelector<HTMLButtonElement>('[data-run-machine]')!.onclick = () => ui.openDevice(j.device_id);
         target.querySelector<HTMLButtonElement>('[data-run-refresh]')!.onclick = () => void load();
-        if (pending(j.status)) setTimeout(() => { if (pane.open && target.isConnected) void load(); },3000);
-      } catch (error) { if (pane.open) target.textContent = (error as Error).message; }
+        if (pending(j.status)) refreshTimer = window.setTimeout(() => { if (pane.open && target.isConnected) void load(); },3000);
+      } catch (error) { if (pane.open) target.textContent = (error as Error).message; } finally { loading = false; }
     }
     await load();
   }
@@ -38,7 +42,11 @@ export function createRunDetails(ui: Item) {
     rememberResource({kind:'batch',id}, () => batch(id));
     const pane: HTMLDialogElement = flyout('Operation results', '<p class="resource-note">Reading per-machine results…</p>', {tone:'automation'});
     const target = pane.querySelector('.resource-body')!;
+    let refreshTimer = 0, loading = false;
+    pane.addEventListener('close', () => clearTimeout(refreshTimer));
     async function load() {
+      if (loading) return;
+      clearTimeout(refreshTimer); loading = true;
       try {
         const b = await api('/batches/'+encodeURIComponent(id));
         if (!pane.open || !target.isConnected) return;
@@ -53,8 +61,8 @@ export function createRunDetails(ui: Item) {
         target.querySelector<HTMLButtonElement>('[data-run-refresh]')!.onclick=()=>void load();
         const cancel = target.querySelector<HTMLButtonElement>('[data-run-cancel]');
         if (cancel) cancel.onclick = async () => { cancel.disabled=true; try { const r=await api('/batches/'+encodeURIComponent(id)+'/cancel','POST'); ui.notify(`${r.cancelled} queued jobs cancelled. Running jobs continue.`); await load(); } catch(error) {ui.notify((error as Error).message,true); cancel.disabled=false;} };
-        if (jobs.some(j=>pending(j.status))) setTimeout(()=>{if(pane.open&&target.isConnected) void load();},3000);
-      } catch(error) { if(pane.open) target.textContent=(error as Error).message; }
+        if (jobs.some(j=>pending(j.status))) refreshTimer = window.setTimeout(()=>{if(pane.open&&target.isConnected) void load();},3000);
+      } catch(error) { if(pane.open) target.textContent=(error as Error).message; } finally { loading = false; }
     }
     await load();
   }

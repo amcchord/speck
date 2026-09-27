@@ -1047,7 +1047,7 @@ function machineHealth(d: Item) {
             <div><small>Processor</small><strong>${cpu === null ? "—" : cpu.toFixed(1) + "<em>%</em>"}</strong>${cpu === null ? '<small>Not reported</small>' : `<progress aria-label="Processor utilization" max="100" value="${cpu}"></progress>`}</div>
             <div><small>Memory</small><strong>${memory === null ? "—" : memory.toFixed(0) + "<em>%</em>"}</strong>${memory === null ? '<small>Not reported</small>' : `<progress aria-label="Memory utilization" max="100" value="${memory}"></progress>`}${t.memory?.total != null ? `<small>${t.memory.used == null ? "—" : bytes(t.memory.used)} / ${bytes(t.memory.total)}</small>` : ""}</div>
           </div>
-          <section class="machine-storage"><h3>Storage</h3>${(t.disks || []).map((x: Item) => `<div class="disk"><b>${esc(x.path)}</b><span>${x.used == null ? "—" : bytes(x.used)} / ${x.total == null ? "—" : bytes(x.total)}</span>${percent(x.usedPercent) === null ? "" : `<progress aria-label="Storage utilization ${esc(x.path)}" value="${x.usedPercent}" max="100"></progress>`}</div>`).join("") || '<small>No storage reported</small>'}</section>
+          <section class="machine-storage"><h3>Storage</h3>${(t.disks || []).map((x: Item, i: number) => `<div class="disk"><button class="text-link" data-volume="${i}">${esc(x.path)}</button><span>${x.used == null ? "—" : bytes(x.used)} / ${x.total == null ? "—" : bytes(x.total)}</span>${percent(x.usedPercent) === null ? "" : `<progress aria-label="Storage utilization ${esc(x.path)}" value="${x.usedPercent}" max="100"></progress>`}</div>`).join("") || '<small>No storage reported</small>'}</section>
           <div class="machine-foreground"><div><small>${presence.appLabel}</small><h3>${esc(presence.title)}</h3>${presence.app?.process ? `<small>${esc(presence.app.process)}</small>` : ""}${!presence.current && presence.app?.observed_at ? `<small>Last observed ${esc(date(Date.parse(presence.app.observed_at) / 1000))}</small>` : ""}</div><div class="machine-user"><small>${presence.userHeading}</small><b>${esc(presence.userLabel)}</b></div><div class="machine-desktop"><small>Interactive desktop</small><b>${esc(presence.desktop)}</b></div></div>`;
 }
 function refreshOpenMachine() {
@@ -1225,6 +1225,10 @@ async function renderDeviceContent() {
       </div>
       <div class="mini-grid machine-system"><div><small>Hostname</small>${esc(d.hostname || "Not reported")}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion || "Not reported")}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
 
+    body.addEventListener("click", event => {
+      const volume = (event.target as Element).closest<HTMLButtonElement>("[data-volume]");
+      if (volume) { const current = fleet.find(item => item.id === d.id) || d; const disk = current.telemetry?.disks?.[Number(volume.dataset.volume)]; if (disk) machineInspection.volume(current, disk); }
+    });
     management.devicePanel(d, body);
     if (canPreview) await ops.previewPanel(d, body.querySelector<HTMLElement>("#machine-preview")!);
   } else if (tab === "patches") {

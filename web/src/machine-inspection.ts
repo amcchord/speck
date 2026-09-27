@@ -431,5 +431,14 @@ export function createMachineInspection(ui: Item) {
     if (!s) throw new Error("Service is not in the latest machine report");
     service(d, s);
   });
-  return { collect, service, serviceControl, inventory, network, process };
+  function volume(d: Item, disk: Item) {
+    const pane: HTMLDialogElement = ui.flyout(disk.path || "Volume", section("Reported storage", facts([
+      ["Machine", d.label], ["Mount path", disk.path], ["Device", disk.device], ["Filesystem", disk.fstype],
+      ["Capacity", capacity(disk.total)], ["Used", capacity(disk.used)], ["Free", capacity(disk.free)],
+      ["Utilization", disk.usedPercent == null ? "Not reported" : Number(disk.usedPercent).toFixed(1) + "%"],
+      ["Last report", detailDate(d.last_seen)],
+    ])) + '<p class="resource-note">Filesystem usage from the endpoint report. Virtual disk allocation and filesystem capacity can differ.</p><button class="secondary" data-volume-inventory>Inspect disks and volumes →</button>' + technicalDetail(disk), {tone:"agents"});
+    pane.querySelector<HTMLButtonElement>('[data-volume-inventory]')!.onclick = () => ui.openDevice(d.id, "inventory");
+  }
+  return { collect, service, serviceControl, inventory, network, process, volume };
 }
