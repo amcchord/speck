@@ -19,6 +19,21 @@ const speed = (v: any) =>
       ? v / 1000 + " Gbps"
       : v + " Mbps"
     : "Not reported";
+const portSpeedClass = (p: Item) => {
+  if (p.state !== "UP" || !Number.isFinite(p.speedMbps) || p.speedMbps <= 0)
+    return "";
+  if (p.speedMbps < 1000) return "speed-slow";
+  if (p.speedMbps === 1000) return "speed-gigabit";
+  if ([2500, 5000].includes(p.speedMbps)) return "speed-multigig";
+  if (p.speedMbps >= 10000) return "speed-fast";
+  return "";
+};
+const portPower = (p: Item) => {
+  const watts = p.observation?.poe_power;
+  return typeof watts === "number" && Number.isFinite(watts) && watts >= 0
+    ? watts.toLocaleString(undefined, { maximumFractionDigits: 1 }) + " W"
+    : null;
+};
 const note = (s: string) => `<p class="resource-note">${e(s)}</p>`;
 const path = (s: Item) =>
   "/unifi/sites/" +
@@ -114,7 +129,9 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
       note("Reading device, ports and connection evidence…"),
       {
         tone: "network",
-        subtitle: "Network · " + (site.site_id ? "Equipment" : site.name || "Equipment"),
+        subtitle:
+          "Network · " +
+          (site.site_id ? "Equipment" : site.name || "Equipment"),
         className: "equipment-flyout",
       },
     );
@@ -153,10 +170,25 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
         o = p.observation || {},
         direct = data!.clients.filter((c: Item) => c.port === p.idx),
         children = data!.children.filter((c: Item) => c.parent_port === p.idx);
-      return `<div class="port-legend"><span><i class="up"></i>Link up</span><span><i></i>Link down / unknown</span><span>ϟ PoE supplies power</span></div><div class="port-grid" role="group" aria-label="Physical ports">${ports.map((p) => `<button data-port="${p.idx}" class="port ${p.state === "UP" ? "up" : ""} ${p.idx === selectedPort ? "selected" : ""}" aria-pressed="${p.idx === selectedPort}" aria-label="Port ${p.idx}, ${p.state}${p.poe?.state === "UP" ? ", PoE on" : ""}"><b>${p.idx}</b><small>${p.connector || "Port"}</small><span>${p.poe?.state === "UP" ? "ϟ" : "·"}</span></button>`).join("")}</div><section class="port-detail"><div class="equipment-heading"><div><span class="resource-eyebrow">Physical port ${p.idx}</span><h3>${e(o.name || "Port " + p.idx)}</h3></div>${status(p.state)}</div>${facts(
+      return `<div class="port-legend" aria-label="Link speed legend"><span><i class="speed-slow"></i>&lt;1 Gbps</span><span><i class="speed-gigabit"></i>1 Gbps</span><span><i class="speed-multigig"></i>2.5 / 5 Gbps</span><span><i class="speed-fast"></i>10+ Gbps</span><span><i></i>Down / unknown speed</span><span>ϟ PoE · watts per port</span></div><div class="port-grid" role="group" aria-label="Physical ports">${ports
+        .map((p) => {
+          const watts = portPower(p);
+          const link =
+            p.state === "UP" && Number.isFinite(p.speedMbps) && p.speedMbps > 0
+              ? speed(p.speedMbps)
+              : "No active link speed reported";
+          const label = e(
+            `Port ${p.idx}, ${p.state}, ${link}, ${watts || "Power not reported"}${p.poe?.state === "UP" ? ", PoE on" : ""}`,
+          );
+          return `<button data-port="${p.idx}" class="port ${portSpeedClass(p)} ${p.idx === selectedPort ? "selected" : ""}" aria-pressed="${p.idx === selectedPort}" aria-label="${label}" title="${label}"><b>${p.idx}</b><small>${watts || "—"}</small>${p.poe?.state === "UP" ? '<span aria-hidden="true">ϟ</span>' : ""}</button>`;
+        })
+        .join(
+          "",
+        )}</div><section class="port-detail"><div class="equipment-heading"><div><span class="resource-eyebrow">Physical port ${p.idx}</span><h3>${e(o.name || "Port " + p.idx)}</h3></div>${status(p.state)}</div>${facts(
         [
           ["Link speed", speed(p.speedMbps)],
           ["Maximum speed", speed(p.maxSpeedMbps)],
+          ["Connector", p.connector],
           [
             "PoE",
             p.poe
@@ -165,10 +197,7 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
                 : "Disabled"
               : "Not supported / not reported",
           ],
-          [
-            "Power draw",
-            typeof o.poe_power === "number" ? o.poe_power + " W" : null,
-          ],
+          ["Power draw", portPower(p)],
           ["Power standard", p.poe?.standard],
           ["Spanning tree", o.stp_state],
           ["Received", capacity(o.rx_bytes)],

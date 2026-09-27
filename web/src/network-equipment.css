@@ -115,19 +115,36 @@
   color: #ced8e1;
   background: #304252;
 }
-.port-grid .port.up {
-  border-color: #6fa7d3;
-  background: #23567d;
+.port-grid .port[class*="speed-"] {
+  border-color: var(--port-border);
+  background: var(--port-fill);
   color: white;
+}
+.speed-slow {
+  --port-border: #d7aa68;
+  --port-fill: #7b541d;
+}
+.speed-gigabit {
+  --port-border: #6fa7d3;
+  --port-fill: #23567d;
+}
+.speed-multigig {
+  --port-border: #70c6bb;
+  --port-fill: #17655d;
+}
+.speed-fast {
+  --port-border: #bda0ec;
+  --port-fill: #63448d;
 }
 .port-grid .port.selected {
   outline: 3px solid #e5b857;
   outline-offset: 1px;
 }
 .port small {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .port b {
   font-size: 17px;
@@ -152,8 +169,8 @@
   border-radius: 2px;
   background: #5e6d7e;
 }
-.port-legend i.up {
-  background: #387aaf;
+.port-legend i[class*="speed-"] {
+  background: var(--port-fill);
 }
 .port-detail {
   border: 1px solid #cddde9;
@@ -259,7 +276,7 @@
 }
 
 .port-grid .port small {
-  color: #ced8e1;
+  color: inherit;
 }
 @media (max-width: 900px) {
   .port-grid {

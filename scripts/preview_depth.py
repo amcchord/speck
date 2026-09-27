@@ -11,9 +11,9 @@ def depth_fixture(route, query, now):
         return {'devices': [switch, ap], 'checked_at': now, 'truncated': False}
     if re.fullmatch(r'/api/unifi/sites/[^/]+/[^/]+/devices/[^/]+', route):
         is_ap = route.endswith('/ap-1')
-        ports = [{'idx': i, 'state': 'UP' if i in (4, 5, 8, 24) else 'DOWN', 'connector': 'RJ45', 'maxSpeedMbps': 1000, 'speedMbps': 1000 if i in (4, 5, 8, 24) else 0,
+        ports = [{'idx': i, 'state': 'UP' if i in (4, 5, 8, 24) else 'DOWN', 'connector': 'SFPPLUS' if i == 24 else 'RJ45', 'maxSpeedMbps': 10000 if i == 24 else 2500, 'speedMbps': {4: 2500, 5: 1000, 8: 100, 24: 10000}.get(i, 0),
                   'poe': {'enabled': True, 'state': 'UP' if i in (4, 8) else 'DOWN', 'standard': '802.3at'},
-                  'observation': {'name': {4: 'Lobby Wi-Fi', 5: 'Reception', 8: 'Lobby camera'}.get(i, 'Port '+str(i)), 'poe_power': 6.2 if i==4 else 0, 'rx_bytes': 182700000, 'tx_bytes': 42300000, 'rx_errors': 0, 'tx_errors': 0, 'rx_dropped': 0, 'tx_dropped': 0, 'stp_state': 'forwarding'}} for i in range(1, 25)]
+                  'observation': {'name': {4: 'Lobby Wi-Fi', 5: 'Reception', 8: 'Lobby camera'}.get(i, 'Port '+str(i)), 'poe_power': {4: 6.2, 8: 12.7, 24: None}.get(i, 0), 'rx_bytes': 182700000, 'tx_bytes': 42300000, 'rx_errors': 0, 'tx_errors': 0, 'rx_dropped': 0, 'tx_dropped': 0, 'stp_state': 'forwarding'}} for i in range(1, 25)]
         return {'device': (ap if is_ap else switch) | {'features': {'accessPoint': {}} if is_ap else {'switching': {}}, 'interfaces': {'ports': [] if is_ap else ports, 'radios': [{'frequencyGHz': 5, 'wlanStandard': '802.11ax', 'channel': 36, 'channelWidthMHz': 80}] if is_ap else []}},
                 'ports': [] if is_ap else ports, 'clients': clients[2:] if is_ap else clients[:2], 'children': [] if is_ap else [ap], 'descendants': [] if is_ap else [ap], 'downstream_clients': [] if is_ap else clients[2:], 'upstream': switch if is_ap else None, 'upstream_port': 4 if is_ap else None,
                 'statistics': {'cpuUtilizationPct': 8.2, 'memoryUtilizationPct': 42.7, 'uptimeSec': 234892, 'lastHeartbeatAt': '2026-09-27T18:00:00Z', 'uplink': {'rxRateBps': 24000000, 'txRateBps': 7000000}}, 'observations_available': True, 'clients_available': True, 'truncated': False, 'checked_at': now}

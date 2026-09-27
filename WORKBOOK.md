@@ -1001,3 +1001,15 @@ production action was performed. Agent/native builds and GitHub CI were not run.
 Private logs, production screenshots, manifests and acceptance records remain
 in ignored `output/integration-depth/` and the private deployment record.
 Index SHA-256: `c73c658bd57b02eabecd7df6bd829a4e7b7610e87a05f2a8349d6f376a45a6de`.
+
+## 2026-09-27 — Port power and link speed
+
+Port tiles now show observed PoE wattage in place of repeated connector names.
+Reported zero remains `0 W`; missing or invalid readings display a dash. Port
+backgrounds distinguish sub-gigabit, gigabit, 2.5/5-gigabit and 10+-gigabit active
+links, with a legend and exact values in tooltips/accessibility labels. Down or
+unknown-speed ports remain neutral. Connector type remains in selected-port detail.
+
+This task is the sole active Speck deployment owner. The inspected production
+baseline remains `a7f604a` with index `c73c658bd57b02eabecd7df6bd829a4e7b7610e87a05f2a8349d6f376a45a6de`.
+The release is web-only; validation and publication results will be recorded below.
