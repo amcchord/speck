@@ -13,6 +13,7 @@ export function createNetwork(ui: Item) {
     domainFilter = "all",
     clientQuery = "",
     reachQuery = "",
+    reachMachine = "",
     reachFilter = "public";
   let status: Item = {},
     domains: Item[] = [],
@@ -558,8 +559,9 @@ export function createNetwork(ui: Item) {
       const q = reachQuery.toLowerCase();
       const rows = (map.machines as Item[]).filter(
         (m) =>
+          (!reachMachine || m.id === reachMachine) &&
           (reachFilter === "all" || (reachFilter === "dns" ? m.dns.length : m.public.length)) &&
-          (!q ||
+          (reachMachine || !q ||
             m.label.toLowerCase().includes(q) ||
             [...m.lan, ...m.public].some((a: Item) => a.ip.includes(q)) ||
             m.dns.some((n: Item) => n.fqdn.includes(q))),
@@ -582,6 +584,7 @@ export function createNetwork(ui: Item) {
       cardify(document.getElementById("net-reach-rows"));
     };
     body.querySelector<HTMLInputElement>("#net-reach-q")!.addEventListener("input", (e) => {
+      reachMachine = "";
       reachQuery = (e.target as HTMLInputElement).value.trim();
       draw();
     });
@@ -679,5 +682,12 @@ export function createNetwork(ui: Item) {
     });
   }
 
-  return { render, closePane, exposeHost };
+  function showMachine(machine: Item) {
+    tab = "reach";
+    reachMachine = machine.id;
+    reachQuery = machine.label;
+    reachFilter = "all";
+    location.hash = "network";
+  }
+  return { render, closePane, exposeHost, showMachine };
 }

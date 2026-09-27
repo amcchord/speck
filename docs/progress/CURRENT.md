@@ -1,3 +1,15 @@
+# Connected Home — local September 27, 2026
+
+The `codex/connected-workspace` branch adds a Home command bar, joined machine
+relationships, an expanded semantic palette, and direct entry to reviewed AI
+drafts and schedules. It includes main `7ad0d63`. The full web gate passes:
+41 units and 243 browser checks, with one existing platform-specific skip; the
+final Home refinement passes 22 focused browser checks. No production release or
+GitHub push occurred. See [behavior and limits](../operations/connected-workspace.md)
+and [synthetic screenshots](../screenshots/connected-workspace/README.md).
+
+---
+
 # Phone and tablet redesign — live September 24, 2026
 
 Every page was audited on iPhone- and iPad-sized screens against production

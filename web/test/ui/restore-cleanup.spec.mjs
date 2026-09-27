@@ -13,7 +13,7 @@ async function setup(page, { role = 'admin', connected = true } = {}) {
     const clone = { ...original, id: 'removed-clone', label: 'Deleted test VM', online: false, approved: false };
     await route.fulfill({ json: { ...value, machines: archived ? [original] : [original, clone] } });
   });
-  await page.goto('/');
+  await page.goto('/#fleet');
   await expect(page.locator('[data-row="removed-clone"]')).toBeVisible();
   await expect(page.locator('#refresh')).toBeEnabled();
   return { calls, archive: () => { archived = true; } };

@@ -1,5 +1,6 @@
 // A small, consistent icon set. Stroke geometry is independent of installed fonts.
 const paths = {
+  home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/>',
   filter: '<path d="M4 7h16M7 12h10M10 17h4"/>',
   columns: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 4v16M16 4v16"/>',
   chevron: '<path d="m7 10 5 5 5-5"/>',

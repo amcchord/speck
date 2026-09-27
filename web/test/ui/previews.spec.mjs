@@ -10,7 +10,7 @@ async function open(page, handler) {
   await page.route('**/api/devices/frontdesk/preview-status', handler);
   await page.route('**/api/devices/frontdesk/preview?*', route => route.fulfill({ contentType: 'image/svg+xml', body: svg }));
   await page.route('**/api/devices/frontdesk/preview-policy', route => route.fulfill({ json: { ok: true } }));
-  await page.goto('/');
+  await page.goto('/#fleet');
   await page.locator('[data-device="frontdesk"]').first().click();
 }
 const saved = { enabled: true, available: true, source: 'saved', state: 'offline', captured_at: 1790071200 };
@@ -79,7 +79,7 @@ test('open machine refreshes user, desktop and app without resetting its preview
   });
   await page.route('**/api/devices/frontdesk/preview-status', route => route.fulfill({json:saved}));
   await page.route('**/api/devices/frontdesk/preview?*', route => route.fulfill({contentType:'image/svg+xml',body:svg}));
-  await page.goto('/'); await page.locator('[data-device="frontdesk"]').first().click();
+  await page.goto('/#fleet'); await page.locator('[data-device="frontdesk"]').first().click();
   await expect(page.locator('.machine-user')).toContainText('No users signed in');
   await expect(page.locator('.capture-time')).toContainText('Last saved');
   await page.locator('.live-screen > img').evaluate(img=>img.dataset.testKeep='yes');

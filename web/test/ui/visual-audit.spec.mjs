@@ -28,7 +28,7 @@ for (const width of [1440, 834, 760, 390, 320]) {
     };
     const signIn = async (page) => {
       await page.context().addCookies([{ name: 'speck-gallery', value: '1', url: 'http://127.0.0.1:8761' }]);
-      await page.goto('/');
+      await page.goto('/#fleet');
       await expect(page.locator('#fleet-rows tr')).not.toHaveCount(0);
     };
     const go = async (page, route) => {
@@ -61,7 +61,7 @@ for (const width of [1440, 834, 760, 390, 320]) {
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
       await signIn(page);
-      for (const route of ['fleet', 'alerts', 'schedules', 'patches', 'software', 'assistant', 'recovery', 'slide', 'activity', 'jobs', 'downloads', 'settings', 'account']) {
+      for (const route of ['home', 'fleet', 'alerts', 'schedules', 'patches', 'software', 'assistant', 'recovery', 'slide', 'activity', 'jobs', 'downloads', 'settings', 'account']) {
         await go(page, route);
         await geometry(page);
         await capture(page, info, route);

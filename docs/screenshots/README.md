@@ -1,5 +1,8 @@
 # Speck screenshots
 
+**[Connected workspace](connected-workspace/README.md)**: the new Home command bar,
+UniFi / Proxmox / Speck relationships, automation entry points and expanded palette.
+
 **[Alerts and AI](alerts-ai/README.md)**: compact triage, understandable outcomes and reviewed diagnosis/repair drafts.
 
 **[Machine overview](machine-overview/README.md)**: compact machine facts, a 16:9 preview and health information above the fold.

@@ -14,7 +14,7 @@ test.describe('phone', () => {
     await signIn(page);
     await expect(page.locator('aside')).toBeHidden();
     const bar = page.getByRole('navigation', { name: 'Primary navigation' });
-    await expect(bar.getByRole('button')).toHaveText([/^Fleet$/, /^Alerts\s*1$/, /^Infra$/, /^Keys$/, /^More$/], { useInnerText: true });
+    await expect(bar.getByRole('button')).toHaveText([/^Home$/, /^Fleet$/, /^Alerts\s*1$/, /^Infra$/, /^More$/], { useInnerText: true });
     const box = await bar.boundingBox();
     expect(box.y + box.height).toBeCloseTo(844, 0);
     // Title and refresh share the first row; the description is left to wider screens.

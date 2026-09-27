@@ -7,7 +7,7 @@ async function signIn(page, transform = d => d, role = 'admin') {
     const response = await route.fetch();
     await route.fulfill({ json: {machines: (await response.json()).machines.map(transform), connections: []} });
   });
-  await page.goto('/');
+  await page.goto('/#fleet');
   await page.locator('[data-device="frontdesk"]').first().click();
   await expect(page.locator('.machine-facts')).toBeAttached();
   // Phones summarize identity on one line; Details expands the full facts.

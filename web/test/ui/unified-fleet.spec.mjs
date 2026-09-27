@@ -14,7 +14,7 @@ async function setup(page) {
     const provider={id:'provider-102',label:'Agentless VM',hostname:'Agentless VM',has_endpoint_agent:false,has_speck_agent:false,approved:null,online:true,state:'running',platform:'unknown',client_name:'Alpha Clinic',location:'Cluster · Host A',kind:'qemu',provider:'proxmox',telemetry:{},resources:[{...endpoint.resources[0],id:'102',name:'Agentless VM'}]};
     await route.fulfill({json:{machines:[endpoint,provider],connections:[]}});
   });
-  await page.goto('/');
+  await page.goto('/#fleet');
   await expect(page.locator('#fleet-rows tr')).toHaveCount(2);
 }
 

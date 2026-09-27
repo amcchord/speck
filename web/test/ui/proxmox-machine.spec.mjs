@@ -255,7 +255,7 @@ async function setup(page, options = {}) {
       } else frame();
     },
   );
-  await page.goto("/");
+  await page.goto("/#fleet");
   await page.locator('[data-row="provider-101"] .machine-name').click();
   return { calls, input, deleted };
 }

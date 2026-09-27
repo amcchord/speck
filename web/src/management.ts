@@ -670,6 +670,7 @@ export function createManagement(ui: Item) {
     updateIndicator,
     renderAlerts,
     renderSchedules,
+    newSchedule,
     renderAudit,
     renderAccount,
     settingsPanel,

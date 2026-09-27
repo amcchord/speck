@@ -716,3 +716,34 @@ Private captures and release scripts are in ignored `output/ui-audit-mobile/` an
 `output/ui-audit-mobile-release/`; the
 [synthetic gallery](docs/screenshots/ui-audit-mobile/README.md) is committed.
 
+
+## Connected Home and expanded palette — September 27, 2026 (local)
+
+`codex/connected-workspace` starts from current main `7ad0d63`. Home becomes the
+default signed-in destination, with machine/host/IP/DNS search, Cmd/Ctrl+K,
+relationships between UniFi evidence, Proxmox hosts and Speck agents, alerts and
+upcoming schedules. AI drafting starts in Home and feeds the existing platform /
+endpoint context review; templates and schedules retain their existing review
+flows. Existing Fleet and assistant deep links continue to work.
+
+The console uses slate navigation, neutral surfaces, blue network, copper
+infrastructure, green agents and violet automation. Phone and tablet layouts
+retain the bottom bar / labeled rail. Identity conflicts, stale sources, empty
+inventory, partial failures and viewer restrictions remain explicit. Network
+drill-down carries the exact machine ID; no name or IP identity joins are added.
+
+Local validation: TypeScript/Vite, 41 web unit tests and the full Chromium/WebKit
+suite (243 passed, one existing WebKit CDP touch skip). The final selection-scroll
+refinement also passed all 22 Home browser checks. Screenshots at 320/390/834/1440
+were reviewed. Python preview compilation and synthetic fixture checks pass. The
+first iterations exposed navigation-selector and short-sidebar regressions; both
+were corrected before the passing full run. No GitHub CI run was requested.
+
+A loopback-only connected preview runs with `scripts/preview.py --connected`; it
+uses synthetic endpoints and documentation IP ranges. No deployment, backend or
+agent changes, live AI request, provider operation, credential access, recovery
+action, GitHub push or merge occurred. Windows/Linux operational qualification
+remains as previously recorded. [Behavior and limits](docs/operations/connected-workspace.md),
+[gallery](docs/screenshots/connected-workspace/README.md). Local logs are in ignored
+`output/connected-workspace/`. Production publication still requires the release
+preflight and a fresh comparison with the live baseline.

@@ -4,6 +4,7 @@ import { fleetToolbar, bindFleetPopovers, updateFilterChips } from "./fleet-tool
 import { bindFleetHeaders, reorderedColumns } from "./fleet-headers";
 import { available as passkeysAvailable, ceremony as passkeyCeremony, encode as encodePasskey } from "./passkeys";
 import { createInfrastructure } from "./infrastructure";
+import { createHome } from "./home";
 import { createNetwork } from "./network";
 import { createKeys } from "./keys";
 import { createApiAccess } from "./api-access";
@@ -38,7 +39,7 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 let csrf = "",
   username = "",
   role = "viewer",
-  page = "fleet",
+  page = "home",
   fleet: Item[] = [],
   selected = "",
   tab = "overview",
@@ -344,8 +345,8 @@ async function desktopSignIn() {
 
 // Navigation grouped by purpose; the first group is the everyday view.
 const NAV_GROUPS: [string, [string, string, string][]][] = [
-  ["", [["fleet", "fleet", "Fleet"], ["alerts", "alerts", "Alerts"]]],
-  ["Automation", [["schedules", "calendar", "Schedules"], ["patches", "patch", "Patches"], ["software", "package", "Software & scripts"], ["assistant", "spark", "AI assistant"]]],
+  ["", [["home", "home", "Home"], ["fleet", "fleet", "Fleet"], ["alerts", "alerts", "Alerts"]]],
+  ["Automation", [["schedules", "calendar", "Schedules"], ["patches", "patch", "Patches"], ["software", "package", "Software & scripts"]]],
   ["Infrastructure", [["infrastructure", "network", "Infrastructure"], ["network", "globe", "Network & DNS"], ["slide", "slide", "Slide"], ["recovery", "recovery", "Recovery lab"]]],
   ["Administration", [["keys", "key", "Keys"], ["api", "code", "API & agents"], ["activity", "history", "Activity"], ["settings", "settings", "Settings"], ["downloads", "download", "Downloads"]]],
 ];
@@ -353,11 +354,12 @@ const NAV_GROUPS: [string, [string, string, string][]][] = [
 const STATIC_PAGES = ["assistant", "downloads", "settings", "account"];
 // Short labels for the tablet rail; phones show the first four primary pages in a tab bar.
 const RAIL_LABELS: Record<string, string> = { software: "Software", assistant: "AI", infrastructure: "Infra", network: "Network", recovery: "Recovery", api: "API" };
-const PRIMARY_PAGES = ["fleet", "alerts", "infrastructure", "keys"];
+const PRIMARY_PAGES = ["home", "fleet", "alerts", "infrastructure"];
 function shell(title: string, subtitle: string) {
   fleetInteractionsCleanup();
   document.body.dataset.role = role;
-  const allowed = ([id]: [string, string, string]) => role !== "viewer" || ["fleet", "alerts", "activity", "downloads", "settings"].includes(id);
+  document.body.dataset.workspacePage = page;
+  const allowed = ([id]: [string, string, string]) => role !== "viewer" || ["home", "fleet", "alerts", "activity", "downloads", "settings"].includes(id);
   const navButton = ([id, symbol, label]: [string, string, string]) =>
     `<button data-page="${id}" class="${page === id ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${icon(symbol as Parameters<typeof icon>[0])}<span>${label}</span>${RAIL_LABELS[id] ? `<span class="rail-label" aria-hidden="true">${RAIL_LABELS[id]}</span>` : ""}</button>`;
   const groups = NAV_GROUPS.map(([group, items]) => {
@@ -367,7 +369,7 @@ function shell(title: string, subtitle: string) {
   const everyPage = NAV_GROUPS.flatMap(([, items]) => items).filter(allowed);
   const primary = [...everyPage.filter(([id]) => PRIMARY_PAGES.includes(id)), ...everyPage.filter(([id]) => !PRIMARY_PAGES.includes(id))].slice(0, 4);
   const inMore = !primary.some(([id]) => id === page);
-  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#fleet" aria-label="Speck home">${wordmark(true)}<img class="brand-mark" src="/assets/brand/speck-mark-lime.svg" alt="" width="28" height="28"><span class="version">0.2</span></a><nav aria-label="Main navigation">${groups}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : '<div id="page-summary" class="fleet-summary page-summary" aria-label="Summary"></div>'}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><div class="page-actions">${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div>${STATIC_PAGES.includes(page) ? "" : `<button id="refresh" class="secondary icon-button" aria-label="Refresh" title="Refresh">${icon("refresh")}</button>`}</div></header><section id="content" tabindex="-1"></section></main><nav class="tabbar" aria-label="Primary navigation">${primary.map(navButton).join("")}<button id="more-open" class="${inMore ? "active" : ""}" aria-haspopup="dialog" ${inMore ? 'aria-current="page"' : ""}>${icon("more")}<span>More</span></button></nav><dialog class="more-sheet" id="more-sheet" aria-label="All pages" tabindex="-1"><div class="more-head"><span class="brand">${wordmark(true)}</span><button class="sheet-close" id="more-close" aria-label="Close">${icon("close")}</button></div><nav aria-label="All pages">${groups}</nav><div class="more-account"><span><b>${esc(username)}</b><small>${esc(role)}</small></span><button class="secondary" data-page="account">Account & access</button><button class="secondary" id="more-logout">${icon("logout")}<span>Sign out</span></button></div></dialog>`;
+  app.innerHTML = `<a class="skip-link" href="#content">Skip to content</a><aside><a class="brand" href="#home" aria-label="Speck home">${wordmark(true)}<img class="brand-mark" src="/assets/brand/speck-mark-lime.svg" alt="" width="28" height="28"><span class="version">0.2</span></a><nav aria-label="Main navigation">${groups}</nav><div class="side-note"><span class="eyebrow">A LITTLE LIGHTWEIGHT RMM</span></div><button id="logout" class="account"><b>${esc(username.slice(0, 1).toUpperCase())}</b><span>${esc(username)}<small>Sign out</small></span>${icon("logout")}</button></aside><main class="workspace ${page === "fleet" ? "fleet-workspace" : ""}"><header><div class="page-heading"><h1>${esc(title)}</h1>${page === "fleet" ? '<div id="fleet-summary" class="fleet-summary" aria-label="Fleet totals"></div>' : '<div id="page-summary" class="fleet-summary page-summary" aria-label="Summary"></div>'}${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><div class="header-actions"><div class="page-actions">${page === "fleet" ? `<button id="add" class="primary">${icon("plus")}<span>Add device</span></button>` : ""}</div>${STATIC_PAGES.includes(page) ? "" : `<button id="refresh" class="secondary icon-button" aria-label="Refresh" title="Refresh">${icon("refresh")}</button>`}</div></header><section id="content" tabindex="-1"></section></main><nav class="tabbar" aria-label="Primary navigation">${primary.map(navButton).join("")}<button id="more-open" class="${inMore ? "active" : ""}" aria-haspopup="dialog" ${inMore ? 'aria-current="page"' : ""}>${icon("more")}<span>More</span></button></nav><dialog class="more-sheet" id="more-sheet" aria-label="All pages" tabindex="-1"><div class="more-head"><span class="brand">${wordmark(true)}</span><button class="sheet-close" id="more-close" aria-label="Close">${icon("close")}</button></div><nav aria-label="All pages">${groups}</nav><div class="more-account"><span><b>${esc(username)}</b><small>${esc(role)}</small></span><button class="secondary" data-page="account">Account & access</button><button class="secondary" id="more-logout">${icon("logout")}<span>Sign out</span></button></div></dialog>`;
   const sheet = document.getElementById("more-sheet") as HTMLDialogElement;
   document.getElementById("more-open")!.onclick = () => {
     sheet.showModal();
@@ -375,7 +377,7 @@ function shell(title: string, subtitle: string) {
   };
   document.getElementById("more-close")!.onclick = () => sheet.close();
   sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.close(); });
-  document.querySelectorAll<HTMLElement>("[data-page]").forEach(
+  app.querySelectorAll<HTMLElement>("nav [data-page], .more-account [data-page]").forEach(
     (el) =>
       (el.onclick = () => {
         (document.getElementById("more-sheet") as HTMLDialogElement | null)?.close();
@@ -448,7 +450,7 @@ async function render(manualRefresh = false) {
     .querySelectorAll<HTMLDialogElement>("dialog")
     .forEach((d) => d.close());
   if (location.hash.startsWith("#desktop-signin/")) { await desktopSignIn(); return; }
-  page = location.hash.slice(1) || "fleet";
+  page = location.hash.slice(1) || "home";
   if (page.startsWith("remote/")) {
     const [id, query = ""] = page.slice(7).split("?");
     const mode = new URLSearchParams(query).get("mode") || "auto";
@@ -457,6 +459,7 @@ async function render(manualRefresh = false) {
   }
   if (
     ![
+      "home",
       "fleet",
       "alerts",
       "schedules",
@@ -476,8 +479,9 @@ async function render(manualRefresh = false) {
       "downloads",
     ].includes(page)
   )
-    page = "fleet";
+    page = "home";
   const titles: Record<string, string[]> = {
+    home: ["Home", ""],
     fleet: ["Fleet", ""],
     alerts: ["Alerts", "Health checks from every agent. Expand an alert for evidence and review actions."],
     schedules: ["Schedules", "Reviewed scans and templates that run on a schedule."],
@@ -499,6 +503,7 @@ async function render(manualRefresh = false) {
   shell(...(titles[page] as [string, string]));
   try {
     await {
+      home: home.render,
       fleet: () => renderFleet(manualRefresh),
       alerts: management.renderAlerts,
       schedules: management.renderSchedules,
@@ -517,6 +522,10 @@ async function render(manualRefresh = false) {
       settings: renderSettings,
       downloads: () => content(desktopDownloads(true)),
     }[page]!();
+    if (page === "home" && focusHomeCommand) {
+      focusHomeCommand = false;
+      document.getElementById("home-query")?.focus();
+    }
     void management.updateIndicator().catch(() => {});
   } catch (err) {
     if (!(err instanceof StaleViewError) && username) content(loadError(err));
@@ -569,6 +578,22 @@ const management = createManagement({
   role: () => role,
   username: () => username,
   refresh: render,
+});
+const home = createHome({
+  api, esc, content, on, date, loading, dialog,
+  checkpoint: () => viewScope.checkpoint(), role: () => role,
+  newSchedule: () => management.newSchedule(),
+  openNetwork: (machine: Item) => network.showMachine(machine),
+  openMachine: async (machine: Item | undefined) => {
+    if (!machine) return;
+    fleet = [...fleet.filter(d => d.id !== machine.id), machine];
+    await openDevice(machine.id);
+  },
+  assist: async (machine: Item, prompt: string) => {
+    await ops.assistDialog(machine);
+    const input = document.getElementById("ai-prompt") as HTMLTextAreaElement | null;
+    if (input) { input.value = prompt; input.focus(); }
+  },
 });
 async function renderFleet(manualRefresh = false) {
   if (!fleetCache) loading("Loading fleet…");
@@ -880,6 +905,7 @@ async function openDevice(id: string, initialTab = "overview") {
     highlightActiveMachine();
     // Return to the machine after dismissal; navigation and replacement panes
     // keep their own focus instead.
+    if (page === "home") document.getElementById("home-open-machine")?.focus({ preventScroll: true });
     if (page === "fleet") {
       document.querySelectorAll<HTMLButtonElement>("#fleet-rows .machine-name").forEach((button) => {
         if (button.dataset.device === id) button.focus({ preventScroll: true });
@@ -2088,6 +2114,14 @@ async function renderSettings() {
   }
 }
 startResponsive();
+let focusHomeCommand = false;
+window.addEventListener("keydown", (event) => {
+  if (!(event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) || !username || page.startsWith("remote/") || document.querySelector("dialog[open]")) return;
+  event.preventDefault();
+  const input = document.getElementById("home-query") as HTMLInputElement | null;
+  if (input) { input.focus(); input.select(); }
+  else { focusHomeCommand = true; location.hash = "home"; }
+});
 window.addEventListener("hashchange", () => {
   if (username) render();
   else signedOut();
