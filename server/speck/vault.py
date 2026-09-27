@@ -913,5 +913,6 @@ async def delete_entry(name: str, revoke: bool = True, user=Depends(writers)):
     with db(write=True) as conn:
         conn.execute("DELETE FROM vault_entries WHERE name=?", (name,))
         conn.execute("DELETE FROM key_systems WHERE kind='vault' AND name=?", (name,))
+        conn.execute("DELETE FROM key_rotation_plans WHERE kind='vault' AND name=?", (name,))
         audit(conn, user["username"], "vault.deleted", detail={"name": name, "revoked": revoked})
     return {"ok": True, "revoked": revoked}

@@ -220,6 +220,7 @@ def remove(name: str, user=Depends(require_admin)):
         if not conn.execute("DELETE FROM ssh_keys WHERE name=?", (name,)).rowcount:
             raise HTTPException(404, "SSH key not found")
         conn.execute("DELETE FROM key_systems WHERE kind='ssh' AND name=?", (name,))
+        conn.execute("DELETE FROM key_rotation_plans WHERE kind='ssh' AND name=?", (name,))
         audit(conn, user["username"], "ssh.deleted", detail={"name": name})
     return {"ok": True}
 

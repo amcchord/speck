@@ -86,6 +86,7 @@ dialog.resource-flyout .net-pane { padding: 0; }
 .resource-navigation button {white-space:nowrap;font-size:12px;}
 .list-workspace-controls {margin:0 0 18px; padding:16px; background:var(--surface,#fff); border:1px solid var(--border,#dce2e8);border-radius:12px;}
 .list-workspace-controls .toolbar {align-items:end;flex-wrap:wrap;gap:12px;}
+.list-workspace-controls:has(> details:not([open])) {padding:0;margin-bottom:6px;background:transparent;border:0;border-radius:0;}
 .list-search {flex:1;min-width:min(250px,100%);}
 .list-result-bar {display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;font-size:12px;color:var(--muted,#64748b);}
 .list-result-bar>div {display:flex;gap:8px;}

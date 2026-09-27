@@ -119,12 +119,16 @@ test('empty inventory, unavailable inventory and unconfigured AI are distinct', 
   await expect(page.locator('.home-stat.agents strong')).toHaveText('—');
 });
 
-test('keyboard command returns to Home; stale Home responses do not replace another page', async ({page}) => {
+test('keyboard command preserves the workspace; stale Home responses do not replace another page', async ({page}) => {
   await setup(page);
   await page.goto('/#fleet');
   await expect(page.locator('#fleet-rows')).toBeVisible();
   await page.keyboard.press('Control+k');
-  await expect(page.locator('#home-query')).toBeFocused();
+  await expect(page.locator('#workspace-command')).toBeFocused();
+  await expect(page).toHaveURL(/#fleet$/);
+  await page.getByRole('dialog',{name:'Find in Speck'}).getByRole('button',{name:'Close',exact:true}).click();
+  await page.goto('/#home');
+  await expect(page.locator('#home-query')).toBeVisible();
   let release;
   await page.route('**/api/network/map', async r => {await new Promise(resolve => { release=resolve; }); await r.fulfill({json:{machines:[]}});});
   await page.locator('#refresh').click();
