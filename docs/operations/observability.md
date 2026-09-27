@@ -117,3 +117,24 @@ verified candidate for its updater helper so future installer fixes apply during
 the current upgrade. Real Windows tests cover released and persistent file locks,
 identity preservation, the complete staged transaction and rollback scenarios.
 Linux agent/connector race tests passed again. Final rollout evidence follows.
+
+### Final agent rollout
+
+Agent source `e6fbfd2` ships signed version 0.3.3. All ten approved endpoints
+(six Windows amd64, four Linux amd64) are online on 0.3.3, advertise interactive
+shells and report current update state. There are no installing, failed or
+rollback-failed updates. The six unapproved recovery candidates remain unchanged.
+
+Legacy installers copied their old updater executable, so three Windows endpoints
+needed an operator-triggered repair using the newly verified, signed installer.
+The corrected installer succeeded, preserved each identity, verified both
+installed binaries and retained backups. Future updates from 0.3.3 use the signed
+candidate as their updater. Real Windows/Linux TLS shell acceptance passed again
+on 0.3.3: session state, Unicode, resize, Ctrl+C, disconnect and fresh reconnect.
+Final server/configuration/database checks passed with no active validation shell.
+
+The web/backend release remains `3a282ac`; the agent release is `e6fbfd2`. Both
+are required ancestors for the next deployment until merged to main. The final
+release record and per-endpoint evidence remain in the same private output and
+rollback directories. The automatic-update policy was preserved and all platform
+offers are enabled again.

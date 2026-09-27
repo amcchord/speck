@@ -865,3 +865,14 @@ waits for helper process exit, and runs the verified candidate as the updater.
 Windows file-lock, transaction/rollback and ConPTY tests passed on the lab host;
 Linux agent/connector race tests passed again. No failed update bypasses approval
 or changes endpoint identity; final release validation follows below.
+
+Final agent source is `e6fbfd2`, signed as 0.3.3. All ten approved endpoints
+(six Windows, four Linux) are online on 0.3.3, advertise interactive shells and
+have current update state; zero failed, installing or rollback-failed updates.
+Three legacy Windows updaters required a signed operator repair; installed
+hashes, retained backups and unchanged identities were verified. Six unapproved
+recovery candidates were untouched. Live 0.3.3 Windows/Linux sessions passed
+state, Unicode, resize, Ctrl+C, teardown and clean reconnect again. All platform
+offers are enabled; automatic-update policy is unchanged. The frontend/backend
+remain `3a282ac`, with no active validation shell and final database/configuration
+invariants intact. Preserve both release commits until they reach main.
