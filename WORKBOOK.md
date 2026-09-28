@@ -1071,3 +1071,64 @@ Equipment history is seven-day, bounded, encrypted and opt-in for continuous
 collection; observed samples start with this release. Backup coverage remains a
 clearly labeled bounded overview, with deeper paginated protected-system history.
 Private deployment, receipts and screenshots are under `output/product-upgrade/`.
+
+## 2026-09-27 — Production UX reliability
+
+Deployed source `1cdb07ee8a8cdd163e1cd77dc7fd7191a3f1c653` as
+`20260928T000453Z-ux-reliability-1cdb07e` (September 28 UTC, September 27 local).
+The [review matrix](docs/ux-reliability-release.md) maps all 30 audit items to
+delivered behavior and records the remaining provider, latency and platform limits.
+The release adds truthful loading/failure/evidence states, compact Fleet reads,
+shared provider snapshots, persistent navigation/search context, clearer endpoint
+and backup workflows, customer associations, reviewed maintenance runbooks,
+private recovery reports and aggregate UX measurements.
+
+The sole deployment owner fetched origin/main and verified its ancestry before
+release builds and publication, retaining prior deployed source `ab5b26e` and main
+`db2f55b`. Publication held the shared release lock, matched the inspected baseline
+and compared the live index immediately before atomic replacement. No active
+endpoint jobs, recovery runs or remote sessions were present at the release gate.
+A consistent database and complete server/web/download/config rollback snapshot
+is retained at `/var/lib/speck-rollback/20260928T000453Z-ux-reliability-1cdb07e`.
+All 27 public web assets match the release manifest; service health is active.
+Final index SHA-256:
+`969013d08b52abf3d29a90226605ce19f2ba1546616f54491a4128dfc4e8bec6`.
+
+Local `./scripts/check-local.sh core` passed at `aac3f3c`: 261 backend tests,
+Ruff, 56 web unit tests and 337 Chromium/WebKit browser tests, with one existing
+WebKit touch-drag skip. Linux agent and Proxmox connector race tests passed;
+Windows agent/desktop and Linux amd64/arm64 agent/Proxmox builds passed. An
+earlier one-pixel WebKit overflow at 320 px was corrected before that complete
+rerun. Final source `1cdb07e` adds remote-start timing and scorecard loading;
+its fresh TypeScript/Vite build and 80 relevant Chromium/WebKit checks passed.
+GitHub push/PR backend checks and the UI-layout browser check passed for
+`1cdb07e`. Native desktop/iOS code and endpoint binaries are unchanged; no iOS
+runtime tests or new physical endpoint operations were performed for this release.
+
+Authenticated production acceptance passed 12 read-only API checks, including
+compact/full endpoint evidence, customer catalogs, runbooks, UX outcomes,
+account-scoped Slide coverage and allowlisted private recovery reports. Manual
+production UI review verified Home, Fleet, Customers & sites, Maintenance and the
+populated UX reliability scorecard. Customer editing, runbook gates and responsive
+behavior were exercised with isolated fixtures. The release preserved all 12
+protected configuration/identity groups and unchanged agent downloads at 0.3.3.
+Acceptance did not create endpoint jobs, remote sessions or restores, change
+endpoint policy, reveal/rotate credentials, or transfer endpoint file contents.
+
+Three-sample authenticated API observations from the operator Mac show a compact
+Fleet response of 595,280 bytes versus 1,043,091 bytes for full Fleet on the same
+release (42.9% smaller); compact median was 285.9 ms. Infrastructure median was
+596.7 ms versus 1,158.0 ms in the earlier sample. Network-map reads were 6,080.4,
+257.5 and 219.2 ms, so cold provider enrichment remains a material latency limit.
+Patch/software medians were 20.3/27.5 ms. These small samples mix cache, provider
+inventory and concurrent load conditions, exclude browser rendering, and do not
+establish a universal latency improvement or guarantee. First useful content and
+complete enrichment are measured separately in the new scorecard.
+
+Customer workspaces provide reviewed organizational context, not tenant
+isolation. Runbook stages remain separately reviewed; unsuccessful or uncertain
+receipts block continuation. Recovery timing is evidence rather than contractual
+RTO/RPO. Anonymous aggregate metrics exclude resource identifiers, commands,
+credentials and remote screens. Private deployment, acceptance and measurement
+records remain in ignored `output/ux-reliability/`. Implementation and release
+documentation are tracked in [PR #26](https://github.com/amcchord/speck/pull/26).

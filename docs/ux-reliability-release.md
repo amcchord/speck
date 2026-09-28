@@ -47,3 +47,7 @@ This release implements the September 27 production UX review in the hosted web 
 ## Release validation
 
 The release record in WORKBOOK.md contains the exact source commit, production index, local check results, observed performance and rollback location. Local backend/unit/browser tests cover failure and delay handling, explicit reviews, private exports, workspace association validation, partial bundle output, schedule exclusions, and runbook stage gates. Production acceptance uses read-only inventory and configuration checks; it does not initiate restoration or modify endpoint policy.
+
+Deployed source `1cdb07e` is live at [speckrmm.com](https://speckrmm.com). The complete local core suite passed 261 backend, 56 web unit and 337 browser tests (one existing WebKit skip), plus Linux race tests and Windows/Linux builds. The final UI refinement passed a fresh build and 80 relevant browser checks. GitHub backend and browser checks passed for that source. Twelve authenticated production API checks and manual review of Home, Fleet, Customers & sites, Maintenance and UX reliability passed.
+
+The compact Fleet payload is 42.9% smaller than full Fleet in the same-release sample (595,280 versus 1,043,091 bytes). Its three-read median was 285.9 ms. Cold network enrichment still reached 6.1 seconds; repeat reads were 258 and 219 ms. These are API observations with mixed cache and load conditions, not rendering benchmarks or latency guarantees. The scorecard now separates first useful content from complete enrichment so this remaining cost is visible.
