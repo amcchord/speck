@@ -72,7 +72,7 @@ export function createHome(ui: Item) {
           <div class="home-panel-heading"><div><h2 id="home-environment-title">Connected systems</h2><p>One machine. Every connection.</p></div><a class="text-link" href="#fleet">Open fleet ${icon("arrow")}</a></div>
           <div class="home-legend" aria-label="Relationship colors"><span class="network">${icon("globe")}UniFi & network</span><span class="compute">${icon("network")}Proxmox & cloud</span><span class="agents">${icon("monitor")}Speck agents</span></div>
           <div class="home-filters" role="group" aria-label="Filter connected systems">${[["all","All systems"],["linked","Connected"],["missing","Without endpoint agent"],["review","Review links"]].map(([id,label]) => `<button data-home-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("")}</div>
-          <div id="home-relationship"></div><div id="home-results" aria-live="polite"></div>
+          <div id="home-results" aria-live="polite"></div><div id="home-relationship"></div>
         </section>
         <div class="home-side">
           <section class="home-panel" aria-labelledby="home-attention-title"><div class="home-panel-heading"><h2 id="home-attention-title">Attention</h2><a href="#workspaces" class="text-link">Operational queue →</a></div>
