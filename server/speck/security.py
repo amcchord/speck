@@ -46,7 +46,7 @@ def require_user(request: Request):
         reads = {'/api/fleet', '/api/fleet/preferences', '/api/auth/me', '/api/devices', '/api/alerts', '/api/monitoring', '/api/audit/events', '/api/access/me', '/api/access/sessions',
                  '/api/whoami', '/api/overview', '/api/search', '/api/guide'}
         personal = {'/api/fleet/preferences', '/api/auth/logout', '/api/access/password', '/api/access/sessions/revoke', '/api/access/totp/setup', '/api/access/totp/confirm', '/api/access/totp/disable'}
-        if not ((request.method == 'GET' and path in reads) or path in personal or path == '/api/access/passkeys' or path.startswith('/api/access/passkeys/')):
+        if not ((request.method == 'GET' and (path in reads or (path.startswith('/api/devices/') and len(path.split('/')) == 4))) or path in personal or path == '/api/access/passkeys' or path.startswith('/api/access/passkeys/')):
             raise HTTPException(403, 'Viewer accounts can read inventory, alerts and audit history')
     if request.method not in ('GET', 'HEAD', 'OPTIONS') and path in ('/api/slide/connection', '/api/ai/settings') and user['role'] != 'admin':
         raise HTTPException(403, 'Administrator access required')

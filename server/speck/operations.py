@@ -182,13 +182,14 @@ def render_script(template, parameters):
 class Batch(BaseModel):
     request_id: str = Field(min_length=16, max_length=80)
     name: str = Field(min_length=1, max_length=100)
-    kind: Literal["template", "patch.scan", "patch.install"]
+    kind: Literal["template", "patch.scan", "patch.install", "inspection.software", "inspection.processes", "inspection.disks"]
     device_ids: list[str] = Field(min_length=1, max_length=500)
     template_id: str | None = None
     template_revision: int | None = None
     parameters: dict[str, str] = Field(default_factory=dict)
     updates: dict[str, list[str]] = Field(default_factory=dict)
     confirmed: bool = False
+    target_policy: Literal["all", "eligible"] = "all"
 
 
 def prepare_batch(conn, body):
@@ -213,7 +214,7 @@ def prepare_batch(conn, body):
         if time.time() - row["last_seen"] > 75:
             raise HTTPException(409, f"{row['label']} is offline. Refresh the target selection.")
         busy = conn.execute(
-            "SELECT 1 FROM batch_jobs bj JOIN jobs j ON j.id=bj.job_id WHERE bj.device_id=? AND j.status IN ('queued','leased','running') AND j.deadline>?",
+            "SELECT 1 FROM jobs j WHERE j.device_id=? AND j.status IN ('queued','leased','running') AND j.deadline>?",
             (device_id, time.time()),
         ).fetchone()
         if busy:
@@ -223,6 +224,10 @@ def prepare_batch(conn, body):
                 raise HTTPException(422, "The selected template and target operating systems must match")
             script = render_script(template, body.parameters)
             timeout = template["timeout"]
+        elif body.kind.startswith("inspection."):
+            from speck.inspection import Inspection, script_for
+            script = script_for(row["platform"], Inspection(kind=body.kind.split(".")[1]))
+            timeout = 60
         elif body.kind == "patch.scan":
             script = WINDOWS_SCAN if row["platform"] == "windows" else LINUX_SCAN
             timeout = 900
@@ -236,7 +241,10 @@ def prepare_batch(conn, body):
                 raise HTTPException(422, "Select updates from the most recent scan")
             script = install_script(row["platform"], ids, report["manager"])
             timeout = 7200
-        prepared.append((dict(row), {"script": script, "shell": "auto", "timeout": timeout}, timeout))
+        payload = {"script": script, "shell": "auto", "timeout": timeout}
+        if body.kind.startswith("inspection."):
+            payload.update(inspection=body.kind.split(".")[1], inspection_platform=row["platform"])
+        prepared.append((dict(row), payload, timeout))
     return prepared
 
 

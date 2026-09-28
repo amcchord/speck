@@ -21,9 +21,9 @@ export function parentDirectory(path: string, windows = false) {
 }
 export function mountFiles(ui: Item, d: Item, root: HTMLElement) {
   let directory = d.platform === "windows" ? "C:\\ProgramData" : "/tmp",
-    generation = 0;
+    generation = 0, selectedFile="", listing=false, lastJob="";
   const windows = d.platform === "windows";
-  root.innerHTML = `<div class="resource-section"><h3>Files on ${e(d.label)}</h3><p class="resource-note">Agent account: ${windows ? "Local System" : "service account (normally root)"}. Transfers are verified with SHA-256; up to 256 MiB. Existing files are preserved.</p></div><div class="toolbar"><label class="list-search">Directory or full file path<input id="file-path" value="${e(directory)}" spellcheck="false"></label><button id="browse" class="secondary">List</button><button id="file-parent" class="secondary">Up</button><button id="download" class="secondary">Download</button></div><nav aria-label="File path" data-file-crumbs></nav><div data-file-list><p class="resource-note">Choose List to read this directory from the agent.</p></div><section class="resource-section"><h3>Upload a file</h3><div class="toolbar"><input id="file-upload" aria-label="Choose file to upload" type="file"><button id="upload" class="primary">Upload to this directory</button></div><p data-transfer-progress role="status"></p></section><section data-transfers></section>`;
+  root.innerHTML = `<div class="resource-section"><h3>Files on ${e(d.label)}</h3><p class="resource-note">Agent account: ${windows ? "Local System" : "service account (normally root)"}. Transfers are verified with SHA-256; up to 256 MiB. Existing files are preserved.</p></div><div class="toolbar"><label class="list-search">Current directory<input id="file-path" value="${e(directory)}" spellcheck="false"></label><button id="browse" class="secondary">Browse files</button><button id="file-parent" class="secondary">Up</button><button id="download" class="secondary" disabled>Download selected file</button></div><nav aria-label="File path" data-file-crumbs>${e(directory)} · not yet read</nav><p data-file-selection role="status">Select a file after browsing its directory.</p><div data-file-list><p class="resource-note">Choose Browse files to read this directory once from the agent.</p></div><section class="resource-section"><h3>Upload a file</h3><div class="toolbar"><input id="file-upload" aria-label="Choose file to upload" type="file"><button id="upload" class="primary">Upload to this directory</button></div><p data-transfer-progress role="status"></p></section><section data-transfers></section>`;
   const input = root.querySelector<HTMLInputElement>("#file-path")!;
   const list = root.querySelector<HTMLElement>("[data-file-list]")!;
   const progress = root.querySelector<HTMLElement>("[data-transfer-progress]")!;
@@ -46,6 +46,8 @@ export function mountFiles(ui: Item, d: Item, root: HTMLElement) {
     );
   }
   async function browse(path = input.value) {
+    if(listing)return; listing=true;
+    selectedFile="";root.querySelector<HTMLButtonElement>("#download")!.disabled=true;
     const version = ++generation;
     list.innerHTML =
       '<p class="resource-note" role="status">Reading directory from the agent…</p>';
@@ -55,6 +57,7 @@ export function mountFiles(ui: Item, d: Item, root: HTMLElement) {
         payload: { path },
         timeout: 60,
       });
+      lastJob=queued.id;
       const job = await wait(queued.id);
       if (!root.isConnected || version !== generation) return;
       if (job.status !== "complete" || !Array.isArray(job.result?.entries))
@@ -98,14 +101,14 @@ export function mountFiles(ui: Item, d: Item, root: HTMLElement) {
         .querySelector<HTMLButtonElement>("[data-file-root]")
         ?.addEventListener("click", () => void browse("/"));
       list.innerHTML = `<div class="scroll"><table><thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Modified</th></tr></thead><tbody>${entries.map((entry, i) => `<tr><td><button class="text-link" data-file="${i}">${entry.directory ? "▸ " : ""}${e(entry.name)}</button></td><td>${entry.symlink ? "Symbolic link" : entry.directory ? "Directory" : "File"}</td><td>${entry.directory ? "—" : e(capacity(entry.size))}</td><td>${e(detailDate(entry.modified))}</td></tr>`).join("")}</tbody></table></div><p class="resource-note">${entries.length} entries · read ${new Date().toLocaleTimeString()}. ${job.result.truncated ? "The agent limited this result to 1,000 entries." : ""}</p>`;
-      listWorkspace(list, "tbody tr", "files on " + d.id);
+      listWorkspace(list, "tbody tr", "files on " + d.id,{label:"files on " + d.label});
       list.querySelectorAll<HTMLButtonElement>("[data-file]").forEach(
         (b) =>
           (b.onclick = () => {
             const entry = entries[Number(b.dataset.file)];
             if (entry.directory && !entry.symlink) void browse(entry.path);
             else {
-              input.value = entry.path;
+              selectedFile=entry.path;root.querySelector<HTMLButtonElement>("#download")!.disabled=false;root.querySelector("[data-file-selection]")!.textContent="Selected file: "+entry.path;
               const pane: HTMLDialogElement = ui.flyout(
                 entry.name,
                 facts([
@@ -129,8 +132,9 @@ export function mountFiles(ui: Item, d: Item, root: HTMLElement) {
       );
     } catch (error) {
       if (root.isConnected && version === generation)
-        list.textContent = (error as Error).message;
-    }
+        {list.textContent = (error as Error).message;
+        if(lastJob){const receipt=document.createElement('button');receipt.className='text-link';receipt.textContent='Inspect directory job';receipt.onclick=()=>ui.showJob(lastJob);list.append(receipt);}}
+    } finally {listing=false;}
   }
   async function transfers() {
     const rows = await ui.api(
@@ -182,8 +186,9 @@ export function mountFiles(ui: Item, d: Item, root: HTMLElement) {
         }),
     );
   }
-  async function download(path = input.value) {
-    progress.textContent = "Requesting file from the agent…";
+  async function download(path = selectedFile) {
+    if(!path){progress.textContent="Select a file first.";return;}
+    progress.textContent = "Requesting "+path+" from the agent…";
     try {
       const result = await ui.api(
         "/devices/" + d.id + "/files/download",

@@ -125,6 +125,8 @@ test.describe('tablet landscape', () => {
 
   test('every destination stays reachable and the selection column is not truncated', async ({ page }) => {
     await signIn(page);
+    // The expanded navigation scrolls within the sidebar, independently of the account.
+    await page.locator('aside [data-page="downloads"]').scrollIntoViewIfNeeded();
     const downloads = await page.locator('aside [data-page="downloads"]').boundingBox();
     const account = await page.locator('aside .account').boundingBox();
     expect(downloads.y + downloads.height).toBeLessThanOrEqual(account.y);

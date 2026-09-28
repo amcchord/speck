@@ -28,7 +28,7 @@ def migrate(conn):
 
 
 class Inspection(BaseModel):
-    kind: Literal["software", "processes", "disks", "service"]
+    kind: Literal["software", "processes", "disks", "service", "bundle"]
     service: str = Field(default="", max_length=160)
     confirmed: bool = False
 
@@ -36,6 +36,13 @@ class Inspection(BaseModel):
 def script_for(platform, body):
     if platform not in ("windows", "linux"):
         raise HTTPException(409, "Inspection supports Windows and Linux endpoint agents")
+    if body.kind == "bundle":
+        commands = []
+        for kind in ('software', 'processes', 'disks'):
+            marker = '__SPECK_REPORT_' + kind + '__'
+            command = script_for(platform, Inspection(kind=kind))
+            commands.append(("Write-Output '" + marker + "'; " + command) if platform == 'windows' else ("printf '\n" + marker + "\n'\n" + command + "\n"))
+        return ("\n".join(commands)) if platform == 'windows' else "set -e\n" + "\n".join(commands)
     if body.kind == "service" and (not body.service or not re.fullmatch(r"[A-Za-z0-9_.:@ /-]{1,160}", body.service)):
         raise HTTPException(422, "Choose an exact service name from the reported inventory")
     if platform == "windows":
@@ -132,6 +139,22 @@ def record_result(conn, job, result):
         return
     payload = json.loads(unseal(job["payload"]))
     kind = payload.get("inspection")
+    if kind == 'bundle':
+        output = result.get('stdout', '')
+        sections = re.split(r'__SPECK_REPORT_(software|processes|disks)__\s*', output)
+        if len(sections) != 7 or sections[1::2] != ['software', 'processes', 'disks']:
+            return
+        # Validate every component before retaining any of them.
+        try:
+            for item, text in zip(sections[1::2], sections[2::2]):
+                normalized = normalize(item, payload['inspection_platform'], text)
+                if len(normalized) > 2000 or any(not isinstance(row, dict) for row in normalized):
+                    return
+        except (TypeError, ValueError, KeyError):
+            return
+        for item, text in zip(sections[1::2], sections[2::2]):
+            record_result(conn, dict(job) | {'payload': seal(json.dumps(payload | {'inspection': item}))}, result | {'stdout': text})
+        return
     if kind not in ("software", "processes", "disks"):
         return
     try:

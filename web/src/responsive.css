@@ -197,3 +197,12 @@ td .primary, td .secondary, td .quick-action { white-space: nowrap; }
   .fleet-workspace .fleet-table-wrap .fleet-table tr[data-row] > td[data-column="memory"]::before { content: "RAM "; display: inline; width: auto; margin: 0; }
   .fleet-workspace .fleet-table-wrap .fleet-table .fleet-empty-row { display: block; padding: 24px 16px; }
 }
+
+
+@media(max-width:360px){.device-drawer .dialog-head{padding-top:8px;padding-bottom:8px}.device-drawer .tabs{padding-block:0}.device-drawer .machine-summary{padding-top:0;margin-top:0}.device-drawer #device-body{padding-top:10px}.device-drawer .machine-facts{gap:6px;margin-bottom:8px}}
+/* Leave a small separation when the last destination is scrolled into view. */
+@media(min-width:761px){aside > nav{padding-bottom:4px;scroll-padding-bottom:4px}}
+#slide-connection{min-width:0;max-width:100%;width:100%}
+.section-head:has(#slide-connection) > div{min-width:0}
+#backup-coverage .resource-related > button{min-width:0;white-space:normal;overflow-wrap:anywhere}
+#slide-connection{display:block;overflow:hidden;text-overflow:ellipsis}

@@ -128,3 +128,8 @@
 .machine-inventory .drawer-actions:not(:empty) { margin-top: 8px; }
 .machine-inventory .drawer-actions button { min-height: var(--control-small); padding: 4px 10px; font-size: 12px; }
 @media (max-width: 760px) { .machine-inventory dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+@media(max-width:360px){.device-drawer .dialog-head{padding-top:10px;padding-bottom:10px}.device-drawer .machine-facts{gap:6px}.device-drawer .machine-summary{padding-top:8px}.device-drawer .tabs{gap:2px;padding-top:4px;padding-bottom:4px}}
+.device-drawer .tabs{scrollbar-width:thin;scroll-padding:12px}.device-drawer .tabs:after{content:'More tools →';white-space:nowrap;align-self:center;color:var(--muted);font-size:11px;padding:0 8px}
+
+@media(max-width:360px){.machine-tabs{gap:2px!important}.machine-tabs button{padding-block:7px!important}.machine-overview{gap:10px!important}.machine-summary{margin-block:8px!important}.device-drawer .dialog-head{padding-block:10px!important}}
