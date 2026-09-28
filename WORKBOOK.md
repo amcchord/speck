@@ -1132,3 +1132,25 @@ RTO/RPO. Anonymous aggregate metrics exclude resource identifiers, commands,
 credentials and remote screens. Private deployment, acceptance and measurement
 records remain in ignored `output/ux-reliability/`. Implementation and release
 documentation are tracked in [PR #26](https://github.com/amcchord/speck/pull/26).
+
+### Home search results before connections
+
+Deployed web source `43f19bdba461c83a25cfc35c971456773bac26b7` as
+`20260928T003449Z-home-search-order-43f19bd`. Home now places matching machine
+results and pagination above the selected system's connection cards. This keeps
+the result list first in both visual and document order at every screen size.
+
+TypeScript/Vite and all 22 existing Home Chromium/WebKit checks passed, including
+1440, 834, 390 and 320 px layouts. Live authenticated read-only acceptance verified
+filtered rows above connection details with zero console errors. This web-only
+release did not rerun backend/agent/native tests; hosted checks were not used for
+the release decision. Endpoint binaries, backend, configuration, identities and
+service PID remain unchanged; no service restart occurred.
+
+The sole deployment owner fetched main and confirmed ancestry, preserved deployed
+source `1cdb07e`, held the shared lock, matched the inspected baseline and checked
+the live index immediately before publication. All 27 public web hashes and health
+passed. Rollback is retained at
+`/var/lib/speck-rollback/20260928T003449Z-home-search-order-43f19bd`.
+Index SHA-256: `fbeb87a3cdd6c16c3fdc2efc0f39755cf23b45fe16e1f7337768cdfb4a225e39`.
+Private evidence is in ignored `output/home-search-order/`.
