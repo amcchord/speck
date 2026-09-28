@@ -1,0 +1,27 @@
+{
+  "provenance": "Unretouched built console screenshots; synthetic Playwright fixtures only. No production data.",
+  "captured_at_utc": "2026-09-28T00:58:13.845635+00:00",
+  "captures": [
+    {
+      "file": "ip-desktop.png",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 176007,
+      "sha256": "b4291a9bfefc22af11787925e04fba5b6db22f762ad974c59f282e95564ca21c"
+    },
+    {
+      "file": "ip-phone.png",
+      "width": 390,
+      "height": 1507,
+      "bytes": 128923,
+      "sha256": "af74a1abf176662130c875c6dfceaca97113a4b2c76b25398f03585028ef7fd3"
+    },
+    {
+      "file": "network.png",
+      "width": 1280,
+      "height": 1358,
+      "bytes": 171730,
+      "sha256": "ac64aa1c955f24ac08733c783cda4face5188ef8f4ad712fa6a4e4fed5844d53"
+    }
+  ]
+}

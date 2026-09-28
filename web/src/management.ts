@@ -1,3 +1,4 @@
+import { entityLink } from './entity-links';
 import {startJourney} from './ux-quality';
 import { listWorkspace } from "./list-workspace";
 import { rememberResource, registerResource, resourceHref } from "./resource-navigation";
@@ -252,7 +253,7 @@ export function createManagement(ui: Item) {
           ? `<div class="schedule-grid">${schedules
               .map(
                 (s: Item, i: number) =>
-                  `<article class="panel schedule-card"><div class="section-head"><span class="eyebrow">${s.operation.kind === "patch.scan" ? "PATCH INVENTORY" : "SCRIPT / SOFTWARE"}</span>${badge(s.enabled ? "Active" : "Paused", !!s.enabled)}</div><h2><button class="text-link" data-schedule-detail="${esc(s.id)}">${esc(s.name)}</button></h2><p>${s.interval_seconds ? "Every " + (s.interval_seconds / 3600).toLocaleString() + " hours" : "One-time operation"} · ${s.operation.device_ids.length} machine${s.operation.device_ids.length === 1 ? "" : "s"}</p><dl class="schedule-facts"><div><dt>Next run</dt><dd>${s.enabled ? date(s.next_run) : "Paused"}</dd></div><div><dt>Owner</dt><dd>${esc(s.owner)}</dd></div>${s.operation.template_revision ? `<div><dt>Template</dt><dd>Revision ${s.operation.template_revision}</dd></div>` : ""}</dl><details><summary>Target machines</summary><ul>${s.operation.device_ids.map((id: string) => `<li>${esc(devices.find((d: Item) => d.id === id)?.label || id)}</li>`).join("")}</ul></details><div class="schedule-runs">${
+                  `<article class="panel schedule-card"><div class="section-head"><span class="eyebrow">${s.operation.kind === "patch.scan" ? "PATCH INVENTORY" : "SCRIPT / SOFTWARE"}</span>${badge(s.enabled ? "Active" : "Paused", !!s.enabled)}</div><h2><button class="text-link" data-schedule-detail="${esc(s.id)}">${esc(s.name)}</button></h2><p>${s.interval_seconds ? "Every " + (s.interval_seconds / 3600).toLocaleString() + " hours" : "One-time operation"} · ${s.operation.device_ids.length} machine${s.operation.device_ids.length === 1 ? "" : "s"}</p><dl class="schedule-facts"><div><dt>Next run</dt><dd>${s.enabled ? date(s.next_run) : "Paused"}</dd></div><div><dt>Owner</dt><dd>${esc(s.owner)}</dd></div>${s.operation.template_revision ? `<div><dt>Template</dt><dd>Revision ${s.operation.template_revision}</dd></div>` : ""}</dl><details><summary>Target machines</summary><ul>${s.operation.device_ids.map((id: string) => `<li>${entityLink({kind:"machine",id},devices.find((d: Item) => d.id === id)?.label || id)}</li>`).join("")}</ul></details><div class="schedule-runs">${
                     s.runs
                       .slice(0, 4)
                       .map(

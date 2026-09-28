@@ -1,3 +1,5 @@
+import { addressLink, entityLink, entities } from './entity-links';
+import { hostRef } from './entity-model';
 import {workspaceTab,setWorkspaceTab} from "./resource-navigation";
 import { rememberResource, registerResource, bindResourceNavigation } from "./resource-navigation";
 import {mountProviderExplorer} from "./provider-explorer";
@@ -286,17 +288,17 @@ export function createInfrastructure(ui: Item) {
         const key = r.connection_id + "/" + r.node;
         const heading =
           key !== group
-            ? `<tr class="infra-group"><th colspan="8">${esc(r.connection_name)} <span>›</span> ${esc(r.node || labels[r.provider])}</th></tr>`
+            ? `<tr class="infra-group"><th colspan="8">${entityLink({kind:"connection",id:r.connection_id},r.connection_name)} <span>›</span> ${entityLink(hostRef(r,entities.machines),r.node || labels[r.provider])}</th></tr>`
             : "";
         group = key;
-        return `${heading}<tr class="${r.kind === "node" ? "infra-host-row" : ""}"><td><button class="text-link" id="infra-resource-${i}">${r.kind !== "node" && r.provider === "proxmox" ? '<span class="infra-branch" aria-hidden="true">↳</span>' : ""}${esc(r.name)}</button>${r.template ? "<small>Template</small>" : ""}</td><td>${esc(kinds[r.kind])}</td><td>${badge(r.status)}</td><td>${managementLabel(r)}</td><td>${typeof r.cpu==='number'?`<span class="infra-load">${Math.round(r.cpu*100)}%<i style="--load:${Math.min(100,Math.max(0,r.cpu*100))}%"></i></span>`:r.provider==='linode'?'<span class="placeholder">In details</span>':'—'}</td><td>${r.max_memory ? `${r.memory ? bytes(r.memory) + " / " : ""}${bytes(r.max_memory)}` : "—"}<small>${r.max_disk ? bytes(r.max_disk) + " disk" : ""}</small></td><td>${esc(r.addresses?.join(", ") || r.id)}<small>${esc(r.pool || "")}</small></td><td>${r.agent ? button("infra-endpoint-" + i, "Open agent") : ""}</td></tr>`;
+        return `${heading}<tr class="${r.kind === "node" ? "infra-host-row" : ""}"><td><button class="text-link" id="infra-resource-${i}">${r.kind !== "node" && r.provider === "proxmox" ? '<span class="infra-branch" aria-hidden="true">↳</span>' : ""}${esc(r.name)}</button>${r.template ? "<small>Template</small>" : ""}</td><td>${esc(kinds[r.kind])}</td><td>${badge(r.status)}</td><td>${managementLabel(r)}</td><td>${typeof r.cpu==='number'?`<span class="infra-load">${Math.round(r.cpu*100)}%<i style="--load:${Math.min(100,Math.max(0,r.cpu*100))}%"></i></span>`:r.provider==='linode'?'<span class="placeholder">In details</span>':'—'}</td><td>${r.max_memory ? `${r.memory ? bytes(r.memory) + " / " : ""}${bytes(r.max_memory)}` : "—"}<small>${r.max_disk ? bytes(r.max_disk) + " disk" : ""}</small></td><td>${r.addresses?.length ? r.addresses.map((a:string)=>addressLink(a)).join(", ") : esc(r.id)}<small>${esc(r.pool || "")}</small></td><td>${r.agent ? button("infra-endpoint-" + i, "Open agent") : ""}</td></tr>`;
       })
       .join("");
     document.getElementById("infra-resources")!.innerHTML = rows.length
       ? `<div class="infra-table-wrap"><table class="infra-resource-table"><thead><tr><th>Host / guest</th><th>Type</th><th>State</th><th>Management</th><th>CPU</th><th>Memory / capacity</th><th>Address / ID</th><th>Agent</th></tr></thead><tbody>${html}</tbody></table></div>${rows.length > limit ? `<button class="secondary net-more" id="infra-more">Show ${Math.min(PAGE, rows.length - limit)} more of ${rows.length - limit} remaining</button>` : ""}<p class="muted">${rows.length} resources · Cluster › host › guest · Checked ${date(inventory.checked_at)}</p>`
       : '<div class="empty"><h2>No matching resources</h2><p>Adjust the filters or add a provider connection.</p></div>';
     rows.slice(0, limit).forEach((r: Item, i: number) => {
-      on("infra-resource-" + i, () => resourceDetail(r));
+      on("infra-resource-" + i, () => openCanonical(r));
       on("infra-endpoint-" + i, () => ui.openDevice(r.agent.id));
     });
     document.getElementById("infra-more")?.addEventListener("click", () => {
@@ -307,6 +309,9 @@ export function createInfrastructure(ui: Item) {
   function machinePanel(r: Item, root: HTMLElement, initialTab = "overview", selectTab?: (tab: string) => void) {
     return mountProxmoxMachine({...ui,openResource:resourceDetail,initialTab,selectTab}, r, root, (id, spec, current) => operationForm(
       {id: current.connection_id, name: current.connection_name, provider: current.provider}, id, spec, current));
+  }
+  async function openCanonical(r:Item) {
+    try { if (ui.openCanonicalMachine && await ui.openCanonicalMachine(r)) return; await resourceDetail(r); } catch(error) { ui.notify((error as Error).message,true); }
   }
   async function resourceDetail(r: Item, initialTab = "overview") {
     const reference = {kind:"infrastructure",id:String(r.id),connection:r.connection_id,provider:r.provider,resourceKind:r.kind};
@@ -355,7 +360,7 @@ export function createInfrastructure(ui: Item) {
       root.querySelector('[data-resource-refresh]')?.addEventListener('click',()=>void load(true));
       root.querySelector('[data-resource-agent]')?.addEventListener('click',()=> { root.closest('dialog')?.close(); void ui.openDevice(resource.agent.id); });
       root.querySelector('[data-resource-console]')?.addEventListener('click',()=>void openProviderConsole(ui,resource));
-      root.querySelectorAll<HTMLElement>('[data-related-resource]').forEach(b=>b.onclick=()=>void resourceDetail(guests[Number(b.dataset.relatedResource)]));
+      root.querySelectorAll<HTMLElement>('[data-related-resource]').forEach(b=>b.onclick=()=>void openCanonical(guests[Number(b.dataset.relatedResource)]));
       root.querySelectorAll<HTMLElement>('[data-infra-action]').forEach(b=>b.onclick=()=> {
         const id = b.dataset.infraAction!;
         void operationForm({id:resource.connection_id,name:resource.connection_name,provider:resource.provider},id,catalog[id],resource);

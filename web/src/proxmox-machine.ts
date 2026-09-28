@@ -1,3 +1,5 @@
+import { addressLink, entityLink, entities } from './entity-links';
+import { hostRef } from './entity-model';
 import {mountPerformance} from "./performance";
 import {detailFacts,detailHero,technicalDetail} from "./resource-story";
 import "./proxmox-machine.css";
@@ -47,8 +49,8 @@ export function mountProxmoxMachine(
   ) =>
     `<button type="button" class="${primary ? "primary" : "secondary"}" data-pve-${key} ${disabled ? "disabled" : ""}>${esc(text)}</button>`;
   const note = (text: string) => `<p class="pve-note">${esc(text)}</p>`;
-  const facts = (rows: [string, any][]) =>
-    `<dl class="pve-facts">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v ?? "Not reported")}</dd></div>`).join("")}</dl>`;
+  const facts = (rows: [string, any][], links: Record<string,string> = {}) =>
+    `<dl class="pve-facts">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${links[k] ?? esc(v ?? "Not reported")}</dd></div>`).join("")}</dl>`;
   const table = (head: string[], rows: any[][], empty: string) =>
     rows.length
       ? `<div class="pve-table"><table><thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((v) => `<td>${esc(v ?? "—")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
@@ -247,7 +249,7 @@ export function mountProxmoxMachine(
             .filter(Boolean)
             .join(" · ") || "None",
         ],
-      ]) + guestNotice(),
+      ], {Host: entityLink(hostRef(resource,entities.machines),resource.node), "IP addresses": ips.map((ip:string)=>addressLink(ip)).join(" · ") || "Not reported"}) + guestNotice(),
     )}${storage()}${section("Recent activity", tasks())}`;
   }
   function storage() {

@@ -1,8 +1,11 @@
+import { addressLink, entityLink, clientLinks, locationLinks, ingestEntities, clearEntities, installEntityLinks } from './entity-links';
+import { resourceMachine } from './entity-model';
+import { createEntityInspectors } from './entity-inspectors';
 import {createCustomerWorkspaces} from "./customer-workspaces";
 import {createMaintenance} from "./maintenance";
 import {configureMetrics,clearMetrics,measureJourney,qualityPage,startJourney} from "./ux-quality";
 import { serviceStartup } from "./inspection-model";
-import { resourceHref } from "./resource-navigation";
+import { resourceHref, installResourceLinks, resourceCheckpoint } from "./resource-navigation";
 import {mountBackupCoverage} from "./backup-coverage";
 import {createRecoveryInspection,recoveryReadiness} from "./recovery-inspection";
 import { createCommandPalette } from "./command-palette";
@@ -111,6 +114,7 @@ function editFleetColumns() {
 let activeDevicePanel: HTMLDialogElement | null = null;
 let fleetScroll = { x: 0, y: 0, table: 0 };
 function clearFleetState() {
+  clearEntities();
   signInStarted=null;pageFailed.clear();
   clearMetrics(); clearResourceHistory(); clearListViews(); home.reset(); commandPalette.reset();
   readCache.clear();
@@ -208,7 +212,8 @@ setInterval(freshness, 15000);
 const flyout = createFlyout(dialog);
 const freshApi = (path: string) => api(path, "GET", undefined, undefined, true, true);
 async function api(path: string, method = "GET", body?: any, signal?: AbortSignal, scoped = true, fresh = false): Promise<any> {
-  const current = scoped ? viewScope.checkpoint() : () => {};
+  const viewCurrent = scoped ? viewScope.checkpoint() : () => {}, inspectionCurrent = resourceCheckpoint();
+  const current = () => { viewCurrent(); if(!inspectionCurrent()) throw new StaleViewError(); };
   const reads = pageReads;
   if (method === "GET") { pendingReads.set(reads,(pendingReads.get(reads)||0)+1); freshness(); }
   if (fresh && /^\/dns\/domains\/[^/]+\/records$/.test(path)) readCache.invalidate(path+"?cached=true");
@@ -225,6 +230,7 @@ async function api(path: string, method = "GET", body?: any, signal?: AbortSigna
       reads.set(path, cached?.revision ?? readCache.state(path).revision ?? 0);
       freshness();
     }
+    if (method === "GET") ingestEntities(path,result);
     return result;
   } catch (error) { current();if(method==="GET"&&reads===pageReads)pageFailed.add(path);throw error; }
   finally { if (method === "GET") { const count=(pendingReads.get(reads)||1)-1;if(count)pendingReads.set(reads,count);else pendingReads.delete(reads);freshness(); } if (mutates) readCache.clear(); }
@@ -654,9 +660,12 @@ const ops = createOperations({
     }
   },
 });
-const infrastructure = createInfrastructure({api, freshApi, flyout, summary, resourceInventory: () => fleet.flatMap(m => m.resources || []), sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
+const infrastructure = createInfrastructure({api, freshApi, flyout, summary, resourceInventory: () => fleet.flatMap(m => m.resources || []), openCanonicalMachine: async (resource:Item) => { await loadFleet(); const machine=resourceMachine(resource,fleet); if(!machine)return false; await openDevice(machine.id); return true; }, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
   newVm: () => launchVm({ api, esc, notify, dialog, loadingState, exposeHost: (ip: string, name: string) => network.exposeHost(ip, name) })});
 const network = createNetwork({ api, freshApi, flyout, openMachine: async (id: string) => { if (!fleet.some(m => m.id === id)) await loadFleet(); await openDevice(id); }, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
+createEntityInspectors({api,flyout,role:()=>role,openEquipment:network.openEquipment});
+installEntityLinks();
+installResourceLinks();
 const keys = createKeys({ api, freshApi, flyout, openKeySystem: async (target: any) => {
   try {
     await loadFleet();
@@ -924,10 +933,10 @@ function renderFleetRows() {
         const usage = (value: any) => value != null && Number.isFinite(Number(value)) ? (Number(value) > 100 ? `<span title="${Number(value).toFixed(0)}% reported">100%</span>` : Number(value).toFixed(0) + "%") : none;
         const cells: Record<string,string> = {
           name: `<button data-device="${esc(d.id)}" class="machine-name" aria-expanded="false" aria-controls="machine-details" title="${esc(d.label)} · ${esc(os)}" aria-label="${esc(d.label)} — ${esc(os)}"><span class="platform-icon">${icon(d.platform === "windows" ? "windows" : d.platform === "linux" ? "linux" : "monitor")}</span><b>${esc(d.label)}</b>${d.restored_from ? '<span class="badge neutral copy-badge">Recovery copy</span>' : ''}</button>`,
-          status: badge(status), client: `${d.client_name ? esc(d.client_name) : '<span class="placeholder">Unassigned</span>'}${d.client_conflict ? ' <span title="Conflicting client memberships">⚠</span>' : ''}`,
+          status: badge(status), client: `${clientLinks(d)}${d.client_conflict ? ' <span title="Conflicting client memberships">⚠</span>' : ''}`,
           agent: `<span class="agent-indicator ${hasAgent(d) ? "installed" : ""}">${hasAgent(d) ? "● " : "○ "}${esc(agentLabel(d))}</span>${d.identity_issues?.length ? ' <span title="Identity needs review">⚠</span>' : ''}`,
-          location: d.location || d.site ? esc(d.location || d.site) : none, app: hasEndpoint(d) ? `<span title="${esc(active ? [active.title,active.process,active.user].filter(Boolean).join(" · ") : presence.desktop)}">${esc(presence.table)}</span>` : none,
-          cpu: usage(cpu(d)), memory: usage(memory(d)), address: primaryAddress(d) === "—" ? none : esc(primaryAddress(d)), provider: esc(d.provider || "Speck"), kind: esc(kindLabel(d)), site: d.site ? esc(d.site) : none, seen: esc(date(d.last_seen)),
+          location: locationLinks(d), app: hasEndpoint(d) ? `<span title="${esc(active ? [active.title,active.process,active.user].filter(Boolean).join(" · ") : presence.desktop)}">${esc(presence.table)}</span>` : none,
+          cpu: usage(cpu(d)), memory: usage(memory(d)), address: primaryAddress(d) === "—" ? none : addressLink(primaryAddress(d)), provider: esc(d.provider || "Speck"), kind: esc(kindLabel(d)), site: d.site ? esc(d.site) : none, seen: esc(date(d.last_seen)),
           preview: hasEndpoint(d) ? d.preview?.available ? `<button data-device="${esc(d.id)}" class="preview-thumb"><img loading="lazy" src="/api/devices/${encodeURIComponent(d.id)}/preview?t=${d.preview.captured_at}" alt="Screen preview of ${esc(d.label)}"><span>${d.preview.source === "live" ? "Live" : "Saved"} · ${date(d.preview.captured_at)}</span></button>` : `<button class="preview-empty" data-device="${esc(d.id)}">${d.preview?.enabled ? "No preview yet" : "Preview off"}</button>` : "—",
         };
         return `<tr data-row="${esc(d.id)}" class="${fleetSelection.has(d.id) ? "selected-row" : ""} ${fleetPrefs.highlight_agents && hasAgent(d) ? "agent-highlight" : ""}"><td class="select-cell"><input type="checkbox" data-select="${esc(d.id)}" aria-label="Select ${esc(d.label)}" ${fleetSelection.has(d.id) ? "checked" : ""} ${selectableMachine(d) ? "" : "disabled"}></td>${activeColumns().map(k => `<td data-column="${k}" data-label="${columns[k].label}" class="${columns[k].className || ""}" title="${k === "client" ? esc((d.clients || []).map((c: Item) => c.name).join(" · ")) : k === "location" ? esc(d.location) : ""}">${cells[k]}</td>`).join("")}<td class="connect-cell">${hasEndpoint(d) ? `<button data-screen="${esc(d.id)}" class="quick-action" ${d.online && selectableMachine(d) && role !== "viewer" ? "" : "disabled"} title="${esc(screenAction)}" aria-label="${esc(screenAction)}">${icon(["shell", "ssh"].includes(d.remote_protocol) ? "terminal" : "monitor")}</button><button data-terminal="${esc(d.id)}" class="quick-action" ${d.online && selectableMachine(d) && role !== "viewer" ? "" : "disabled"} title="${esc(shellAction)}" aria-label="${esc(shellAction)}">${icon("code")}</button>` : `<button data-device="${esc(d.id)}" class="quick-action" aria-label="Manage ${esc(d.label)}" title="Manage machine">${icon("monitor")}</button>`}</td></tr>`;
@@ -1030,9 +1039,11 @@ async function openDevice(id: string, initialTab = "overview") {
     }
   });
   try {
+    if (!fleet.some((d) => d.id === id)) await loadFleet();
     if (!fleet.some((d) => d.id === id))
       fleet = [...fleet, ...(await api("/devices?include_archived=true")).filter((d: Item) => !fleet.some(x => x.id === d.id))];
     if (!panel.isConnected || !panel.open || activeDevicePanel !== panel) return;
+    if (!fleet.some((d) => d.id === id)) throw new Error("This machine is no longer in inventory. Refresh Fleet to inspect current resources.");
     if (fleet.find((d) => d.id === id)?.archived) tab = "overview";
     await renderDevice();
   } catch (err) {
@@ -1114,7 +1125,7 @@ async function renderDevice() {
   }
 }
 function machineInventorySummary(d: Item) {
-  return `<section class="machine-inventory"><dl><div><dt>Client</dt><dd>${esc(d.client_name || "Unassigned")}${d.client_conflict ? `<small>${esc(d.clients.map((c: Item) => c.name).join(" · "))}</small>` : ""}</dd></div><div><dt>Speck agent</dt><dd>${esc(agentLabel(d))}</dd></div><div><dt>Location / host</dt><dd>${esc(d.location || d.site || "—")}</dd></div></dl>${d.identity_evidence?.length ? `<p class="muted">Joined by ${esc(d.identity_evidence.join(" · "))}</p>` : ""}${d.identity_issues?.length ? `<p class="callout">Identity needs review: ${esc(d.identity_issues.join(" · "))}</p>` : ""}${d.stale ? '<p class="callout">Provider inventory is stale. Actions check the current provider before proceeding.</p>' : ""}<button class="text-link" data-identity-detail>Inspect identity &amp; coverage →</button><div class="drawer-actions">${(d.resources || []).map((r: Item,i: number) => `<button data-machine-resource="${i}" class="secondary" ${role === "viewer" ? "disabled" : ""}>${esc(r.provider)} · ${esc(r.kind)} ${esc(r.id)}</button>`).join("")}</div></section><div id="machine-reach" class="machine-reach" aria-live="polite"></div>`;
+  return `<section class="machine-inventory"><dl><div><dt>Client</dt><dd>${clientLinks(d)}${d.client_conflict ? `<small>${esc(d.clients.map((c: Item) => c.name).join(" · "))}</small>` : ""}</dd></div><div><dt>Speck agent</dt><dd>${esc(agentLabel(d))}</dd></div><div><dt>Location / host</dt><dd>${locationLinks(d)}</dd></div></dl>${d.identity_evidence?.length ? `<p class="muted">Joined by ${esc(d.identity_evidence.join(" · "))}</p>` : ""}${d.identity_issues?.length ? `<p class="callout">Identity needs review: ${esc(d.identity_issues.join(" · "))}</p>` : ""}${d.stale ? '<p class="callout">Provider inventory is stale. Actions check the current provider before proceeding.</p>' : ""}<button class="text-link" data-identity-detail>Inspect identity &amp; coverage →</button><div class="drawer-actions">${(d.resources || []).map((r: Item,i: number) => `<button data-machine-resource="${i}" class="secondary" ${role === "viewer" ? "disabled" : ""}>${esc(r.provider)} · ${esc(r.kind)} ${esc(r.id)}</button>`).join("")}</div></section><div id="machine-reach" class="machine-reach" aria-live="polite"></div>`;
 }
 function inspectIdentity(d:Item){
   rememberResource({kind:'identity',id:d.id},()=>inspectIdentity(d));
@@ -1182,7 +1193,7 @@ async function showReach(d: Item) {
   const reported = primaryAddress(d).split("/")[0];
   if (!m.network_clients?.length && !m.public.length && !m.dns.length && m.lan.every((l: Item) => l.ip === reported)) return;
   const chip = (text: string, tone = "") => `<span class="net-chip ${tone}">${esc(text)}</span>`;
-  el.innerHTML = `<dl><div><dt>LAN</dt><dd>${m.lan.map((l: Item) => `<span class="mono">${esc(l.ip)}</span>`).join(" ") || "—"}</dd></div><div><dt>Public</dt><dd>${m.public.map((p: Item) => `<span class="mono">${esc(p.ip)}</span>${p.via === "unifi_nat" ? chip("NAT") : ""}`).join(" ") || "—"}</dd></div><div><dt>DNS names</dt><dd>${m.dns.slice(0, 8).map((n: Item) => `<a class="net-chip" href="${resourceHref(location.hash.slice(1),{kind:"dns-record",id:n.name || "@",connection:n.domain,resourceKind:n.type || "A"})}">${esc(n.fqdn)}</a>`).join("") || "—"}${m.dns.length > 8 ? `<small>+${m.dns.length - 8} more</small>` : ""}</dd></div></dl><a class="text-link" href="#network">Network &amp; DNS</a>${m.network_clients?.length ? '<div class="machine-uplinks">'+m.network_clients.map((c:Item,i:number)=>'<button data-machine-uplink="'+i+'">'+esc(c.uplink_name || 'Network equipment')+(c.port?' · Port '+esc(c.port):'')+' →</button>').join('')+'</div><small>Matched by unique MAC address · provider observations</small>':''}`;
+  el.innerHTML = `<dl><div><dt>LAN</dt><dd>${m.lan.map((l: Item) => `<span class="mono">${addressLink(l.ip)}</span>`).join(" ") || "—"}</dd></div><div><dt>Public</dt><dd>${m.public.map((p: Item) => `<span class="mono">${addressLink(p.ip)}</span>${p.via === "unifi_nat" ? chip("NAT") : ""}`).join(" ") || "—"}</dd></div><div><dt>DNS names</dt><dd>${m.dns.slice(0, 8).map((n: Item) => `<a class="net-chip" href="${resourceHref(location.hash.slice(1),{kind:"dns-record",id:n.name || "@",connection:n.domain,resourceKind:n.type || "A"})}">${esc(n.fqdn)}</a>`).join("") || "—"}${m.dns.length > 8 ? `<small>+${m.dns.length - 8} more</small>` : ""}</dd></div></dl><a class="text-link" href="#network">Network &amp; DNS</a>${m.network_clients?.length ? '<div class="machine-uplinks">'+m.network_clients.map((c:Item,i:number)=>'<button data-machine-uplink="'+i+'">'+esc(c.uplink_name || 'Network equipment')+(c.port?' · Port '+esc(c.port):'')+' →</button>').join('')+'</div><small>Matched by unique MAC address · provider observations</small>':''}`;
   el.querySelectorAll<HTMLElement>('[data-machine-uplink]').forEach(b=>b.onclick=()=>{const c=m.network_clients[Number(b.dataset.machineUplink)];void network.openEquipment(c,c.uplink_id,c.port);});
 }
 async function renderDeviceContent() {
@@ -1221,7 +1232,7 @@ async function renderDeviceContent() {
     ${machineInventorySummary(d)}
     <div class="machine-summary">
       <dl class="machine-facts">
-        <div><dt>IP address</dt><dd class="machine-address"><span class="mono">${esc(address)}</span>${address !== "—" ? '<button id="copy-machine-ip" class="quick-action" title="Copy IP address" aria-label="Copy IP address">' + icon("copy") + '</button>' : ""}</dd></div>
+        <div><dt>IP address</dt><dd class="machine-address"><span class="mono">${addressLink(address)}</span>${address !== "—" ? '<button id="copy-machine-ip" class="quick-action" title="Copy IP address" aria-label="Copy IP address">' + icon("copy") + '</button>' : ""}</dd></div>
         <div><dt>Operating system</dt><dd>${esc(t.host?.platform || d.platform || "Not reported")}<small>${esc([t.host?.platformVersion, d.arch].filter(Boolean).join(" · "))}</small></dd></div>
         <div><dt>Uptime${d.online ? "" : " at last report"}</dt><dd class="machine-uptime">${uptime(t.host?.uptime)}</dd></div>
         <div><dt>Last report</dt><dd class="machine-report">${esc(date(d.last_seen))}</dd></div>
@@ -1269,7 +1280,7 @@ async function renderDeviceContent() {
           ${machineHealth(d)}
         </div>
       </div>
-      <div class="mini-grid machine-system"><div><small>Hostname</small>${esc(d.hostname || "Not reported")}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion || "Not reported")}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
+      <div class="mini-grid machine-system"><div><small>Hostname</small>${entityLink({kind:"machine",id:d.id},d.hostname || d.label)}</div><div><small>Kernel</small>${esc(t.host?.kernelVersion || "Not reported")}</div><div><small>Agent</small>${esc(t.version || "Waiting for telemetry")}</div><div><small>Slide protection</small>${esc(d.slide_agent_id || "Not linked")}</div></div>`;
 
     body.addEventListener("click", event => {
       const volume = (event.target as Element).closest<HTMLButtonElement>("[data-volume]");
@@ -2331,7 +2342,7 @@ window.addEventListener("hashchange", event => {
   if (username) {
     const next = (location.hash.slice(1) || "home").split("?")[0];
     if(next===page&&next==="fleet"&&new URLSearchParams(location.hash.split("?")[1]||"").has("coverage")) drawFleet();
-    else if (next === page && !next.startsWith("remote/") && !changedView) void restoreResource().catch(error => notify(error.message,true));
+    else if (next === page && !next.startsWith("remote/") && !changedView) void restoreResource().catch(error => {if(!(error instanceof StaleViewError))notify(error.message,true);});
     else void render();
   } else { clearResourceHistory(); signedOut(); }
 });
