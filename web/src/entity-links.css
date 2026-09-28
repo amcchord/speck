@@ -54,3 +54,10 @@ a.entity-link:focus-visible {
 .entity-filter input {
   width: 100%;
 }
+.entity-row > span {
+  flex: 1;
+}
+.entity-row > small {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
