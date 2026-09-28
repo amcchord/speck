@@ -595,7 +595,7 @@ async function render(manualRefresh = false) {
   try {
     await {
       home: home.render,
-      workspaces:customers.render,maintenance:maintenance.render,quality:()=>qualityPage({api,content}),
+      workspaces:customers.render,maintenance:maintenance.render,quality:()=>{loading("Loading UX reliability…");return qualityPage({api,content});},
       fleet: () => renderFleet(manualRefresh),
       alerts: management.renderAlerts,
       schedules: management.renderSchedules,
@@ -1513,11 +1513,12 @@ async function renderRemotePage(id: string, attempt = 0, mode = "auto") {
   }
 }
 async function connectRemote(d: Item, attempt = 0) {
+  const finishFrame=startJourney("session_first_frame","browser");
   app.innerHTML = `<main class="remote-workspace"><header class="remote-header"><a href="#fleet" class="remote-back">← Fleet</a>${wordmark(true)}<div class="remote-title"><h1>${esc(d.label)}</h1><small id="remote-status">Connecting…</small></div><button id="remote-ai" class="secondary">Screen assistant</button><button id="fullscreen" class="secondary">Full screen</button></header><div class="remote-controls"><button id="remote-keyboard" class="secondary">Keyboard</button><button id="sound" class="secondary">Enable sound</button><button id="mic" class="secondary">Enable microphone</button><label>Keys <select id="key-macro"><option value="">Send shortcut…</option><option value="cad">Ctrl + Alt + Del</option><option value="task">Task manager</option><option value="run">Windows + R</option><option value="alt-tab">Alt + Tab</option><option value="copy">Ctrl + C</option><option value="paste">Ctrl + V</option><option value="enter">Return / Enter</option><option value="backspace">Backspace</option><option value="escape">Escape</option><option value="tab">Tab</option></select></label><button id="type-secret" class="secondary">Type password</button><button id="fit-screen" class="secondary">View at 100%</button><button id="remote-reconnect" class="secondary">Reconnect</button><button id="desktop-launch" class="secondary">Open in desktop app</button><span id="remote-stats"></span></div><section class="remote-stage"><div id="remote-display" tabindex="0" aria-label="Remote screen. Keyboard input is sent to this machine."></div><div id="remote-startup" class="remote-startup">${loadingState(attempt ? "Reconnecting the display…" : "Connecting to machine…", "The screen will appear as soon as it is ready.")}</div></section><footer class="remote-footer"><input id="clipboard" aria-label="Remote clipboard" placeholder="Text for the remote clipboard"><button id="paste" class="secondary">Copy to remote</button><button id="read-clipboard" class="secondary">Use my clipboard</button><label class="check"><input id="shared-clipboard" type="checkbox"> Shared clipboard</label></footer></main>`;
   const modal = document.querySelector<HTMLElement>(".remote-workspace")!;
   let closed = false;
   remoteCleanup = () => {
-    closed = true;
+    closed = true;finishFrame("cancelled");
     modal.dispatchEvent(new Event("close"));
   };
   const reconnect = async (nextAttempt = 0) => {
@@ -1552,7 +1553,7 @@ async function connectRemote(d: Item, attempt = 0) {
     width,
     height,
     mode: "connection",
-  });
+  }).catch(error=>{finishFrame(error instanceof StaleViewError?"cancelled":"failed");throw error;});
   if (closed || !modal.isConnected) return;
   if (session.protocol !== "rdp") {
     document.getElementById("mic")!.hidden = true;
@@ -1569,7 +1570,6 @@ async function connectRemote(d: Item, attempt = 0) {
   useReliableImageDecoder(guacDisplay, Guacamole, navigator.userAgent);
   display.appendChild(guacDisplay.getElement());
   const status = document.getElementById("remote-status")!;
-  const finishFrame=startJourney("session_first_frame","browser");
   let connectionState = 0, screenReady = false, flushed = false;
   const overlay = document.getElementById("remote-startup")!;
   const sample = document.createElement("canvas");
