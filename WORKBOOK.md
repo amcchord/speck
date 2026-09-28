@@ -1184,3 +1184,44 @@ backend matches the incorporated source. This is a web-only release. Backend,
 agent and native code are unchanged from that baseline; no endpoint runtime,
 iOS or new Windows/Linux capability claim is made. Private release evidence stays
 in ignored `output/entity-navigation/`.
+
+### Production acceptance — Standard entity navigation
+
+Deployed source `6d42e93de850f017252cd1abd68f7c344da33956` as
+`20260928T010522Z-entity-navigation-6d42e93` (September 28 UTC, September 27 local).
+The initial publication from `36b6414` passed 60 web unit tests and 355 local
+Chromium/WebKit browser checks, with one existing WebKit touch-drag skip. Final
+source `6d42e93` adjusts only the status column width after live phone review;
+its fresh TypeScript/Vite build and all 18 focused entity browser checks passed.
+
+Both publications fetched origin/main and verified ancestry, preserved the newer
+UX/Home releases, held the shared release lock, matched the inspected live
+baseline and compared the index immediately before atomic publication. Each
+retains a web rollback snapshot. Final rollback:
+`/var/lib/speck-rollback/20260928T010522Z-entity-navigation-6d42e93/web`.
+All 27 public web assets match the validated build. Service health is active;
+PID 151449 was retained with no restart. Final index SHA-256:
+`63c5f2b0c5b905a2f3bbb96fbc837b32a2b194573fca6fe20f7a9e36347aa995`.
+
+Authenticated read-only live acceptance passed in Chromium at 1440 px and WebKit
+at 390 px: client → machine → hypervisor, IP evidence, network membership and
+selected physical ports, including browser Back, reload and no horizontal
+overflow. There were zero JavaScript errors or unexpected writes. Normal aggregate
+UX measurement posts were allowed after correcting the acceptance harness's
+endpoint name. Temporary browser sessions were logged out. A production screen
+review confirmed the final phone status words remain on one line.
+
+The backend source, dependency manifest, environment, service process and all 12
+protected configuration/identity groups match the original pre-task baseline.
+Credentials (including reveal counters), provider settings, existing machine /
+installation identities and agent downloads are preserved. No endpoint job,
+remote session, restore or equipment power operation was used for acceptance.
+Backend, agent and iOS/native tests were not rerun for this web-only release;
+Windows/Linux runtime qualification is unchanged. GitHub backend checks passed
+for the initial application commit; checks for the CSS follow-up were still
+running when this record was written. Local validation was the release gate;
+no required GitHub branch check was bypassed and no PR was merged.
+
+[PR #27](https://github.com/amcchord/speck/pull/27) is based on the still-open UX
+PR #26 so its review diff contains the entity work. Private manifests, snapshots,
+acceptance logs and live screenshots stay in ignored `output/entity-navigation/`.

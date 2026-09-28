@@ -77,3 +77,28 @@ History retains workspace context. Copy links retain the selected machine tab
 or equipment port; normal hops offer Back, while modified clicks retain native
 browser behavior. A navigation checkpoint prevents a late response from replacing
 the inspector chosen afterward. Logout clears the catalog with existing caches.
+
+## Validation and production release
+
+Live release: `20260928T010522Z-entity-navigation-6d42e93`, application source `6d42e93`.
+Initial implementation `36b6414` passed TypeScript/Vite, 60 web units and 355 local
+Chromium/WebKit checks (one existing WebKit touch-drag skip). The final phone
+status-width refinement passed a new build and 18 focused browser checks.
+Desktop and phone production acceptance verified all entity hops, port selection,
+Back and reload with zero page errors, unexpected writes or horizontal overflow.
+All 27 public asset hashes and protected-state comparisons passed. The backend
+retained its process; credentials and endpoint binaries are unchanged.
+
+See WORKBOOK.md for exact baselines, rollback and separate hosted-check status.
+This is a web-console release; it does not change native app navigation or add
+Windows/Linux agent capabilities. Networks remain observation groups, and
+unreported or out-of-scope relationships are not invented.
+
+## Extending the vocabulary
+
+Add an exact scoped reference constructor in `entity-model.ts`, register its
+read-only inspector, and render it through `entityLink`. Prefer explicit IDs
+already attached to the row. Supply the existing connection/site when linking
+provider resources. Add ambiguity, reload and keyboard coverage for new kinds.
+Never derive ownership from a label or IP, place secrets in references, or parse
+commands and raw payloads to create links.
