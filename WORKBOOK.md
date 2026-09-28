@@ -1154,3 +1154,33 @@ passed. Rollback is retained at
 `/var/lib/speck-rollback/20260928T003449Z-home-search-order-43f19bd`.
 Index SHA-256: `fbeb87a3cdd6c16c3fdc2efc0f39755cf23b45fe16e1f7337768cdfb4a225e39`.
 Private evidence is in ignored `output/home-search-order/`.
+
+## Standard entity navigation — September 27, 2026 (prepared)
+
+`codex/entity-navigation` preserves main `db2f55b` and the newer deployed UX /
+Home search work through `43f19bd`, including release record `eff78eb`. The
+[plan and entity contract](docs/operations/entity-navigation.md) define Machine,
+Hypervisor, Equipment, physical Port, customer Client, LAN client, Network, IP,
+Site and provider Connection, with scope and one destination per identity.
+
+Shared anchors connect Fleet, machine facts, Infrastructure, Proxmox and network
+relationships and search. Client, observed-network and IP inspectors expose
+searchable related entities. Exact provider membership maps to the canonical
+machine pane; repeated names offer a choice, and shared IPs never choose an owner.
+Copy links and Back retain workspace/tab/port context. Late navigation responses
+are discarded; an unavailable physical port never silently selects another port.
+Commands, raw evidence, credential values and editable content remain untouched.
+
+Local TypeScript/Vite, 60 web units and 18 focused Chromium/WebKit entity checks
+pass, as did 34 entity/Proxmox checks before the final missing-port guard. The
+complete initial browser run found two obsolete assertions (duplicate-name
+selection and canonical machine pane) in both engines; both tests were corrected
+and passed in focused rechecks. Final full-suite and production acceptance follow.
+Synthetic desktop/phone captures are in [the gallery](docs/screenshots/entity-navigation/README.md).
+
+This chat is the single active Speck deployment owner. The inspected live index
+is `fbeb87a3cdd6c16c3fdc2efc0f39755cf23b45fe16e1f7337768cdfb4a225e39`; the
+backend matches the incorporated source. This is a web-only release. Backend,
+agent and native code are unchanged from that baseline; no endpoint runtime,
+iOS or new Windows/Linux capability claim is made. Private release evidence stays
+in ignored `output/entity-navigation/`.
