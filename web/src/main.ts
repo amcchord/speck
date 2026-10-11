@@ -674,7 +674,7 @@ const keys = createKeys({ api, freshApi, flyout, openKeySystem: async (target: a
     keys.closePane(); await openDevice(machine.id);
   } catch (error) { notify((error as Error).message, true); }
 }, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
-const apiAccess = createApiAccess({ api, flyout, summary, esc, notify, dialog, content, loading, role: () => role, loadingState });
+const apiAccess = createApiAccess({ api, flyout, summary, esc, notify, dialog, content, loading, role: () => role, loadingState, checkpoint:()=>viewScope.checkpoint() });
 const management = createManagement({
   api, flyout, showBatch: runDetails.batch, showJob: runDetails.job,
   esc,

@@ -11,6 +11,12 @@ states in Chromium and WebKit. Production captures remain private. The
 | --- | --- |
 | [![Home before](before-home-390.png)](before-home-390.png) | [![Home after](home-390.png)](home-390.png) |
 
+| Tablet header before follow-up | After |
+| --- | --- |
+| [![Patches before](before-patches-834.png)](before-patches-834.png) | [![Patches after](patches-834.png)](patches-834.png) |
+
+[Fleet at 320 px](fleet-320.png) retains readable names beside stacked touch targets.
+
 ## Workspaces
 
 | Desktop | Phone |
@@ -33,6 +39,10 @@ states in Chromium and WebKit. Production captures remain private. The
 | [![Interface evidence](interface-desktop.png)](interface-desktop.png) | [![Inventory](inventory-phone.png)](inventory-phone.png) |
 | [![Physical port](port-desktop.png)](port-desktop.png) | [![Touch ports](ports-320.png)](ports-320.png) |
 | [![Retry infrastructure](infrastructure-retry.png)](infrastructure-retry.png) | [![Cloud resource](cloud-phone.png)](cloud-phone.png) |
+
+| API schema retry | API request failure | API empty search |
+| --- | --- | --- |
+| [![Schema retry](api-schema-retry-390.png)](api-schema-retry-390.png) | [![Request failure](api-request-error-390.png)](api-request-error-390.png) | [![Clear search](api-empty-search-390.png)](api-empty-search-390.png) |
 
 Fixture evidence and illustrated recovery outcomes are not production tests.
 See [the release record](../../operations/ui-ux-polish-2026-10-11.md) for validation

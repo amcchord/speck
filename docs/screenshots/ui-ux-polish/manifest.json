@@ -1,10 +1,10 @@
 {
   "provenance": "Unretouched console captures using synthetic fixtures only. Live production captures remain private in ignored output. Captures demonstrate UI behavior, not new endpoint/runtime qualification.",
-  "captured_at_utc": "2026-10-11T20:20:08.796459+00:00",
+  "captured_at_utc": "2026-10-11T20:26:12.427688+00:00",
   "captures": [
     {
       "file": "home-1440.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 1440,
       "height": 1736,
       "bytes": 296220,
@@ -12,7 +12,7 @@
     },
     {
       "file": "home-390.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 390,
       "height": 3326,
       "bytes": 275343,
@@ -20,7 +20,7 @@
     },
     {
       "file": "fleet-1440.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 1440,
       "height": 1000,
       "bytes": 172370,
@@ -28,7 +28,7 @@
     },
     {
       "file": "fleet-390.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 390,
       "height": 1686,
       "bytes": 168045,
@@ -36,7 +36,7 @@
     },
     {
       "file": "infrastructure-1440.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 1440,
       "height": 1310,
       "bytes": 280128,
@@ -44,7 +44,7 @@
     },
     {
       "file": "infrastructure-390.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 390,
       "height": 1887,
       "bytes": 303749,
@@ -52,7 +52,7 @@
     },
     {
       "file": "network-1440.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 1440,
       "height": 1178,
       "bytes": 155556,
@@ -60,7 +60,7 @@
     },
     {
       "file": "network-390.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 390,
       "height": 1813,
       "bytes": 147243,
@@ -68,7 +68,7 @@
     },
     {
       "file": "workspaces-1440.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 1440,
       "height": 2587,
       "bytes": 254708,
@@ -76,7 +76,7 @@
     },
     {
       "file": "workspaces-390.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 390,
       "height": 2713,
       "bytes": 232396,
@@ -84,7 +84,7 @@
     },
     {
       "file": "maintenance-1440.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 1440,
       "height": 1000,
       "bytes": 151596,
@@ -92,7 +92,7 @@
     },
     {
       "file": "maintenance-390.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 390,
       "height": 1782,
       "bytes": 151427,
@@ -100,7 +100,7 @@
     },
     {
       "file": "patches-1440.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 1440,
       "height": 1200,
       "bytes": 192058,
@@ -108,7 +108,7 @@
     },
     {
       "file": "patches-390.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 390,
       "height": 1694,
       "bytes": 169530,
@@ -116,7 +116,7 @@
     },
     {
       "file": "settings-1440.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 1440,
       "height": 1245,
       "bytes": 257404,
@@ -124,7 +124,7 @@
     },
     {
       "file": "settings-390.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 390,
       "height": 3032,
       "bytes": 256322,
@@ -132,7 +132,7 @@
     },
     {
       "file": "api-1440.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 1440,
       "height": 1649,
       "bytes": 224700,
@@ -140,7 +140,7 @@
     },
     {
       "file": "api-390.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 390,
       "height": 2539,
       "bytes": 215051,
@@ -148,7 +148,7 @@
     },
     {
       "file": "recovery-1440.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 1440,
       "height": 1000,
       "bytes": 107846,
@@ -156,7 +156,7 @@
     },
     {
       "file": "recovery-390.png",
-      "phase": "Integrated release candidate",
+      "phase": "Follow-up release candidate",
       "width": 390,
       "height": 1000,
       "bytes": 71203,
@@ -249,6 +249,54 @@
       "height": 1000,
       "bytes": 73676,
       "sha256": "70fe28b0bc9a239e4c9106ae90242eddab9f0bb64e30e17b72f28ecc6e66ae39"
+    },
+    {
+      "file": "before-patches-834.png",
+      "phase": "First release tablet finding",
+      "width": 834,
+      "height": 1555,
+      "bytes": 173908,
+      "sha256": "e7ee64415c0f2f6d24ba29e3ba7c715312019d2f945c6aae55f7f770b4ecca04"
+    },
+    {
+      "file": "patches-834.png",
+      "phase": "Follow-up release candidate",
+      "width": 834,
+      "height": 1408,
+      "bytes": 169095,
+      "sha256": "9f19adb4ff9180d9ab78507d9772a2619b44562eba2d2a362da0c090564dabfb"
+    },
+    {
+      "file": "fleet-320.png",
+      "phase": "Follow-up release candidate",
+      "width": 320,
+      "height": 1851,
+      "bytes": 168770,
+      "sha256": "f25f3b985b50145b3c08f8186512212096831fbcce514450a9fecffd8af42ee5"
+    },
+    {
+      "file": "api-schema-retry-390.png",
+      "phase": "Isolated follow-up state",
+      "width": 390,
+      "height": 1000,
+      "bytes": 93413,
+      "sha256": "3acbeafade2695aab1d503bc50cfc7d04b38729eb614f9568f4bf767f7c7f220"
+    },
+    {
+      "file": "api-request-error-390.png",
+      "phase": "Isolated follow-up state",
+      "width": 390,
+      "height": 1000,
+      "bytes": 97069,
+      "sha256": "dc0799e9cdbd26e85fdf98c20006806e8813e0b35bd144c11b1f39eeca1ed2dd"
+    },
+    {
+      "file": "api-empty-search-390.png",
+      "phase": "Isolated follow-up state",
+      "width": 390,
+      "height": 1000,
+      "bytes": 92439,
+      "sha256": "cc56747c3b82b9e7001cd6a4abdeaa12185029fbe0092b0781a692695b447d20"
     }
   ]
 }

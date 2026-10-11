@@ -1225,3 +1225,35 @@ no required GitHub branch check was bypassed and no PR was merged.
 [PR #27](https://github.com/amcchord/speck/pull/27) is based on the still-open UX
 PR #26 so its review diff contains the entity work. Private manifests, snapshots,
 acceptance logs and live screenshots stay in ignored `output/entity-navigation/`.
+
+## Console UI and UX polish — October 11, 2026
+
+Three agents reviewed Fleet/machine panes, network/infrastructure and operational
+workspaces. This chat was the sole deployment owner. The release preserves main
+`db2f55b` and the newer UX/entity-navigation work through `df79045`; see
+[the change and release record](docs/operations/ui-ux-polish-2026-10-11.md) and
+[the screenshot gallery](docs/screenshots/ui-ux-polish/README.md).
+
+Published web source `c807a0a3734cf9e0fc45c0b70801143bfd3e4064` as
+`20261011T202052Z-ui-ux-polish-c807a0a`. TypeScript/Vite, 60 web units and 441 local
+Chromium/WebKit browser checks passed, with one existing WebKit touch-drag skip.
+The final synthetic sweep covers 21 pages at four widths; the private live sweep
+covers all 21 on desktop/phone. Both have zero page errors or horizontal overflow.
+Read-only live acceptance verifies machine/hypervisor, customer/machine,
+IP/network and physical-port links, Back and reload on Chromium/WebKit. No
+unexpected writes occurred; temporary browser sessions were logged out.
+
+The release fetched main and verified ancestry, held the shared release lock,
+matched the inspected baseline and compared the index immediately before atomic
+publication. All 27 public assets match. Index SHA-256:
+`caf3ace3caa4d0cc738b2be7b5887b920f115a91993c61accf59efc341bad441`.
+Rollback: `/var/lib/speck-rollback/20261011T202052Z-ui-ux-polish-c807a0a/web`.
+PID 151449, backend/dependencies/environment, 12 protected configuration groups
+and endpoint downloads are unchanged; there was no service restart. No new
+Windows/Linux endpoint or native/iOS runtime capability is claimed.
+
+[PR #28](https://github.com/amcchord/speck/pull/28) is stacked on PR #27 to preserve
+deployed work absent from main. GitHub checks were pending at publication; none
+were bypassed and no PR was merged. Private evidence stays in ignored
+`output/ui-ux-polish/`. Final screenshot review identified tablet summary crowding,
+narrow Fleet name wrapping and API explorer error/lifecycle gaps for a follow-up.

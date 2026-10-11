@@ -8,6 +8,7 @@ import { icon } from "./icons";
 import { relative } from "./network-model";
 import { endpointGroups, snippets } from "./api-model";
 import { cardify } from "./table-cards";
+import { StaleViewError } from "./loading";
 
 type Item = Record<string, any>;
 
@@ -20,6 +21,7 @@ export function createApiAccess(ui: Item) {
     schema: Item | null = null,
     endpointQuery = "",
     showInactive = false;
+  let schemaLoading = false, schemaError = "", schemaVersion = 0;
 
   async function copy(text: string, label = "Copied") {
     await navigator.clipboard.writeText(text);
@@ -43,8 +45,30 @@ export function createApiAccess(ui: Item) {
       drawEndpoints();
     });
     drawTokens();
-    if (!schema) schema = await fetch("/api/openapi.json").then((r) => r.json()).catch(() => null);
-    drawEndpoints();
+    if (!schema) await loadSchema();
+    else drawEndpoints();
+  }
+
+  async function loadSchema() {
+    const host = document.getElementById("api-endpoints"), version = ++schemaVersion;
+    const current = ui.checkpoint?.() || (() => {});
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
+    schemaLoading = true; schemaError = ""; drawEndpoints();
+    try {
+      const response = await fetch("/api/openapi.json", { signal: controller.signal });
+      if (!response.ok) throw new Error(`Schema request returned HTTP ${response.status}.`);
+      const result = await response.json();
+      if (!result?.paths || typeof result.paths !== "object" || Array.isArray(result.paths)) throw new Error("The schema response is incomplete.");
+      current();
+      if (!host?.isConnected || version !== schemaVersion) return;
+      schema = result;
+    } catch (error) {
+      if (error instanceof StaleViewError || !host?.isConnected || version !== schemaVersion) return;
+      schemaError = error instanceof Error && error.name !== "AbortError" ? error.message : "The schema request timed out.";
+    } finally {
+      clearTimeout(timer);
+      if (host?.isConnected && version === schemaVersion) { schemaLoading = false; drawEndpoints(); }
+    }
   }
 
   function drawTokens() {
@@ -146,7 +170,10 @@ export function createApiAccess(ui: Item) {
     const el = document.getElementById("api-endpoints");
     if (!el) return;
     if (!schema) {
-      el.innerHTML = '<div class="empty"><h2>Schema unavailable</h2></div>';
+      el.innerHTML = schemaLoading
+        ? ui.loadingState("Loading schema…", "Your tokens remain available while endpoints load.")
+        : `<div class="empty" role="status"><h2>Schema unavailable</h2><p>${esc(schemaError || "Endpoint descriptions could not be loaded.")}</p><button class="secondary" id="api-retry-schema">Retry schema</button></div>`;
+      el.querySelector<HTMLButtonElement>("#api-retry-schema")?.addEventListener("click", () => void loadSchema());
       return;
     }
     const groups = endpointGroups(schema, endpointQuery);
@@ -164,15 +191,25 @@ export function createApiAccess(ui: Item) {
                 .join("")}</div></details>`,
           )
           .join("")
-      : '<div class="empty"><h2>No matching endpoints</h2></div>';
+      : '<div class="empty"><h2>No matching endpoints</h2><p>Try a path, method or description, or clear the search.</p><button class="secondary" id="api-clear-search">Clear search</button></div>';
+    el.querySelector<HTMLButtonElement>("#api-clear-search")?.addEventListener("click", () => {
+      endpointQuery = "";
+      const input = document.getElementById("api-endpoint-q") as HTMLInputElement;
+      input.value = ""; drawEndpoints(); input.focus();
+    });
     el.querySelectorAll<HTMLButtonElement>("[data-try]").forEach((b) =>
       b.addEventListener("click", async () => {
         const [group, index] = b.dataset.try!.split(":");
         const op = groups.find(([g]) => g === group)![1][+index];
-        b.disabled = true;
+        const current = ui.checkpoint?.() || (() => {}), row = b.closest(".api-endpoint")!;
+        const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000);
+        row.querySelector(".api-request-error")?.remove();
+        b.disabled = true; b.textContent = "Reading…"; b.setAttribute("aria-busy", "true");
         try {
-          const response = await fetch(op.path, { headers: { Accept: "application/json" } });
+          const response = await fetch(op.path, { headers: { Accept: "application/json" }, signal: controller.signal });
           const text = await response.text();
+          current();
+          if (!b.isConnected) return;
           let body = text;
           try {
             body = JSON.stringify(JSON.parse(text), null, 2);
@@ -183,8 +220,15 @@ export function createApiAccess(ui: Item) {
             `${op.method} ${op.path}`,
             `<div class="net-confirm keys-result"><p>${chip("HTTP " + response.status, response.ok ? "good" : "bad")} ${esc(op.summary)}</p><pre class="keys-value api-response">${esc(body.length > 60000 ? body.slice(0, 60000) + "\n… truncated" : body)}</pre></div>`, { className: "wide" });
           void d;
+        } catch (error) {
+          if (error instanceof StaleViewError || !b.isConnected) return;
+          const message = document.createElement("p");
+          message.className = "api-request-error"; message.setAttribute("role", "status");
+          message.textContent = error instanceof Error && error.name === "AbortError" ? "Request timed out. Try again." : "Could not read this endpoint. Check your connection and try again.";
+          row.append(message);
         } finally {
-          b.disabled = false;
+          clearTimeout(timer);
+          b.disabled = false; b.textContent = "Try"; b.removeAttribute("aria-busy");
         }
       }),
     );

@@ -48,6 +48,14 @@ td .primary, td .secondary, td .quick-action { white-space: nowrap; }
   aside .account > .icon { display: none; }
   .workspace { padding: 22px 24px; }
   .device-drawer { width: 100%; border-radius: 0; border-left: 0; }
+  .workspace > header { display: grid; grid-template-columns: minmax(0, 1fr) max-content; align-items: center; gap: 8px 16px; }
+  .workspace > header .page-heading { display: contents; }
+  .workspace > header h1 { grid-column: 1; grid-row: 1; margin: 0; min-width: 0; }
+  .workspace > header .header-actions { grid-column: 2; grid-row: 1; }
+  .workspace > header .fleet-summary { grid-column: 1 / -1; grid-row: 2; margin: 0; flex-wrap: wrap; gap: 6px 16px; }
+  .workspace > header .page-heading > p { grid-column: 1 / -1; grid-row: 3; margin: 0; }
+  .workspace > header .page-freshness { grid-column: 1 / -1; grid-row: 4; }
+  .workspace > header .fleet-summary:empty, .workspace > header .page-freshness:empty { display: none; }
 }
 
 /* ---------- Phone: tab bar, More sheet and header ---------- */
@@ -205,6 +213,10 @@ td .primary, td .secondary, td .quick-action { white-space: nowrap; }
 
 
 @media(max-width:360px){.device-drawer .dialog-head{padding-top:8px;padding-bottom:8px}.device-drawer .tabs{padding-block:0}.device-drawer .machine-summary{padding-top:0;margin-top:0}.device-drawer #device-body{padding-top:10px}.device-drawer .machine-facts{gap:6px;margin-bottom:8px}}
+@media(max-width:360px){
+  .fleet-workspace .fleet-table-wrap .fleet-table tr[data-row] { padding-right: 60px; min-height: 112px; }
+  .fleet-workspace .fleet-table-wrap .fleet-table tr[data-row] > td.connect-cell { flex-direction: column; }
+}
 /* Leave a small separation when the last destination is scrolled into view. */
 @media(min-width:761px){aside > nav{padding-bottom:4px;scroll-padding-bottom:4px}}
 #slide-connection{min-width:0;max-width:100%;width:100%}
