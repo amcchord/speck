@@ -67,6 +67,31 @@ test('queued machine dismissal preserves a newly focused Home search', async ({p
   await expect(page.locator('[data-home-machine]')).toHaveCount(2);
 });
 
+test('queued edit-modal and machine dismissal preserve a newly focused Home search', async ({page}) => {
+  await setup(page);
+  await page.goto('/#home');
+  await page.locator('#home-query').fill('portal.example-clinic.com');
+  await page.locator('#home-open-machine').click();
+  await page.locator('#device-edit').click();
+  await expect(page.locator('dialog:modal')).toBeVisible();
+  await page.evaluate(() => new Promise(resolve => {
+    const modal = document.querySelector('dialog:modal');
+    const pane = document.getElementById('machine-details');
+    const query = document.getElementById('home-query');
+    pane.addEventListener('close', resolve, {once:true});
+    modal.querySelector('.close').focus();
+    modal.close();
+    pane.close();
+    query.focus();
+    query.value = '';
+    query.dispatchEvent(new Event('input', {bubbles:true}));
+  }));
+  await expect(page.locator('#home-query')).toBeFocused();
+  await expect(page.locator('#home-query')).toHaveValue('');
+  await page.getByRole('button',{name:'Without endpoint agent',exact:true}).click();
+  await expect(page.locator('[data-home-machine]')).toHaveCount(2);
+});
+
 test('AI handoff and scheduling retain explicit review and never execute from Home', async ({page}) => {
   const writes=[];
   page.on('request', r => {if (r.method() !== 'GET') writes.push(r.url());});

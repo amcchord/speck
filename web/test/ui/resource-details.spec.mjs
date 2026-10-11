@@ -48,6 +48,26 @@ test('queued resource dismissal preserves a newly focused infrastructure search'
   expect(counts.writes).toBe(0);
 });
 
+test('queued review-modal and resource dismissal return focus to the resource',async({page})=>{
+  const counts=await setup(page);
+  await page.goto('/#infrastructure');
+  const open=page.getByRole('button',{name:'Example cloud',exact:true});
+  await open.click();
+  await page.locator('.resource-flyout').getByRole('button',{name:'Reboot',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Reboot',exact:true})).toBeVisible();
+  await page.evaluate(()=>new Promise(resolve=>{
+    const modal=document.querySelector('dialog:modal');
+    const pane=document.querySelector('.resource-flyout');
+    pane.addEventListener('close',resolve,{once:true});
+    modal.querySelector('.close').focus();
+    modal.close();
+    pane.close();
+  }));
+  await expect(page.locator('.resource-flyout')).toHaveCount(0);
+  await expect(open).toBeFocused();
+  expect(counts.writes).toBe(0);
+});
+
 for(const width of [1440,834,390]) test(`cloud, host and Slide details share a readable flyout at ${width}px`,async({page},info)=>{
   await page.setViewportSize({width,height:1000});const counts=await setup(page);
   await page.goto('/#infrastructure');

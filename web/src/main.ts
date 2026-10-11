@@ -1018,20 +1018,24 @@ async function openDevice(id: string, initialTab = "overview") {
   panel.id = "machine-details";
   activeDevicePanel = panel;
   highlightActiveMachine();
-  const closePanel = panel.close.bind(panel);
-  panel.close = (returnValue?: string) => {
-    const focused = document.activeElement;
-    const restoreFocus = panel.open && (!focused || focused === document.body || panel.contains(focused));
-    closePanel(returnValue);
-    if (!restoreFocus || activeDevicePanel !== panel || document.querySelector("dialog:modal")) return;
-    // Return focus during dismissal, before the queued close event can race
-    // the user's next control or Safari's native focus restoration.
+  const focusOpener = () => {
+    if (document.querySelector("dialog:modal")) return;
     if (page === "home") document.getElementById("home-open-machine")?.focus({ preventScroll: true });
     if (page === "fleet") {
       document.querySelectorAll<HTMLButtonElement>("#fleet-rows .machine-name").forEach((button) => {
         if (button.dataset.device === id) button.focus({ preventScroll: true });
       });
     }
+  };
+  const closePanel = panel.close.bind(panel);
+  panel.close = (returnValue?: string) => {
+    const focused = document.activeElement;
+    const restoreFocus = panel.open && (!focused || focused === document.body || panel.contains(focused));
+    closePanel(returnValue);
+    if (!restoreFocus || activeDevicePanel !== panel) return;
+    // Return focus during dismissal, before the queued close event can race
+    // the user's next control or Safari's native focus restoration.
+    focusOpener();
   };
   const escape = (event: KeyboardEvent) => {
     if (tab === "terminal" && panel.querySelector(".shell-workspace")?.contains(event.target as Node)) return;
@@ -1047,6 +1051,10 @@ async function openDevice(id: string, initialTab = "overview") {
     disconnect();
     detailVersion++;
     highlightActiveMachine();
+    // A nested modal may retain focus until its queued removal. Recover only
+    // focus lost to the body, preserving any newly chosen outside control.
+    const focused = document.activeElement;
+    if (!focused || focused === document.body) focusOpener();
   });
   try {
     if (!fleet.some((d) => d.id === id)) await loadFleet();
