@@ -1353,3 +1353,32 @@ Published `9dd65720a064de8872bc837e04c3cb53dfe968f8` as `20261011T213141Z-drawer
 Live desktop/phone before/after focus and AI review checks passed. A task-only synthetic provider draft was reviewed without executing it. A fresh 21-page/four-width sweep produced 84 private captures with no page errors, overflow, loading/error states or unexpected writes. Sessions were logged out.
 
 Main ancestry, newer deployed work, the live baseline, shared lock and immediately preceding index were checked. All 27 public files match; index SHA-256 `233fbab20cca8f212a4a0682cbb0e5889b4d45ecfb6b50736e20d87a3314b2b4`. Web rollback: `/var/lib/speck-rollback/20261011T213141Z-drawer-focus-9dd6572/web`. Backend, dependencies/environment, all 14 protected groups, endpoint downloads and healthy PID 398942 are preserved without a restart. All hosted backend, unit and browser checks pass for this source (browser run `38176452826`). No branch check was bypassed or PR merged. See the [complete release and qualification record](docs/operations/ai-workflow-polish-2026-10-11.md).
+
+
+### Remote status and fixture follow-up — AI and console review
+
+Published `6ccb2adc19048ea8c91216ab1a740dfec44f333e` as
+`20261011T214601Z-remote-header-6ccb2ad`. Phone machine title/status is readable, and
+connection/audio/error transitions no longer move remote controls. Tablet/desktop keeps
+normal flex layout; the full error remains in the screen overlay. Synthetic browser
+WebSockets are installed before document load and verify the actual Guacamole
+query-string URL is intercepted.
+
+Fresh production web build, 60 units and 519 Chromium/WebKit browser checks pass, with
+one existing touch-drag skip. Twenty focused remote checks cover five widths and six
+real synthetic protocol/status transitions; twelve focus regressions also pass. The
+gallery now includes 20 synthetic AI/remote images, for 57 public captures total. Final
+read-only live focus/AI review and 84 private page screenshots pass with no page errors,
+overflow, loading/error states or unexpected writes. No real endpoint input or
+additional provider call occurred; existing backend/platform qualification remains
+unchanged.
+
+Main ancestry, previous deployed sources, shared lock, exact baseline and immediately
+preceding index were checked. All 27 public files match; index SHA-256
+`d2c3444a0b383af64b01b792ed6a14c3cfed7247e6265688cc568d5acd8cb7eb`. Web rollback:
+`/var/lib/speck-rollback/20261011T214601Z-remote-header-6ccb2ad/web`. Backend,
+dependencies/environment, all 14 protected groups, endpoint downloads and healthy PID
+398942 remain unchanged without restart. All hosted checks for prior focus source
+`9dd6572` pass. All hosted backend, unit and browser checks pass for deployed source
+`6ccb2ad` (browser run `38177379280`: 519 passes and one existing skip). No branch check was bypassed or PR merged. See the [complete
+validation and release record](docs/operations/ai-workflow-polish-2026-10-11.md).

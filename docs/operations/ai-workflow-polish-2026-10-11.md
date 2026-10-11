@@ -189,3 +189,58 @@ The live before/after reproduction confirmed the original focus theft in Chromiu
 Origin/main was fetched and verified as an ancestor before the build and again before publication. The newer deployed releases, exact live baseline and all 14 protected configuration/identity groups were preserved under the shared release lock. The live index was compared again immediately before atomic replacement. This publication changes only web assets: backend, server dependencies/environment, saved configuration, endpoint downloads and PID 398942 remain unchanged; no restart was needed. All 27 public files match the build. Index SHA-256: `233fbab20cca8f212a4a0682cbb0e5889b4d45ecfb6b50736e20d87a3314b2b4`. Web rollback: `/var/lib/speck-rollback/20261011T213141Z-drawer-focus-9dd6572/web`. The prior AI release retains the full server/configuration/database rollback.
 
 All hosted backend, unit and browser checks pass for `9dd6572` (browser run `38176452826`). Local validation remains the release gate; no required branch check was bypassed and no PR was merged.
+
+
+## Stable remote controls and deterministic browser fixtures
+
+Published `6ccb2adc19048ea8c91216ab1a740dfec44f333e` as
+`20261011T214601Z-remote-header-6ccb2ad`. Remote connection status could wrap behind
+phone controls and move the toolbar during disconnect/error transitions, changing the
+target under a pending click. The phone title/status now has a full-width row with two
+reserved status lines. Larger displays keep their existing flex flow and normal header
+height; the compact status is ellipsized and the full error remains readable in the
+screen overlay.
+
+Trace review of the earlier hosted keyboard failure also found an unreliable fixture:
+WebSocket interception was registered after the document loaded, followed by hash-only
+navigation, and its URL pattern did not explicitly match Guacamole's empty query string.
+The fixture now installs before loading the document, matches `/ws?` and verifies that
+the actual socket was intercepted before controls are clicked. It sends synthetic
+Guacamole drawing/error frames and mocked audio counters; it does not open a real
+endpoint transport.
+
+Twenty focused checks passed in Chromium/WebKit at 1440/834/760/390/320 px. Geometry
+stays stable through waiting, connected, Audio idle, audio-byte statistics, a long
+protocol error and disconnected states. The transient error is measured before
+Guacamole's synchronous disconnect callback; the full overlay message remains readable,
+and the Keyboard click opens the intended dialog. Twelve focus regressions and
+TypeScript also passed. The initial fixture run was interrupted after readiness
+assertions failed; an intermediate geometry run found four tablet failures before the
+status constraint was added. These historical failures are preserved privately and are
+not counted as passes.
+
+The fresh final production web build, 60 web units and all 519 Chromium/WebKit browser
+checks pass, with one existing WebKit touch-drag skip. Backend and agent code remain
+exactly the previously qualified `50d8fef` release, whose local core passed 399 backend
+tests plus Linux runtime/race and Windows/Linux platform builds. All hosted checks for
+the intervening `9dd6572` source pass. All hosted backend, unit and browser checks pass for deployed source `6ccb2ad`
+(browser run `38177379280`: 519 passes and one existing skip).
+
+The public AI gallery now contains 20 synthetic captures, including two full 320 px
+remote-workspace states, for 57 public screenshots across both galleries. Hashes and
+byte counts were verified. A new live sweep covers all 21 pages at four widths: 84
+private screenshots with no page errors, overflow, loading/error states or unexpected
+writes. Read-only live focus and AI review checks pass again on desktop/phone; no
+additional provider request, endpoint command or physical remote input was needed.
+Existing real-provider qualification remains unchanged. Temporary browser sessions were
+logged out and isolated preview servers were stopped.
+
+Origin/main and the previous deployed AI/focus releases were verified as ancestors
+before the build and publication. The shared deployment lock, exact live baseline and
+immediately preceding index protected publication. All 27 public web files match the
+validated build. Index SHA-256:
+`d2c3444a0b383af64b01b792ed6a14c3cfed7247e6265688cc568d5acd8cb7eb`. Web rollback:
+`/var/lib/speck-rollback/20261011T214601Z-remote-header-6ccb2ad/web`. Backend,
+dependencies/environment, all 14 protected configuration/identity groups, endpoint
+downloads and healthy PID 398942 are preserved without a restart. No required branch
+check was bypassed and no PR was merged.
