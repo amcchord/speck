@@ -1154,3 +1154,74 @@ passed. Rollback is retained at
 `/var/lib/speck-rollback/20260928T003449Z-home-search-order-43f19bd`.
 Index SHA-256: `fbeb87a3cdd6c16c3fdc2efc0f39755cf23b45fe16e1f7337768cdfb4a225e39`.
 Private evidence is in ignored `output/home-search-order/`.
+
+## Standard entity navigation — September 27, 2026 (prepared)
+
+`codex/entity-navigation` preserves main `db2f55b` and the newer deployed UX /
+Home search work through `43f19bd`, including release record `eff78eb`. The
+[plan and entity contract](docs/operations/entity-navigation.md) define Machine,
+Hypervisor, Equipment, physical Port, customer Client, LAN client, Network, IP,
+Site and provider Connection, with scope and one destination per identity.
+
+Shared anchors connect Fleet, machine facts, Infrastructure, Proxmox and network
+relationships and search. Client, observed-network and IP inspectors expose
+searchable related entities. Exact provider membership maps to the canonical
+machine pane; repeated names offer a choice, and shared IPs never choose an owner.
+Copy links and Back retain workspace/tab/port context. Late navigation responses
+are discarded; an unavailable physical port never silently selects another port.
+Commands, raw evidence, credential values and editable content remain untouched.
+
+Local TypeScript/Vite, 60 web units and 18 focused Chromium/WebKit entity checks
+pass, as did 34 entity/Proxmox checks before the final missing-port guard. The
+complete initial browser run found two obsolete assertions (duplicate-name
+selection and canonical machine pane) in both engines; both tests were corrected
+and passed in focused rechecks. Final full-suite and production acceptance follow.
+Synthetic desktop/phone captures are in [the gallery](docs/screenshots/entity-navigation/README.md).
+
+This chat is the single active Speck deployment owner. The inspected live index
+is `fbeb87a3cdd6c16c3fdc2efc0f39755cf23b45fe16e1f7337768cdfb4a225e39`; the
+backend matches the incorporated source. This is a web-only release. Backend,
+agent and native code are unchanged from that baseline; no endpoint runtime,
+iOS or new Windows/Linux capability claim is made. Private release evidence stays
+in ignored `output/entity-navigation/`.
+
+### Production acceptance — Standard entity navigation
+
+Deployed source `6d42e93de850f017252cd1abd68f7c344da33956` as
+`20260928T010522Z-entity-navigation-6d42e93` (September 28 UTC, September 27 local).
+The initial publication from `36b6414` passed 60 web unit tests and 355 local
+Chromium/WebKit browser checks, with one existing WebKit touch-drag skip. Final
+source `6d42e93` adjusts only the status column width after live phone review;
+its fresh TypeScript/Vite build and all 18 focused entity browser checks passed.
+
+Both publications fetched origin/main and verified ancestry, preserved the newer
+UX/Home releases, held the shared release lock, matched the inspected live
+baseline and compared the index immediately before atomic publication. Each
+retains a web rollback snapshot. Final rollback:
+`/var/lib/speck-rollback/20260928T010522Z-entity-navigation-6d42e93/web`.
+All 27 public web assets match the validated build. Service health is active;
+PID 151449 was retained with no restart. Final index SHA-256:
+`63c5f2b0c5b905a2f3bbb96fbc837b32a2b194573fca6fe20f7a9e36347aa995`.
+
+Authenticated read-only live acceptance passed in Chromium at 1440 px and WebKit
+at 390 px: client → machine → hypervisor, IP evidence, network membership and
+selected physical ports, including browser Back, reload and no horizontal
+overflow. There were zero JavaScript errors or unexpected writes. Normal aggregate
+UX measurement posts were allowed after correcting the acceptance harness's
+endpoint name. Temporary browser sessions were logged out. A production screen
+review confirmed the final phone status words remain on one line.
+
+The backend source, dependency manifest, environment, service process and all 12
+protected configuration/identity groups match the original pre-task baseline.
+Credentials (including reveal counters), provider settings, existing machine /
+installation identities and agent downloads are preserved. No endpoint job,
+remote session, restore or equipment power operation was used for acceptance.
+Backend, agent and iOS/native tests were not rerun for this web-only release;
+Windows/Linux runtime qualification is unchanged. GitHub backend checks passed
+for the initial application commit; checks for the CSS follow-up were still
+running when this record was written. Local validation was the release gate;
+no required GitHub branch check was bypassed and no PR was merged.
+
+[PR #27](https://github.com/amcchord/speck/pull/27) is based on the still-open UX
+PR #26 so its review diff contains the entity work. Private manifests, snapshots,
+acceptance logs and live screenshots stay in ignored `output/entity-navigation/`.

@@ -1,3 +1,4 @@
+import { ipRef, machineAddresses, networkRef, lanClientRef, portRef } from './entity-model';
 import {startJourney} from "./ux-quality";
 import { escapeDetail as e } from "./resource-story";
 import { resourceHref, type ResourceRef } from "./resource-navigation";
@@ -49,7 +50,7 @@ export function createCommandPalette(ui: Item) {
       finish();
       recent.splice(0,recent.length,...[hit,...recent.filter(h=>identity(h)!==identity(hit))].slice(0,8));
       pane.close();
-      location.hash = hit.ref ? resourceHref(page, hit.ref) : hit.page!;
+      location.hash = hit.ref ? resourceHref(page, hit.ref.kind === "port" ? {...hit.ref,kind:"equipment",tab:"ports:"+hit.ref.resourceKind,resourceKind:undefined} : hit.ref) : hit.page!;
     };
     const draw = () => {
       if (!pane.open) return;
@@ -128,19 +129,17 @@ export function createCommandPalette(ui: Item) {
           draw();
         });
     };
-    source("/fleet?compact=true", (data) =>
-      data.machines.map((d: Item) => ({
-        title: d.label,
-        description:
-          (d.restored_from ? "Recovery copy · " : d.has_endpoint_agent && d.approved ? "Managed endpoint · " : d.has_speck_agent ? "Connector / unapproved identity · " : "Provider resource · ") +
-          (d.location || d.site || d.platform || "Discovered resource"),
-        search: [d.hostname, ...(d.addresses || []), ...(d.aliases || [])].join(
-          " ",
-        ),
-        ref: { kind: "machine", id: d.id },
-      })),
-    );
+    source("/fleet?compact=true", data => data.machines.flatMap((m:Item)=>[
+      {title:m.label, description:(m.restored_from ? 'Recovery copy · ' : m.has_endpoint_agent && m.approved ? 'Managed endpoint · ' : m.has_speck_agent ? 'Connector / unapproved identity · ' : 'Provider resource · ')+(m.location || m.site || m.platform || 'Discovered resource'), search:[m.hostname,...machineAddresses(m),...(m.aliases || [])].join(' '), ref:{kind:'machine',id:m.id}},
+      ...(m.clients || []).filter((c:Item)=>c.key).map((c:Item)=>({title:c.name,description:'Client · Customer membership',ref:{kind:'client',id:c.key}})),
+      ...machineAddresses(m).map(ip=>({title:ip,description:'IP address · Reporting resources',ref:ipRef(ip)!})),
+    ]));
     if (ui.role() !== "viewer") {
+      source("/unifi/clients", rows => (rows.clients || rows).flatMap((c:Item)=>[
+        {title:c.name || c.mac,description:'LAN client · '+(c.network_name || c.site_id || 'Managed gateway'),ref:lanClientRef(c)},
+        {title:c.network_name || c.ssid,description:'Network · '+(c.site_id || '')+(c.vlan == null ? '' : ' · VLAN '+c.vlan),ref:networkRef(c)},
+        {title:c.uplink_name+' · Port '+c.port,description:'Port · '+(c.site_id || ''),ref:portRef(c)},
+      ].filter(h=>h.ref)) as Hit[]);
       source("/unifi/equipment/index", (rows) =>
         rows.map((d: Item) => ({
           title: d.name || d.id,

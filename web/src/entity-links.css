@@ -1,0 +1,63 @@
+/* One navigational treatment, sized by its surrounding fact or table cell. */
+a.entity-link {
+  color: var(--network, #285b93);
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+a.entity-link:hover {
+  text-decoration-style: solid;
+  text-decoration-color: currentColor;
+}
+a.entity-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+.entity-list {
+  display: grid;
+  gap: 8px;
+}
+.entity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line, #dde3e8);
+}
+.entity-row > span {
+  min-width: 0;
+}
+.entity-row small {
+  display: block;
+  color: var(--muted, #697582);
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.entity-row .entity-link {
+  font-weight: 600;
+}
+.entity-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 12px 0;
+}
+.entity-filter {
+  display: block;
+  margin: 12px 0;
+}
+.entity-filter input {
+  width: 100%;
+}
+.entity-row > span {
+  flex: 1;
+}
+.entity-row > small {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}

@@ -177,13 +177,9 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
         return note(
           "No physical switch ports are reported by this device. Explore its clients and radios below.",
         );
-      if (!ports.some((p) => p.idx === selectedPort))
-        selectedPort = ports[0].idx;
-      const p = ports.find((p) => p.idx === selectedPort)!,
-        o = p.observation || {},
-        direct = data!.clients.filter((c: Item) => c.port === p.idx),
-        children = data!.children.filter((c: Item) => c.parent_port === p.idx);
-      return `<div class="port-legend" aria-label="Link speed legend"><span><i class="speed-slow"></i>&lt;1 Gbps</span><span><i class="speed-gigabit"></i>1 Gbps</span><span><i class="speed-multigig"></i>2.5 / 5 Gbps</span><span><i class="speed-fast"></i>10+ Gbps</span><span><i></i>Down / unknown speed</span><span>ϟ PoE · watts per port</span></div><div class="port-grid" role="group" aria-label="Physical ports">${ports
+      if (selectedPort === undefined) selectedPort = ports[0].idx;
+      const p = ports.find((p) => p.idx === selectedPort);
+      const grid = `<div class="port-legend" aria-label="Link speed legend"><span><i class="speed-slow"></i>&lt;1 Gbps</span><span><i class="speed-gigabit"></i>1 Gbps</span><span><i class="speed-multigig"></i>2.5 / 5 Gbps</span><span><i class="speed-fast"></i>10+ Gbps</span><span><i></i>Down / unknown speed</span><span>ϟ PoE · watts per port</span></div><div class="port-grid" role="group" aria-label="Physical ports">${ports
         .map((p) => {
           const watts = portPower(p);
           const link =
@@ -197,7 +193,12 @@ export function createEquipment(ui: Item, openClient: (c: Item) => void) {
         })
         .join(
           "",
-        )}</div><section class="port-detail"><div class="equipment-heading"><div><span class="resource-eyebrow">Physical port ${p.idx}</span><h3>${e(o.name || "Port " + p.idx)}</h3></div>${status(p.state)}</div>${facts(
+        )}</div>`;
+      if (!p) return grid + note(`Port ${selectedPort} is not reported by this device. Choose a currently reported port above.`);
+      const o = p.observation || {},
+        direct = data!.clients.filter((c: Item) => c.port === p.idx),
+        children = data!.children.filter((c: Item) => c.parent_port === p.idx);
+      return grid + `<section class="port-detail"><div class="equipment-heading"><div><span class="resource-eyebrow">Physical port ${p.idx}</span><h3>${e(o.name || "Port " + p.idx)}</h3></div>${status(p.state)}</div>${facts(
         [
           ["Link speed", speed(p.speedMbps)],
           ["Maximum speed", speed(p.maxSpeedMbps)],

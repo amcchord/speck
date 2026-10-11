@@ -23,7 +23,7 @@ export const detailStatus = (value: any) => {
   const tone = /^(running|online|connected|healthy|complete|completed|success|successful|succeeded|passed|verified)$/i.test(label) ? 'good' : /^(failed|error|unhealthy)$/i.test(label) ? 'bad' : 'neutral';
   return `<span class="badge ${tone}">${e(label.replaceAll('_',' '))}</span>`;
 };
-export const detailFacts = (rows: [string, any][]) => `<dl class="resource-facts">${rows.map(([key,value]) => `<div><dt>${e(key)}</dt><dd>${e(plain(value))}</dd></div>`).join('')}</dl>`;
+export const detailFacts = (rows: [string, any][], links: Record<string, string> = {}) => `<dl class="resource-facts">${rows.map(([key,value]) => `<div><dt>${e(key)}</dt><dd>${links[key] ?? e(plain(value))}</dd></div>`).join('')}</dl>`;
 export const detailSection = (title: string, html: string) => `<section class="resource-section"><h3>${e(title)}</h3>${html}</section>`;
 const facts = detailFacts, section = detailSection;
 const metrics = (rows: [string, any, string?][]) => `<div class="resource-metrics">${rows.map(([key,value,note]) => `<div><small>${e(key)}</small><strong>${e(plain(value))}</strong>${note ? `<small>${e(note)}</small>` : ''}</div>`).join('')}</div>`;

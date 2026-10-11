@@ -396,7 +396,8 @@ test("infrastructure opens the same organized VM overview", async ({
   await page
     .getByRole("button", { name: "Clinic server", exact: true })
     .click();
-  const pane = page.locator("dialog.infra-dialog");
+  const pane = page.locator("#machine-details");
+  expect(JSON.parse(new URLSearchParams(new URL(page.url()).hash.split("?")[1]).get("inspect")).kind).toBe("machine");
   await expect(
     pane.getByText("Debian GNU/Linux 13", { exact: true }),
   ).toBeVisible();
