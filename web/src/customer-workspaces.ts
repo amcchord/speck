@@ -17,23 +17,29 @@ export function createCustomerWorkspaces(ui: Item) {
     );
   async function render() {
     ui.loading("Loading customer workspaces…");
+    const current = ui.checkpoint?.() || (() => {});
     const spaces: Item[] = await ui.api("/workspaces");
+    current();
     const id = new URLSearchParams(location.hash.split("?")[1] || "").get(
       "workspace",
     );
     const selected = spaces.find((w) => w.id === id);
     ui.content(
-      `<div class="toolbar"><button class="primary" data-new-workspace>Create customer / site workspace</button>${selected ? '<button class="secondary" data-edit-workspace>Review associations</button>' : ""}<a class="secondary" href="#maintenance">Maintenance routines</a></div><p class="resource-note">Explicit associations preserve context across endpoints, network, backup resources, credentials and schedules. A workspace does not grant additional resource permissions.</p><div class="customer-tabs">${spaces.map((w) => `<a class="secondary" aria-current="${selected?.id === w.id ? "page" : "false"}" href="#workspaces?workspace=${e(w.id)}">${e(w.name)}</a>`).join("") || "<p>No workspaces yet. Create one and review its exact resources; names are never used to infer ownership.</p>"}</div><div data-customer-content></div>`,
+      `<div class="toolbar customer-toolbar"><button class="primary" data-new-workspace>Create customer / site workspace</button>${selected ? '<button class="secondary" data-edit-workspace>Review associations</button>' : ""}<a class="secondary" href="#maintenance">Maintenance routines</a></div><p class="resource-note">Explicit associations preserve context across endpoints, network, backup resources, credentials and schedules. A workspace does not grant additional resource permissions.</p><nav class="customer-tabs" aria-label="Customer workspaces"><a class="secondary" href="#workspaces" ${!id ? 'aria-current="page"' : ""}>All workspaces</a>${spaces.map((w) => `<a class="secondary" aria-current="${selected?.id === w.id ? "page" : "false"}" href="#workspaces?workspace=${e(w.id)}">${e(w.name)}</a>`).join("") || "<p>No workspaces yet. Create one and review its exact resources; names are never used to infer ownership.</p>"}</nav><div data-customer-content></div>`,
     );
     document
       .querySelector("[data-new-workspace]")!
-      .addEventListener("click", () => void edit());
+      .addEventListener("click", (event) => void openEditor(event));
     document
       .querySelector("[data-edit-workspace]")
-      ?.addEventListener("click", () => void edit(selected));
+      ?.addEventListener("click", (event) => void openEditor(event, selected));
     const root = document.querySelector<HTMLElement>(
       "[data-customer-content]",
     )!;
+    if (id && !selected) {
+      root.innerHTML = '<div class="empty"><h2>Workspace unavailable</h2><p>This workspace may have been removed or is outside your access. Choose a workspace above, or return to All workspaces.</p></div>';
+      return;
+    }
     root.innerHTML = '<p role="status">Reading operational evidence…</p>';
     const sources: Item = {
       fleet: "/fleet?compact=true",
@@ -49,6 +55,7 @@ export function createCustomerWorkspaces(ui: Item) {
     const results = await Promise.allSettled(
       Object.values(sources).map((path) => ui.api(path)),
     );
+    current();
     if (!root.isConnected) return;
     const data: Item = {},
       failed: string[] = [];
@@ -176,16 +183,26 @@ export function createCustomerWorkspaces(ui: Item) {
         ),
       );
     const queue = root.querySelector<HTMLElement>("[data-customer-queue]")!;
-    listWorkspace(queue, ".home-alert", "operational queue", { size: 25 });
+    listWorkspace(queue, ".home-alert", "customer-queue:" + (selected?.id || "all"), { size: 25, label: "operational queue", collapsible: true });
     listWorkspace(
       root.querySelector<HTMLElement>("[data-customer-resources]")!,
       "a",
-      "associated resources",
+      "customer-resources:" + (selected?.id || "all"),
+      { label: selected ? "associated resources" : "unassigned machines", collapsible: true },
     );
   }
+  async function openEditor(event: Event, existing?: Item) {
+    const button = event.currentTarget as HTMLButtonElement;
+    button.disabled = true;
+    try { await edit(existing); }
+    catch (error) { ui.notify((error as Error).message, true); }
+    finally { button.disabled = false; }
+  }
   async function edit(existing?: Item) {
+    const current = ui.checkpoint?.() || (() => {});
     const catalog = await ui.api("/workspaces/catalog");
-    const rows: Item[] = catalog.items;
+    current();
+    const rows: Item[] = [...catalog.items];
     for (const a of existing?.associations || [])
       if (!rows.some((r) => identity(r) === identity(a)))
         rows.push({
@@ -196,16 +213,16 @@ export function createCustomerWorkspaces(ui: Item) {
         });
     const pane: HTMLDialogElement = ui.dialog(
       existing ? "Review customer associations" : "Create customer workspace",
-      `<label>Customer / site name<input data-customer-name maxlength="100" value="${e(existing?.name || "")}"></label><label>Recovery retest objective (days)<input data-retest type="number" min="1" max="365" value="${existing?.retest_days || 30}"></label><p>Choose exact resources and connections. These associations are organizational context, not a tenant access boundary. Existing permissions remain required.</p><div data-association-list>${rows
+      `<label>Customer / site name<input data-customer-name required maxlength="100" value="${e(existing?.name || "")}"></label><label>Recovery retest objective (days)<input data-retest required type="number" min="1" max="365" value="${existing?.retest_days || 30}"></label><p>Choose exact resources and connections. These associations are organizational context, not a tenant access boundary. Existing permissions remain required.</p><div data-association-list>${rows
         .map((r, i) => {
           const previous = existing?.associations.find(
             (a: Item) => identity(a) === identity(r),
           );
-          return `<div class="association-row"><label class="check"><input type="checkbox" data-association="${i}" ${previous ? "checked" : ""}><span><b>${e(r.label)}</b><small>${e(r.kind)} · ${e(r.description || r.connection || "")}</small></span></label><label class="check"><input type="checkbox" data-pin="${i}" ${previous?.pinned ? "checked" : ""}> Pin</label></div>`;
+          return `<div class="association-row"><label class="check"><input type="checkbox" data-association="${i}" ${previous ? "checked" : ""}><span><b>${e(r.label)}</b><small>${e(r.kind)} · ${e(r.description || r.connection || "")}</small></span></label><label class="check"><input type="checkbox" data-pin="${i}" aria-label="Pin ${e(r.label)}" ${previous ? "" : "disabled"} ${previous?.pinned ? "checked" : ""}> Pin</label></div>`;
         })
         .join(
           "",
-        )}</div><p data-workspace-error role="alert"></p><button class="primary" data-save-workspace>Confirm reviewed associations</button>`,
+        )}</div><div class="customer-review-footer"><p data-association-count role="status"></p><p data-workspace-error role="alert"></p><button class="primary" data-save-workspace>Confirm reviewed associations</button></div>`,
       { className: "wide" },
     );
     listWorkspace(
@@ -214,9 +231,26 @@ export function createCustomerWorkspaces(ui: Item) {
       "resource associations",
       { size: 30 },
     );
+    const updateAssociations = () => {
+      const chosen = [...pane.querySelectorAll<HTMLInputElement>("[data-association]:checked")];
+      pane.querySelector("[data-association-count]")!.textContent = `${chosen.length} resources selected · ${chosen.filter(b => pane.querySelector<HTMLInputElement>(`[data-pin="${b.dataset.association}"]`)!.checked).length} pinned`;
+    };
+    pane.querySelectorAll<HTMLInputElement>("[data-association]").forEach(box => box.onchange = () => {
+      const pin = pane.querySelector<HTMLInputElement>(`[data-pin="${box.dataset.association}"]`)!;
+      pin.disabled = !box.checked;
+      if (!box.checked) pin.checked = false;
+      updateAssociations();
+    });
+    pane.querySelectorAll<HTMLInputElement>("[data-pin]").forEach(box => box.onchange = updateAssociations);
+    updateAssociations();
     pane.querySelector<HTMLButtonElement>("[data-save-workspace]")!.onclick =
       async (event) => {
         const button = event.currentTarget as HTMLButtonElement;
+        const name = pane.querySelector<HTMLInputElement>("[data-customer-name]")!;
+        name.value = name.value.trim();
+        const retest = pane.querySelector<HTMLInputElement>("[data-retest]")!;
+        if (!name.reportValidity() || !retest.reportValidity()) return;
+        pane.querySelector("[data-workspace-error]")!.textContent = "";
         button.disabled = true;
         try {
           const associations = [

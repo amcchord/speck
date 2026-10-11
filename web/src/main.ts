@@ -511,7 +511,7 @@ function content(html: string) {
     more.title = "More actions";
     more.innerHTML = icon("more");
     more.onclick = () => {
-      const sheet = dialog("Actions", `<div class="action-list">${secondary.map((node, i) => `<button class="secondary" data-action-index="${i}">${esc(node.textContent?.trim() || "")}</button>`).join("")}</div>`);
+      const sheet = dialog("Actions", `<div class="action-list">${secondary.map((node, i) => `<button class="secondary" data-action-index="${i}" ${node.hasAttribute("disabled") ? "disabled" : ""}>${esc(node.textContent?.trim() || node.getAttribute("aria-label") || node.title || "Action")}</button>`).join("")}</div>`);
       sheet.querySelectorAll<HTMLButtonElement>("[data-action-index]").forEach((b) => (b.onclick = () => { sheet.close(); secondary[Number(b.dataset.actionIndex)].click(); }));
     };
     actions.parentElement.insertBefore(more, document.getElementById("refresh"));
@@ -631,7 +631,7 @@ async function render(manualRefresh = false) {
     if (!(err instanceof StaleViewError) && username && started===journeyStarted) {measureJourney("enrichment",page,performance.now()-journeyStarted,"failed"); content(loadError(err));}
   }
 }
-const machineInspection = createMachineInspection({api,flyout,dialog,notify,showJob:(id:string)=>runDetails.job(id),openDevice,openNetwork:(d:Item)=>network.showMachine(d)});
+const machineInspection = createMachineInspection({api,flyout,dialog,notify,role:()=>role,showJob:(id:string)=>runDetails.job(id),openDevice,openNetwork:(d:Item)=>network.showMachine(d)});
 const recoveryInspection=createRecoveryInspection({api,flyout});
 const runDetails = createRunDetails({api, flyout, openDevice, role: () => role, notify});
 registerResource("machine", async ref => { await loadFleet(); await openDevice(ref.id, ref.tab || "overview"); });
@@ -660,7 +660,7 @@ const ops = createOperations({
     }
   },
 });
-const infrastructure = createInfrastructure({api, freshApi, flyout, summary, resourceInventory: () => fleet.flatMap(m => m.resources || []), openCanonicalMachine: async (resource:Item) => { await loadFleet(); const machine=resourceMachine(resource,fleet); if(!machine)return false; await openDevice(machine.id); return true; }, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
+const infrastructure = createInfrastructure({api, freshApi, flyout, summary, loadingState, resourceInventory: () => fleet.flatMap(m => m.resources || []), openCanonicalMachine: async (resource:Item) => { await loadFleet(); const machine=resourceMachine(resource,fleet); if(!machine)return false; await openDevice(machine.id); return true; }, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
   newVm: () => launchVm({ api, esc, notify, dialog, loadingState, exposeHost: (ip: string, name: string) => network.exposeHost(ip, name) })});
 const network = createNetwork({ api, freshApi, flyout, openMachine: async (id: string) => { if (!fleet.some(m => m.id === id)) await loadFleet(); await openDevice(id); }, summary, esc, notify, dialog, content, loading, badge, role: () => role, loadingState });
 createEntityInspectors({api,flyout,role:()=>role,openEquipment:network.openEquipment});
@@ -693,8 +693,8 @@ const management = createManagement({
   username: () => username,
   refresh: render,
 });
-const customers=createCustomerWorkspaces({api,content,loading,dialog,notify});
-const maintenance=createMaintenance({api,content,loading,dialog,notify,newSchedule:(seed:Item)=>management.newSchedule(seed),showBatch:runDetails.batch});
+const customers=createCustomerWorkspaces({api,content,loading,dialog,notify,checkpoint:()=>viewScope.checkpoint()});
+const maintenance=createMaintenance({api,content,loading,dialog,notify,checkpoint:()=>viewScope.checkpoint(),newSchedule:(seed:Item)=>management.newSchedule(seed),showBatch:runDetails.batch});
 configureMetrics(body=>username && role!=="viewer" ? requestApi("/ux/measurements","POST",body) : Promise.resolve());
 let journeyStarted=performance.now(),firstContent=false;
 function usefulContent(){if(!firstContent){firstContent=true;measureJourney("first_content",page,performance.now()-journeyStarted);}}
@@ -2276,9 +2276,21 @@ async function renderJobs() {
 async function renderSettings() {
   loading("Loading settings…");
   if (role === "viewer") return management.renderAccount();
-  const c = await api("/slide/connection");
+  let slideFailure = "";
+  const c = await api("/slide/connection").catch(error => {
+    if (error instanceof StaleViewError) throw error;
+    slideFailure = (error as Error).message;
+    return {};
+  });
+  const settingsPart = async (title: string, read: () => Promise<unknown>) => {
+    try { await read(); }
+    catch (error) {
+      if (error instanceof StaleViewError) throw error;
+      document.querySelector(".settings-grid")?.insertAdjacentHTML("beforeend", `<article class="panel settings-error" role="status"><h2>${esc(title)}</h2><p>This section could not be loaded. Other settings remain available.</p><details><summary>Error details</summary><p>${esc((error as Error).message)}</p></details><button class="secondary" data-settings-retry>Retry settings</button></article>`);
+    }
+  };
   content(
-    `<div class="toolbar settings-sections" role="navigation" aria-label="Settings sections"><a class="secondary" href="#account">Account & access</a><a class="secondary" href="#api">AI / API clients</a><button class="secondary" id="settings-integrations">Integration directory</button><button class="secondary" data-settings-group="agents">Endpoint agent policy</button><button class="secondary" data-settings-group="all">All settings</button></div><p class="resource-note">Endpoint agents manage Windows/Linux machines. AI and API clients use separately scoped credentials to access Speck.</p><div class="settings-grid"><article class="panel"><span class="eyebrow">SLIDE INTEGRATION</span><h2>Slide connection</h2><a class="text-link" href="${resourceHref("settings",{kind:"connection",id:"slide-settings"})}">Inspect integration health &amp; resources →</a><p>${c.connected ? "A Slide account is connected. Enter a new token to replace it." : "Add an account-scoped Slide API token."}</p><label>API origin<input id="slide-url" value="${esc(c.url || "https://api.slide.tech")}"></label><label>API token<input id="slide-token" type="password" autocomplete="new-password"></label><button id="save-slide" class="primary">Verify & connect</button></article><article class="panel"><span class="eyebrow">DEVICE ENROLLMENT</span><h2>Windows and Linux agents</h2><p>Install Speck as a Windows service or a Linux systemd service. Devices connect outbound over HTTPS.</p><button id="enrollment" class="secondary">Add a device</button></article></div>`,
+    `<div class="toolbar settings-sections" role="navigation" aria-label="Settings sections"><a class="secondary" href="#account">Account & access</a><a class="secondary" href="#api">AI / API clients</a><button class="secondary" id="settings-integrations">Integration directory</button><button class="secondary" data-settings-group="agents" aria-pressed="false">Endpoint agent policy</button><button class="secondary" data-settings-group="all" aria-pressed="true">All settings</button></div><p class="resource-note">Endpoint agents manage Windows/Linux machines. AI and API clients use separately scoped credentials to access Speck.</p><div class="settings-grid"><article class="panel"><span class="eyebrow">SLIDE INTEGRATION</span><h2>Slide connection</h2><a class="text-link" href="${resourceHref("settings",{kind:"connection",id:"slide-settings"})}">Inspect integration health &amp; resources →</a><p>${slideFailure ? "Connection status is unavailable. Retry before replacing its token." : c.connected ? "A Slide account is connected. Enter a new token to replace it." : "Add an account-scoped Slide API token."}</p><label>API origin<input id="slide-url" value="${esc(c.url || "https://api.slide.tech")}"></label><label>API token<input id="slide-token" type="password" autocomplete="new-password"></label><button id="save-slide" class="primary" ${slideFailure ? "disabled" : ""}>Verify & connect</button>${slideFailure ? '<button class="secondary" data-settings-retry>Retry connection</button>' : ""}</article><article class="panel"><span class="eyebrow">DEVICE ENROLLMENT</span><h2>Windows and Linux agents</h2><p>Install Speck as a Windows service or a Linux systemd service. Devices connect outbound over HTTPS.</p><button id="enrollment" class="secondary">Add a device</button></article></div>`,
   );
   on("save-slide", async () => {
     await api("/slide/connection", "PUT", {
@@ -2290,8 +2302,8 @@ async function renderSettings() {
   });
   on("enrollment", enrollmentDialog);
   on('settings-integrations',()=>integrationDirectory({api,flyout}));
-  document.querySelectorAll<HTMLButtonElement>('[data-settings-group]').forEach(b=>b.onclick=()=>{document.querySelectorAll<HTMLElement>('.settings-grid>article').forEach(card=>card.hidden=b.dataset.settingsGroup!=='all'&&!/DEVICE ENROLLMENT|AGENT UPDATES/.test(card.textContent || ''));});
   if (role === "admin") {
+    await settingsPart("Automatic updates", async () => {
     const updates = await api("/agent-updates");
     document
       .querySelector(".settings-grid")!
@@ -2313,9 +2325,10 @@ async function renderSettings() {
       });
       notify("Agent update policy saved");
     });
+    });
   }
-  if (role === "admin") await integrationSettings({ api, esc, date, on, value, notify, dialog });
-  await ops.settingsPanel();
+  if (role === "admin") await settingsPart("Read-only integrations", () => integrationSettings({ api, esc, date, on, value, notify, dialog }));
+  await settingsPart("AI and remote workspace", () => ops.settingsPanel());
   await management.settingsPanel();
   // Sections load from several modules; pack them into one set of columns without row gaps.
   const grids = [...document.querySelectorAll<HTMLElement>("#content .settings-grid")];
@@ -2324,6 +2337,12 @@ async function renderSettings() {
     grid.remove();
   });
   grids[0]?.classList.add("settings-masonry");
+  document.querySelectorAll<HTMLButtonElement>('[data-settings-retry]').forEach(b => b.onclick = () => void render(true));
+  document.querySelectorAll<HTMLButtonElement>('[data-settings-group]').forEach(b => b.onclick = () => {
+    const group = b.dataset.settingsGroup;
+    document.querySelectorAll<HTMLElement>('.settings-grid>article').forEach(card => card.hidden = group !== 'all' && !/DEVICE ENROLLMENT|AGENT UPDATES/.test(card.textContent || ''));
+    document.querySelectorAll<HTMLElement>('[data-settings-group]').forEach(control => control.setAttribute('aria-pressed', String(control.dataset.settingsGroup === group)));
+  });
   if (role !== "admin") {
     for (const id of ["save-slide", "save-ai"])
       document.getElementById(id)?.setAttribute("disabled", "");

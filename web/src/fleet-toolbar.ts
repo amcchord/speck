@@ -8,7 +8,7 @@ export const filterOptions: Record<string, { label: string; options: Record<stri
 };
 export function fleetToolbar(prefs: FleetPreferences, previews: boolean, viewer: boolean) {
   return `<div class="fleet-toolbar">
-    <div class="search-field">${icon('search')}<input id="fleet-search" aria-label="Search devices" placeholder="Search machines, clients, hosts or apps"></div>
+    <div class="search-field">${icon('search')}<input id="fleet-search" type="search" autocomplete="off" aria-label="Search devices" placeholder="Search machines, clients, hosts or apps"></div>
     <label class="fleet-agent-only">${icon('spark')}<span>Speck agents only</span><input id="fleet-agent-only" type="checkbox" role="switch" ${prefs.agent_filter === 'installed' ? 'checked' : ''}><span class="fleet-switch-track" aria-hidden="true"></span></label>
     <button id="fleet-filters" class="secondary fleet-tool" popovertarget="fleet-filters-panel" aria-expanded="false">${icon('filter')}<span>Filters</span><span id="fleet-filter-count" class="filter-count" hidden></span>${icon('chevron')}</button>
     <button id="fleet-view" class="secondary fleet-tool" popovertarget="fleet-view-panel" aria-expanded="false">${icon('columns')}<span>View</span>${icon('chevron')}</button>

@@ -1,5 +1,8 @@
 # Speck screenshots
 
+**[UI and UX polish](ui-ux-polish/README.md)**: desktop and phone workspaces,
+machine/network inspectors, retry states and before/after phone headers.
+
 **[Resource flyouts](resource-details/README.md)**: cloud and backup details,
 readable capacity and protection, and related resources on desktop, tablet and phone.
 

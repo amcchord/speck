@@ -6,7 +6,7 @@ export function mountSiteMap(root:HTMLElement,sites:Site[],select:(site:Site)=>v
   const mapped=mappedSites(sites);
   root.innerHTML=`<div class="site-map"><div class="site-map-heading"><span><b>Site locations</b><small>${mapped.length} of ${sites.length} sites have a reported location · Zoom in to explore streets</small></span><div class="map-controls"><button aria-label="Fit all sites" data-map-fit>Fit sites</button></div></div><div class="map-canvas" role="region" aria-label="Interactive site map"></div><div class="map-footer"><span><i></i> Connected <i class="offline"></i> Needs attention</span><small data-map-note>Locations reported by UniFi · <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener noreferrer">Report a map issue</a></small></div></div>`;
   const canvas=root.querySelector<HTMLElement>('.map-canvas')!;
-  if(!mapped.length){canvas.innerHTML='<p class="map-empty">No geographic coordinates reported. Explore the sites below.</p>';return;}
+  if(!mapped.length){root.querySelector<HTMLButtonElement>('[data-map-fit]')!.disabled=true;canvas.innerHTML='<p class="map-empty">No geographic coordinates reported. Explore the sites below.</p>';return;}
   void import('leaflet').then(L=>{
     if(!root.isConnected)return;
     const map=L.map(canvas,{scrollWheelZoom:false,attributionControl:true,zoomControl:true});

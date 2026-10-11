@@ -3,14 +3,15 @@ type Filter = { label: string; values: string[]; value: (row: HTMLElement) => st
 const views = new Map<string, {query:string;filters:string[];compact:boolean;offset:number;expanded?:boolean}>();
 /** Consistent in-memory views. Search indexes displayed metadata, never hidden
  * secrets; saved filters expire with the authenticated page. */
-export function listWorkspace(root: HTMLElement, selector: string, name: string, options: {filters?:Filter[];size?:number;collapsible?:boolean;label?:string} = {}) {
+export function listWorkspace(root: HTMLElement, selector: string, name: string, options: {filters?:Filter[];size?:number;collapsible?:boolean;label?:string;onChange?:()=>void} = {}) {
   root.querySelector('[data-list-controls]')?.remove();
   const rows = [...root.querySelectorAll<HTMLElement>(selector)];
+  const canCompact = rows.some(row => row.matches("tr") || row.querySelector("td"));
   const index = new Map(rows.map(r=>[r,(r.textContent || '').toLocaleLowerCase()]));
   const filters=options.filters || [], size=options.size || 50;
   const state=views.get(name) || {query:'',filters:[],compact:false,offset:0};
   const controls=document.createElement('div'); controls.dataset.listControls=''; controls.className='list-workspace-controls';
-  controls.innerHTML=`<div class="toolbar"><label class="list-search">Search ${e(options.label || name.replaceAll("-", " "))}<input type="search" placeholder="Search displayed names, status and details" value="${e(state.query)}"></label>${filters.map((f,i)=>`<label>${e(f.label)}<select data-list-filter="${i}"><option value="">All ${e(f.label.toLowerCase())}</option>${f.values.map(v=>`<option value="${e(v)}">${e(v)}</option>`).join('')}</select></label>`).join('')}<button class="secondary" data-list-density aria-pressed="${state.compact}">Compact rows</button><button class="text-link" data-list-reset>Reset view</button></div><div class="list-result-bar"><span role="status" data-list-count></span><div><button class="secondary" data-list-prev>Previous</button><button class="secondary" data-list-next>Next</button></div></div>`;
+  controls.innerHTML=`<div class="toolbar"><label class="list-search">Search ${e(options.label || name.replaceAll("-", " "))}<input type="search" placeholder="Search displayed names, status and details" value="${e(state.query)}"></label>${filters.map((f,i)=>`<label>${e(f.label)}<select data-list-filter="${i}"><option value="">All ${e(f.label.toLowerCase())}</option>${f.values.map(v=>`<option value="${e(v)}">${e(v)}</option>`).join('')}</select></label>`).join('')}<button class="secondary" data-list-density ${canCompact ? "" : "hidden"} aria-pressed="${state.compact}">Compact rows</button><button class="text-link" data-list-reset>Reset view</button></div><div class="list-result-bar"><span role="status" data-list-count></span><div ${rows.length > size ? "" : "hidden"}><button class="secondary" data-list-prev aria-label="Previous ${e(options.label || name.replaceAll("-", " "))} page">Previous</button><button class="secondary" data-list-next aria-label="Next ${e(options.label || name.replaceAll("-", " "))} page">Next</button></div></div>`;
   if(options.collapsible) {
     const details=document.createElement('details'); details.open=state.expanded ?? (!!state.query||state.filters.some(Boolean));details.ontoggle=()=>{state.expanded=details.open;views.set(name,state);};
     const summary=document.createElement('summary'); summary.textContent='Search and filter '+(options.label || name.replaceAll("-", " "))+' · '+rows.length+' loaded'; details.append(summary);
@@ -31,7 +32,11 @@ export function listWorkspace(root: HTMLElement, selector: string, name: string,
     controls.querySelector('[data-list-count]')!.textContent=matches.length?`${state.offset+1}–${Math.min(state.offset+size,matches.length)} of ${matches.length} results · ${rows.length} loaded`:rows.length ? 'No matching results. Clear filters or try another name.' : 'No items have been recorded.';
     (controls.querySelector('[data-list-prev]') as HTMLButtonElement).disabled=state.offset===0;
     (controls.querySelector('[data-list-next]') as HTMLButtonElement).disabled=state.offset+size>=matches.length;
+    const summary = controls.querySelector("summary");
+    if (summary) summary.textContent = "Search and filter " + (options.label || name.replaceAll("-", " ")) + " · " + matches.length + (matches.length !== rows.length ? " matching / " + rows.length + " loaded" : " loaded");
+    controls.querySelector<HTMLButtonElement>("[data-list-reset]")!.hidden = !state.query && !state.filters.some(Boolean);
     views.set(name,state);
+    options.onChange?.();
   };
   search.oninput=()=>{state.query=search.value;state.offset=0;draw();};
   selects.forEach((s,i)=>s.onchange=()=>{state.filters[i]=s.value;state.offset=0;draw();});
@@ -39,6 +44,7 @@ export function listWorkspace(root: HTMLElement, selector: string, name: string,
   controls.querySelector<HTMLButtonElement>('[data-list-next]')!.onclick=()=>{state.offset+=size;draw();};
   controls.querySelector<HTMLButtonElement>('[data-list-density]')!.onclick=event=>{state.compact=!state.compact;(event.currentTarget as HTMLElement).setAttribute('aria-pressed',String(state.compact));draw();};
   controls.querySelector<HTMLButtonElement>('[data-list-reset]')!.onclick=()=>{state.query='';state.filters=[];state.offset=0;search.value='';selects.forEach(s=>s.value='');draw();};
+  if (!rows.length) controls.hidden = true;
   draw(); return {draw,rows};
 }
 export function clearListViews(){views.clear();}

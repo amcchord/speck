@@ -23,10 +23,14 @@ export function createOperations(ui: Item) {
     );
     modal.classList.add("operation-review");
     on("confirm-operation", async () => {
+      const confirm = modal.querySelector<HTMLButtonElement>("#confirm-operation")!;
+      confirm.disabled = true;
+      try {
       const batch = await api("/batches", "POST", { ...body, confirmed: true });
       modal.close();
       notify("Operation queued. Each machine reports its own result.");
       showBatch(batch.id);
+      } finally { confirm.disabled = false; }
     });
   }
   async function scan(ids: string[]) {
@@ -53,7 +57,7 @@ export function createOperations(ui: Item) {
       0,
     );
     content(
-      `<button id="patch-scan" class="primary" data-page-action>Scan selected</button><button id="patch-schedule" class="secondary" data-page-action>Schedule selected scans</button><div class="panel operations-panel"><div class="section-head"><h2>Patch inventory</h2><label class="check"><input id="patch-select-all" type="checkbox"> Select online machines</label></div><div class="scroll"><table><thead><tr><th></th><th>Machine</th><th>Updates</th><th>Last scan</th><th>Reboot</th><th></th></tr></thead><tbody>${devices
+      `<button id="patch-scan" class="primary" data-page-action>Scan selected</button><button id="patch-schedule" class="secondary" data-page-action>Schedule selected scans</button><div class="panel operations-panel"><div class="section-head"><h2>Patch inventory</h2><span id="patch-selection-count" class="muted" role="status"></span><label class="check"><input id="patch-select-all" type="checkbox"> Select online machines</label></div><div class="scroll"><table><thead><tr><th></th><th>Machine</th><th>Updates</th><th>Last scan</th><th>Reboot</th><th></th></tr></thead><tbody>${devices
         .map((d: Item) => {
           const r = reports.find((r: Item) => r.device_id === d.id);
           const posture = patchPosture(d,r);
@@ -73,32 +77,49 @@ export function createOperations(ui: Item) {
         '<div class="empty">Your update operations will appear here.</div>'
       }</div>`,
     );
+    const updateSelection = () => {
+      if (!document.getElementById("patch-selection-count")) return;
+      const boxes = [...document.querySelectorAll<HTMLInputElement>("[data-patch-target]")];
+      const selected = boxes.filter(box => box.checked).length;
+      const visible = boxes.filter(box => !box.disabled && !box.closest("tr")!.hidden);
+      const hidden = boxes.filter(box => box.checked && box.closest("tr")!.hidden).length;
+      document.getElementById("patch-selection-count")!.textContent = `${selected} selected${hidden ? ` · ${hidden} outside this view` : ""}`;
+      const all = document.getElementById("patch-select-all") as HTMLInputElement;
+      all.checked = visible.length > 0 && visible.every(box => box.checked);
+      all.indeterminate = visible.some(box => box.checked) && !all.checked;
+      all.disabled = !visible.length;
+      for (const id of ["patch-scan", "patch-schedule"]) (document.getElementById(id) as HTMLButtonElement).disabled = !selected;
+    };
+    document.querySelectorAll<HTMLInputElement>("[data-patch-target]").forEach(box => box.onchange = updateSelection);
     document
       .getElementById("patch-select-all")!
-      .addEventListener("change", (e) =>
+      .addEventListener("change", (e) => {
         document
           .querySelectorAll<HTMLInputElement>(
             "tr:not([hidden]) [data-patch-target]:not(:disabled)",
           )
-          .forEach((x) => (x.checked = (e.target as HTMLInputElement).checked)),
-      );
+          .forEach((x) => (x.checked = (e.target as HTMLInputElement).checked));
+        updateSelection();
+      });
     const patchRoot=document.querySelector<HTMLElement>('.operations-panel')!;
-    listWorkspace(patchRoot,'tbody tr','patches',{filters:[
+    listWorkspace(patchRoot,'tbody tr','patches',{collapsible:true, onChange:updateSelection, filters:[
       {label:'Posture',values:['Current','Updates available','Stale scan','Never scanned','Ineligible','Unsupported'],value:r=>r.dataset.posture!},
       {label:'Platform',values:['windows','linux'],value:r=>r.dataset.platform!},
       {label:'Site',values:[...new Set(devices.map((d:Item)=>d.site || d.client_name || 'Unassigned'))] as string[],value:r=>r.dataset.site!},
       {label:'Severity',values:['Security / critical','Other / not reported'],value:r=>r.dataset.severity!},
     ]});
     on('patch-schedule',()=>ui.newSchedule({device_ids:[...document.querySelectorAll<HTMLInputElement>('[data-patch-target]:checked')].map(e=>e.dataset.patchTarget),name:'Scheduled patch inventory'}));
-    on("patch-scan", () =>
-      scan(
+    on("patch-scan", async () => {
+      const scanButton = document.getElementById("patch-scan") as HTMLButtonElement;
+      scanButton.disabled = true;
+      try { await scan(
         [
           ...document.querySelectorAll<HTMLInputElement>(
             "[data-patch-target]:checked",
           ),
         ].map((e) => e.dataset.patchTarget!),
-      ),
-    );
+      ); } finally { updateSelection(); }
+    });
     const population = devices.filter((d:Item)=>d.approved&&!d.revoked&&!d.archived&&['windows','linux'].includes(d.platform)&&d.telemetry?.capabilities?.managed_operations);
     const scoped = reports.filter((r:Item)=>population.some((d:Item)=>d.id===r.device_id));
     const fresh = scoped.filter((r:Item)=>r.scanned && Date.now()/1000-r.scanned<=86400);
@@ -169,7 +190,7 @@ export function createOperations(ui: Item) {
         '<div class="empty">Per-machine deployment results will appear here.</div>'
       }</div>`,
     );
-    listWorkspace(document.getElementById('content')!,'.template-card','templates',{filters:[{label:'Platform',values:['windows','linux'],value:r=>r.dataset.platform!},{label:'Type',values:['software','script'],value:r=>r.dataset.category!}]});
+    listWorkspace(document.getElementById('content')!,'.template-card','templates',{collapsible:true,filters:[{label:'Platform',values:['windows','linux'],value:r=>r.dataset.platform!},{label:'Type',values:['software','script'],value:r=>r.dataset.category!}]});
     document.querySelectorAll<HTMLButtonElement>('[data-template-detail]').forEach(b=>b.onclick=()=>void inspectTemplate(b.dataset.templateDetail!));
     on("software-inventory",softwareInventory);
     on("new-template", () => templateEditor());
@@ -551,25 +572,43 @@ export function createOperations(ui: Item) {
   async function settingsPanel() {
     const el = document.createElement("section");
     el.className = "settings-grid";
-    el.innerHTML = loadingState("Loading AI settings…");
+    el.innerHTML = `<article class="panel" data-ai-settings><span class="eyebrow">AI ASSISTANT</span><h2>OpenAI</h2><div data-ai-settings-body>${loadingState("Loading AI settings…")}</div></article><article class="panel"><span class="eyebrow">REMOTE ACCESS</span><h2>Remote workspace</h2><label>Open remote sessions with<select id="remote-client"><option value="browser">Browser workspace</option><option value="desktop">Speck Desktop, with browser fallback</option></select></label><p>Speck Desktop adds shared clipboard and native key shortcuts.</p><a class="text-link" href="#downloads">Download Speck Desktop →</a></article>`;
     document.getElementById("content")!.append(el);
-    const cfg = await api("/ai/settings");
-    if (!el.isConnected) return;
-    el.innerHTML = `<article class="panel"><span class="eyebrow">AI ASSISTANT</span><h2>OpenAI</h2><p>${cfg.configured ? "Connected" : "Not connected"}. Keys stay encrypted on the server.</p><label>Model<input id="ai-model" value="${esc(cfg.model)}"></label><label>API key<input id="ai-key" type="password" autocomplete="new-password" placeholder="${cfg.configured ? "Leave blank to keep the current key" : "OpenAI API key"}"></label>${button("save-ai", "Save AI settings", true)}</article><article class="panel"><span class="eyebrow">REMOTE ACCESS</span><h2>Remote workspace</h2><label>Open remote sessions with<select id="remote-client"><option value="browser">Browser workspace</option><option value="desktop">Speck Desktop, with browser fallback</option></select></label><p>Speck Desktop adds shared clipboard and native key shortcuts.</p><a class="text-link" href="#downloads">Download Speck Desktop →</a></article>`;
-    document.getElementById("content")!.append(el);
-    (el.querySelector("#remote-client") as HTMLSelectElement).value =
-      localStorage.getItem("speck-remote-client") || "browser";
-    el.querySelector("#remote-client")!.addEventListener("change", () =>
-      localStorage.setItem("speck-remote-client", value("remote-client")),
-    );
-    on("save-ai", async () => {
-      await api("/ai/settings", "PUT", {
-        model: value("ai-model"),
-        key: value("ai-key"),
-      });
-      (document.getElementById("ai-key") as HTMLInputElement).value = "";
-      notify("AI settings saved");
-    });
+    const preference = el.querySelector<HTMLSelectElement>("#remote-client")!;
+    preference.value = localStorage.getItem("speck-remote-client") || "browser";
+    preference.onchange = () => localStorage.setItem("speck-remote-client", preference.value);
+    const panel = el.querySelector<HTMLElement>("[data-ai-settings-body]")!;
+    const loadAI = async () => {
+      panel.innerHTML = loadingState("Loading AI settings…");
+      try {
+        const cfg = await api("/ai/settings");
+        if (!panel.isConnected) return;
+        panel.innerHTML = `<p>${cfg.configured ? "Connected" : "Not connected"}. Keys stay encrypted on the server.</p><label>Model<input id="ai-model" required value="${esc(cfg.model || "")}"></label><label>API key<input id="ai-key" type="password" autocomplete="new-password" placeholder="${cfg.configured ? "Leave blank to keep the current key" : "OpenAI API key"}"></label>${button("save-ai", "Save AI settings", true)}${ui.role() !== "admin" ? '<p class="resource-note">Administrator access is required to change AI settings.</p>' : ""}<p data-ai-settings-error role="alert"></p>`;
+        panel.querySelector<HTMLButtonElement>("#save-ai")!.disabled = ui.role() !== "admin";
+        on("save-ai", async () => {
+          if (ui.role() !== "admin") return;
+          const save = panel.querySelector<HTMLButtonElement>("#save-ai")!;
+          const model = panel.querySelector<HTMLInputElement>("#ai-model")!;
+          model.value = model.value.trim();
+          if (!model.reportValidity()) return;
+          save.disabled = true;
+          const error = panel.querySelector("[data-ai-settings-error]")!;
+          error.textContent = "";
+          try {
+            await api("/ai/settings", "PUT", { model: model.value, key: panel.querySelector<HTMLInputElement>("#ai-key")!.value });
+            if (!panel.isConnected) return;
+            panel.querySelector<HTMLInputElement>("#ai-key")!.value = "";
+            notify("AI settings saved");
+          } catch (err) { if (panel.isConnected) error.textContent = (err as Error).message; }
+          finally { save.disabled = ui.role() !== "admin"; }
+        });
+      } catch (error) {
+        if (!panel.isConnected) return;
+        panel.innerHTML = `<p class="resource-notice" role="status">AI settings unavailable. ${esc((error as Error).message)}</p><button class="secondary" data-retry-ai-settings>Retry AI settings</button>`;
+        panel.querySelector<HTMLButtonElement>("[data-retry-ai-settings]")!.onclick = () => void loadAI();
+      }
+    };
+    await loadAI();
   }
   return {
     renderPatches,

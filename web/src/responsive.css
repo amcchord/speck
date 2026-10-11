@@ -83,15 +83,20 @@ td .primary, td .secondary, td .quick-action { white-space: nowrap; }
   .more-account > span small { display: block; margin-top: 2px; color: #9fb3a5; text-transform: capitalize; }
   .more-account button { flex: 1 1 0; }
 
-  .workspace > header { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px 8px; margin-bottom: 16px; }
+  .workspace > header { display: grid; grid-template-columns: minmax(0, 1fr) 44px 44px; align-items: center; gap: 6px 8px; margin-bottom: 16px; }
+  .workspace > header:has(.page-more) { grid-template-columns: minmax(0, 1fr) 44px 44px 44px; }
   .workspace > header .page-heading, .workspace > header .header-actions { display: contents; }
   .workspace > header h1 { grid-column: 1; grid-row: 1; margin: 0; font-size: 26px; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; }
+  .workspace > header #workspace-search { grid-column: 2; grid-row: 1; }
   .workspace > header #refresh { grid-column: 3; grid-row: 1; }
-  .workspace > header .page-more { display: inline-flex; grid-column: 2; grid-row: 1; }
+  .workspace > header:has(.page-more) #refresh { grid-column: 4; }
+  .workspace > header .page-more { display: inline-flex; grid-column: 3; grid-row: 1; }
+  .workspace > header .page-freshness { grid-column: 1 / -1; grid-row: 3; min-width: 0; overflow-wrap: anywhere; }
+  .workspace > header .page-freshness:empty { display: none; }
   .workspace > header .page-actions > .secondary[data-page-action] { display: none; }
   .workspace > header .fleet-summary { grid-column: 1 / -1; grid-row: 2; margin: 0; gap: 4px 12px; font-size: 12px; }
   .workspace > header .page-heading > p { display: none; }
-  .workspace > header .page-actions { grid-column: 1 / -1; grid-row: 3; display: flex; flex-wrap: wrap; gap: 8px; }
+  .workspace > header .page-actions { grid-column: 1 / -1; grid-row: 4; display: flex; flex-wrap: wrap; gap: 8px; }
   .workspace > header .page-actions:empty { display: none; }
   .workspace > header .page-actions > * { flex: 0 1 auto; font-size: 13px; }
   .workspace > header .page-actions span { display: inline; }

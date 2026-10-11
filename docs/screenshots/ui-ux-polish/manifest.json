@@ -1,0 +1,254 @@
+{
+  "provenance": "Unretouched console captures using synthetic fixtures only. Live production captures remain private in ignored output. Captures demonstrate UI behavior, not new endpoint/runtime qualification.",
+  "captured_at_utc": "2026-10-11T20:20:08.796459+00:00",
+  "captures": [
+    {
+      "file": "home-1440.png",
+      "phase": "Integrated release candidate",
+      "width": 1440,
+      "height": 1736,
+      "bytes": 296220,
+      "sha256": "01db6cbd013dc4116e0075d35f3562b5c19482b3c866584d39e869a4d2d5703b"
+    },
+    {
+      "file": "home-390.png",
+      "phase": "Integrated release candidate",
+      "width": 390,
+      "height": 3326,
+      "bytes": 275343,
+      "sha256": "fe8f79fe5ec5efb72175e9dd61ea713ed1bf540b9f955ab87942e36544db494b"
+    },
+    {
+      "file": "fleet-1440.png",
+      "phase": "Integrated release candidate",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 172370,
+      "sha256": "252ce4c1b9df4bb5b9062c89eb9f4544d06e6f691a7b665301142ebd56d459ee"
+    },
+    {
+      "file": "fleet-390.png",
+      "phase": "Integrated release candidate",
+      "width": 390,
+      "height": 1686,
+      "bytes": 168045,
+      "sha256": "e1670d1f73725e975198b2c3eabe7fe3cd0b1e97b32e344b6f54470081af147b"
+    },
+    {
+      "file": "infrastructure-1440.png",
+      "phase": "Integrated release candidate",
+      "width": 1440,
+      "height": 1310,
+      "bytes": 280128,
+      "sha256": "ffd99124aa60cf7da2784f45453621c51caacf22d4a8a12a7e9ec224cff5f639"
+    },
+    {
+      "file": "infrastructure-390.png",
+      "phase": "Integrated release candidate",
+      "width": 390,
+      "height": 1887,
+      "bytes": 303749,
+      "sha256": "5e7d13208e07c87a1c4e48907953a98aa38afe32f199da59cf33b1df82e3ee61"
+    },
+    {
+      "file": "network-1440.png",
+      "phase": "Integrated release candidate",
+      "width": 1440,
+      "height": 1178,
+      "bytes": 155556,
+      "sha256": "295038011ecba872605c18dcdc31ec5bc6e84493f4e05db45bc91b665dcf8098"
+    },
+    {
+      "file": "network-390.png",
+      "phase": "Integrated release candidate",
+      "width": 390,
+      "height": 1813,
+      "bytes": 147243,
+      "sha256": "e22c587fadb738bc9aa24b61e5cb8d5b1be1dd350b5e1bb362d8fe879be9248d"
+    },
+    {
+      "file": "workspaces-1440.png",
+      "phase": "Integrated release candidate",
+      "width": 1440,
+      "height": 2587,
+      "bytes": 254708,
+      "sha256": "7c99ca6b71f9c74a2ec719e10901f99826753f39e16a7bc04bec45c60a585ad5"
+    },
+    {
+      "file": "workspaces-390.png",
+      "phase": "Integrated release candidate",
+      "width": 390,
+      "height": 2713,
+      "bytes": 232396,
+      "sha256": "083134c9c2352f705518fe1abf03e7d6a694e4bee6208193df5aeacd633f96f1"
+    },
+    {
+      "file": "maintenance-1440.png",
+      "phase": "Integrated release candidate",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 151596,
+      "sha256": "3ef415a63487d7fc9231afd4db31b859fb1e34328a9b9b7fa1eb3e0ae74d3b18"
+    },
+    {
+      "file": "maintenance-390.png",
+      "phase": "Integrated release candidate",
+      "width": 390,
+      "height": 1782,
+      "bytes": 151427,
+      "sha256": "9bfffb380c25442744af89bd9b952b9a0a3290d4ee415a4e9c6f7c4c9346b318"
+    },
+    {
+      "file": "patches-1440.png",
+      "phase": "Integrated release candidate",
+      "width": 1440,
+      "height": 1200,
+      "bytes": 192058,
+      "sha256": "805b0124b25185b407be99ae9dbdac01ebad942198ff82baa66001e91c9ba9f8"
+    },
+    {
+      "file": "patches-390.png",
+      "phase": "Integrated release candidate",
+      "width": 390,
+      "height": 1694,
+      "bytes": 169530,
+      "sha256": "df8c12d7bf3ee78059b5ae0f89a5b7b450da1a939132c71e6983ce05d645b893"
+    },
+    {
+      "file": "settings-1440.png",
+      "phase": "Integrated release candidate",
+      "width": 1440,
+      "height": 1245,
+      "bytes": 257404,
+      "sha256": "83a58d886fb03a76a65525f5855c3872fc130a79807485c86a9fdad1a462d9ff"
+    },
+    {
+      "file": "settings-390.png",
+      "phase": "Integrated release candidate",
+      "width": 390,
+      "height": 3032,
+      "bytes": 256322,
+      "sha256": "4dc75a55249507f6f8aeec839bb4d0167e6959c8c08f3a7cfc51b3505be7790f"
+    },
+    {
+      "file": "api-1440.png",
+      "phase": "Integrated release candidate",
+      "width": 1440,
+      "height": 1649,
+      "bytes": 224700,
+      "sha256": "ce135282d3b9de7bd71eaac6ef3468d6bb2bda79c20217b5cd2e831c203783e9"
+    },
+    {
+      "file": "api-390.png",
+      "phase": "Integrated release candidate",
+      "width": 390,
+      "height": 2539,
+      "bytes": 215051,
+      "sha256": "d9e697f42297215b12412ed3a69bbf59ae11214aa06874c1e112475818399284"
+    },
+    {
+      "file": "recovery-1440.png",
+      "phase": "Integrated release candidate",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 107846,
+      "sha256": "cfbf1911fe8e4fb9650e770d6f39264c89cba2317834cf3691404decfe6bcac6"
+    },
+    {
+      "file": "recovery-390.png",
+      "phase": "Integrated release candidate",
+      "width": 390,
+      "height": 1000,
+      "bytes": 71203,
+      "sha256": "88b903b4ea09fa4d6014c2c08ed9d55bf0ebb9289a03b41aba94d60c4efeace4"
+    },
+    {
+      "file": "machine-desktop.png",
+      "phase": "Isolated area review",
+      "width": 800,
+      "height": 960,
+      "bytes": 87401,
+      "sha256": "c8a04f6f7cf4524a7ab730be9f3268e42a924b66d06b4dff26df7b6ab6393470"
+    },
+    {
+      "file": "machine-phone.png",
+      "phase": "Isolated area review",
+      "width": 390,
+      "height": 960,
+      "bytes": 68939,
+      "sha256": "35437fd631881a73a8f63f1ce538d2c126b233509ed1615306788687edf2645b"
+    },
+    {
+      "file": "inventory-phone.png",
+      "phase": "Isolated area review",
+      "width": 390,
+      "height": 960,
+      "bytes": 70426,
+      "sha256": "42332910a2d2a6b42dbefe3c2d2ad68c6c8add6decaf0cdee6227ef192b4fae1"
+    },
+    {
+      "file": "interface-desktop.png",
+      "phase": "Isolated area review",
+      "width": 820,
+      "height": 960,
+      "bytes": 50424,
+      "sha256": "5e54456f320cb93049ad12163887ca2b110cc53923b9e68b7118beca2765666a"
+    },
+    {
+      "file": "columns-320.png",
+      "phase": "Isolated area review",
+      "width": 320,
+      "height": 1861,
+      "bytes": 142435,
+      "sha256": "3b963d1183e6cb2e9072652f74af47be4ff8f8486b830090962a8885337b336d"
+    },
+    {
+      "file": "ports-320.png",
+      "phase": "Isolated area review",
+      "width": 320,
+      "height": 960,
+      "bytes": 51327,
+      "sha256": "d59ee7e29d65a3ba7887c4017e89f5b12b52b7f98bd8919f351323cc02e7b1af"
+    },
+    {
+      "file": "port-desktop.png",
+      "phase": "Isolated area review",
+      "width": 1440,
+      "height": 960,
+      "bytes": 168189,
+      "sha256": "3c7c439c56beefc89b14d185435b151911037513de5beb4f4056a55d71aa189d"
+    },
+    {
+      "file": "cloud-phone.png",
+      "phase": "Isolated area review",
+      "width": 390,
+      "height": 960,
+      "bytes": 73573,
+      "sha256": "97240ad0b32be15443e72807785e1f93de9e0c019b679c3e76ae4c51f3e2ec8f"
+    },
+    {
+      "file": "infrastructure-retry.png",
+      "phase": "Isolated area review",
+      "width": 1280,
+      "height": 720,
+      "bytes": 92456,
+      "sha256": "e203b7685a4302da8d9a749da365bdfc9af3cf1abaa31692918eac71ec28e79a"
+    },
+    {
+      "file": "before-home-390.png",
+      "phase": "Baseline before fixes",
+      "width": 390,
+      "height": 3388,
+      "bytes": 282578,
+      "sha256": "ef8d39bceb5012d2db8d710abd77359576c4df5359ff4be41958029acfa486d2"
+    },
+    {
+      "file": "before-slide-390.png",
+      "phase": "Baseline before fixes",
+      "width": 390,
+      "height": 1000,
+      "bytes": 73676,
+      "sha256": "70fe28b0bc9a239e4c9106ae90242eddab9f0bb64e30e17b72f28ecc6e66ae39"
+    }
+  ]
+}

@@ -41,6 +41,8 @@ export function createInfrastructure(ui: Item) {
   let limit = PAGE;
   let inventory: Item = { connections: [] },
     agents: Item[] = [];
+  let renderGeneration = 0, sectionGeneration = 0, connectorError = "";
+  const loadingSection = (text: string) => ui.loadingState?.(text) || `<p class="resource-note" role="status">${esc(text)}</p>`;
   const button = (id: string, label: string) =>
     `<button class="secondary" id="${id}">${esc(label)}</button>`;
   const summary = (v: any): string =>
@@ -70,16 +72,24 @@ export function createInfrastructure(ui: Item) {
     return `<p>${esc(summary(data))}</p>`;
   }
   async function render() {
+    const current = ++renderGeneration, page = location.hash.split('?')[0];
+    sectionGeneration++;
     section=workspaceTab(section,["resources","connections","history"]);
     loading("Loading infrastructure…");
-    [inventory, agents] = await Promise.all([
-      api("/infrastructure/inventory"),
-      api("/infrastructure/connectors"),
-    ]);
-    const rows = inventory.connections.flatMap((c: Item) => c.resources);
+    const results = await Promise.allSettled([api("/infrastructure/inventory"), api("/infrastructure/connectors")]);
+    if (current !== renderGeneration || page !== location.hash.split('?')[0]) return;
+    if (results[0].status === "rejected") {
+      content('<div class="empty" role="alert"><h2>Infrastructure unavailable</h2><p>Resource inventory could not be loaded. Your provider connections have not changed.</p><button class="secondary" id="infra-inventory-retry">Try again</button></div>');
+      on("infra-inventory-retry", () => void render());
+      return;
+    }
+    inventory = results[0].value;
+    connectorError = results[1].status === "rejected" ? "Host connector status could not be refreshed. Resource inventory remains available." : "";
+    agents = results[1].status === "fulfilled" ? results[1].value : [];
+    const rows = inventory.connections.flatMap((c: Item) => c.resources || []);
     ui.summary?.(`<span><b>${rows.filter((r: Item)=>['running','online'].includes(r.status)).length}</b> running</span><span><b>${inventory.connections.length}</b> connections</span><span><b>${rows.filter((r: Item)=>r.agent).length}</b> linked agents</span>`);
     content(
-      `${admin() && ui.newVm && inventory.connections.some((c: Item) => c.provider === "austinland") ? `<button class="primary" id="infra-new-vm" data-page-action>${icon("plus")}<span>New VM</span></button>` : ""}${admin() ? '<button class="secondary" id="infra-add" data-page-action>Add connection</button>' : ""}<div class="infra-tabs" role="tablist" aria-label="Infrastructure views">${[
+      `${admin() && ui.newVm && inventory.connections.some((c: Item) => c.provider === "austinland") ? `<button class="primary" id="infra-new-vm" data-page-action>${icon("plus")}<span>New VM</span></button>` : ""}${admin() ? '<button class="secondary" id="infra-add" data-page-action>Add connection</button>' : ""}${connectorError ? `<p class="resource-notice">${esc(connectorError)} <button class="text-link" id="infra-connectors-retry">Retry connector status</button></p>` : ""}<div class="infra-tabs" role="tablist" aria-label="Infrastructure views">${[
         ["resources", `Resources (${rows.length})`],
         ["connections", "Connections"],
         ["history", "Activity"],
@@ -92,21 +102,24 @@ export function createInfrastructure(ui: Item) {
     );
     on("infra-add", () => editConnection());
     on("infra-new-vm", () => ui.newVm());
+    on("infra-connectors-retry", () => void render());
     ["resources", "connections", "history"].forEach((s) =>
       on("infra-tab-" + s, async () => {
         section = s; setWorkspaceTab(section);
-        await renderSection();
-        document.querySelectorAll("[role=tab]").forEach((el) => {
+        document.querySelectorAll(".infra-tabs [role=tab]").forEach((el) => {
           const active = el.id === "infra-tab-" + s;
           el.setAttribute("aria-selected", String(active));
           el.classList.toggle("active", active);
         });
+        await renderSection();
       }),
     );
     await renderSection();
   }
   async function renderSection() {
-    const body = document.getElementById("infra-body")!;
+    const body = document.getElementById("infra-body");
+    if (!body) return;
+    const current = ++sectionGeneration;
     if (section === "resources") {
       const all = inventory.connections.flatMap((c: Item)=>c.resources || []);
       const running = all.filter((r: Item)=>['running','online'].includes(r.status));
@@ -150,6 +163,7 @@ export function createInfrastructure(ui: Item) {
         () => {
           connection = value("infra-connection");
           limit = PAGE;
+          syncScopes();
           renderRows();
         },
         "change",
@@ -164,7 +178,7 @@ export function createInfrastructure(ui: Item) {
         "change",
       );
       body.querySelectorAll<HTMLButtonElement>('[data-infra-scope]').forEach(b=>b.onclick=()=>{
-        connection=b.dataset.infraScope!;provider='';query='';limit=PAGE;void renderSection();
+        connection=b.dataset.infraScope!;provider='';query='';coverage='';limit=PAGE;void renderSection();
       });
       renderRows();
     } else if (section === "connections") {
@@ -205,7 +219,16 @@ export function createInfrastructure(ui: Item) {
           );
       });
     } else {
-      const rows = await api("/infrastructure/operations");
+      body.innerHTML = loadingSection("Loading infrastructure activity…");
+      let rows: Item[];
+      try { rows = await api("/infrastructure/operations"); }
+      catch {
+        if (current !== sectionGeneration || !body.isConnected || section !== "history") return;
+        body.innerHTML = '<div class="empty" role="alert"><h2>Activity unavailable</h2><p>Operation receipts could not be loaded. Resource inventory remains available.</p><button class="secondary" id="infra-activity-retry">Try again</button></div>';
+        on("infra-activity-retry", () => void renderSection());
+        return;
+      }
+      if (current !== sectionGeneration || !body.isConnected || section !== "history") return;
       body.innerHTML = `<p class="muted">Submitted means the provider accepted the request; inspect the resource for completion. Unknown outcomes need inspection before a new attempt.</p>${
         rows.length
           ? `<div class="infra-table-wrap"><table class="infra-activity"><thead><tr><th>When</th><th>Operation</th><th>Target</th><th>By</th><th>Status</th><th>Result</th></tr></thead><tbody>${rows
@@ -225,10 +248,10 @@ export function createInfrastructure(ui: Item) {
     const d=ui.flyout(c.name,detailHero(labels[c.provider]+' · Connection',c.status,'Provider access, resource coverage and connector health in one place.',[['Resources',members.length],['Running',members.filter((r:Item)=>['running','online'].includes(r.status)).length],['Linked agents',members.filter((r:Item)=>r.agent).length]])+detailSection('Connection',detailFacts([['Provider',labels[c.provider]],['Configuration updated',date(c.updated)],['Collection outcome',c.error || c.status],['Credential source',c.connector?'Outbound connector enrollment':c.managed_in_settings?'Slide settings credential':'Credential sealed on this connection; separate from project vault entries'],['Transport',c.connector?'Outbound connector':'Provider API'],['Origin',c.url],['Inventory checked',date(inventory.checked_at)]]))+detailSection('Host connectors',agents.filter(a=>a.connection_id===c.id).map(a=>`<div class="infra-agent"><span><b>${esc(a.hostname)}</b><small>Agent ${esc(a.version)} · ${date(a.last_seen)}</small></span>${badge(a.online?'online':'offline',a.online)}</div>`).join('')||'<p class="resource-note">This connection uses its provider API.</p>')+'<div class="resource-actions"><button class="primary" data-browse-connection>Browse resources</button><button class="secondary" data-manage-connection>Management tools</button></div>',{tone:c.provider==='slide'?'protection':'compute',subtitle:labels[c.provider]});
     const details=document.createElement('section');details.className='resource-section';details.innerHTML='<h3>Capabilities &amp; related configuration</h3><p class="resource-note">Reading supported tools…</p>';d.querySelector('.resource-body').append(details);
     void api('/infrastructure/connections/'+c.id+'/catalog').then((catalog:Item)=>{if(!d.open)return;details.innerHTML='<h3>Capabilities &amp; related configuration</h3><p>'+Object.values(catalog).filter((s:any)=>admin()||s.method==='GET').map((s:any)=>esc(s.label)).join(' · ')+'</p>'+(c.managed_in_settings?'<a href="#settings">Manage this Slide credential in Settings →</a>':admin()?'<p class="resource-note">Credentials are stored on this connection. Provider keys in the project vault are independent unless a recorded provisioning association says otherwise.</p><button class="secondary" data-edit-connection-detail>Edit connection configuration</button>':'')+'<p class="resource-note">A successful inventory collection confirms read access at the observed time, not every management permission. Actions validate current provider capabilities.</p>';details.querySelector('[data-edit-connection-detail]')?.addEventListener('click',()=>editConnection(c));}).catch(()=>{details.innerHTML='<p class="resource-notice">Capability discovery unavailable. Inspect the collection error and connector state.</p>';});
-    d.querySelector('[data-browse-connection]')!.addEventListener('click',()=>{d.close();connection=c.id;provider='';query='';section='resources';if(location.hash.split('?')[0]==='#infrastructure')void render();else location.hash='#infrastructure';});
+    d.querySelector('[data-browse-connection]')!.addEventListener('click',()=>{d.close();browseConnection(c);});
     d.querySelector('[data-manage-connection]')!.addEventListener('click',()=>void connectionTools(c));
   }
-  function operationDetail(r: Item) {
+  function operationDetail(r?: Item) {
     if(!r)return;
     rememberResource({kind:"infrastructure-operation",id:r.id},()=>operationDetail(r));
     const c=inventory.connections.find((c:Item)=>c.id===r.connection_id);
@@ -260,9 +283,28 @@ export function createInfrastructure(ui: Item) {
       return `${badge("Identity needs review")}<small>Duplicate hardware identity</small>`;
     return `<span class="placeholder" title="No matched Speck endpoint agent">${r.provider === "proxmox" ? "Proxmox only" : "Provider only"}</span>`;
   }
+  function syncScopes() {
+    document.querySelectorAll<HTMLButtonElement>('[data-infra-scope]').forEach(b => {
+      const selected = b.dataset.infraScope === connection;
+      const reveal = selected && b.getAttribute('aria-pressed') !== 'true';
+      b.classList.toggle('selected', selected); b.setAttribute('aria-pressed', String(selected));
+      if(reveal && b.parentElement) {
+        const strip=b.parentElement, card=b.getBoundingClientRect(), frame=strip.getBoundingClientRect();
+        strip.scrollLeft += card.left < frame.left ? card.left-frame.left : card.right > frame.right ? card.right-frame.right : 0;
+      }
+    });
+  }
+  function browseConnection(c: Item) {
+    connection=c.id;provider='';query='';coverage='';limit=PAGE;section='resources';
+    if(location.hash.split('?')[0]==='#infrastructure') {setWorkspaceTab(section);void render();}
+    else location.hash='#infrastructure?view=resources';
+  }
+  function clearFilters() { query='';provider='';connection='';coverage='';limit=PAGE;void renderSection(); }
   function renderRows() {
+    syncScopes();
+    const all = inventory.connections.flatMap((c: Item) => c.resources || []);
     const rows = inventory.connections
-      .flatMap((c: Item) => c.resources)
+      .flatMap((c: Item) => c.resources || [])
       .filter(
         (r: Item) =>
           (!provider || r.provider === provider) &&
@@ -273,13 +315,13 @@ export function createInfrastructure(ui: Item) {
       )
       .sort(
         (a: Item, b: Item) =>
-          a.connection_name.localeCompare(b.connection_name) ||
-          a.node.localeCompare(b.node) ||
+          String(a.connection_name || '').localeCompare(String(b.connection_name || '')) ||
+          String(a.node || '').localeCompare(String(b.node || '')) ||
           (a.kind === "node"
             ? -1
             : b.kind === "node"
               ? 1
-              : a.name.localeCompare(b.name)),
+              : String(a.name || '').localeCompare(String(b.name || ''))),
       );
     let group = "";
     const html = rows
@@ -294,9 +336,14 @@ export function createInfrastructure(ui: Item) {
         return `${heading}<tr class="${r.kind === "node" ? "infra-host-row" : ""}"><td><button class="text-link" id="infra-resource-${i}">${r.kind !== "node" && r.provider === "proxmox" ? '<span class="infra-branch" aria-hidden="true">↳</span>' : ""}${esc(r.name)}</button>${r.template ? "<small>Template</small>" : ""}</td><td>${esc(kinds[r.kind])}</td><td>${badge(r.status)}</td><td>${managementLabel(r)}</td><td>${typeof r.cpu==='number'?`<span class="infra-load">${Math.round(r.cpu*100)}%<i style="--load:${Math.min(100,Math.max(0,r.cpu*100))}%"></i></span>`:r.provider==='linode'?'<span class="placeholder">In details</span>':'—'}</td><td>${r.max_memory ? `${r.memory ? bytes(r.memory) + " / " : ""}${bytes(r.max_memory)}` : "—"}<small>${r.max_disk ? bytes(r.max_disk) + " disk" : ""}</small></td><td>${r.addresses?.length ? r.addresses.map((a:string)=>addressLink(a)).join(", ") : esc(r.id)}<small>${esc(r.pool || "")}</small></td><td>${r.agent ? button("infra-endpoint-" + i, "Open agent") : ""}</td></tr>`;
       })
       .join("");
-    document.getElementById("infra-resources")!.innerHTML = rows.length
+    const filtered = Boolean(query || provider || connection || coverage);
+    const count = `<div class="infra-result-bar"><span role="status">${rows.length} of ${all.length} resources${rows.length > limit ? ` · Showing ${Math.min(limit,rows.length)}` : ''}</span>${filtered ? '<button class="text-link" id="infra-clear-filters">Clear filters</button>' : ''}</div>`;
+    document.getElementById("infra-resources")!.innerHTML = count + (rows.length
       ? `<div class="infra-table-wrap"><table class="infra-resource-table"><thead><tr><th>Host / guest</th><th>Type</th><th>State</th><th>Management</th><th>CPU</th><th>Memory / capacity</th><th>Address / ID</th><th>Agent</th></tr></thead><tbody>${html}</tbody></table></div>${rows.length > limit ? `<button class="secondary net-more" id="infra-more">Show ${Math.min(PAGE, rows.length - limit)} more of ${rows.length - limit} remaining</button>` : ""}<p class="muted">${rows.length} resources · Cluster › host › guest · Checked ${date(inventory.checked_at)}</p>`
-      : '<div class="empty"><h2>No matching resources</h2><p>Adjust the filters or add a provider connection.</p></div>';
+      : filtered ? '<div class="empty"><h2>No matching resources</h2><p>Clear the filters to see every resource in your connected infrastructure.</p></div>' : !inventory.connections.length ? '<div class="empty"><h2>Connect your infrastructure</h2><p>Add a provider connection to browse hosts, guests and cloud instances.</p>'+ (admin() ? '<button class="primary" id="infra-empty-add">Add connection</button>' : '<p>Ask an administrator to add a connection.</p>')+'</div>' : '<div class="empty"><h2>No resources reported</h2><p>Inspect Connections for provider access and collection errors, then refresh the inventory.</p><button class="secondary" id="infra-empty-connections">Inspect connections</button></div>');
+    on("infra-clear-filters", clearFilters);
+    on("infra-empty-add", () => editConnection());
+    on("infra-empty-connections", () => document.getElementById('infra-tab-connections')?.click());
     rows.slice(0, limit).forEach((r: Item, i: number) => {
       on("infra-resource-" + i, () => openCanonical(r));
       on("infra-endpoint-" + i, () => ui.openDevice(r.agent.id));
@@ -345,7 +392,7 @@ export function createInfrastructure(ui: Item) {
       const secondary = ([id]: [string, any]) => /delete|remove|destroy|rename|migrate|clone/.test(id);
       const action = ([id, s]: [string, any]) => `<button class="secondary ${/delete|remove|destroy/.test(id) ? 'is-destructive' : ''}" data-infra-action="${esc(id)}">${esc(s.label)}</button>`;
       const actions = `<section class="resource-actions"><h3>Management</h3><p class="resource-note">${resource.agent ? 'Linked to a Speck endpoint agent.' : resource.management === 'host_agent' ? 'Managed through an outbound Speck host connector.' : 'Managed through the provider. Endpoint commands and patching require a Speck agent.'}</p><div class="resource-action-buttons">${resource.agent ? '<button class="secondary" data-resource-agent>Open Speck agent</button>' : ''}${resource.kind === 'virt' ? '<button class="secondary" data-resource-console>Open provider console</button>' : ''}${allowed.filter(a=>!secondary(a)).map(action).join('')}</div>${allowed.some(secondary) ? '<details class="resource-more"><summary>More actions</summary><div class="resource-action-buttons">'+allowed.filter(secondary).map(action).join('')+'</div></details>' : ''}</section>`;
-      root.innerHTML = `<div class="resource-refresh"><span role="status">${busy ? 'Reading provider details…' : 'Provider details loaded'}</span><button class="text-link" data-resource-refresh ${busy ? 'disabled' : ''}>Refresh details</button></div>${errors.length ? '<p class="resource-notice">'+esc(errors.join(' '))+'</p>' : ''}${infrastructureStory(resource, detail, siblings, actions+(detail && ['linode','proxmox'].includes(resource.provider) ? '<section class="resource-performance"></section>' : ''))}${!busy && (resource.provider==='linode'||resource.kind==='protected') ? '<div data-provider-explorer></div>' : ''}${detail ? technicalDetail(detail) : ''}`;
+      root.innerHTML = `<div class="resource-refresh"><span role="status">${busy ? 'Reading provider details…' : errors.length ? detail ? 'Showing previous provider details' : 'Showing inventory information' : 'Provider details loaded'}</span><button class="text-link" data-resource-refresh ${busy ? 'disabled' : ''}>Refresh details</button></div>${errors.length ? '<p class="resource-notice">'+esc(errors.join(' '))+'</p>' : ''}${infrastructureStory(resource, detail, siblings, actions+(detail && ['linode','proxmox'].includes(resource.provider) ? '<section class="resource-performance"></section>' : ''))}${!busy && (resource.provider==='linode'||resource.kind==='protected') ? '<div data-provider-explorer></div>' : ''}${detail ? technicalDetail(detail) : ''}`;
       const explorer=root.querySelector<HTMLElement>('[data-provider-explorer]');
       if(explorer)mountProviderExplorer({...ui,openResource:resourceDetail},resource,explorer);
       root.querySelectorAll<HTMLElement>('[data-host-detail]').forEach(b=>b.onclick=()=>{
@@ -462,9 +509,7 @@ export function createInfrastructure(ui: Item) {
   async function connectionTools(c: Item) {
     const catalog = await api(`/infrastructure/connections/${c.id}/catalog`);
     if (!Object.keys(catalog).length) {
-      section = "resources";
-      connection = c.id;
-      await render();
+      browseConnection(c);
       return;
     }
     const d = dialog(

@@ -1,4 +1,5 @@
 import { serviceStartup } from "./inspection-model";
+import { loadingState } from "./loading";
 import {
   escapeDetail as e,
   capacity,
@@ -11,23 +12,83 @@ import { listWorkspace } from "./list-workspace";
 import { operationOutput } from "./run-detail";
 import { rememberResource, registerResource } from "./resource-navigation";
 type Item = Record<string, any>;
-const table = (head: string[], rows: string[][]) =>
+const table = (
+  head: string[],
+  rows: string[][],
+  empty = "No entries were included in the last agent report.",
+) =>
   rows.length
     ? `<div class="scroll"><table><thead><tr>${head.map((h) => "<th>" + e(h) + "</th>").join("")}</tr></thead><tbody>${rows.map((r) => "<tr>" + r.map((c) => "<td>" + c + "</td>").join("") + "</tr>").join("")}</tbody></table></div>`
-    : '<p class="resource-note">The completed report contains no rows. Open its receipt to review the collection scope.</p>';
+    : `<p class="resource-note">${e(empty)}</p>`;
+const routeDestination = (r: Item) =>
+  r.dst ?? r.destination ?? r.DestinationPrefix ?? "Not reported";
+const routeInterface = (r: Item) =>
+  r.dev ?? r.interface ?? r.InterfaceAlias ?? "Not reported";
+const routeGateway = (r: Item) => r.gateway ?? r.NextHop ?? "On link";
+const socketAddress = (socket?: Item) => {
+  if (!socket?.ip) return "Not reported";
+  const ip = String(socket.ip);
+  return socket.port == null
+    ? ip
+    : `${ip.includes(":") ? `[${ip}]` : ip}:${socket.port}`;
+};
 export function createMachineInspection(ui: Item) {
+  const unavailable = (d: Item) =>
+    ui.role?.() === "viewer"
+      ? "Your viewer role can read reports but cannot collect inspections or control services."
+      : d.archived
+        ? "This machine is archived. Management is disabled."
+        : d.revoked
+          ? "This machine's enrollment is revoked. Management is disabled."
+          : !d.approved
+            ? "Review and approve this machine's identity before collecting inspections or controlling services."
+            : !d.online
+              ? "This machine is offline. Existing reports remain available; collection and service controls require an online agent."
+              : "";
+  const requestCollection = async (
+    button: HTMLButtonElement,
+    d: Item,
+    kind: string,
+    name = "",
+    finished?: (job: Item) => void,
+  ) => {
+    const label = button.textContent;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.textContent = "Preparing review…";
+    try {
+      await collect(d, kind, name, finished, () => button.isConnected);
+    } finally {
+      button.disabled = !!unavailable(d);
+      button.removeAttribute("aria-busy");
+      button.textContent = label;
+    }
+  };
   async function collect(
     d: Item,
     kind: string,
     service = "",
     finished?: (job: Item) => void,
+    current = () => true,
   ) {
-    const request = { kind, service },
+    const reason = unavailable(d);
+    if (reason) {
+      ui.notify(reason, true);
+      return;
+    }
+    const request = { kind, service };
+    let preview: Item;
+    try {
       preview = await ui.api(
         "/devices/" + d.id + "/inspection/preview",
         "POST",
         request,
       );
+    } catch (error) {
+      if (current()) ui.notify((error as Error).message, true);
+      return;
+    }
+    if (!current()) return;
     const review: HTMLDialogElement = ui.dialog(
       "Review " + kind + " inspection",
       facts([
@@ -50,6 +111,7 @@ export function createMachineInspection(ui: Item) {
             "POST",
             { ...request, confirmed: true },
           );
+          if (!review.open) return;
           review.close();
           if (!finished) {
             await ui.showJob(result.id);
@@ -90,6 +152,11 @@ export function createMachineInspection(ui: Item) {
       };
   }
   async function serviceControl(d: Item, name: string, action: string) {
+    const reason = unavailable(d);
+    if (reason) {
+      ui.notify(reason, true);
+      return;
+    }
     const review: HTMLDialogElement = ui.dialog(
       "Review service " + action,
       facts([
@@ -123,39 +190,73 @@ export function createMachineInspection(ui: Item) {
     rememberResource({ kind: "service", id: s.name, connection: d.id }, () =>
       service(d, s),
     );
+    const reason = unavailable(d);
     const pane: HTMLDialogElement = ui.flyout(
       s.display_name || s.name,
       facts([
         ["Service", s.name],
         ["State", s.state || s.status],
-        ["Startup type", serviceStartup(s.start_type ?? s.startup,d.platform)],
+        ["Startup type", serviceStartup(s.start_type ?? s.startup, d.platform)],
         ["Detail", s.detail || s.description],
         ["Observed", detailDate(d.last_seen)],
         ["Machine", d.label],
       ]) +
         section(
           "Inspect before changing",
-          `<p>Collect startup configuration, dependencies, process identity and up to 20 recent service events. Missing provider fields stay unreported.</p><button class="secondary" data-service-inspect>Review detailed inspection</button>`,
+          `<p>Collect startup configuration, dependencies, process identity and up to 20 recent service events. Missing provider fields stay unreported.</p>${ui.role?.() === "viewer" ? "" : '<button class="secondary" data-service-inspect>Review detailed inspection</button>'}${reason ? `<p class="resource-note">${e(reason)}</p>` : ""}`,
         ) +
-        `<div class="toolbar">${["start", "stop", "restart"].map((action) => `<button class="secondary" data-service-action="${action}">${action[0].toUpperCase() + action.slice(1)}…</button>`).join("")}</div>` +
+        (ui.role?.() === "viewer"
+          ? ""
+          : `<div class="toolbar">${["start", "stop", "restart"].map((action) => `<button class="secondary" data-service-action="${action}">${action[0].toUpperCase() + action.slice(1)}…</button>`).join("")}</div>`) +
         technicalDetail(s),
       { tone: "agents", subtitle: "Service · " + d.label },
     );
-    pane.querySelector<HTMLButtonElement>("[data-service-inspect]")!.onclick =
-      () => void collect(d, "service", s.name);
+    const inspection = pane.querySelector<HTMLButtonElement>(
+      "[data-service-inspect]",
+    );
+    if (inspection) {
+      inspection.disabled = !!reason;
+      inspection.onclick = () =>
+        void requestCollection(inspection, d, "service", s.name);
+    }
     pane
       .querySelectorAll<HTMLButtonElement>("[data-service-action]")
       .forEach((b) => {
-        b.disabled = !d.online || !d.approved || d.archived || d.revoked || (b.dataset.serviceAction==="start" && ["running","active"].includes(s.state || s.status)) || (["stop","restart"].includes(b.dataset.serviceAction!) && ["stopped","inactive"].includes(s.state || s.status));
+        b.disabled =
+          !!reason ||
+          (b.dataset.serviceAction === "start" &&
+            ["running", "active"].includes(s.state || s.status)) ||
+          (["stop", "restart"].includes(b.dataset.serviceAction!) &&
+            ["stopped", "inactive"].includes(s.state || s.status));
         b.onclick = () =>
           void serviceControl(d, s.name, b.dataset.serviceAction!);
       });
   }
-  async function inventory(d: Item, root: HTMLElement) {
+  async function inventory(
+    d: Item,
+    root: HTMLElement,
+    selectedKind = "processes",
+  ) {
+    const reason = unavailable(d);
     root.innerHTML =
-      '<h3>Endpoint inventory</h3><p class="resource-note">Read-only reports are collected on request. Each report keeps its collection time and job evidence.</p><div class="toolbar"><label>Inventory<select data-inspection-kind><option value="processes">Processes</option><option value="software">Installed software</option><option value="disks">Disks & volumes</option></select></label><button class="primary" data-inspection-collect>Review collection</button><button class="secondary" data-inspection-bundle>Review diagnostic bundle</button></div><div data-inspection-report></div>';
+      '<h3>Endpoint inventory</h3><p class="resource-note">Read-only reports are collected on request. Each report keeps its collection time and job evidence.</p><div class="toolbar inspection-toolbar"><label>Inventory<select data-inspection-kind><option value="processes">Processes</option><option value="software">Installed software</option><option value="disks">Disks & volumes</option></select></label><button class="primary" data-inspection-collect>Review collection</button><button class="secondary" data-inspection-bundle>Review diagnostic bundle</button></div>' +
+      (reason ? `<p class="resource-note">${e(reason)}</p>` : "") +
+      "<div data-inspection-report></div>";
     const target = root.querySelector<HTMLElement>("[data-inspection-report]")!;
-    root.querySelector("[data-inspection-bundle]")!.addEventListener("click",()=>void collect(d,"bundle","",()=>void inventory(d,root)));
+    const selector = root.querySelector<HTMLSelectElement>(
+      "[data-inspection-kind]",
+    )!;
+    selector.value = ["processes", "software", "disks"].includes(selectedKind)
+      ? selectedKind
+      : "processes";
+    const bundle = root.querySelector<HTMLButtonElement>(
+      "[data-inspection-bundle]",
+    )!;
+    bundle.disabled = !!reason;
+    bundle.onclick = () =>
+      void requestCollection(bundle, d, "bundle", "", () => {
+        if (root.isConnected) void inventory(d, root, selector.value);
+      });
     let reports: Item[] = [];
     const draw = () => {
       const kind = root.querySelector<HTMLSelectElement>(
@@ -169,7 +270,9 @@ export function createMachineInspection(ui: Item) {
           " inspection has been collected. Review a collection to read it from this endpoint.</p>";
         return;
       }
-      const rows: Item[] = report.report.rows;
+      const rows: Item[] = Array.isArray(report.report?.rows)
+        ? report.report.rows
+        : [];
       const columns =
         kind === "software"
           ? ["name", "version", "publisher", "architecture"]
@@ -195,7 +298,7 @@ export function createMachineInspection(ui: Item) {
               ];
       const present = columns.filter((k) => rows.some((row) => row[k] != null));
       target.innerHTML =
-        `<p class="resource-note">Collected ${e(detailDate(report.collected))} · ${Date.now()/1000-report.collected>86400 ? "Stale (over 24 hours) · " : ""}${e(report.report.scope)}. ${kind==="processes" ? d.platform==="windows" ? "CPU seconds are cumulative process time, not current utilization." : "Linux CPU percentage is the process lifetime average reported by ps." : ""} ${rows.length >= report.report.limit ? "Collection reached its row limit; inventory is partial." : ""}</p>` +
+        `<p class="resource-note">Collected ${e(detailDate(report.collected))} · ${Date.now() / 1000 - report.collected > 86400 ? "Stale (over 24 hours) · " : ""}${e(report.report.scope)}. ${kind === "processes" ? (d.platform === "windows" ? "CPU seconds are cumulative process time, not current utilization." : "Linux CPU percentage is the process lifetime average reported by ps.") : ""} ${rows.length >= report.report.limit ? "Collection reached its row limit; inventory is partial." : ""}</p>` +
         table(
           present.map((k) => k.replaceAll("_", " ")),
           rows.map((row, i) =>
@@ -209,9 +312,12 @@ export function createMachineInspection(ui: Item) {
                   ),
             ),
           ),
+          "The completed report contains no rows. Open its receipt to review the collection scope.",
         ) +
         `<button class="text-link" data-inspection-receipt>Open collection receipt</button>`;
-      listWorkspace(target, "tbody tr", kind + " on " + d.id, {label:kind + " on " + d.label});
+      listWorkspace(target, "tbody tr", kind + " on " + d.id, {
+        label: kind + " on " + d.label,
+      });
       target.querySelector<HTMLButtonElement>(
         "[data-inspection-receipt]",
       )!.onclick = () => ui.showJob(report.job_id);
@@ -245,27 +351,40 @@ export function createMachineInspection(ui: Item) {
             }),
         );
     };
-    root.querySelector<HTMLSelectElement>("select")!.onchange = draw;
+    selector.onchange = draw;
     const button = root.querySelector<HTMLButtonElement>(
       "[data-inspection-collect]",
     )!;
-    button.disabled = !d.online || !d.approved || d.archived;
+    button.disabled = !!reason;
     button.onclick = () =>
-      void collect(
+      void requestCollection(
+        button,
         d,
         root.querySelector<HTMLSelectElement>("select")!.value,
         "",
         () => {
-          if (root.isConnected) void inventory(d, root);
+          if (root.isConnected) void inventory(d, root, selector.value);
           else void ui.openDevice(d.id, "inventory");
         },
       );
-    try {
-      reports = await ui.api("/devices/" + d.id + "/inspections");
-      if (root.isConnected) draw();
-    } catch (error) {
-      if (root.isConnected) target.textContent = (error as Error).message;
-    }
+    const load = async () => {
+      selector.disabled = true;
+      target.innerHTML = loadingState("Loading inspection reports…");
+      try {
+        reports = await ui.api("/devices/" + d.id + "/inspections");
+        if (root.isConnected) draw();
+      } catch (error) {
+        if (root.isConnected) {
+          target.innerHTML = `<p class="resource-note" role="alert">Unable to load inspection reports: ${e((error as Error).message)}</p><button class="secondary" data-inspection-retry>Try again</button>`;
+          target.querySelector<HTMLButtonElement>(
+            "[data-inspection-retry]",
+          )!.onclick = () => void load();
+        }
+      } finally {
+        selector.disabled = false;
+      }
+    };
+    await load();
   }
   function process(d: Item, p: Item) {
     const connections = (d.telemetry?.network?.connections || []).filter(
@@ -297,10 +416,11 @@ export function createMachineInspection(ui: Item) {
           table(
             ["Local", "Remote", "State"],
             connections.map((c: Item) => [
-              e(c.local?.ip) + ":" + e(c.local?.port),
-              e(c.remote?.ip) + ":" + e(c.remote?.port),
+              e(socketAddress(c.local)),
+              e(socketAddress(c.remote)),
               e(c.status),
             ]),
+            "No connections for this PID were included in the last agent report.",
           ),
         ) +
         '<p class="resource-note">PIDs can be reused. Connection evidence and on-demand process inventory may have different observation times. CPU seconds is accumulated process time, not instantaneous utilization.</p>',
@@ -323,12 +443,13 @@ export function createMachineInspection(ui: Item) {
         table(
           ["Destination", "Next hop", "Interface", "Metric"],
           routes.map((r) => [
-            e(r.dst || r.DestinationPrefix || "default"),
-            e(r.gateway || r.NextHop || "On link"),
-            e(r.dev || r.InterfaceAlias || "Not reported"),
+            e(routeDestination(r)),
+            e(routeGateway(r)),
+            e(routeInterface(r)),
             e(r.metric ?? r.RouteMetric ?? "Not reported"),
           ]),
-        ) || "<p>No route report available.</p>",
+          "No routes were included in the last agent report.",
+        ),
       ) +
       section(
         "DNS resolvers",
@@ -342,6 +463,7 @@ export function createMachineInspection(ui: Item) {
                   e((r.ServerAddresses || r.servers || []).join(", ")),
                 ],
           ),
+          "No DNS resolvers were included in the last agent report.",
         ),
       ) +
       section(
@@ -350,15 +472,10 @@ export function createMachineInspection(ui: Item) {
           ["Process", "Local → remote", "State"],
           (n.connections || []).map((c: Item, i: number) => [
             `<button class="text-link" data-process="${i}">${e(c.process || "Process")} · ${e(c.pid)}</button>`,
-            e(c.local?.ip) +
-              ":" +
-              e(c.local?.port) +
-              " → " +
-              e(c.remote?.ip) +
-              ":" +
-              e(c.remote?.port),
+            e(socketAddress(c.local)) + " → " + e(socketAddress(c.remote)),
             e(c.status || (c.type === 2 ? "UDP" : "")),
           ]),
+          "No network connections were included in the last agent report.",
         ),
       ) +
       '<p class="resource-note">Routes and interfaces describe the last agent report, not a successful reachability test. ' +
@@ -386,12 +503,21 @@ export function createMachineInspection(ui: Item) {
               ["MAC", nic.mac],
               ["MTU", nic.mtu],
               ["Flags", (nic.flags || []).join(", ")],
-              ["Bytes received", capacity(counters.bytesRecv)],
-              ["Bytes sent", capacity(counters.bytesSent)],
-              ["Receive errors", counters.errin],
-              ["Transmit errors", counters.errout],
-              ["Received packets", counters.packetsRecv],
-              ["Sent packets", counters.packetsSent],
+              [
+                "Bytes received",
+                capacity(counters.bytesRecv ?? counters.bytes_recv),
+              ],
+              [
+                "Bytes sent",
+                capacity(counters.bytesSent ?? counters.bytes_sent),
+              ],
+              ["Receive errors", counters.errin ?? counters.errors_in],
+              ["Transmit errors", counters.errout ?? counters.errors_out],
+              [
+                "Received packets",
+                counters.packetsRecv ?? counters.packets_recv,
+              ],
+              ["Sent packets", counters.packetsSent ?? counters.packets_sent],
               ["Observed", detailDate(d.last_seen)],
             ]) +
               section(
@@ -399,11 +525,9 @@ export function createMachineInspection(ui: Item) {
                 table(
                   ["Destination", "Next hop"],
                   routes
-                    .filter((r) => (r.dev || r.InterfaceAlias) === nic.name)
-                    .map((r) => [
-                      e(r.dst || r.DestinationPrefix || "default"),
-                      e(r.gateway || r.NextHop || "On link"),
-                    ]),
+                    .filter((r) => routeInterface(r) === nic.name)
+                    .map((r) => [e(routeDestination(r)), e(routeGateway(r))]),
+                  "No routes using this interface were included in the last agent report.",
                 ),
               ) +
               '<p class="resource-note">Traffic totals are cumulative counters, not current rates. Physical switch relationships require unique MAC evidence.</p><button class="secondary" data-interface-network>Follow network relationships →</button>' +
@@ -434,13 +558,41 @@ export function createMachineInspection(ui: Item) {
     service(d, s);
   });
   function volume(d: Item, disk: Item) {
-    const pane: HTMLDialogElement = ui.flyout(disk.path || "Volume", section("Reported storage", facts([
-      ["Machine", d.label], ["Mount path", disk.path], ["Device", disk.device], ["Filesystem", disk.fstype],
-      ["Capacity", capacity(disk.total)], ["Used", capacity(disk.used)], ["Free", capacity(disk.free)],
-      ["Utilization", disk.usedPercent == null ? "Not reported" : Number(disk.usedPercent).toFixed(1) + "%"],
-      ["Last report", detailDate(d.last_seen)],
-    ])) + '<p class="resource-note">Filesystem usage from the endpoint report. Virtual disk allocation and filesystem capacity can differ.</p><button class="secondary" data-volume-inventory>Inspect disks and volumes →</button>' + technicalDetail(disk), {tone:"agents"});
-    pane.querySelector<HTMLButtonElement>('[data-volume-inventory]')!.onclick = () => ui.openDevice(d.id, "inventory");
+    const pane: HTMLDialogElement = ui.flyout(
+      disk.path || "Volume",
+      section(
+        "Reported storage",
+        facts([
+          ["Machine", d.label],
+          ["Mount path", disk.path],
+          ["Device", disk.device],
+          ["Filesystem", disk.fstype],
+          ["Capacity", capacity(disk.total)],
+          ["Used", capacity(disk.used)],
+          ["Free", capacity(disk.free)],
+          [
+            "Utilization",
+            disk.usedPercent == null
+              ? "Not reported"
+              : Number(disk.usedPercent).toFixed(1) + "%",
+          ],
+          ["Last report", detailDate(d.last_seen)],
+        ]),
+      ) +
+        '<p class="resource-note">Filesystem usage from the endpoint report. Virtual disk allocation and filesystem capacity can differ.</p><button class="secondary" data-volume-inventory>Inspect disks and volumes →</button>' +
+        technicalDetail(disk),
+      { tone: "agents" },
+    );
+    pane.querySelector<HTMLButtonElement>("[data-volume-inventory]")!.onclick =
+      () => ui.openDevice(d.id, "inventory");
   }
-  return { collect, service, serviceControl, inventory, network, process, volume };
+  return {
+    collect,
+    service,
+    serviceControl,
+    inventory,
+    network,
+    process,
+    volume,
+  };
 }
