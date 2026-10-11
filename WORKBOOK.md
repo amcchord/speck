@@ -1257,3 +1257,34 @@ deployed work absent from main. GitHub checks were pending at publication; none
 were bypassed and no PR was merged. Private evidence stays in ignored
 `output/ui-ux-polish/`. Final screenshot review identified tablet summary crowding,
 narrow Fleet name wrapping and API explorer error/lifecycle gaps for a follow-up.
+
+
+### Follow-up production acceptance — Console UI and UX polish
+
+Published `32ddc002dbd44f2fb8d9243d462aa868ef67c7ab` as
+`20261011T202614Z-ui-ux-followup-32ddc00`. This follow-up repairs tablet summary
+crowding, 320 px Fleet name wrapping and API explorer
+loading/retry/error/navigation states. Fresh TypeScript/Vite, 60 units and all
+114 relevant browser checks passed; the complete first-batch suite passed 441
+checks with one existing skip. Two new collapsed-group test assertions were
+corrected before the final passing run. The synthetic follow-up sweep again
+covers 21 pages at four widths with zero page errors or overflow. The public
+gallery contains 37 synthetic captures.
+
+Read-only live navigation acceptance passed in Chromium 1440 px and WebKit 390
+px, with no errors or unexpected writes. The final live sweep covers all 21 pages
+at 1440/834/390/320 px: 84 captures with zero errors, overflow or unexpected
+writes. The review retained 920 screenshot files, with 37 public synthetic
+gallery selections. All 27 public files match the
+release. Final index SHA-256:
+`38f3c3ea0500df18826e8ba68ce6323796fdd155e374b9031b838886db29b4a2`. Rollback:
+`/var/lib/speck-rollback/20261011T202614Z-ui-ux-followup-32ddc00/web`.
+
+Main ancestry, the inspected baseline, shared lock and immediately preceding
+live index were checked again. The original protected
+backend/dependencies/environment, all 12 configuration groups, endpoint
+downloads and PID 151449 remain unchanged. No service restart, endpoint job,
+restore or equipment power action occurred. GitHub backend/unit checks passed
+for both application commits. The `32ddc00` hosted browser run was pending at
+final verification; the final record commit changes documentation only.
+No branch check was bypassed or PR merged.

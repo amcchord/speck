@@ -91,3 +91,41 @@ Rollback: `/var/lib/speck-rollback/20261011T202052Z-ui-ux-polish-c807a0a/web`.
 PR #27. GitHub checks were pending at publication; local validation was the gate.
 No branch check was bypassed. The final screenshot review led to the tablet,
 narrow Fleet and API follow-up described above; its release record follows.
+
+
+## Follow-up publication
+
+Published `32ddc002dbd44f2fb8d9243d462aa868ef67c7ab` as
+`20261011T202614Z-ui-ux-followup-32ddc00`. Its fresh TypeScript/Vite build, 60
+web units and all 114 relevant Chromium/WebKit checks passed. The first
+application batch had already passed the complete 441-check suite with one
+existing skip. The follow-up initially exposed two incorrect new assertions
+about a deliberately collapsed endpoint group; those assertions were corrected
+and the complete relevant run passed.
+
+The final synthetic follow-up sweep again captured all 21 pages at four widths
+with zero page errors or overflow. The public gallery contains 37 selected
+synthetic screenshots, including the tablet before/after and API recovery
+states. Read-only live machine, hypervisor, customer, IP, network and
+selected-port acceptance passed in both engines with Back/reload and zero page
+errors or unexpected writes.
+
+The final private live sweep captured all 21 pages at 1440, 834, 390 and 320 px:
+84 screens with zero page errors, horizontal overflow or unexpected writes.
+The review retained 920 screenshot files (716 distinct image hashes), including
+area reviews, broad sweeps, targeted states and live acceptance. Public evidence
+uses synthetic resources; private production data remains ignored.
+
+All 27 public assets match the final build. Both publications fetched main,
+checked ancestry, reconciled the inspected baseline under the shared lock, and
+compared the live index immediately before atomic replacement. Protected state
+remains equal to the original pre-task baseline; PID 151449 stayed active
+without restart. Final index:
+`38f3c3ea0500df18826e8ba68ce6323796fdd155e374b9031b838886db29b4a2`. Rollback:
+`/var/lib/speck-rollback/20261011T202614Z-ui-ux-followup-32ddc00/web`.
+Windows/Linux endpoint runtime and native/iOS qualification remain unchanged.
+
+GitHub backend/unit checks passed for both application commits. At final
+verification, the hosted browser run for `32ddc00` was still pending. The final
+record commit changes documentation only. Pending runs are not counted as
+successful validation or used to bypass branch checks. No PR was merged.
