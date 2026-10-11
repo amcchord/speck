@@ -104,3 +104,71 @@ computer tool returned one validated left-click inside that target. No proposed
 input was applied, and the isolated test database contained no jobs. Initial
 provider failures exposed the nullable-action and Linux-option defects described
 above; the final fresh three-request probe passed after those fixes.
+
+## Local and live acceptance
+
+The final `./scripts/check-local.sh core` run on release source `50d8fef` passed
+in 292 seconds: Ruff, 399 backend tests, Linux agent/Proxmox race and runtime
+checks, Windows/Linux cross-builds, TypeScript/Vite, 60 web units and 499
+Chromium/WebKit browser tests. One existing WebKit touch-drag test remains
+skipped. The suite includes 58 new AI workflow browser cases and the actual
+Guacamole closed-transport regression. The earlier core run was interrupted
+after cross-file review found that transport defect; it is not counted as a
+full passing run. Native/iOS code is unchanged and was not requalified.
+
+The build also reported two Python dependency deprecations, its existing large
+JavaScript chunk warning and an existing `source-map-js` 1.2.1 development
+dependency audit advisory. Dependency manifests are unchanged by this release.
+
+Authenticated live acceptance passed in Chromium at 1440 px and WebKit at
+390 px. Tasks survive opening the review dialog; model configuration, the
+updated OpenAPI context contract and public agent guide agree with the release.
+Anonymous MCP access is rejected. A direct live-provider request supplied only
+a synthetic task and returned a PowerShell draft, verification and caution;
+no endpoint command or input was executed.
+
+The final private live sweep covers all 21 pages at 1440/834/390/320 px: 84
+captures, no page errors, horizontal overflow, loading/error states or unexpected
+writes. Temporary browser sessions were logged out. The complete UI/AI review
+retained 1,067 private screenshot files, including repeated iterations, and
+55 curated public synthetic captures across the two galleries. Production
+screenshots and provider output remain in ignored directories.
+
+## Deployment
+
+Published `50d8fefc192c5aad1bcfb9a3ce266e0d5bc493ed` as
+`20261011T210342Z-ai-polish-50d8fef`. The parent chat was the sole deployment
+owner. Before the production build and again before publication, origin/main
+was fetched and verified as an ancestor. Main `db2f55b`, the newer UX/entity
+work through `df79045` and both prior UI releases are preserved.
+
+The full live baseline matched under the shared release lock. The initial
+settings snapshot drifted only because `management_tick` and
+`slide_restore_sync` are periodic worker checkpoints. Those two keys were
+excluded from the saved-configuration gate, and the sensitive settings baseline
+was reconciled without writing settings; the other 13 protected groups and
+source/index/environment/dependencies still matched the original snapshot.
+Fourteen configuration and identity groups are protected in the reconciled
+baseline, including actual saved settings and stable API-token fields.
+
+Preflight found no active endpoint jobs, recovery runs, pending provider
+operations, connector requests or remote transport connections. Server, web,
+downloads, configuration and a consistent database backup were taken before
+the brief service restart. The live index was compared again immediately before
+atomic publication. Rollback is available at
+`/var/lib/speck-rollback/20261011T210342Z-ai-polish-50d8fef`.
+
+All 27 public web files match the validated build. Index SHA-256:
+`cc2d0ce2594b4ca640170e00764c4359fc976c2ded6b3cf808a61446a82b5cbe`.
+The service is healthy and active with PID 398942, replacing PID 151449.
+The deployed backend exactly matches the release manifest. Dependencies,
+environment, all 14 protected groups and agent downloads still match the
+reconciled baseline after live acceptance. Credentials and provider models were
+not changed, and no endpoint binary was published.
+
+Both hosted backend/unit checks for `50d8fef` passed. Its hosted browser run was
+still running when this record was written; the earlier AI source `e7872e6`
+passed all hosted checks. Local checks were the release gate. No required branch
+check was bypassed and no PR was merged. Source and records are pushed on
+[PR #28](https://github.com/amcchord/speck/pull/28), stacked on PR #27 to preserve
+deployed work that has not reached main.

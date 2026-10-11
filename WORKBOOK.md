@@ -1288,3 +1288,57 @@ restore or equipment power action occurred. GitHub backend/unit checks passed
 for both application commits. The `32ddc00` hosted browser run was pending at
 final verification; the final record commit changes documentation only.
 No branch check was bypassed or PR merged.
+
+## AI context, reviewed computer steps and agent APIs — October 11, 2026
+
+Three agents reviewed assistant context, frontend draft/screen workflows and
+external REST/MCP contracts. The parent chat remained the sole deployment owner.
+See the [AI change, validation and release record](docs/operations/ai-workflow-polish-2026-10-11.md)
+and [18-image synthetic gallery](docs/screenshots/ai-workflow-polish/README.md).
+
+Published `50d8fefc192c5aad1bcfb9a3ce266e0d5bc493ed` as
+`20261011T210342Z-ai-polish-50d8fef`. Visible context controls, authoritative
+endpoint/platform evidence, retained drafts and bounded prompts improve script
+review. Computer actions validate the complete batch, current screen/session
+and live Guacamole transport, claim each proposal once and retain redacted
+navigation history. External agents get effective scopes, endpoint details,
+validated arguments and bounded command polling with truthful receipts.
+
+The final local core passed: 399 backend tests, Linux agent/Proxmox race/runtime
+checks, Windows/Linux cross-builds, TypeScript/Vite, 60 units and 499 browser
+tests, with one existing WebKit touch-drag skip. Real-provider synthetic Windows
+and Linux drafts and a computer target proposal passed. The Linux draft also
+passed syntax and execution in a disposable, read-only Linux container; the
+Windows draft and computer proposal were reviewed without applying them to
+physical machines. Native/iOS qualification is unchanged.
+
+Read-only live AI acceptance passed on desktop and phone, including one
+synthetic task-only provider draft. All 21 pages were captured at four widths:
+84 private screenshots with zero page errors, overflow or unexpected writes.
+The complete UI/AI review retained 1,067 private screenshot files and 55 public
+synthetic gallery selections. Temporary browser sessions were logged out.
+
+Origin/main was fetched and ancestry verified before the build and publication;
+newer deployed UX/entity work and prior UI releases were preserved. Publication
+held the shared lock, matched the reconciled baseline and compared the live
+index immediately before replacement. Periodic settings checkpoints
+`management_tick` and `slide_restore_sync` were excluded after explaining their
+baseline drift; saved settings were preserved without writing configuration.
+The restart gate found no active jobs, recovery, provider/connector requests or
+remote transports. Full rollback and consistent database backups are at
+`/var/lib/speck-rollback/20261011T210342Z-ai-polish-50d8fef`.
+
+All 27 public files match. Final index SHA-256:
+`cc2d0ce2594b4ca640170e00764c4359fc976c2ded6b3cf808a61446a82b5cbe`.
+Backend source matches the release manifest; dependencies, environment, all
+14 protected configuration/identity groups and agent downloads are preserved.
+The service is active and healthy after a brief restart, PID 398942. No new
+endpoint binary, endpoint command, physical input, restore or power operation
+was used for this review.
+
+Source and records are pushed on [PR #28](https://github.com/amcchord/speck/pull/28),
+stacked on PR #27. Both hosted backend/unit checks for the release passed; its
+browser run was still running when recorded. Earlier AI source passed all
+hosted checks. Local validation was the release gate; no branch check was
+bypassed and no PR was merged. Private evidence remains in ignored
+`output/ai-polish/` and `output/ui-ux-polish/`.
