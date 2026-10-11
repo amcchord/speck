@@ -52,6 +52,39 @@ function actionLabel(a: Action, redacted = false): string {
 }
 // No screen pixels or typed text are stored in the session's navigation history.
 const sessions = new WeakMap<object, { device: string; task: string; steps: string[] }>();
+/** Guacamole 1.5 does not forward a tunnel's close/error to its Client state. */
+export function bindRemoteTransport(client: any, tunnel: any, closedState: number) {
+  const previousState = tunnel.onstatechange, previousError = tunnel.onerror;
+  let ended = false, detached = false;
+  const end = () => {
+    if (ended || detached) return;
+    ended = true;
+    client.disconnect();
+  };
+  const stateChanged = (state: number) => {
+    try { previousState?.call(tunnel, state); }
+    finally { if (state === closedState) end(); }
+  };
+  const failed = (error: Item) => {
+    try { previousError?.call(tunnel, error); }
+    // WebSocketTunnel reports its error while still OPEN, then sets CLOSED.
+    // Disconnecting recursively from onerror would re-enter its close path.
+    finally { if (!ended && !detached) client.onerror?.(error); }
+  };
+  tunnel.onstatechange = stateChanged; tunnel.onerror = failed;
+  return () => {
+    detached = true;
+    if (tunnel.onstatechange === stateChanged) tunnel.onstatechange = previousState;
+    if (tunnel.onerror === failed) tunnel.onerror = previousError;
+  };
+}
+/** A Guacamole Client silently drops input when its underlying tunnel closes. */
+export function sendRemoteKeys(client: any, keys: number[], active: () => boolean) {
+  const current = () => { if (!active()) throw new Error("The remote transport disconnected. Inspect the screen before continuing."); };
+  for (const pressed of [1, 0]) for (const key of pressed ? keys : [...keys].reverse()) {
+    current(); client.sendKeyEvent(pressed, key); current();
+  }
+}
 export function openScreenAssistant(ui: Item, d: Item, client: any, sendKeys: (keys: number[]) => void, active: () => boolean) {
   const { api, esc, dialog } = ui;
   let session = sessions.get(client);
@@ -149,19 +182,22 @@ export function openScreenAssistant(ui: Item, d: Item, client: any, sendKeys: (k
         } catch (err) { apply.disabled = true; status.textContent = (err as Error).message; return; }
         // Claim once before sending input: an uncertain local send or audit must never replay a step.
         consumed = true; apply.disabled = true; busy = true; controls();
+        const connected = () => { if (!active()) throw new Error("The remote transport disconnected."); };
+        const mouse = (state: Item) => { connected(); client.sendMouseState(state); connected(); };
+        const keys = (sequence: number[]) => { connected(); sendKeys(sequence); connected(); };
         try {
           for (const a of actions) {
             const state = { x: a.x, y: a.y, left: false, middle: false, right: false, up: false, down: false };
             if (["click", "double_click", "move"].includes(a.type)) {
-              client.sendMouseState(state);
+              mouse(state);
               if (a.type !== "move") for (let i = 0; i < (a.type === "double_click" ? 2 : 1); i++) {
-                client.sendMouseState({ ...state, [a.type === "double_click" ? "left" : a.button]: true }); client.sendMouseState(state);
+                mouse({ ...state, [a.type === "double_click" ? "left" : a.button]: true }); mouse(state);
               }
             } else if (a.type === "type") {
-              for (const key of remoteTextKeys(a.text)) sendKeys([key]);
-            } else if (a.type === "keypress") sendKeys(a.keys.map((k: string) => keyNames[k.toUpperCase()] ?? k.codePointAt(0)!));
+              for (const key of remoteTextKeys(a.text)) keys([key]);
+            } else if (a.type === "keypress") keys(a.keys.map((k: string) => keyNames[k.toUpperCase()] ?? k.codePointAt(0)!));
             else if (a.type === "scroll") for (let i = 0; i < Math.ceil(Math.abs(a.scroll_y) / 80); i++) {
-              client.sendMouseState({ ...state, [a.scroll_y > 0 ? "down" : "up"]: true }); client.sendMouseState(state);
+              mouse({ ...state, [a.scroll_y > 0 ? "down" : "up"]: true }); mouse(state);
             }
           }
         } catch {

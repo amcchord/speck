@@ -41,7 +41,7 @@ import "./orbits.css";
 import "./downloads.css";
 import { desktopDownloads } from "./downloads";
 import { createOperations } from "./operations";
-import { openScreenAssistant } from "./screen-assistant";
+import { openScreenAssistant, bindRemoteTransport, sendRemoteKeys } from "./screen-assistant";
 import { createManagement } from "./management";
 import { icon, wordmark } from "./icons";
 import { startMicrophone } from "./microphone";
@@ -1658,6 +1658,9 @@ async function connectRemote(d: Item, attempt = 0) {
     startup.stop();
     if (!closed && modal.isConnected) showFailure(remoteError || "Unable to connect");
   };
+  const releaseTransport = bindRemoteTransport(client, tunnel, Guacamole.Tunnel.State.CLOSED);
+  modal.addEventListener("close", releaseTransport);
+  const screenInputActive = () => !closed && remote === client && connectionState === 3 && screenReady && tunnel.isConnected();
   const statistics = setInterval(async () => {
     if (!modal.isConnected || connectionState !== 3 || !screenReady) return;
     try {
@@ -1772,11 +1775,16 @@ async function connectRemote(d: Item, attempt = 0) {
     escape: [0xff1b],
     tab: [0xff09],
   };
-  const sendKeys = (keys: number[]) => {
+  const sendKeys = (keys: number[], requireConnected = false) => {
+    const current = () => { if (requireConnected && !screenInputActive()) throw new Error("The remote transport disconnected. Inspect the screen before continuing."); };
+    current();
     startup.interacted();
     keyboard?.reset();
-    keys.forEach((k) => client.sendKeyEvent(1, k));
-    [...keys].reverse().forEach((k) => client.sendKeyEvent(0, k));
+    if (requireConnected) sendRemoteKeys(client, keys, screenInputActive);
+    else {
+      keys.forEach((k) => client.sendKeyEvent(1, k));
+      [...keys].reverse().forEach((k) => client.sendKeyEvent(0, k));
+    }
     display.focus();
   };
   document.getElementById("key-macro")!.addEventListener("change", () => {
@@ -1840,7 +1848,7 @@ async function connectRemote(d: Item, attempt = 0) {
       "Clipboard copied to the remote machine. Paste it in the remote app.",
     );
   });
-  on("remote-ai", () => remoteAssistant(d, client, sendKeys, () => !closed && remote === client && connectionState === 3 && screenReady));
+  on("remote-ai", () => remoteAssistant(d, client, keys => sendKeys(keys, true), screenInputActive));
   client.onclipboard = (stream: any, mimetype: string) => {
     if (mimetype === "text/plain") {
       const reader = new Guacamole.StringReader(stream);

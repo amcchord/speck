@@ -9,6 +9,7 @@ const screenSource = ts.transpileModule(await fs.readFile(new URL('../../src/scr
 const remoteInputSource = ts.transpileModule(await fs.readFile(new URL('../../src/remote-input.ts', import.meta.url), 'utf8'), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
 }).outputText;
+const guacamoleSource = await fs.readFile(new URL('../../node_modules/guacamole-common-js/dist/esm/guacamole-common.js', import.meta.url), 'utf8');
 const answer = { summary: 'Review the recorded service state.', script: 'Get-Service Spooler', caution: 'Read-only inspection; verify the correct machine.', verification: 'Confirm fresh service status.', request_id: 'synthetic-ai' };
 async function setup(page, info, width = 1440) {
   await page.setViewportSize({ width, height: width < 600 ? 844 : 960 });
@@ -31,12 +32,13 @@ async function terminal(page, id = 'frontdesk') {
 }
 // Run the production controller with an in-memory display/input adapter. Network
 // calls remain Playwright fixtures; no Guacamole or endpoint session is created.
-async function screenHarness(page, platform = 'windows', waitForReady = true) {
+async function screenHarness(page, platform = 'windows', waitForReady = true, actualTransport = false) {
   await page.route('**/ai-screen-fixture.js', r => r.fulfill({ contentType: 'text/javascript', body: screenSource }));
   await page.route('**/remote-input', r => r.fulfill({ contentType: 'text/javascript', body: remoteInputSource }));
+  await page.route('**/ai-guacamole-fixture.js', r => r.fulfill({ contentType: 'text/javascript', body: guacamoleSource }));
   await page.goto('/#fleet');
-  await page.evaluate(async platform => {
-    const { openScreenAssistant } = await import('/ai-screen-fixture.js');
+  await page.evaluate(async ({ platform, actualTransport }) => {
+    const { openScreenAssistant, bindRemoteTransport, sendRemoteKeys } = await import('/ai-screen-fixture.js');
     const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const canvas = document.createElement('canvas'); canvas.width = 800; canvas.height = 600;
     const ctx = canvas.getContext('2d'); ctx.fillStyle = '#f7faf3'; ctx.fillRect(0, 0, 800, 600);
@@ -45,7 +47,35 @@ async function screenHarness(page, platform = 'windows', waitForReady = true) {
     ctx.strokeStyle = '#9aa99c'; ctx.strokeRect(50, 160, 700, 65); ctx.fillText('lab.example.invalid', 70, 201);
     ctx.fillStyle = '#315741'; ctx.fillRect(50, 265, 175, 50); ctx.fillStyle = '#fff'; ctx.fillText('Review changes', 63, 297);
     const state = window.screenFixture = { active: true, captures: 0, mouse: [], keys: [], canvas };
-    const client = { getDisplay: () => ({ flatten: () => { state.captures++; return canvas; } }), sendMouseState: s => { if (state.inputFailure) throw new Error('Synthetic disconnected input'); state.mouse.push(s); } };
+    let client = { getDisplay: () => ({ flatten: () => { state.captures++; return canvas; } }), sendMouseState: s => { if (state.inputFailure) throw new Error('Synthetic disconnected input'); state.mouse.push(s); } };
+    if (actualTransport) {
+      const { default: Guacamole } = await import('/ai-guacamole-fixture.js');
+      state.makeGuac = (bound = true) => {
+        state.guacClient?.disconnect();
+        const tunnel = new Guacamole.Tunnel();
+        state.sent = []; state.priorStates = []; state.priorErrors = []; state.clientStates = []; state.errors = []; state.disconnectOnInput = false;
+        tunnel.connect = () => tunnel.setState(Guacamole.Tunnel.State.OPEN);
+        tunnel.disconnect = () => tunnel.setState(Guacamole.Tunnel.State.CLOSED);
+        tunnel.sendMessage = (...args) => {
+          if (!tunnel.isConnected()) return; state.sent.push(args);
+          if (state.disconnectOnInput && ['mouse', 'key'].includes(args[0])) tunnel.setState(Guacamole.Tunnel.State.CLOSED);
+        };
+        tunnel.onstatechange = s => state.priorStates.push(s); tunnel.onerror = e => state.priorErrors.push(e.message);
+        const guacClient = new Guacamole.Client(tunnel);
+        guacClient.onstatechange = s => { state.clientState = s; state.clientStates.push(s); };
+        guacClient.onerror = e => state.errors.push(e.message);
+        const release = bound ? bindRemoteTransport(guacClient, tunnel, Guacamole.Tunnel.State.CLOSED) : () => {};
+        guacClient.connect('synthetic-local-only');
+        tunnel.oninstruction('size', ['0', '800', '600']); tunnel.oninstruction('rect', ['0', '0', '0', '800', '600']);
+        tunnel.oninstruction('cfill', ['15', '0', '247', '250', '243', '255']); tunnel.oninstruction('sync', ['1']);
+        state.tunnel = tunnel; state.guacClient = guacClient; state.releaseTransport = release;
+        return guacClient;
+      };
+      client = state.makeGuac();
+      state.connected = () => state.active && state.clientState === 3 && state.tunnel.isConnected();
+      state.sendKeys = keys => sendRemoteKeys(client, keys, state.connected);
+      state.sendError = () => { state.tunnel.onerror(new Guacamole.Status(519, 'Synthetic transport outage')); state.tunnel.setState(Guacamole.Tunnel.State.CLOSED); };
+    }
     const ui = { esc: escape,
       api: async (path, method = 'GET', body, signal) => {
         const r = await fetch('/api' + path, { method, body: body === undefined ? undefined : JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, signal });
@@ -58,10 +88,11 @@ async function screenHarness(page, platform = 'windows', waitForReady = true) {
       },
     };
     let currentClient = client;
-    state.open = (id = 'synthetic-screen') => openScreenAssistant(ui, { id, label: 'Synthetic lab screen', platform }, currentClient, keys => state.keys.push(keys), () => state.active);
+    state.open = (id = 'synthetic-screen') => openScreenAssistant(ui, { id, label: 'Synthetic lab screen', platform }, currentClient, actualTransport ? state.sendKeys : keys => state.keys.push(keys), actualTransport ? state.connected : () => state.active);
     state.newSession = () => { currentClient = { ...client }; state.open(); };
     state.open();
-  }, platform);
+  }, { platform, actualTransport });
+  if (actualTransport) await expect.poll(() => page.evaluate(() => window.screenFixture.clientState)).toBe(3);
   if (waitForReady) await expect(page.locator('#screen-ai-step')).toBeEnabled();
 }
 
@@ -302,4 +333,39 @@ test('reviewed input adapter maps newline/tab/unicode and exact mouse/wheel acti
   const mouse = await page.evaluate(() => window.screenFixture.mouse);
   expect(mouse.filter(m => m.left)).toHaveLength(2); expect(mouse.filter(m => m.up)).toHaveLength(25); expect(mouse.filter(m => m.right || m.middle || m.down)).toHaveLength(0);
   expect(mouse[0]).toMatchObject({ x: 20, y: 30, left: false });
+});
+
+test('actual Guacamole silent tunnel closure is bridged to client failure with prior handlers preserved', async ({ page }, info) => {
+  await setup(page, info); await screenHarness(page, 'windows', true, true);
+  await page.evaluate(() => window.screenFixture.makeGuac(false));
+  await expect.poll(() => page.evaluate(() => window.screenFixture.clientState)).toBe(3);
+  const baseline = await page.evaluate(() => {
+    const s = window.screenFixture; s.tunnel.setState(2);
+    s.guacClient.sendMouseState({ x: 1, y: 1, left: true, right: false, middle: false, up: false, down: false });
+    s.guacClient.sendKeyEvent(1, 65);
+    return { state: s.clientState, connected: s.tunnel.isConnected(), sent: s.sent.filter(a => ['mouse', 'key'].includes(a[0])).length };
+  });
+  expect(baseline).toEqual({ state: 3, connected: false, sent: 0 }); // the library's real silent-drop behavior
+  await page.evaluate(() => window.screenFixture.makeGuac(true));
+  await expect.poll(() => page.evaluate(() => window.screenFixture.clientState)).toBe(3);
+  await page.evaluate(() => window.screenFixture.sendError());
+  await expect.poll(() => page.evaluate(() => window.screenFixture.clientState)).toBe(5);
+  const bridged = await page.evaluate(() => ({ errors: window.screenFixture.errors, priorErrors: window.screenFixture.priorErrors, states: window.screenFixture.priorStates, client: window.screenFixture.clientStates }));
+  expect(bridged.errors).toEqual(['Synthetic transport outage']); expect(bridged.priorErrors).toEqual(['Synthetic transport outage']);
+  expect(bridged.states).toContain(2); expect(bridged.client.slice(-2)).toEqual([4, 5]);
+});
+
+for (const duringInput of [false, true]) test(`actual Guacamole transport disconnect ${duringInput ? 'during' : 'before'} Apply never produces a false receipt/history`, async ({ page }, info) => {
+  await setup(page, info); let receipts = 0;
+  await page.route('**/api/ai/assist', r => r.fulfill({ json: { summary: 'Review a shortcut on the synthetic display.', request_id: 'actual-tunnel', actions: [{ type: 'keypress', keys: ['CTRL', 'A'] }] } }));
+  await page.route('**/api/ai/actions/applied', r => { receipts++; return r.fulfill({ json: { ok: true } }); });
+  await screenHarness(page, 'windows', true, true); await page.locator('#screen-ai-prompt').fill('Review the synthetic shortcut'); await page.locator('#screen-ai-step').click();
+  await expect(page.locator('#apply-screen-step')).toBeVisible();
+  await page.evaluate(during => { if (during) window.screenFixture.disconnectOnInput = true; else window.screenFixture.tunnel.setState(2); }, duringInput);
+  await page.locator('#apply-screen-step').click();
+  await expect(page.locator('[data-screen-outcome]')).toContainText(duringInput ? 'Input may have been sent' : 'no longer connected');
+  await expect(page.locator('#apply-screen-step')).toBeDisabled(); await expect(page.locator('.ai-shared-history')).toHaveCount(0);
+  expect(receipts).toBe(0); expect(await page.evaluate(() => window.screenFixture.clientState)).toBe(5);
+  expect(await page.evaluate(() => window.screenFixture.sent.filter(a => a[0] === 'key').length)).toBe(duringInput ? 1 : 0);
+  await page.locator('#apply-screen-step').evaluate(el => el.click()); expect(receipts).toBe(0);
 });

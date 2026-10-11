@@ -35,7 +35,10 @@ The shared capture, dimensions, time and exact actions are visible before Apply.
 
 The whole action batch is validated before any input is sent. A changed screen,
 expired proposal or unsupported action requires a new request/manual control.
-Apply is claimed once before sending input; an uncertain local send or activity
+The actual Guacamole client can retain a connected state after its tunnel closes,
+while silently discarding input. An isolated reproduction confirmed that case;
+transport readiness and close/error propagation now gate screen proposals and
+input. Apply is claimed once before sending input; an uncertain local send or activity
 receipt cannot replay it. Server receipts bind operator, endpoint, ordered action
 types and expiry. The screenshot-only provider continuation remains read-only;
 refusals and incomplete responses cannot trigger continuation or remote input.
@@ -70,7 +73,7 @@ with no reusable prompt templates. Reference: the served
 | AI endpoint/context contract | Isolated Windows fixtures | Isolated Linux fixtures |
 | Script language | Real-provider PowerShell draft, reviewed but not executed | Real-provider POSIX sh draft; syntax and execution passed in a disposable, read-only Linux container |
 | Endpoint command/file transport | Existing agent APIs; no new binary | Existing agent APIs; no new binary |
-| Reviewed computer input | Synthetic browser clients; existing remote transport | Synthetic browser clients; existing remote transport |
+| Reviewed computer input | Synthetic browser clients and actual Guacamole transport-disconnect regression; existing RDP transport | Synthetic input adapter; GUI transport unchanged; SSH/shell workspace has no screen assistant |
 | New physical-machine execution in this review | None | None |
 
 Screen actions are limited to five supported inputs. Drag, horizontal scrolling,
