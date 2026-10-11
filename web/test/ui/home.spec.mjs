@@ -43,6 +43,30 @@ test('Home is the sign-in destination; exact relationships, search and machine n
   await expect(page.locator('#home-relationship')).toContainText('No endpoint agent');
 });
 
+test('queued machine dismissal preserves a newly focused Home search', async ({page}) => {
+  await setup(page);
+  await page.goto('/#home');
+  await page.locator('#home-query').fill('portal.example-clinic.com');
+  await expect(page.locator('#home-relationship')).toContainText('BYD-SERVER');
+  await page.locator('[data-home-host]').click();
+  await expect(page.locator('#machine-details')).toContainText('pve-1');
+  // Native close events are queued. Choose and edit the next control in that
+  // same task so the regression does not depend on keyboard or network timing.
+  await page.evaluate(() => new Promise(resolve => {
+    const pane = document.getElementById('machine-details');
+    const query = document.getElementById('home-query');
+    pane.addEventListener('close', resolve, {once:true});
+    pane.close();
+    query.focus();
+    query.value = '';
+    query.dispatchEvent(new Event('input', {bubbles:true}));
+  }));
+  await expect(page.locator('#home-query')).toBeFocused();
+  await expect(page.locator('#home-query')).toHaveValue('');
+  await page.getByRole('button',{name:'Without endpoint agent',exact:true}).click();
+  await expect(page.locator('[data-home-machine]')).toHaveCount(2);
+});
+
 test('AI handoff and scheduling retain explicit review and never execute from Home', async ({page}) => {
   const writes=[];
   page.on('request', r => {if (r.method() !== 'GET') writes.push(r.url());});

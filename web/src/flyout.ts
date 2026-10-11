@@ -22,6 +22,16 @@ export function createFlyout(dialog: (title: string, html: string, options?: any
     bindResourceNavigation(pane);
     active = pane;
     originalOpener = opener;
+    const closePane = pane.close.bind(pane);
+    pane.close = (returnValue?: string) => {
+      const focused = document.activeElement;
+      const restoreFocus = pane.open && (!focused || focused === document.body || pane.contains(focused));
+      closePane(returnValue);
+      // Restore synchronously: Safari returns native focus outside the pane,
+      // and the user's next selection must survive the queued close event.
+      if (restoreFocus && active === pane && opener?.isConnected && !document.querySelector('dialog:modal'))
+        opener.focus({preventScroll:true});
+    };
     pane.dataset.tone = options.tone || 'compute';
     pane.dataset.detailFlyout = '';
     if (options.subtitle) {
@@ -38,7 +48,6 @@ export function createFlyout(dialog: (title: string, html: string, options?: any
       document.removeEventListener('keydown', escape, true);
       if (active !== pane) return;
       active = null;
-      if (opener?.isConnected && !document.querySelector('dialog:modal')) opener.focus({preventScroll:true});
     });
     pane.querySelector<HTMLButtonElement>('.close')?.focus({preventScroll:true});
     return pane;

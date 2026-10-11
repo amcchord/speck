@@ -166,9 +166,11 @@ environment, all 14 protected groups and agent downloads still match the
 reconciled baseline after live acceptance. Credentials and provider models were
 not changed, and no endpoint binary was published.
 
-Both hosted backend/unit checks for `50d8fef` passed. Its hosted browser run was
-still running when this record was written; the earlier AI source `e7872e6`
-passed all hosted checks. Local checks were the release gate. No required branch
+Both hosted backend/unit checks for `50d8fef` passed. Its hosted browser run
+subsequently failed one Home search/filter assertion after 498 browser passes
+and one existing skip. The trace showed the dismissed drawer's queued Close
+handler returning focus after search clearing began. The earlier AI source
+`e7872e6` passed all hosted checks. Local checks were the release gate. No required branch
 check was bypassed and no PR was merged. Source and records are pushed on
 [PR #28](https://github.com/amcchord/speck/pull/28), stacked on PR #27 to preserve
 deployed work that has not reached main.

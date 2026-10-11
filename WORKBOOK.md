@@ -1337,8 +1337,10 @@ endpoint binary, endpoint command, physical input, restore or power operation
 was used for this review.
 
 Source and records are pushed on [PR #28](https://github.com/amcchord/speck/pull/28),
-stacked on PR #27. Both hosted backend/unit checks for the release passed; its
-browser run was still running when recorded. Earlier AI source passed all
-hosted checks. Local validation was the release gate; no branch check was
+stacked on PR #27. Both hosted backend/unit checks for the release passed. Its
+hosted browser run subsequently failed one Home search/filter assertion after
+498 passes and one existing skip: a queued drawer Close handler could steal
+focus after search clearing began. Earlier AI source passed all hosted checks.
+Local validation was the release gate; no branch check was
 bypassed and no PR was merged. Private evidence remains in ignored
 `output/ai-polish/` and `output/ui-ux-polish/`.
