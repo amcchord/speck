@@ -129,3 +129,11 @@ GitHub backend/unit checks passed for both application commits. At final
 verification, the hosted browser run for `32ddc00` was still pending. The final
 record commit changes documentation only. Pending runs are not counted as
 successful validation or used to bypass branch checks. No PR was merged.
+
+
+## Hosted follow-up
+
+The complete hosted browser checks subsequently passed for `c807a0a`,
+`32ddc00` and documentation head `9f4a27b`; backend/unit checks passed as well.
+The AI and external-agent follow-up is recorded separately in
+[AI workflow polish](ai-workflow-polish-2026-10-11.md).

@@ -41,6 +41,7 @@ import "./orbits.css";
 import "./downloads.css";
 import { desktopDownloads } from "./downloads";
 import { createOperations } from "./operations";
+import { openScreenAssistant } from "./screen-assistant";
 import { createManagement } from "./management";
 import { icon, wordmark } from "./icons";
 import { startMicrophone } from "./microphone";
@@ -116,7 +117,7 @@ let fleetScroll = { x: 0, y: 0, table: 0 };
 function clearFleetState() {
   clearEntities();
   signInStarted=null;pageFailed.clear();
-  clearMetrics(); clearResourceHistory(); clearListViews(); home.reset(); commandPalette.reset();
+  clearMetrics(); clearResourceHistory(); clearListViews(); home.reset(); commandPalette.reset(); ops.reset();
   readCache.clear();
   pageReads.clear();
   document.querySelectorAll<HTMLDialogElement>('dialog').forEach(d => { d.close(); d.remove(); });
@@ -652,12 +653,16 @@ const ops = createOperations({
   devices: () => api("/devices"),
   selected: () => [...fleetSelection],
   openDevice,
-  setScript: (script: string, context?: Item) => {
+  setScript: (script: string, context?: Item, expectedDevice?: string) => {
+    if (expectedDevice && (selected !== expectedDevice || tab !== "scripts" || !activeDevicePanel?.open)) return false;
     const editor = document.getElementById("script") as HTMLTextAreaElement;
     if (editor) {
       editor.value = script;
-      if (context) editor.insertAdjacentHTML("beforebegin", `<aside class="callout ai-command-context"><strong>${esc(context.title)}</strong>${context.caution ? `<p>${esc(context.caution)}</p>` : ""}<p><b>Verify after running:</b> ${esc(context.verification)}</p><small>The alert stays open until recovery is observed or the job outcome is marked reviewed.</small></aside>`);
+      editor.parentElement?.querySelectorAll(".ai-command-context").forEach(el => el.remove());
+      if (context) editor.insertAdjacentHTML("beforebegin", `<aside class="callout ai-command-context"><strong>${esc(context.title)}</strong>${context.caution ? `<p>${esc(context.caution)}</p>` : ""}${context.verification ? `<p><b>Verify after running:</b> ${esc(context.verification)}</p>` : ""}<small>${context.alert ? "The alert stays open until recovery is observed or the job outcome is marked reviewed." : "Review the target and script before choosing Run. Nothing has run."}</small></aside>`);
+      return true;
     }
+    return false;
   },
 });
 const infrastructure = createInfrastructure({api, freshApi, flyout, summary, loadingState, resourceInventory: () => fleet.flatMap(m => m.resources || []), openCanonicalMachine: async (resource:Item) => { await loadFleet(); const machine=resourceMachine(resource,fleet); if(!machine)return false; await openDevice(machine.id); return true; }, sessionApi: (path: string, method: string, body?: any) => api(path, method, body, undefined, false), esc, on, value, notify, dialog, content, loading, badge, bytes, date, openDevice, role: () => role,
@@ -709,9 +714,7 @@ const home = createHome({
     await openDevice(machine.id);
   },
   assist: async (machine: Item, prompt: string) => {
-    await ops.assistDialog(machine);
-    const input = document.getElementById("ai-prompt") as HTMLTextAreaElement | null;
-    if (input) { input.value = prompt; input.focus(); }
+    await ops.assistDialog(machine, "", undefined, undefined, prompt);
   },
 });
 async function renderFleet(manualRefresh = false) {
@@ -1837,7 +1840,7 @@ async function connectRemote(d: Item, attempt = 0) {
       "Clipboard copied to the remote machine. Paste it in the remote app.",
     );
   });
-  on("remote-ai", () => remoteAssistant(d, client, sendKeys, copyToRemote));
+  on("remote-ai", () => remoteAssistant(d, client, sendKeys, () => !closed && remote === client && connectionState === 3 && screenReady));
   client.onclipboard = (stream: any, mimetype: string) => {
     if (mimetype === "text/plain") {
       const reader = new Guacamole.StringReader(stream);
@@ -2402,154 +2405,11 @@ api("/auth/me")
   })
   .catch((err) => { if (!(err instanceof StaleViewError)) signedOut(); });
 
-async function remoteAssistant(
+function remoteAssistant(
   d: Item,
   client: any,
   sendKeys: (keys: number[]) => void,
-  copyToRemote: (text: string) => void,
+  active: () => boolean,
 ) {
-  const modal = dialog(
-    "Screen assistant",
-    `<p>Describe what you want to do on this screen. The current remote screen and your request will be sent to OpenAI.</p><label>Task<textarea id="screen-ai-prompt" rows="3" placeholder="Help me navigate to the application’s connection settings"></textarea></label><div class="toolbar"><button id="screen-ai-explain" class="primary">Explain this screen</button><button id="screen-ai-step" class="secondary">Suggest next action</button></div><div id="screen-ai-result"></div>`,
-  );
-  modal.classList.add("remote-ai-dialog");
-  let originalImage = "";
-  const capture = () =>
-    client.getDisplay().flatten().toDataURL("image/jpeg", 0.8);
-  const ask = async (mode: string) => {
-    originalImage = capture();
-    const result = await api("/ai/assist", "POST", {
-      prompt: value("screen-ai-prompt"),
-      platform: d.platform,
-      device_id: d.id,
-      image: originalImage,
-      mode,
-      width: client.getDisplay().getWidth(),
-      height: client.getDisplay().getHeight(),
-    });
-    const el = modal.querySelector("#screen-ai-result")!;
-    const extra =
-      mode === "assist"
-        ? `<p>${esc(result.verification || "")}</p><p>${esc(result.caution || "")}</p>`
-        : result.actions.length
-          ? `<h3>Proposed actions</h3><pre>${pretty(result.actions)}</pre><p>Check the actions before applying them. Nothing has run.</p><button id="apply-screen-step" class="primary">Apply this step</button>`
-          : "<p>Use manual control for this step.</p>";
-    el.innerHTML = `<p>${esc(result.summary)}</p>` + extra;
-
-    if (mode === "computer" && result.actions?.length) {
-      on("apply-screen-step", async () => {
-        if (capture() !== originalImage)
-          throw new Error(
-            "The screen changed. Ask for a fresh step before applying it.",
-          );
-        const keyNames: Record<string, number> = {
-          CTRL: 0xffe3,
-          CONTROL: 0xffe3,
-          ALT: 0xffe9,
-          SHIFT: 0xffe1,
-          META: 0xffeb,
-          SUPER: 0xffeb,
-          WIN: 0xffeb,
-          ENTER: 0xff0d,
-          RETURN: 0xff0d,
-          TAB: 0xff09,
-          ESC: 0xff1b,
-          ESCAPE: 0xff1b,
-          BACKSPACE: 0xff08,
-          DELETE: 0xffff,
-          SPACE: 0x20,
-          ARROWUP: 0xff52,
-          ARROWDOWN: 0xff54,
-          ARROWLEFT: 0xff51,
-          ARROWRIGHT: 0xff53,
-        };
-        // Validate the entire step before sending any input.
-        for (const a of result.actions) {
-          if (a.type === "scroll" && a.scroll_x)
-            throw new Error("Horizontal scrolling needs manual control.");
-          if (
-            a.type === "keypress" &&
-            a.keys.some(
-              (key: string) =>
-                !(key.toUpperCase() in keyNames) && key.length !== 1,
-            )
-          )
-            throw new Error("This key shortcut needs manual control.");
-        }
-        for (const a of result.actions) {
-          if (["click", "double_click", "move"].includes(a.type)) {
-            const state = {
-              x: a.x,
-              y: a.y,
-              left: false,
-              middle: false,
-              right: false,
-              up: false,
-              down: false,
-            };
-            const button = a.button || "left";
-            client.sendMouseState(state);
-            if (a.type !== "move") {
-              for (let i = 0; i < (a.type === "double_click" ? 2 : 1); i++) {
-                client.sendMouseState({ ...state, [button]: true });
-                client.sendMouseState(state);
-              }
-            }
-          }
-          if (a.type === "type") {
-            for (const c of a.text) {
-              const point = c.codePointAt(0)!;
-              sendKeys([point <= 255 ? point : 0x01000000 | point]);
-            }
-          }
-          if (a.type === "keypress")
-            sendKeys(
-              a.keys.map(
-                (k: string) =>
-                  keyNames[k.toUpperCase()] ?? k.toLowerCase().codePointAt(0),
-              ),
-            );
-          if (a.type === "scroll") {
-            const dy = a.scroll_y || 0;
-            for (const [delta, positive, negative] of [[dy, "down", "up"]] as [
-              number,
-              string,
-              string,
-            ][]) {
-              if (!delta) continue;
-              const state = {
-                x: a.x,
-                y: a.y,
-                left: false,
-                middle: false,
-                right: false,
-                up: false,
-                down: false,
-              };
-              for (
-                let i = 0;
-                i < Math.min(20, Math.ceil(Math.abs(delta) / 80));
-                i++
-              ) {
-                client.sendMouseState({
-                  ...state,
-                  [delta > 0 ? positive : negative]: true,
-                });
-                client.sendMouseState(state);
-              }
-            }
-          }
-        }
-        await api("/ai/actions/applied", "POST", {
-          request_id: result.request_id,
-          device_id: d.id,
-          actions: result.actions.map((a: Item) => a.type),
-        });
-        modal.close();
-        notify("Step applied. Inspect the screen before asking for another.");
-      });
-    }
-  };
-  on("screen-ai-explain", () => ask("assist"));
-  on("screen-ai-step", () => ask("computer"));
+  return openScreenAssistant({ api, esc, dialog }, d, client, sendKeys, active);
 }

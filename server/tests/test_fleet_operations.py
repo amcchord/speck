@@ -1,6 +1,8 @@
 import base64
 import json
+import struct
 import time
+import zlib
 
 import httpx
 import pytest
@@ -250,7 +252,16 @@ def test_computer_assistant_supplies_initial_screenshot_without_executing(client
 
     monkeypatch.setattr("speck.assistant.httpx.AsyncClient", FakeClient)
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    image = "data:image/jpeg;base64," + base64.b64encode(b"\xff\xd8\xfftest").decode()
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+
+    png = (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", 1280, 720, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress((b"\0" + b"\xff\xff\xff" * 1280) * 720))
+        + chunk(b"IEND", b"")
+    )
+    image = "data:image/png;base64," + base64.b64encode(png).decode()
     result = client.post("/api/ai/assist", json={"prompt": "Click the field", "mode": "computer", "image": image})
     assert result.status_code == 200
     assert result.json()["actions"][0]["type"] == "click"

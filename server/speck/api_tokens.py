@@ -76,7 +76,8 @@ def authenticate(token, request=None):
             window[:] = [int(now // 60), 0]
         window[1] += 1
         if window[1] > RATE_PER_MINUTE:
-            raise HTTPException(429, "API token rate limit exceeded; retry next minute")
+            raise HTTPException(429, "API token rate limit exceeded; retry next minute",
+                                headers={"Retry-After": str(60 - int(now) % 60)})
         client = request.client.host if request and request.client else ""
         conn.execute(
             "UPDATE api_tokens SET last_used=?,last_ip=?,uses=uses+1 WHERE id=?", (now, client[:64], row["id"])
@@ -107,7 +108,7 @@ def authenticate(token, request=None):
 def enforce(user, request):
     """Apply token-specific limits before the ordinary role checks."""
     path, method = request.url.path, request.method
-    if path == "/api/auth/me" and method == "GET":
+    if path in ("/api/auth/me", "/api/whoami") and method == "GET":
         return
     if path.startswith(BLOCKED) or INTERACTIVE.match(path):
         raise HTTPException(403, "API tokens cannot manage sign-in, tokens or interactive sessions")
@@ -237,7 +238,7 @@ def revoke_token(token_id: str, user=Depends(session_only)):
 
 
 def whoami(user):
-    """Identity summary shared by /api/agent/whoami and the MCP server."""
+    """Identity summary shared by /api/whoami and the MCP server."""
     item = {"username": user.get("owner", user["username"]), "role": user["role"], "via": user.get("via", "session")}
     if user.get("via") == "token":
         item |= {
@@ -247,8 +248,31 @@ def whoami(user):
             "read_only": user["read_only"],
             "key_prefixes": user["key_prefixes"],
             "expires": user["expires"],
+            "capabilities": token_capabilities(user),
+            "key_prefixes_apply_to": "vault_entry_names_only",
         }
     return item
+
+
+def token_capabilities(user):
+    """Describe existing authorization; never substitute discovery for endpoint checks."""
+    scopes = set(user.get("scopes", ()))
+    general = bool(scopes & set(ROLE_SCOPES))
+    write = bool(scopes & {"operate", "admin"})
+    operator = user["role"] in ("operator", "admin")
+    administrator = user["role"] == "admin"
+    return {
+        "fleet_read": general,
+        "provider_read": general and operator,
+        "endpoint_jobs": general and write and operator,
+        "administrator_changes": "admin" in scopes and administrator,
+        "vault_read": "keys:read" in scopes and administrator,
+        "vault_write": "keys:write" in scopes and administrator,
+        "private_ssh_and_handoffs": general and "keys:read" in scopes and administrator,
+        "screen_preview_read": general and operator,
+        "screen_preview_policy": general and write and operator,
+        "interactive_sessions": False,
+    }
 
 
 def issue(username, name, scopes, days=1, key_prefixes=()):
@@ -258,6 +282,8 @@ def issue(username, name, scopes, days=1, key_prefixes=()):
         user = conn.execute("SELECT * FROM users WHERE username=? AND disabled=0", (username,)).fetchone()
         if not user:
             raise SystemExit("No enabled account named " + username)
+        if user["role"] == "viewer" and set(body.scopes) - {"read"}:
+            raise SystemExit("Viewer accounts can create read-only tokens")
         if {"admin", "keys:read", "keys:write"} & set(body.scopes) and user["role"] != "admin":
             raise SystemExit("Only administrators can hold admin or vault scopes")
         token = PREFIX + secrets.token_urlsafe(32)
