@@ -566,6 +566,15 @@ input[type="checkbox"] {
   color: #bdd0b0;
   font-size: 10px;
 }
+/* Connection changes must not move input controls. Full errors appear in the screen overlay. */
+.remote-workspace:not(.shell-workspace) .remote-header small {
+  display: block;
+  height: 15px;
+  line-height: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .remote-back {
   color: var(--lime);
   text-decoration: none;
@@ -986,6 +995,24 @@ input[type="checkbox"] {
   }
   .remote-ai-dialog {
     width: calc(100vw - 16px);
+  }
+}
+
+@media (max-width: 600px) {
+  .remote-workspace:not(.shell-workspace) .remote-header .remote-title {
+    flex: 1 0 100%;
+    order: -1;
+  }
+  .remote-workspace:not(.shell-workspace) .remote-header h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .remote-workspace:not(.shell-workspace) .remote-header small {
+    height: 30px;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
   }
 }
 

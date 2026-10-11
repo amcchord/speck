@@ -2,6 +2,23 @@ import { test, expect } from './fixtures.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+const instruction = (...args) => args.map(arg => `${String(arg).length}.${arg}`).join(',') + ';';
+async function syntheticRemote(page) {
+  let socket;
+  const stats = { audio_bytes: 0 };
+  await page.context().addCookies([{ name: 'speck-gallery', value: '1', url: 'http://127.0.0.1:8761' }]);
+  await page.route('**/api/devices/frontdesk/remote/sessions', route => route.fulfill({ json: { id: 'preview', protocol: 'rdp' } }));
+  await page.route('**/api/remote/sessions/preview/stats', route => route.fulfill({ json: stats }));
+  // Guacamole appends "?" even when connect() receives no parameters. Keep the
+  // real socket completely mocked, including that empty query string. Install
+  // before the document loads; hash navigation cannot install the mock later.
+  await page.routeWebSocket(/\/api\/remote\/sessions\/preview\/ws(?:\?.*)?$/, ws => { socket = ws; });
+  await page.goto('/#remote/frontdesk');
+  await expect.poll(() => socket?.url()).toMatch(/\/api\/remote\/sessions\/preview\/ws\?$/);
+  await expect(page.locator('#remote-status')).toHaveText('Waiting for session…');
+  return { socket, stats };
+}
+
 // These checks use only the synthetic preview server, including its rejected writes.
 // Measurements catch overflow, mixed control sizing and the full-width masthead bug.
 for (const width of [1440, 834, 760, 390, 320]) {
@@ -124,11 +141,8 @@ for (const width of [1440, 834, 760, 390, 320]) {
     });
 
     test('remote workspace controls and keyboard remain usable', async ({ page }, info) => {
-      await signIn(page);
       // A synthetic session proves layout only; no gateway or real endpoint is contacted.
-      await page.route('**/api/devices/frontdesk/remote/sessions', route => route.fulfill({ json: { id: 'preview', protocol: 'rdp' } }));
-      await page.routeWebSocket('**/api/remote/sessions/preview/ws', () => {});
-      await page.goto('/#remote/frontdesk');
+      await syntheticRemote(page);
       await expect(page.locator('#remote-keyboard')).toBeVisible();
       await geometry(page);
       await capture(page, info, 'remote-workspace');
@@ -136,6 +150,65 @@ for (const width of [1440, 834, 760, 390, 320]) {
       await expect(page.locator('#send-text')).toBeVisible();
       await geometry(page);
       await capture(page, info, 'remote-keyboard');
+    });
+
+    test('remote toolbar stays stable across connection status transitions', async ({ page }, info) => {
+      const { socket, stats } = await syntheticRemote(page);
+      const controls = page.locator('.remote-controls');
+      const bounds = async () => controls.evaluate(el => {
+        const elements = [el, el.querySelector('#remote-keyboard'), el.querySelector('#mic')];
+        return elements.map(element => {
+          const { x, y, width, height } = element.getBoundingClientRect();
+          return { x, y, width, height };
+        });
+      });
+      const waiting = await bounds();
+      if (width <= 600) {
+        const title = await page.locator('.remote-title').boundingBox();
+        expect(title.width).toBeGreaterThanOrEqual(width - 25);
+        expect(await page.locator('.remote-title h1').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBeTruthy();
+      }
+      await capture(page, info, 'remote-waiting');
+      socket.send(instruction('size', 0, 800, 600) + instruction('rect', 0, 0, 0, 800, 600) + instruction('cfill', 15, 0, 247, 250, 243, 255) + instruction('rect', 0, 0, 0, 800, 70) + instruction('cfill', 15, 0, 43, 67, 55, 255) + instruction('rect', 0, 50, 110, 700, 90) + instruction('cfill', 15, 0, 220, 231, 217, 255) + instruction('sync', 1));
+      await expect(page.locator('#remote-status')).toHaveText('Connected');
+      const connected = await bounds();
+      await expect(page.locator('#remote-status')).toHaveText('Connected · Audio idle');
+      const idle = await bounds();
+      stats.audio_bytes = 32768;
+      await expect(page.locator('#remote-status')).toHaveText('Connected · 32 KB audio received');
+      const audio = await bounds();
+      await capture(page, info, 'remote-connected');
+      const error = 'Synthetic remote connection error: the test gateway rejected this session. No real endpoint or gateway was contacted. Reconnect after checking the synthetic connection settings.';
+      // Guacamole follows onerror synchronously with disconnect states. Observe
+      // the real error assignment before that transition without changing it.
+      await page.locator('#remote-status').evaluate((el, error) => {
+        const descriptor = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
+        Object.defineProperty(el, 'textContent', {
+          get() { return descriptor.get.call(this); },
+          set(value) {
+            descriptor.set.call(this, value);
+            if (value === error) window.remoteErrorBounds = [...document.querySelectorAll('.remote-controls, #remote-keyboard, #mic')].map(element => {
+              const { x, y, width, height } = element.getBoundingClientRect();
+              return { x, y, width, height };
+            });
+          },
+        });
+      }, error);
+      socket.send(instruction('error', error, 519));
+      await expect(page.locator('#remote-status')).toHaveText('Disconnected');
+      await expect(page.locator('#remote-startup')).toContainText(error);
+      expect(await page.locator('#remote-startup strong').evaluate(el => el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1)).toBeTruthy();
+      const failed = await page.evaluate(() => window.remoteErrorBounds);
+      expect(failed).toHaveLength(waiting.length);
+      const disconnected = await bounds();
+      for (const state of [connected, idle, audio, failed, disconnected]) for (let i = 0; i < waiting.length; i++) {
+        for (const property of ['x', 'y', 'width', 'height']) expect(Math.abs(state[i][property] - waiting[i][property]), `${width}px ${property} of remote control ${i}`).toBeLessThanOrEqual(1);
+      }
+      await geometry(page);
+      await capture(page, info, 'remote-disconnected');
+      await page.locator('#remote-keyboard').click();
+      await expect(page.locator('#send-text')).toBeVisible();
+      await expect(page.locator('#mic')).toBeEnabled();
     });
   });
 }

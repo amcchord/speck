@@ -1344,3 +1344,12 @@ focus after search clearing began. Earlier AI source passed all hosted checks.
 Local validation was the release gate; no branch check was
 bypassed and no PR was merged. Private evidence remains in ignored
 `output/ai-polish/` and `output/ui-ux-polish/`.
+
+
+### Web focus acceptance follow-up — AI and console review
+
+Published `9dd65720a064de8872bc837e04c3cb53dfe968f8` as `20261011T213141Z-drawer-focus-9dd6572`. Queued machine/resource dismissal preserves newly selected search fields and nested-modal dismissal returns focus to the correct opener. Fresh web build, 60 units and 509 Chromium/WebKit browser checks passed, with one existing touch-drag skip. The intermediate candidate's local/hosted failures were not counted as passes or published. The `source-map-js` development patch resolves the reported audit advisory; a fresh install reports zero vulnerabilities.
+
+Live desktop/phone before/after focus and AI review checks passed. A task-only synthetic provider draft was reviewed without executing it. A fresh 21-page/four-width sweep produced 84 private captures with no page errors, overflow, loading/error states or unexpected writes. Sessions were logged out.
+
+Main ancestry, newer deployed work, the live baseline, shared lock and immediately preceding index were checked. All 27 public files match; index SHA-256 `233fbab20cca8f212a4a0682cbb0e5889b4d45ecfb6b50736e20d87a3314b2b4`. Web rollback: `/var/lib/speck-rollback/20261011T213141Z-drawer-focus-9dd6572/web`. Backend, dependencies/environment, all 14 protected groups, endpoint downloads and healthy PID 398942 are preserved without a restart. All hosted backend, unit and browser checks pass for this source (browser run `38176452826`). No branch check was bypassed or PR merged. See the [complete release and qualification record](docs/operations/ai-workflow-polish-2026-10-11.md).

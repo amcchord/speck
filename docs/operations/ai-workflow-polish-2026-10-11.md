@@ -174,3 +174,18 @@ handler returning focus after search clearing began. The earlier AI source
 check was bypassed and no PR was merged. Source and records are pushed on
 [PR #28](https://github.com/amcchord/speck/pull/28), stacked on PR #27 to preserve
 deployed work that has not reached main.
+
+
+## Web focus and keyboard acceptance follow-up
+
+Published `9dd65720a064de8872bc837e04c3cb53dfe968f8` as `20261011T213141Z-drawer-focus-9dd6572`. A queued machine/resource Close handler could move focus away from a newly selected search field. Dismissal now returns focus during close and only recovers lost body focus after queued cleanup. Explicitly selected outside controls survive; nested modal dismissal still returns keyboard users to the correct opener.
+
+The intermediate `2472781` candidate was not published: its full local browser run failed five Chromium machine-overview focus cases, exposing the nested-modal variant. Its separate hosted run failed two cases after 501 passes and one skip: machine focus at 760 px and the 320 px WebKit remote keyboard assertion. These are test failures, not successful runs or simulator startup failures.
+
+Fresh TypeScript/Vite, all 60 web units and all 509 Chromium/WebKit browser checks passed on the final source in 3.9 minutes, with one existing WebKit touch-drag skip. Ten new browser cases cover queued close, newly selected search fields and nested-dialog focus. Backend/agent code is unchanged from the previously qualified AI release. The transitive development dependency `source-map-js` was patched from 1.2.1 to 1.2.2; the fresh install reports zero vulnerabilities.
+
+The live before/after reproduction confirmed the original focus theft in Chromium 1440 px and WebKit 390 px. Both now retain `home-query` focus with no errors or unexpected writes. Live AI draft review passed again at both widths; a synthetic task-only provider request returned a draft with verification and caution, without executing it. The final live screenshot sweep covers all 21 pages at 1440/834/390/320 px: 84 new private captures, no page errors, horizontal overflow, loading/error states or unexpected writes. Temporary sessions were logged out.
+
+Origin/main was fetched and verified as an ancestor before the build and again before publication. The newer deployed releases, exact live baseline and all 14 protected configuration/identity groups were preserved under the shared release lock. The live index was compared again immediately before atomic replacement. This publication changes only web assets: backend, server dependencies/environment, saved configuration, endpoint downloads and PID 398942 remain unchanged; no restart was needed. All 27 public files match the build. Index SHA-256: `233fbab20cca8f212a4a0682cbb0e5889b4d45ecfb6b50736e20d87a3314b2b4`. Web rollback: `/var/lib/speck-rollback/20261011T213141Z-drawer-focus-9dd6572/web`. The prior AI release retains the full server/configuration/database rollback.
+
+All hosted backend, unit and browser checks pass for `9dd6572` (browser run `38176452826`). Local validation remains the release gate; no required branch check was bypassed and no PR was merged.

@@ -1,5 +1,5 @@
 {
-  "provenance": "Unretouched production frontend and screen-assistant controller, synthetic records, mocked provider and in-memory input adapter only. No endpoint sessions, real inputs or production/private captures. Typed placeholder values are synthetic.",
+  "provenance": "Unretouched actual frontend and screen-assistant controller, synthetic records, mocked provider and computer-input adapters only. Remote workspace captures use Guacamole with an intercepted loopback WebSocket and synthetic protocol frames. No endpoint sessions, real inputs or production/private captures. Typed placeholder values and audio statistics are synthetic.",
   "captured_at_utc": "2026-10-11T20:52:35.267283+00:00",
   "captures": [
     {
@@ -163,6 +163,28 @@
       "sha256": "c65cd4f59bee875fea37f5804a3db89cc49f4b0c6f163b6b556dc0253c8eb65b",
       "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-explanation-phone.png",
       "engine": "Chromium"
+    },
+    {
+      "file": "remote-connected-320.png",
+      "width": 320,
+      "height": 960,
+      "bytes": 34482,
+      "sha256": "6469cff89be4c0be45f7a0e70c322ac7ad2bd7e02a0e41afd378cbad2bde66c5",
+      "source": "output/ai-polish/drawer-followup/remote-screenshots/chromium/320/remote-connected.png",
+      "engine": "Chromium",
+      "captured_at_utc": "2026-10-11T21:39:57.100589+00:00",
+      "provenance": "Actual frontend source served by isolated loopback Vite; synthetic preview account and remote-session response, intercepted Guacamole 1.5 WebSocket, synthetic drawing/error protocol and audio statistics. No real session or input."
+    },
+    {
+      "file": "remote-disconnected-320.png",
+      "width": 320,
+      "height": 960,
+      "bytes": 54297,
+      "sha256": "7b590dd3eb1114ecf8ed1da2b909f619e04d9e3c0aab2e145a9670c7c5653468",
+      "source": "output/ai-polish/drawer-followup/remote-screenshots/chromium/320/remote-disconnected.png",
+      "engine": "Chromium",
+      "captured_at_utc": "2026-10-11T21:39:57.185164+00:00",
+      "provenance": "Actual frontend source served by isolated loopback Vite; synthetic preview account and remote-session response, intercepted Guacamole 1.5 WebSocket, synthetic drawing/error protocol and audio statistics. No real session or input."
     }
   ]
 }
