@@ -1382,3 +1382,55 @@ dependencies/environment, all 14 protected groups, endpoint downloads and health
 `9dd6572` pass. All hosted backend, unit and browser checks pass for deployed source
 `6ccb2ad` (browser run `38177379280`: 519 passes and one existing skip). No branch check was bypassed or PR merged. See the [complete
 validation and release record](docs/operations/ai-workflow-polish-2026-10-11.md).
+
+
+## PR stack merged and production reconciled — October 11, 2026
+
+Merged [PR #26](https://github.com/amcchord/speck/pull/26), [PR
+#27](https://github.com/amcchord/speck/pull/27) and [PR
+#28](https://github.com/amcchord/speck/pull/28) into `main` in dependency order with
+ordinary merge commits. PR #27 was marked ready and #27/#28 retargeted to main after
+their dependencies merged. All three original PR heads had passing backend/unit and
+browser checks; merge operations were pinned to their inspected head SHAs. No required
+branch check was bypassed. Final application merge:
+`8587ff67514de23092fd29c54fb27b5c1dda322c`. Its complete source tree is identical to
+reviewed PR head `75b7864`; the earlier deployed backend, web and agent work remain
+ancestors.
+
+Before the fresh production build, origin/main was fetched and verified as an ancestor.
+`./scripts/check-local.sh core` passed on merged `8587ff6` in 343 seconds: Ruff, 399
+backend tests, Linux agent/Proxmox runtime and race tests, Windows/Linux platform
+builds, TypeScript/Vite, 60 web units and 519 Chromium/WebKit browser checks, with one
+existing WebKit touch-drag skip. The fresh install reports zero vulnerabilities.
+Existing Python deprecations and Vite chunk warnings remain. Native/iOS and physical
+desktop qualification are unchanged.
+
+Production already contains every runtime change in merged main. The fresh main web
+build matches all 27 public files byte for byte; backend source and server requirements
+match too. A freshly initialized isolated database was compared with production through
+read-only schema queries: all 58 tables, 396 columns and nine explicit indexes are
+present and match, with no missing schema migration. Database integrity is `ok`; the
+isolated database was deleted. No production data transformation, runtime replacement or
+restart was needed.
+
+Authenticated live AI review, API-guide/context and search-focus acceptance passed in
+Chromium at 1440 px and WebKit at 390 px. A new 21-page sweep at 1440/834/390/320 px
+produced 84 private captures with no page errors, horizontal overflow, loading/error
+states or unexpected writes. No provider request, endpoint command, remote input,
+recovery or equipment action was performed; temporary sessions were logged out.
+
+The sole deployment owner held the shared release lock, matched the entire live baseline
+and compared the index again immediately before recording the main equivalence
+confirmation. Confirmation `20261011T221349Z-main-verified-8587ff6` is stored privately
+at `/opt/speck/releases/20261011T221349Z-main-verified-8587ff6/release.json`. Web index
+SHA-256: `d2c3444a0b383af64b01b792ed6a14c3cfed7247e6265688cc568d5acd8cb7eb`. Existing
+web/backend rollback and consistent database backups remain available. All 14 protected
+configuration/identity groups, credentials, server environment/dependencies, endpoint
+downloads and healthy PID 398942 are unchanged.
+
+All hosted backend/unit and browser checks pass for merged application `8587ff6`
+(backend run `38179131677`, browser run `38179131673`: 519 passes and one existing
+skip). All pre-merge checks passed. Local validation is the
+primary release gate. The merged source is on GitHub main; operational records are the
+only additional source edits. Private manifests, schema comparison, confirmation and
+acceptance evidence remain in ignored `output/pr28-main-production/`.
