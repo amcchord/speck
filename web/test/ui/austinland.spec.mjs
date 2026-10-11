@@ -160,7 +160,7 @@ for (const width of [1440, 390]) {
     const remove = page.getByRole('dialog', { name: 'Remove public IP mapping' });
     await expect(remove.getByText('2 DNS names still point here')).toBeVisible();
     await remove.getByRole('button', { name: 'Cancel' }).click();
-    await page.getByRole('tab', { name: 'Reachability' }).click();
+    await page.getByRole('tab', { name: 'Recorded paths' }).click();
     await expect(page.getByText('NAT · shop-web')).toBeVisible();
     await page.screenshot({ path: `${shots}/network-reachability-${width}-${info.project.name}.png` });
     await page.getByRole('tab', { name: 'LAN clients' }).click();

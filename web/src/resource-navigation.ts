@@ -19,7 +19,11 @@ export function currentResource(): ResourceRef | null {
   } catch { return null; }
 }
 export function resourceHref(page: string, ref: ResourceRef) {
-  return '#' + page.split('?')[0] + '?inspect=' + encodeURIComponent(key(ref));
+  const parts=page.replace(/^#/, '').split('?');
+  const params=new URLSearchParams(parts[1] || (parts[0]===location.hash.slice(1).split('?')[0] ? location.hash.split('?')[1] || '' : ''));
+  const workspace=new URLSearchParams(location.hash.split('?')[1] || '').get('workspace');if(workspace&&!params.has('workspace'))params.set('workspace',workspace);
+  params.set('inspect',key(Object.fromEntries(Object.entries(ref).filter(([k,v])=>['kind','id','tab','connection','provider','resourceKind','site'].includes(k)&&typeof v==='string'&&v.length)) as ResourceRef));
+  return '#' + parts[0] + '?' + params.toString();
 }
 export function registerResource(kind: string, open: Open) { resolvers.set(kind, open); }
 export function rememberResource(ref: ResourceRef, open: () => void | Promise<void>) {
@@ -47,7 +51,7 @@ export function bindResourceNavigation(pane: HTMLDialogElement) {
   const ref = currentResource();
   if (!ref) return;
   const id = key(ref), head = pane.querySelector('.dialog-head');
-  if (pendingNavigation !== id) return;
+  if (!pendingNavigation || identity(JSON.parse(pendingNavigation)) !== identity(ref)) return;
   pendingNavigation = null;
   if (!head || head.querySelector('[data-resource-navigation]')) return;
   const controls = document.createElement('span');
@@ -63,7 +67,16 @@ export function bindResourceNavigation(pane: HTMLDialogElement) {
   controls.append(copy); head.insertBefore(controls, head.querySelector('.close'));
   pane.addEventListener('close', () => {
     if (!restoring && !document.querySelector('dialog.device-drawer[open]') && identity(currentResource() || {kind:'',id:''}) === identity(ref))
-      history.replaceState(null, '', location.hash.split('?')[0]);
+      { const params=new URLSearchParams(location.hash.split('?')[1] || ''); params.delete('inspect'); history.replaceState(null,'',location.hash.split('?')[0]+(params.size?'?'+params:'')); }
   });
 }
 export function clearResourceHistory() { recent.clear(); pendingNavigation = null; }
+
+export function workspaceTab(fallback:string, allowed:string[]):string {
+  const tab=new URLSearchParams(location.hash.split('?')[1] || '').get('view');
+  return tab && allowed.includes(tab) ? tab : fallback;
+}
+export function setWorkspaceTab(tab:string) {
+  const params=new URLSearchParams(location.hash.split('?')[1] || ''); params.set('view',tab); params.delete('inspect');
+  history.pushState(null,'',location.hash.split('?')[0]+'?'+params);
+}

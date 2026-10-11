@@ -13,6 +13,7 @@ sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 from preview_fixtures import provider_fixture
 from preview_workspace import workspace_fixture
 from preview_depth import depth_fixture
+from preview_reliability import reliability_fixture
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -237,6 +238,9 @@ class Handler(BaseHTTPRequestHandler):
                     )
                 ],
             }
+            fixture = reliability_fixture(route, DEVICES, NOW)
+            if fixture is not None:
+                return self.send(fixture)
             fixture = depth_fixture(route, parse_qs(url.query), NOW)
             if fixture is not None:
                 return self.send(fixture)

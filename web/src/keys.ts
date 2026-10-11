@@ -1,3 +1,4 @@
+import {workspaceTab,setWorkspaceTab} from "./resource-navigation";
 import { rememberResource, registerResource, resourceHref } from "./resource-navigation";
 import "./network.css";
 import "./keys.css";
@@ -44,6 +45,7 @@ export function createKeys(ui: Item) {
   }
 
   async function render() {
+    tab=workspaceTab(tab,["vault","providers","ssh","handoffs"]);
     loading("Loading keys…");
     if (!admin()) {
       content('<div class="empty"><h2>Administrators only</h2><p>The credential vault, provider credentials and handoff files are available to administrators.</p></div>');
@@ -76,7 +78,7 @@ export function createKeys(ui: Item) {
     document.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((b) =>
       b.addEventListener("click", () => {
         closePane();
-        tab = b.dataset.tab!;
+        tab = b.dataset.tab!; setWorkspaceTab(tab);
         document.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((x) => {
           x.classList.toggle("active", x === b);
           x.setAttribute("aria-selected", String(x === b));
@@ -534,7 +536,7 @@ export function createKeys(ui: Item) {
         }</div><p>${chip(s.mode === "mint" ? "Mints project keys" : s.mode === "shared" ? "Shares one key" : "Used by Speck", s.mode === "mint" ? "good" : "")}</p><p class="keys-provider-desc">${esc(s.description)}</p>${
           `<p class="keys-provider-scope">${entries.filter(e => e.service === s.service).length} project credentials</p>`
         }${s.configuration_error ? `<p class="infra-error">${esc(s.configuration_error)}</p>` : ""}<p class="keys-check" id="check-${esc(s.service)}">${
-          check ? `${check.ok ? chip("Working", "good") : chip("Failed", "bad")} ${esc(check.detail)} <small>${esc(relative(check.checked_at))} · ${check.latency_ms} ms</small>` : ""
+          check ? `${check.ok ? chip("Last check passed", "good") : chip("Failed", "bad")} ${esc(check.detail)} <small>${esc(relative(check.checked_at))}${Number.isFinite(check.latency_ms) ? " · "+check.latency_ms+" ms" : ""}</small>` : ""
         }</p><div class="infra-actions"><button class="secondary" data-check="${esc(s.service)}" ${s.configured ? "" : "disabled"}>Check</button>${
           s.master_entry
             ? `<button class="secondary" data-open-entry="${esc(s.master_entry)}">Open vault entry</button>`
@@ -553,7 +555,7 @@ export function createKeys(ui: Item) {
           const result = await api(`/keys/services/${b.dataset.check}/check`, "POST");
           const s = services.find((x) => x.service === b.dataset.check);
           if (s) s.last_check = result;
-          target.innerHTML = `${result.ok ? chip("Working", "good") : chip("Failed", "bad")} ${esc(result.detail)} <small>${result.latency_ms} ms</small>`;
+          target.innerHTML = `${result.ok ? chip("Last check passed", "good") : chip("Failed", "bad")} ${esc(result.detail)} <small>${Number.isFinite(result.latency_ms) ? result.latency_ms+" ms" : "Duration not reported"}</small>`;
         } finally {
           b.disabled = false;
         }

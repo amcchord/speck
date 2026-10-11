@@ -12,10 +12,13 @@ export function mountBackupCoverage(
   agents: Item[],
   open: (kind: string, row: Item) => void,
 ) {
-  root.innerHTML =
-    '<p class="resource-note">Loading protection evidence independently of inventory…</p>';
+  const inventoryFallback=(message:string)=>{
+    root.innerHTML=section('Protection coverage','<p class="resource-notice">'+e(message)+'</p><div class="resource-related">'+agents.map((a,i)=>`<button class="secondary" data-coverage-agent="${i}" data-slide-detail="${i}"><span><b>${e(a.display_name || a.hostname || a.agent_id)}</b><small>Recovery-point coverage not yet established</small></span>→</button>`).join('')+'</div>');
+    root.querySelectorAll<HTMLButtonElement>('[data-coverage-agent]').forEach(b=>b.onclick=()=>open('agent',agents[Number(b.dataset.coverageAgent)]));
+  };
+  inventoryFallback('Loading protection evidence independently of inventory…');
   void ui
-    .api("/slide/coverage")
+    .api("/slide/coverage"+(ui.connection ? "?connection_id="+encodeURIComponent(ui.connection) : ""))
     .then((data: Item) => {
       if (!root.isConnected) return;
       const rows = agents.map((a) => {
@@ -48,7 +51,7 @@ export function mountBackupCoverage(
       });
       root.innerHTML = section(
         "Protection coverage",
-        `<p class="resource-note">${e(data.note)}</p>${data.backup.error || data.snapshot.error ? '<p class="resource-notice">Some provider evidence is unavailable. Coverage remains partial.</p>' : ""}<div class="table-wrap"><table><thead><tr><th>Protected system</th><th>Latest observed recovery point</th><th>Provider verification</th><th>Evidence</th></tr></thead><tbody>${rows.map((r, i) => `<tr data-coverage-status="${e(r.evidence.state)}"><td><button class="text-link" data-coverage-agent="${i}">${e(r.a.display_name || r.a.hostname || r.a.agent_id)}</button></td><td>${e(detailDate(r.evidence.latestPoint))}<small>${e(r.evidence.state)}</small></td><td>${r.evidence.verified ? e(detailDate(r.evidence.verified)) : "No passed verification in returned evidence"}</td><td>${r.evidence.failed} failed jobs · ${r.evidence.complete ? "Complete returned history" : "Partial history"}</td></tr>`).join("")}</tbody></table></div><button class="secondary" data-backup-calendar>Explore recovery-point calendar</button>`,
+        `<p class="resource-note">${e(data.note)}</p>${data.backup.error || data.snapshot.error ? '<p class="resource-notice">Some provider evidence is unavailable. Coverage remains partial.</p>' : ""}<div class="table-wrap"><table><thead><tr><th>Protected system</th><th>Latest observed recovery point</th><th>Provider verification</th><th>Evidence</th></tr></thead><tbody>${rows.map((r, i) => `<tr data-coverage-status="${e(r.evidence.state)}"><td><button class="text-link" data-coverage-agent="${i}" data-slide-detail="${i}">${e(r.a.display_name || r.a.hostname || r.a.agent_id)}</button></td><td>${e(detailDate(r.evidence.latestPoint))}<small>${e(r.evidence.state)}</small></td><td>${r.evidence.verified ? e(detailDate(r.evidence.verified)) : "No passed verification in returned evidence"}</td><td>${r.evidence.failed} failed jobs · ${r.evidence.complete ? "Complete returned history" : "Partial history"}</td></tr>`).join("")}</tbody></table></div><button class="secondary" data-backup-calendar>Explore recovery-point calendar</button>`,
       );
       root
         .querySelectorAll<HTMLElement>("[data-coverage-agent]")
@@ -118,10 +121,6 @@ export function mountBackupCoverage(
         });
     })
     .catch((error: Error) => {
-      if (root.isConnected)
-        root.innerHTML =
-          '<p class="resource-notice">Coverage unavailable. ' +
-          e(error.message) +
-          "</p>";
+      if (root.isConnected) inventoryFallback('Coverage unavailable. '+error.message);
     });
 }

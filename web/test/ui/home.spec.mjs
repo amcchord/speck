@@ -115,8 +115,9 @@ test('empty inventory, unavailable inventory and unconfigured AI are distinct', 
   // Navigation now reuses the known empty snapshot. Explicit refresh tests the
   // unavailable source rather than silently discarding that cached snapshot.
   await page.locator('#refresh').click();
-  await expect(page.locator('#home-results')).toContainText('Inventory unavailable');
-  await expect(page.locator('.home-stat.agents strong')).toHaveText('—');
+  await expect(page.locator('.home-notice')).toContainText('Could not load: Machine inventory');
+  await expect(page.locator('#home-results')).toContainText('Connect your first systems');
+  await expect(page.locator('.home-stat.agents strong')).toHaveText('0');
 });
 
 test('keyboard command preserves the workspace; stale Home responses do not replace another page', async ({page}) => {

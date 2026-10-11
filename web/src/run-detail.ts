@@ -29,7 +29,7 @@ export function createRunDetails(ui: Item) {
         target.innerHTML = hero('Endpoint operation', j.status, j.kind.replaceAll('.',' · ')) + facts([
           ['Requested by',j.actor],['Created',detailDate(j.created)],['Started',detailDate(j.started)],['Finished',detailDate(j.finished)],['Elapsed',duration(j.started,j.finished)],['Exit code',j.result?.exit_code],
         ]) + (['unknown','expired'].includes(j.status) ? '<p class="resource-notice">The outcome is not confirmed. Inspect the machine before attempting the operation again.</p>' : '') +
-          section('Target', `<button class="secondary" data-run-machine>${e(j.device_id)} →</button>`) + section('Result',operationOutput(j.result)) +
+          section('Outcome', facts([['Requested action', j.kind],['Process outcome', j.status + (j.result?.exit_code != null ? ' · exit '+j.result.exit_code : '')],['Verified effect', 'Not independently verified; review current evidence before retrying'],['Target platform / site',[j.platform,j.site].filter(Boolean).join(' · ')]])) + section('Target', `<button class="secondary" data-run-machine>${e(j.label || j.device_id)} →</button>`) + section('Result',operationOutput(j.result)) +
           `<details class="resource-technical"><summary>Request and receipt</summary>${technicalDetail(j)}</details><button class="secondary" data-run-refresh>Refresh evidence</button>`;
         target.querySelector<HTMLButtonElement>('[data-run-machine]')!.onclick = () => ui.openDevice(j.device_id);
         target.querySelector<HTMLButtonElement>('[data-run-refresh]')!.onclick = () => void load();

@@ -1,3 +1,4 @@
+import {downloadRecovery} from "./recovery-export";
 import {
   detailFacts as facts,
   detailSection as section,
@@ -131,7 +132,7 @@ export function createRecoveryInspection(ui: Item) {
     if (!r) throw new Error("Recovery run unavailable");
     rememberResource({ kind: "recovery-run", id }, () => openRun(id));
     const verified = r.report?.verified_at;
-    ui.flyout(
+    const pane=ui.flyout(
       r.state.name || "Recovery run",
       hero(
         "Isolated recovery",
@@ -258,9 +259,10 @@ export function createRecoveryInspection(ui: Item) {
             })
             .join(""),
         ) +
-        technicalDetail({ state: r.state, report: r.report }),
+        '<section class="resource-section"><h3>Private recovery report</h3><label>Retest objective (days)<input data-report-retest type="number" min="1" max="365" value="30"></label><button class="secondary" data-recovery-export>Download private recovery report</button><p data-export-status role="status">Export includes measured evidence and limitations; no command output or credentials.</p></section>'+technicalDetail({ state: r.state, report: r.report }),
       { tone: "protection", subtitle: "Recovery · Evidence" },
     );
+    pane.querySelector('[data-recovery-export]').onclick=async()=>{try{const days=Number(pane.querySelector('[data-report-retest]').value);const report=await ui.api('/recovery/runs/'+encodeURIComponent(id)+'/evidence?retest_days='+days);downloadRecovery(report);pane.querySelector('[data-export-status]').textContent='Private report downloaded. Open it locally to print or save as PDF.';}catch(error){pane.querySelector('[data-export-status]').textContent=(error as Error).message;}};
   }
   registerResource("recovery-plan", (ref) => openPlan(ref.id));
   registerResource("recovery-run", (ref) => openRun(ref.id));

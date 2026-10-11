@@ -88,10 +88,12 @@ export function mountEquipmentHistory(
               gap: samples[i].at - samples[i - 1].at > 900,
             });
         }
-      const series = port == null ? [] : portHistory(samples, port);
+      const series:Item[] = port == null ? [] : portHistory(samples, port);
+      series.slice(0,2).forEach((s:Item)=>s.emptyReason = samples.length < 2 ? 'Awaiting a second counter observation. Rates need two samples within 15 minutes.' : 'No comparable counters in this interval: a collection gap, counter reset, or missing measurement prevents a rate.');
       root.innerHTML =
         facts([
           ["Last observation", detailDate(latest?.at)],
+          ["Retained samples", samples.length + " in " + hours + " hours"],
           [
             "Observed PoE total",
             power.length

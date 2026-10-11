@@ -411,7 +411,8 @@ async def inventory(user=Depends(require_user)):
                 await provider_request(cfg, "POST", "/operations/unifi-status", {"args": {}})
                 rows = []
             else:
-                rows = resources(cfg, await raw_inventory(cfg))
+                from speck.fleet import source_snapshot
+                return await source_snapshot(cfg)
             return public_connection(cfg) | {"status": "connected", "resources": rows}
         except HTTPException as exc:
             return public_connection(cfg) | {"status": "unavailable", "error": str(exc.detail), "resources": []}

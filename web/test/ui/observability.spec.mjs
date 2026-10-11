@@ -51,7 +51,7 @@ for(const platform of ['windows','linux']) for(const width of [1440,390]) test(`
  await page.route('**/api/devices/frontdesk/remote/sessions',r=>r.fulfill({json:{id:'embedded',protocol:'shell'}}));
  await page.route('**/api/remote/sessions/embedded',r=>{if(r.request().method()==='DELETE')closed.push(true);return r.fulfill({json:{ok:true}});});
  await page.routeWebSocket('**/api/remote/sessions/embedded/ws',ws=>{ws.onMessage(m=>inputs.push(JSON.parse(m)));ws.send(JSON.stringify({type:'ready'}));ws.send(Buffer.from('PS C:\\> '));});
- await page.goto('/#fleet');await page.locator('[data-device="frontdesk"]').first().click();await page.locator('#drawer-terminal').click();
+ await page.goto('/#fleet');await page.locator('[data-device="frontdesk"]').first().click();await page.locator('#drawer-terminal').click();await expect(page.locator('.shell-embedded')).toHaveCount(0);await page.locator('#terminal-connect').click();
  await expect(page.locator('.shell-embedded')).toBeVisible();await expect(page.locator('#shell-status')).toHaveText('Connected');
  await page.locator('.xterm-helper-textarea').pressSequentially('pwd');await page.locator('.xterm-helper-textarea').press('Enter');
  await expect.poll(()=>inputs.filter(i=>i.type==='input').map(i=>i.data).join('')).toContain('pwd\r');

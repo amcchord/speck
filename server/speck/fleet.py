@@ -12,7 +12,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, model_validator
 
-from speck.config import seal, unseal
+from speck.config import seal, unseal, data_dir
 from speck.db import db
 from speck.security import require_user
 from speck import infrastructure as infra
@@ -102,7 +102,20 @@ def resource_key(row):
     return f"{row['provider']}:{scope}:{row['kind']}:{row['id']}"
 
 
+_source_reads = {}
+
+
 async def source_snapshot(cfg, force=False):
+    key = (str(data_dir()), cfg['id'], hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest(), force)
+    task = _source_reads.get(key)
+    if task is None:
+        task = asyncio.create_task(_source_snapshot(cfg, force))
+        _source_reads[key] = task
+        task.add_done_callback(lambda done: _source_reads.pop(key, None) if _source_reads.get(key) is done else None)
+    return copy.deepcopy(await asyncio.shield(task))
+
+
+async def _source_snapshot(cfg, force=False):
     fingerprint = hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()
     with db() as conn:
         cached = conn.execute(
@@ -336,14 +349,34 @@ def assemble(endpoints, groups):
 
 
 @router.get("")
-async def inventory(refresh: bool = False, user=Depends(require_user)):
+async def inventory(refresh: bool = False, compact: bool = False, user=Depends(require_user)):
     from speck.main import devices
 
     cfgs = [infra.get_connection(c["id"]) for c in infra.connections(user) if c["provider"] != "austinland"]
     groups = await asyncio.gather(*(source_snapshot(cfg, refresh) for cfg in cfgs))
     infra.correlate_agents(groups)  # Includes specialized host-agent presence.
+    machines = assemble(devices(user=user), groups)
+    if compact:
+        machines = [compact_machine(m) for m in machines]
     return {
-        "machines": assemble(devices(user=user), groups),
+        "machines": machines,
         "connections": [{k: v for k, v in g.items() if k != "resources"} for g in groups],
         "checked_at": time.time(),
     }
+
+
+def compact_machine(machine):
+    """List projection. Never use this projection as an operation preflight."""
+    item = copy.deepcopy(machine)
+    telemetry = item.get("telemetry", {})
+    for field in ("services", "processes"):
+        telemetry.pop(field, None)
+    network = telemetry.get("network", {})
+    network.pop("connections", None)
+    # Provider raw documents duplicate the structured fields and belong in detail reads.
+    for resource in item.get("resources", []):
+        resource.pop("raw", None)
+    if item.get("resource"):
+        item["resource"].pop("raw", None)
+    item["telemetry_compact"] = bool(item.get("has_endpoint_agent"))
+    return item

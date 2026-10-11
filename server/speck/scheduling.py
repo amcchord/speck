@@ -28,7 +28,7 @@ class Schedule(BaseModel):
 
     @model_validator(mode="after")
     def allowed(self):
-        if self.operation.kind not in ("template", "patch.scan"):
+        if self.operation.kind not in ("template", "patch.scan", "inspection.software", "inspection.processes", "inspection.disks"):
             raise ValueError(
                 "Schedule reviewed templates or update scans; patch installation remains a reviewed action"
             )
@@ -37,10 +37,29 @@ class Schedule(BaseModel):
         return self
 
 
+def prepare_schedule(conn, operation):
+    if operation.target_policy == "all":
+        return prepare_batch(conn, operation), []
+    if len(set(operation.device_ids)) != len(operation.device_ids):
+        raise HTTPException(422, "Device selection contains duplicates")
+    prepared, excluded = [], []
+    for device_id in operation.device_ids:
+        try:
+            prepared.extend(prepare_batch(conn, operation.model_copy(update={"device_ids": [device_id]})))
+        except HTTPException as exc:
+            if exc.status_code not in (409,):
+                raise
+            row = conn.execute("SELECT label FROM devices WHERE id=?", (device_id,)).fetchone()
+            excluded.append({"id": device_id, "label": row[0] if row else "Unavailable identity", "reason": str(exc.detail)})
+    return prepared, excluded
+
+
 def validate_schedule(conn, body):
     if body.first_run < time.time() + 5 or body.first_run > time.time() + 366 * 86400:
         raise HTTPException(422, "Choose a first run between now and one year from now")
-    prepared = prepare_batch(conn, body.operation)
+    prepared, _ = prepare_schedule(conn, body.operation)
+    if not prepared:
+        raise HTTPException(409, "No eligible targets; choose at least one available approved endpoint")
     if body.interval_seconds and body.interval_seconds <= max(t + 120 for _, _, t in prepared):
         raise HTTPException(422, "The interval must exceed the operation time limit plus two minutes")
     return prepared
@@ -50,7 +69,9 @@ def validate_schedule(conn, body):
 def preview(body: Schedule, user=Depends(require_user)):
     with db() as conn:
         targets = validate_schedule(conn, body)
+        _, excluded = prepare_schedule(conn, body.operation)
     return {
+        "target_policy": body.operation.target_policy, "excluded": excluded,
         "first_run": body.first_run,
         "interval_seconds": body.interval_seconds,
         "targets": [{"id": d["id"], "label": d["label"], "script": p["script"], "timeout": t} for d, p, t in targets],
@@ -124,6 +145,7 @@ def schedules(user=Depends(require_user)):
                 "template_id": spec.template_id,
                 "template_revision": spec.template_revision,
                 "device_ids": spec.device_ids,
+                "target_policy": spec.target_policy,
             }
             item["runs"] = [
                 dict(r)
@@ -270,7 +292,10 @@ def run_due(conn, now):
                 conn.execute("UPDATE schedules SET enabled=0 WHERE id=?", (row["id"],))
             else:
                 try:
-                    prepared = prepare_batch(conn, op)
+                    prepared, excluded = prepare_schedule(conn, op)
+                    if not prepared:
+                        raise HTTPException(409, "No eligible targets. " + "; ".join(x["label"] + ": " + x["reason"] for x in excluded))
+                    reason = "; ".join(x["label"] + ": " + x["reason"] for x in excluded)
                     op.request_id = "schedule:" + run_id
                     batch_id = enqueue_batch(conn, op, prepared, row["username"], now)
                     status = "queued"

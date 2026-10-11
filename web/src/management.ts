@@ -1,3 +1,4 @@
+import {startJourney} from './ux-quality';
 import { listWorkspace } from "./list-workspace";
 import { rememberResource, registerResource, resourceHref } from "./resource-navigation";
 import { operationOutput } from "./run-detail";
@@ -106,6 +107,7 @@ export function createManagement(ui: Item) {
       {label:'Site',values:[...new Set(devices.map((d:Item)=>d.site || 'Unassigned'))] as string[],value:r=>r.dataset.site!},
       {label:'Age',values:['Last 24 hours','Older than a day'],value:r=>r.dataset.age!},
     ]});
+    list.querySelector('[data-list-controls] details')?.append(document.querySelector('.alerts-toolbar')!);
     const groups=new Map<string,Item[]>();for(const alert of data.items){const key=alert.title+' · '+alert.key.split(':')[0];groups.set(key,[...(groups.get(key)||[]),alert]);}
     const grouped=document.createElement('button');grouped.className='secondary';grouped.textContent='Related symptoms';document.querySelector('.alerts-toolbar')!.append(grouped);grouped.onclick=()=>{const pane:HTMLDialogElement=ui.flyout('Related alert symptoms','<p class="resource-note">Grouped by reported title and condition type within the loaded alert page. Each machine and occurrence retains its own evidence and review state.</p>'+[...groups].sort((a,b)=>b[1].length-a[1].length).map(([title,rows])=>detailSection(title,'<p>'+rows.length+' occurrences · '+new Set(rows.map(a=>a.device_id)).size+' machines</p><div class="resource-related">'+rows.map(a=>`<button data-group-alert="${esc(a.id)}"><span><b>${esc(a.label || a.device_id)}</b><small>${date(a.opened)} · ${a.resolved?'Resolved':a.acknowledged?'Acknowledged':'Needs attention'}</small></span>→</button>`).join('')+'</div>')).join(''),{tone:'attention'});pane.querySelectorAll<HTMLElement>('[data-group-alert]').forEach(b=>b.onclick=()=>{const a=data.items.find((a:Item)=>a.id===b.dataset.groupAlert);void inspectAlert(a,devices.find((d:Item)=>d.id===a.device_id));});};
     data.items.forEach((a: Item, i: number) => {
@@ -126,6 +128,7 @@ export function createManagement(ui: Item) {
   }
 
   async function inspectAlert(a:Item,device?:Item) {
+    const finish=startJourney("alert_to_evidence","alerts");
     rememberResource({kind:'alert',id:a.id},()=>inspectAlert(a,device));
     const check=a.key.startsWith('job:')?'Inspect the exact job result and current machine state. An uncertain completion does not establish failure; avoid repeating an action until verified.':a.key.includes('offline')?'Check the last agent report, gateway path and maintenance window before restarting services.':a.key.includes('disk')?'Inspect affected volumes and growth before deleting data.':a.key.includes('service')?'Inspect startup mode, dependencies and recent service failures before restarting.':'Compare the current reading with the configured threshold and inspect related machine activity.';
     const pane:HTMLDialogElement=ui.flyout(a.title,detailSection('Condition',`<p>${esc(a.explanation || a.title)}</p>`)+detailFacts([['Severity',a.severity],['Machine',a.label],['Opened',date(a.opened)],['Last observation',date(a.updated)],['Acknowledged',a.acknowledged?date(a.acknowledged)+' · '+a.ack_actor:'Not acknowledged'],['Resolved',a.resolved?date(a.resolved)+' · '+a.resolve_actor:'No recovery recorded']])+detailSection('First checks',`<p>${esc(check)}</p><p class="resource-note">${esc(a.resolution_hint || 'Health alerts clear when recovery is observed. Acknowledging an alert does not change the machine.')}</p>`)+`<div class="toolbar"><button class="secondary" data-alert-machine>Inspect machine</button>${a.job?'<button class="secondary" data-alert-job>Open job result</button>':''}${device&&canManage()?'<button class="secondary" data-alert-maintenance>Review maintenance</button>':''}</div><section class="resource-section" data-alert-evidence></section><div class="toolbar">${!a.resolved&&canManage()?`${!a.acknowledged?'<button class="secondary" data-alert-ack>Acknowledge</button>':''}${a.key.startsWith('job:')?'<button class="secondary" data-alert-resolve>Mark reviewed</button>':''}`:''}</div>`,{tone:'attention',subtitle:'Alert · Evidence and investigation'});
@@ -133,7 +136,8 @@ export function createManagement(ui: Item) {
     pane.querySelector<HTMLButtonElement>('[data-alert-job]')?.addEventListener('click',()=>void ui.showJob(a.job.id));
     pane.querySelector<HTMLButtonElement>('[data-alert-maintenance]')?.addEventListener('click',()=>void organize(device!));
     for(const [attr,action] of [['ack','acknowledge'],['resolve','resolve']]) pane.querySelector<HTMLButtonElement>('[data-alert-'+attr+']')?.addEventListener('click',async()=>{try{await api('/alerts/'+a.id,'POST',{action});pane.close();await renderAlerts();}catch(error){notify((error as Error).message,true);}});
-    if(a.job&&canManage())try {const detail=await api('/alerts/'+encodeURIComponent(a.id));if(pane.open)pane.querySelector('[data-alert-evidence]')!.innerHTML='<h3>Job evidence</h3>'+operationOutput(detail.job?.result);} catch {if(pane.open)pane.querySelector('[data-alert-evidence]')!.textContent='Job evidence is unavailable. Inspect the machine before retrying.';}
+    if(a.job&&canManage())try {const detail=await api('/alerts/'+encodeURIComponent(a.id));if(pane.open)pane.querySelector('[data-alert-evidence]')!.innerHTML='<h3>Job evidence</h3>'+operationOutput(detail.job?.result);} catch {finish('failed');if(pane.open)pane.querySelector('[data-alert-evidence]')!.textContent='Job evidence is unavailable. Inspect the machine before retrying.';}
+    finish(pane.open?'ready':'cancelled');
   }
   registerResource('alert',async ref=>{const data=await api('/alerts/'+encodeURIComponent(ref.id));await inspectAlert(data.alert || data);});
 
@@ -320,7 +324,7 @@ export function createManagement(ui: Item) {
     ]);
     const modal = dialog(
       seed.edit_id ? "Edit schedule" : "New schedule",
-      `${seed.template_id?'<p class="resource-note">Parameters start from the current template defaults. Review every value and the exact script before saving this new schedule revision.</p>':''}<label>Name<input id="schedule-name" maxlength="100" placeholder="Daily update inventory"></label><label>Operation<select id="schedule-operation"><option value="scan">Scan available patches</option>${templates.map((t: Item) => `<option value="${t.id}">${esc(t.name)} · ${esc(t.platform)}</option>`).join("")}</select></label><div id="schedule-parameters"></div><div class="form-grid"><label>First run (your local time)<input type="datetime-local" id="schedule-first" value="${localTime()}"></label><label>Repeat<select id="schedule-interval"><option value="86400">Every day</option><option value="3600">Every hour</option><option value="604800">Every week</option><option value="0">Once</option></select></label></div><h3>Target machines</h3><div id="schedule-targets" class="schedule-targets"></div><p>Targets are fixed when saved. A run is skipped if any target is offline, busy or retired. A changed template pauses the schedule for review.</p>${button("schedule-review", "Review schedule", true)}`,
+      `${seed.template_id?'<p class="resource-note">Parameters start from the current template defaults. Review every value and the exact script before saving this new schedule revision.</p>':''}<label>Name<input id="schedule-name" maxlength="100" placeholder="Daily update inventory"></label><label>Operation<select id="schedule-operation"><option value="scan">Scan available patches</option><option value="inspection.software">Collect software inventory</option><option value="inspection.processes">Collect process inventory</option><option value="inspection.disks">Collect disk inventory</option>${templates.map((t: Item) => `<option value="${t.id}">${esc(t.name)} · ${esc(t.platform)}</option>`).join("")}</select></label><div id="schedule-parameters"></div><div class="form-grid"><label>First run (${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)})<input type="datetime-local" id="schedule-first" value="${localTime()}"></label><label>Repeat<select id="schedule-interval"><option value="86400">Every day</option><option value="3600">Every hour</option><option value="604800">Every week</option><option value="0">Once</option></select></label></div><label>When targets are unavailable<select id="schedule-policy"><option value="all">Require every target (skip the whole occurrence)</option><option value="eligible">Run independently on eligible targets; record every exclusion</option></select></label><h3>Target machines</h3><div class="toolbar"><label>Find targets<input id="schedule-search" type="search" placeholder="Machine, site or platform"></label><label>Site<select id="schedule-site"><option value="">All sites</option>${[...new Set(devices.map((d:Item)=>d.site || "Unassigned"))].map(site=>`<option>${esc(site)}</option>`).join("")}</select></label></div><p id="schedule-target-count" role="status"></p><div id="schedule-targets" class="schedule-targets"></div><p>Targets are fixed when saved. The reviewed policy determines whether an unavailable target blocks the whole occurrence or is individually excluded. A changed template pauses the schedule for review.</p>${button("schedule-review", "Review schedule", true)}`,
     );
     modal.classList.add("wide");
     const choices = () => {
@@ -334,16 +338,20 @@ export function createManagement(ui: Item) {
         .filter((d: Item) => !template || d.platform === template.platform)
         .map(
           (d: Item) =>
-            `<label class="check"><input type="checkbox" data-schedule-target="${d.id}" ${d.approved && d.online && d.telemetry?.capabilities?.managed_operations ? "" : "disabled"}><span>${esc(d.label)}<small>${esc(d.platform)} · ${d.online ? "Online" : "Offline"}</small></span></label>`,
+            `<label class="check"><input type="checkbox" data-schedule-target="${d.id}" ${d.approved && !d.revoked && !d.archived && d.telemetry?.capabilities?.managed_operations ? "" : "disabled"}><span>${esc(d.label)}<small>${esc(d.platform)} · ${!d.approved ? "Approval required" : d.revoked ? "Revoked" : d.archived ? "Archived" : !d.telemetry?.capabilities?.managed_operations ? "Agent update required" : d.online ? "Online" : "Offline; unavailable at this preview"} · ${esc(d.site || "Unassigned")}</small></span></label>`,
         )
         .join("");
     };
     if(seed.template_id) (modal.querySelector('#schedule-operation') as HTMLSelectElement).value=seed.template_id;
+    if(seed.kind?.startsWith('inspection.')) (modal.querySelector('#schedule-operation') as HTMLSelectElement).value=seed.kind;
     choices();
+    const filterTargets=()=>{const labels=[...modal.querySelectorAll<HTMLElement>('#schedule-targets label')];const q=value('schedule-search').toLowerCase(),site=value('schedule-site');labels.forEach(l=>{const id=l.querySelector<HTMLInputElement>('input')!.dataset.scheduleTarget;const d=devices.find((d:Item)=>d.id===id);l.hidden=!(l.textContent || '').toLowerCase().includes(q)||!!site&&(d.site || 'Unassigned')!==site;});document.getElementById('schedule-target-count')!.textContent=labels.filter(l=>!l.hidden).length+' of '+labels.length+' targets visible';};
+    on('schedule-search',filterTargets,'input');on('schedule-site',filterTargets,'change');filterTargets();
+    if(seed.target_policy) (modal.querySelector('#schedule-policy') as HTMLSelectElement).value=seed.target_policy;
     if(seed.interval_seconds!=null) (modal.querySelector('#schedule-interval') as HTMLSelectElement).value=String(seed.interval_seconds);
     if(seed.name) (modal.querySelector('#schedule-name') as HTMLInputElement).value=seed.name;
     if(seed.device_ids) modal.querySelectorAll<HTMLInputElement>('[data-schedule-target]').forEach(b=>{b.checked=!b.disabled&&seed.device_ids.includes(b.dataset.scheduleTarget);});
-    on("schedule-operation", choices, "change");
+    on("schedule-operation",()=>{choices();filterTargets();}, "change");
     on("schedule-review", async () => {
       const template = templates.find(
         (t: Item) => t.id === value("schedule-operation"),
@@ -352,7 +360,8 @@ export function createManagement(ui: Item) {
         operation: {
           request_id: crypto.randomUUID(),
           name: value("schedule-name"),
-          kind: template ? "template" : "patch.scan",
+          kind: template ? "template" : value("schedule-operation").startsWith("inspection.") ? value("schedule-operation") : "patch.scan",
+          target_policy:value("schedule-policy"),
           device_ids: [
             ...document.querySelectorAll<HTMLInputElement>(
               "[data-schedule-target]:checked",
@@ -377,7 +386,7 @@ export function createManagement(ui: Item) {
       const review = await api("/schedules/preview", "POST", body);
       const confirm = dialog(
         "Review schedule",
-        `<h3>${esc(body.operation.name)}</h3><p>First run ${date(review.first_run)}. ${review.interval_seconds ? "Repeats every " + review.interval_seconds / 3600 + " hours." : "Runs once."}</p><p>${review.targets.length} selected machine${review.targets.length === 1 ? "" : "s"}:</p><ul>${review.targets.map((t: Item) => `<li>${esc(t.label)}</li>`).join("")}</ul><details><summary>Review exact scripts</summary>${review.targets.map((t: Item) => `<h3>${esc(t.label)}</h3><pre>${esc(t.script)}</pre>`).join("")}</details><div class="dialog-footer">${button("schedule-create", "Create schedule", true)}</div>`,
+        `<h3>${esc(body.operation.name)}</h3><p>First run ${date(review.first_run)}. ${review.interval_seconds ? "Repeats every " + review.interval_seconds / 3600 + " hours." : "Runs once."}</p><p>Policy: ${body.operation.target_policy === "all" ? "All targets required" : "Run eligible targets independently"}. Times shown in ${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)}.</p>${review.excluded?.length ? `<div class="callout"><b>Excluded at preview</b>${review.excluded.map((t:Item)=>`<p>${esc(t.label)}: ${esc(t.reason)}</p>`).join("")}</div>` : ""}<p>${review.targets.length} selected machine${review.targets.length === 1 ? "" : "s"}:</p><ul>${review.targets.map((t: Item) => `<li>${esc(t.label)}</li>`).join("")}</ul><details><summary>Review exact scripts</summary>${review.targets.map((t: Item) => `<h3>${esc(t.label)}</h3><pre>${esc(t.script)}</pre>`).join("")}</details><div class="dialog-footer">${button("schedule-create", "Create schedule", true)}</div>`,
       );
       on("schedule-create", async () => {
         await api(seed.edit_id ? "/schedules/"+seed.edit_id : "/schedules", seed.edit_id ? "PUT" : "POST", {...body,...(seed.edit_id?{revision:seed.revision}:{})});

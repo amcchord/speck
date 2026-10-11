@@ -167,3 +167,8 @@
   .home-action { min-height: 64px; }
   .home-footnote { font-size: 11px; }
 }
+
+@media(max-width:700px){
+ .home-workspace{display:flex;flex-direction:column}.home-hero{order:0}.home-layout{display:contents}.home-side{order:1;display:contents}.home-side>section:first-child{order:1;margin-bottom:12px}.home-stats{order:2}.home-environment{order:3}.home-automation{order:4;margin-top:16px}.home-footnote{order:5}
+ .home-intro p,.home-shortcuts,.home-ai-status{display:none}.home-hero{padding-bottom:12px}.home-intro h2{font-size:23px;margin-bottom:10px}.home-command .primary{width:auto;min-height:36px}.home-command-input{flex-wrap:wrap}.home-command-input input{min-width:180px}.home-command-input #home-search-all{margin-left:auto;font-size:12px;min-height:36px}.home-alert{padding:10px 0}
+}

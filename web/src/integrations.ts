@@ -1,3 +1,5 @@
+import {resourceHref} from "./resource-navigation";
+import {escapeDetail as e,detailSection as section,detailFacts as facts,detailDate} from "./resource-story";
 type Item = Record<string, any>;
 
 export async function integrationSettings(ui: Item) {
@@ -74,4 +76,12 @@ export async function integrationSettings(ui: Item) {
       }
     });
   });
+}
+
+export async function integrationDirectory(ui:Item){
+ const pane:HTMLDialogElement=ui.flyout('Integration directory','<p>Reading connection and credential metadata…</p>');
+ const results=await Promise.allSettled([ui.api('/infrastructure/connections'),ui.api('/keys/services'),ui.api('/ai/settings')]);
+ if(!pane.open)return;
+ const connections:Item[]=results[0].status==='fulfilled'?results[0].value:[],providers:Item[]=results[1].status==='fulfilled'?results[1].value:[];
+ pane.querySelector('.resource-body')!.innerHTML='<p>Configuration, credential ownership and historical checks are shown separately. One provider may have several independent connections; changing one does not replace the others.</p>'+section('Infrastructure and backup connections',connections.map(c=>`<p><a href="${resourceHref(location.hash.slice(1),{kind:'connection',id:c.id})}">${e(c.name)} →</a> · ${e(c.provider)} · ${c.id==='slide-settings'?'Configured in Settings; independent Slide token':'Configured in Infrastructure; connection-specific credential'} · ${c.mode==='agent'?'Outbound connector transport':'API transport'}</p>`).join('') || '<p>No connection metadata available.</p>')+section('Provider credential ownership',providers.map(p=>`<p><a href="${resourceHref(location.hash.slice(1),{kind:'provider',id:p.service})}">${e(p.label || p.service)} →</a> · Keys → Providers · ${e(p.mode || 'Service credential')} · ${p.configured?'Configured':'Not configured'} · ${p.last_check?'Last check '+(p.last_check.ok?'passed':'failed')+' '+e(detailDate(p.last_check.checked_at)):'No check recorded'}</p>`).join('') || '<p>Provider credentials require administrator access or could not be loaded.</p>')+section('AI planning',facts([['Configuration','Settings → OpenAI; independent AI-planning key'],['State',results[2].status==='fulfilled'?(results[2].value.configured?'Configured':'Not configured'):'Unavailable']]))+'<p><a href="#keys?view=providers">Open provider configuration →</a> · <a href="#infrastructure?view=connections">Open connection configuration →</a></p>';
 }
