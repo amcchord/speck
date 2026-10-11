@@ -9,6 +9,7 @@ export function createOperations(ui: Item) {
   const { api, esc, badge, date, icon, on, value, notify, content } = ui;
   const dialog: (title: string, body: string) => HTMLDialogElement = ui.dialog;
   let templates: Item[] = [];
+  let assistantDraft = { platform: "windows", task: "" };
   const button = (id: string, label: string, primary = false) =>
     `<button id="${id}" class="${primary ? "primary" : "secondary"}">${label}</button>`;
   async function refreshTemplates() {
@@ -23,10 +24,14 @@ export function createOperations(ui: Item) {
     );
     modal.classList.add("operation-review");
     on("confirm-operation", async () => {
+      const confirm = modal.querySelector<HTMLButtonElement>("#confirm-operation")!;
+      confirm.disabled = true;
+      try {
       const batch = await api("/batches", "POST", { ...body, confirmed: true });
       modal.close();
       notify("Operation queued. Each machine reports its own result.");
       showBatch(batch.id);
+      } finally { confirm.disabled = false; }
     });
   }
   async function scan(ids: string[]) {
@@ -53,7 +58,7 @@ export function createOperations(ui: Item) {
       0,
     );
     content(
-      `<button id="patch-scan" class="primary" data-page-action>Scan selected</button><button id="patch-schedule" class="secondary" data-page-action>Schedule selected scans</button><div class="panel operations-panel"><div class="section-head"><h2>Patch inventory</h2><label class="check"><input id="patch-select-all" type="checkbox"> Select online machines</label></div><div class="scroll"><table><thead><tr><th></th><th>Machine</th><th>Updates</th><th>Last scan</th><th>Reboot</th><th></th></tr></thead><tbody>${devices
+      `<button id="patch-scan" class="primary" data-page-action>Scan selected</button><button id="patch-schedule" class="secondary" data-page-action>Schedule selected scans</button><div class="panel operations-panel"><div class="section-head"><h2>Patch inventory</h2><span id="patch-selection-count" class="muted" role="status"></span><label class="check"><input id="patch-select-all" type="checkbox"> Select online machines</label></div><div class="scroll"><table><thead><tr><th></th><th>Machine</th><th>Updates</th><th>Last scan</th><th>Reboot</th><th></th></tr></thead><tbody>${devices
         .map((d: Item) => {
           const r = reports.find((r: Item) => r.device_id === d.id);
           const posture = patchPosture(d,r);
@@ -73,32 +78,49 @@ export function createOperations(ui: Item) {
         '<div class="empty">Your update operations will appear here.</div>'
       }</div>`,
     );
+    const updateSelection = () => {
+      if (!document.getElementById("patch-selection-count")) return;
+      const boxes = [...document.querySelectorAll<HTMLInputElement>("[data-patch-target]")];
+      const selected = boxes.filter(box => box.checked).length;
+      const visible = boxes.filter(box => !box.disabled && !box.closest("tr")!.hidden);
+      const hidden = boxes.filter(box => box.checked && box.closest("tr")!.hidden).length;
+      document.getElementById("patch-selection-count")!.textContent = `${selected} selected${hidden ? ` · ${hidden} outside this view` : ""}`;
+      const all = document.getElementById("patch-select-all") as HTMLInputElement;
+      all.checked = visible.length > 0 && visible.every(box => box.checked);
+      all.indeterminate = visible.some(box => box.checked) && !all.checked;
+      all.disabled = !visible.length;
+      for (const id of ["patch-scan", "patch-schedule"]) (document.getElementById(id) as HTMLButtonElement).disabled = !selected;
+    };
+    document.querySelectorAll<HTMLInputElement>("[data-patch-target]").forEach(box => box.onchange = updateSelection);
     document
       .getElementById("patch-select-all")!
-      .addEventListener("change", (e) =>
+      .addEventListener("change", (e) => {
         document
           .querySelectorAll<HTMLInputElement>(
             "tr:not([hidden]) [data-patch-target]:not(:disabled)",
           )
-          .forEach((x) => (x.checked = (e.target as HTMLInputElement).checked)),
-      );
+          .forEach((x) => (x.checked = (e.target as HTMLInputElement).checked));
+        updateSelection();
+      });
     const patchRoot=document.querySelector<HTMLElement>('.operations-panel')!;
-    listWorkspace(patchRoot,'tbody tr','patches',{filters:[
+    listWorkspace(patchRoot,'tbody tr','patches',{collapsible:true, onChange:updateSelection, filters:[
       {label:'Posture',values:['Current','Updates available','Stale scan','Never scanned','Ineligible','Unsupported'],value:r=>r.dataset.posture!},
       {label:'Platform',values:['windows','linux'],value:r=>r.dataset.platform!},
       {label:'Site',values:[...new Set(devices.map((d:Item)=>d.site || d.client_name || 'Unassigned'))] as string[],value:r=>r.dataset.site!},
       {label:'Severity',values:['Security / critical','Other / not reported'],value:r=>r.dataset.severity!},
     ]});
     on('patch-schedule',()=>ui.newSchedule({device_ids:[...document.querySelectorAll<HTMLInputElement>('[data-patch-target]:checked')].map(e=>e.dataset.patchTarget),name:'Scheduled patch inventory'}));
-    on("patch-scan", () =>
-      scan(
+    on("patch-scan", async () => {
+      const scanButton = document.getElementById("patch-scan") as HTMLButtonElement;
+      scanButton.disabled = true;
+      try { await scan(
         [
           ...document.querySelectorAll<HTMLInputElement>(
             "[data-patch-target]:checked",
           ),
         ].map((e) => e.dataset.patchTarget!),
-      ),
-    );
+      ); } finally { updateSelection(); }
+    });
     const population = devices.filter((d:Item)=>d.approved&&!d.revoked&&!d.archived&&['windows','linux'].includes(d.platform)&&d.telemetry?.capabilities?.managed_operations);
     const scoped = reports.filter((r:Item)=>population.some((d:Item)=>d.id===r.device_id));
     const fresh = scoped.filter((r:Item)=>r.scanned && Date.now()/1000-r.scanned<=86400);
@@ -169,7 +191,7 @@ export function createOperations(ui: Item) {
         '<div class="empty">Per-machine deployment results will appear here.</div>'
       }</div>`,
     );
-    listWorkspace(document.getElementById('content')!,'.template-card','templates',{filters:[{label:'Platform',values:['windows','linux'],value:r=>r.dataset.platform!},{label:'Type',values:['software','script'],value:r=>r.dataset.category!}]});
+    listWorkspace(document.getElementById('content')!,'.template-card','templates',{collapsible:true,filters:[{label:'Platform',values:['windows','linux'],value:r=>r.dataset.platform!},{label:'Type',values:['software','script'],value:r=>r.dataset.category!}]});
     document.querySelectorAll<HTMLButtonElement>('[data-template-detail]').forEach(b=>b.onclick=()=>void inspectTemplate(b.dataset.templateDetail!));
     on("software-inventory",softwareInventory);
     on("new-template", () => templateEditor());
@@ -253,17 +275,20 @@ export function createOperations(ui: Item) {
     };
     t.parameters.forEach(addParam);
     on("add-parameter", () => addParam());
-    on("template-ai", () =>
-      assistDialog(
-        { platform: value("template-platform") },
-        value("template-script"),
+    on("template-ai", () => {
+      const platform = modal.querySelector<HTMLSelectElement>("#template-platform")!.value;
+      return assistDialog(
+        { platform },
+        modal.querySelector<HTMLTextAreaElement>("#template-script")!.value,
         (script: string) => {
+          if (!modal.isConnected || !modal.open || modal.querySelector<HTMLSelectElement>("#template-platform")!.value !== platform)
+            throw new Error("The template or its operating system changed. Request a fresh draft for that target.");
           (
             modal.querySelector("#template-script") as HTMLTextAreaElement
           ).value = script;
         },
-      ),
-    );
+      );
+    });
     on("save-template", async () => {
       const parameters = [...inputs.children].map((row) => {
         const get = (key: string) =>
@@ -463,113 +488,164 @@ export function createOperations(ui: Item) {
     script = "",
     accept?: (script: string) => void,
     alertTask?: { alert: Item; intent: "diagnose" | "fix" },
+    initialPrompt = "",
   ) {
-    const cfg = alertTask ? await api("/ai/settings") : null;
     const fixing = alertTask?.intent === "fix";
     const modal = dialog(
       alertTask ? (fixing ? "AI fix · review a repair" : "AI diagnose · investigate the cause") : "Ask Speck AI",
-      `<p>${d.label ? esc(d.label) + " · " : ""}${d.platform === "linux" ? "Linux shell" : "Windows PowerShell"}</p>${alertTask ? `<div class="ai-alert-context"><strong>${esc(alertTask.alert.title)}</strong><p>${esc(alertTask.alert.explanation || "Investigate the selected alert.")}</p></div>${!d.online ? '<p class="callout">This machine is offline. AI can review recorded evidence; reconnect it before running a script.</p>' : ""}${cfg?.configured ? "" : '<p class="callout">Connect OpenAI in Settings to use AI assistance.</p>'}` : ""}<label>What do you need?<textarea id="ai-prompt" rows="3" placeholder="Find out why this application cannot reach the server"></textarea></label>${d.id ? '<label class="check"><input id="ai-health" type="checkbox" checked> Include current OS, CPU, memory, disks and service status</label>' : ""}${alertTask?.alert.job ? '<label class="check"><input id="ai-job-evidence" type="checkbox"> Include original script and job output (may contain sensitive data)</label>' : ""}<small>Your request${alertTask ? ", alert and job metadata" : ""} and selected context are sent to OpenAI. ${fixing ? "Review the proposed changes and verification before running a repair." : "AI suggests diagnostic checks; review any script before running it."}</small><div class="toolbar">${button("ai-ask", alertTask ? (fixing ? "Propose a fix" : "Diagnose this alert") : "Get help", true)}</div><div id="ai-result" aria-live="polite"></div>`,
+      `<p><b>${esc(d.label || (d.id ? "Selected machine" : "Reusable draft"))}</b> · ${d.platform === "linux" ? "Linux shell" : "Windows PowerShell"}</p>${alertTask ? `<div class="ai-alert-context"><strong>${esc(alertTask.alert.title)}</strong><p>${esc(alertTask.alert.explanation || "Investigate the selected alert.")}</p></div>` : ""}${d.id && !d.online ? '<p class="callout">This machine is offline. AI can review recorded evidence; reconnect it before running a script.</p>' : ""}<div data-ai-connection role="status">Checking AI connection…</div><label>What do you need?<textarea id="ai-prompt" required minlength="3" maxlength="8000" rows="3" placeholder="Find out why this application cannot reach the server"></textarea></label><fieldset class="ai-context-options"><legend>Context shared with this request</legend>${d.id ? '<label class="check"><input id="ai-health" type="checkbox" checked><span>Include recorded OS, CPU, memory, disks and service status<small>Recorded health can be out of date. Verify fresh evidence before acting.</small></span></label>' : '<small>No machine health is included in this reusable draft.</small>'}${script ? `<label class="check"><input id="ai-existing-script" type="checkbox"> Include the terminal draft (may contain sensitive data)</label><details><summary>Review terminal draft</summary><pre>${esc(script)}</pre></details>` : ""}${alertTask?.alert.job ? '<label class="check"><input id="ai-job-evidence" type="checkbox"> Include original script and job output (may contain sensitive data)</label>' : ""}</fieldset><small>Your request${alertTask ? ", alert and job metadata" : ""} and selected context are sent to OpenAI. ${fixing ? "Review the proposed changes and verification before running a repair." : "Review any suggested script before running it."}</small><div class="toolbar">${button("ai-ask", alertTask ? (fixing ? "Propose a fix" : "Diagnose this alert") : "Get help", true)}<button id="ai-cancel" class="secondary" hidden>Stop waiting</button></div><div id="ai-result" aria-live="polite"></div>`,
     );
     modal.classList.add("assistant-dialog");
-    if (alertTask) {
-      (modal.querySelector("#ai-prompt") as HTMLTextAreaElement).value = fixing
+    const prompt = modal.querySelector<HTMLTextAreaElement>("#ai-prompt")!;
+    const ask = modal.querySelector<HTMLButtonElement>("#ai-ask")!;
+    const cancel = modal.querySelector<HTMLButtonElement>("#ai-cancel")!;
+    const out = modal.querySelector<HTMLElement>("#ai-result")!;
+    const connection = modal.querySelector<HTMLElement>("[data-ai-connection]")!;
+    const contextInputs = [...modal.querySelectorAll<HTMLInputElement>(".ai-context-options input")];
+    let configured = false, busy = false, generation = 0, controller: AbortController | undefined;
+    const live = () => modal.isConnected && modal.open;
+    const controls = () => { ask.disabled = !configured || busy; prompt.disabled = busy; contextInputs.forEach(i => i.disabled = busy); cancel.hidden = !busy; };
+    controls();
+    prompt.value = initialPrompt || (alertTask ? (fixing
         ? "Find the root cause of this alert and propose a targeted repair with verification and rollback. If evidence is insufficient, explain what to check first."
-        : "Diagnose the root cause of this alert. Explain the evidence, likely causes and any missing information. Suggest read-only checks to confirm the cause.";
-      (modal.querySelector("#ai-ask") as HTMLButtonElement).disabled = !cfg?.configured;
-    }
-    on("ai-ask", async () => {
-      modal.querySelector("#ai-result")!.innerHTML =
-        '<p class="working">Working on your request…</p>';
-      const result = await api("/ai/assist", "POST", {
-        prompt: value("ai-prompt"),
-        platform: d.platform || "windows",
-        device_id: d.id || null,
-        script,
-        ...(alertTask ? {
-          alert_id: alertTask.alert.id,
-          alert_intent: alertTask.intent,
-          include_job_evidence: !!(modal.querySelector("#ai-job-evidence") as HTMLInputElement)?.checked,
-        } : {}),
-        include_health: !!(
-          document.getElementById("ai-health") as HTMLInputElement
-        )?.checked,
-      }).catch((error: Error) => {
-        modal.querySelector("#ai-result")?.replaceChildren();
-        throw error;
-      });
-      if (!modal.isConnected) return;
-      const out = modal.querySelector("#ai-result")!;
-      out.innerHTML = `<div class="ai-answer"><p>${esc(result.summary)}</p>${result.script ? `<h3>Suggested script</h3><pre>${esc(result.script)}</pre>` : ""}${result.caution ? `<p class="callout">${esc(result.caution)}</p>` : ""}<h3>Verify</h3><p>${esc(result.verification)}</p>${result.script ? `<div class="toolbar">${button("ai-use", alertTask ? "Review script →" : "Use this script", true)}${button("ai-template", "Save as template")}</div>` : ""}</div>`;
-      on("ai-use", async () => {
-        modal.close();
-        if (accept) accept(result.script);
-        else if (d.id) {
-          await ui.openDevice(d.id, "scripts");
-          ui.setScript(result.script, alertTask ? {
-            title: alertTask.alert.title,
-            caution: result.caution,
-            verification: result.verification,
-          } : undefined);
-        } else
-          templateEditor({
-            name: "AI draft",
-            platform: d.platform || "windows",
-            script: result.script,
-          });
-      });
-      on("ai-template", () => {
-        modal.close();
-        templateEditor({
-          name: "AI draft",
-          platform: d.platform || "windows",
-          script: result.script,
-        });
-      });
-    });
+        : "Diagnose the root cause of this alert. Explain the evidence, likely causes and any missing information. Suggest read-only checks to confirm the cause.") : "");
+    const abandon = () => { generation++; controller?.abort(); busy = false; controls(); };
+    modal.addEventListener("close", abandon);
+    cancel.onclick = () => { abandon(); out.innerHTML = '<p role="status">Stopped waiting. Your request is retained; no script has run.</p>'; };
+    const invalidate = () => { generation++; if (out.childElementCount) out.innerHTML = '<p class="muted">Request context changed. Ask again to review an updated draft.</p>'; };
+    prompt.oninput = invalidate; contextInputs.forEach(i => i.onchange = invalidate);
+    const loadConnection = async () => {
+      configured = false; controls(); connection.textContent = "Checking AI connection…";
+      try {
+        const cfg = await api("/ai/settings"); if (!live()) return;
+        configured = !!cfg.configured;
+        connection.innerHTML = configured ? "Connected to OpenAI" : '<p class="callout">Connect OpenAI in Settings to use AI assistance.</p><a class="text-link" href="#settings" data-ai-settings-link>Open AI settings →</a>';
+        connection.querySelector("[data-ai-settings-link]")?.addEventListener("click", () => modal.close());
+      } catch (err) {
+        if (!live()) return;
+        connection.innerHTML = `<p class="callout" role="alert">AI settings unavailable. ${esc((err as Error).message)}</p><button class="secondary" data-ai-connection-retry>Retry AI connection</button>`;
+        connection.querySelector<HTMLButtonElement>("[data-ai-connection-retry]")!.onclick = () => void loadConnection();
+      } finally { if (live()) controls(); }
+    };
+    ask.onclick = async () => {
+      if (busy || !configured || !live()) return;
+      prompt.value = prompt.value.trim(); if (!prompt.reportValidity()) return;
+      const version = ++generation;
+      controller = new AbortController(); busy = true; controls();
+      out.innerHTML = '<p class="working" role="status">Working on your request…</p>';
+      try {
+        const result = await api("/ai/assist", "POST", {
+          prompt: prompt.value, platform: d.platform || "windows", device_id: d.id || null,
+          script: modal.querySelector<HTMLInputElement>("#ai-existing-script")?.checked ? script : "",
+          ...(alertTask ? { alert_id: alertTask.alert.id, alert_intent: alertTask.intent,
+            include_job_evidence: !!modal.querySelector<HTMLInputElement>("#ai-job-evidence")?.checked } : {}),
+          include_health: !!modal.querySelector<HTMLInputElement>("#ai-health")?.checked,
+        }, controller.signal);
+        if (!live() || version !== generation) return;
+        if (!result || typeof result.summary !== "string" || !result.summary.trim() ||
+            ["script", "caution", "verification"].some(k => result[k] != null && typeof result[k] !== "string"))
+          throw new Error("AI returned an incomplete answer. Please retry.");
+        out.innerHTML = `<div class="ai-answer"><p>${esc(result.summary)}</p>${result.script ? `<h3>Suggested script · ${d.platform === "linux" ? "Linux shell" : "Windows PowerShell"}</h3><pre>${esc(result.script)}</pre>` : ""}${result.caution ? `<p class="callout">${esc(result.caution)}</p>` : ""}${result.verification ? `<h3>Verify</h3><p>${esc(result.verification)}</p>` : ""}${result.script ? `<div class="toolbar">${button("ai-use", d.id || accept ? "Review script →" : "Review as template", true)}${button("ai-template", "Save as template")}</div>` : ""}<p data-ai-handoff-error role="alert"></p></div>`;
+        out.scrollIntoView({ block: "nearest" });
+        const use = out.querySelector<HTMLButtonElement>("#ai-use");
+        if (use) use.onclick = async () => {
+          if (busy || version !== generation || !live()) return;
+          busy = true; controls(); use.disabled = true;
+          const error = out.querySelector<HTMLElement>("[data-ai-handoff-error]")!;
+          try {
+            if (accept) accept(result.script);
+            else if (d.id) {
+              await ui.openDevice(d.id, "scripts");
+              if (!live() || version !== generation) return;
+              if (ui.setScript(result.script, { title: alertTask?.alert.title || "AI draft · review before running", caution: result.caution,
+                verification: result.verification, alert: !!alertTask }, d.id) === false)
+                throw new Error("The target terminal is unavailable. Your draft is retained; retry or save it as a template.");
+            } else templateEditor({ name: "AI draft", platform: d.platform || "windows", script: result.script });
+            modal.close();
+          } catch (err) { if (live()) error.textContent = `Could not open the review. ${(err as Error).message}`; }
+          finally { busy = false; if (live()) { controls(); use.disabled = false; } }
+        };
+        const save = out.querySelector<HTMLButtonElement>("#ai-template");
+        if (save) save.onclick = () => {
+          if (busy || version !== generation) return;
+          templateEditor({ name: "AI draft", platform: d.platform || "windows", script: result.script }); modal.close();
+        };
+      } catch (err) {
+        if (!live() || version !== generation) return;
+        out.innerHTML = `<p class="callout" role="alert">${esc((err as Error).message)}</p><p>Your request and selected context are retained. No script has run; you can retry.</p>`;
+        out.scrollIntoView({ block: "nearest" });
+        notify((err as Error).message, true);
+      } finally { if (version === generation) { busy = false; if (live()) controls(); } }
+    };
+    void loadConnection();
+    return modal;
   }
   async function renderAssistant() {
     ui.loading("Loading AI assistant…");
-    const cfg = await api("/ai/settings");
     content(
-      `<div class="assistant-home"><h2>What are we fixing?</h2><p>Draft a script, diagnose an issue, or create a reusable template.</p><div class="assistant-composer"><label>Operating system<select id="assistant-platform"><option value="windows">Windows · PowerShell</option><option value="linux">Linux · shell</option></select></label><label>Your task<textarea id="assistant-task" rows="4" placeholder="Write a script that checks disk space and reports services that failed to start"></textarea></label><div class="toolbar">${button("assistant-start", "Ask Speck", true)}<small>${cfg.configured ? "Connected · " + esc(cfg.model) : "Connect OpenAI in Settings"}</small></div></div><div class="assistant-prompts">${["Diagnose a slow workstation", "Check DNS and connectivity", "Draft a software installer"].map((s) => `<button class="secondary" data-prompt="${esc(s)}">${esc(s)}</button>`).join("")}</div><p class="muted assistant-note">AI drafts are reviewed before execution. For machine context, use Ask AI in its detail panel.</p></div>`,
+      `<div class="assistant-home"><h2>What are we fixing?</h2><p>Draft a script, diagnose an issue, or create a reusable template.</p><div class="assistant-composer"><label>Operating system<select id="assistant-platform"><option value="windows">Windows · PowerShell</option><option value="linux">Linux · shell</option></select></label><label>Your task<textarea id="assistant-task" required minlength="3" maxlength="8000" rows="4" placeholder="Write a script that checks disk space and reports services that failed to start"></textarea></label><div class="toolbar">${button("assistant-start", "Ask Speck", true)}<small data-assistant-connection role="status">Checking AI connection…</small></div></div><div class="assistant-prompts">${["Diagnose a slow workstation", "Check DNS and connectivity", "Draft a software installer"].map((s) => `<button class="secondary" data-prompt="${esc(s)}">${esc(s)}</button>`).join("")}</div><p class="muted assistant-note">AI drafts are reviewed before execution. For machine context, use Ask AI in its detail panel.</p></div>`,
     );
+    const task = document.querySelector<HTMLTextAreaElement>("#assistant-task")!;
+    const platform = document.querySelector<HTMLSelectElement>("#assistant-platform")!;
+    task.value = assistantDraft.task; platform.value = assistantDraft.platform;
+    const remember = () => { assistantDraft = { task: task.value, platform: platform.value }; };
+    task.oninput = remember; platform.onchange = remember;
     on("assistant-start", async () => {
-      const prompt = value("assistant-task");
-      await assistDialog({ platform: value("assistant-platform") });
-      (document.getElementById("ai-prompt") as HTMLTextAreaElement).value =
-        prompt;
+      task.value = task.value.trim(); if (!task.reportValidity()) return;
+      remember(); await assistDialog({ platform: platform.value }, "", undefined, undefined, task.value);
     });
     document.querySelectorAll<HTMLButtonElement>("[data-prompt]").forEach(
       (el) =>
         (el.onclick = () => {
-          (
-            document.getElementById("assistant-task") as HTMLTextAreaElement
-          ).value = el.dataset.prompt!;
+          task.value = el.dataset.prompt!; remember(); task.focus();
         }),
     );
+    const status = document.querySelector<HTMLElement>("[data-assistant-connection]")!;
+    try {
+      const cfg = await api("/ai/settings"); if (!status.isConnected) return;
+      status.textContent = cfg.configured ? "Connected · " + (cfg.model || "OpenAI") : "Connect OpenAI in Settings";
+    } catch (err) { if (status.isConnected) status.textContent = `AI connection unavailable. ${(err as Error).message} Your draft is retained; Ask Speck lets you retry.`; }
   }
   async function settingsPanel() {
     const el = document.createElement("section");
     el.className = "settings-grid";
-    el.innerHTML = loadingState("Loading AI settings…");
+    el.innerHTML = `<article class="panel" data-ai-settings><span class="eyebrow">AI ASSISTANT</span><h2>OpenAI</h2><div data-ai-settings-body>${loadingState("Loading AI settings…")}</div></article><article class="panel"><span class="eyebrow">REMOTE ACCESS</span><h2>Remote workspace</h2><label>Open remote sessions with<select id="remote-client"><option value="browser">Browser workspace</option><option value="desktop">Speck Desktop, with browser fallback</option></select></label><p>Speck Desktop adds shared clipboard and native key shortcuts.</p><a class="text-link" href="#downloads">Download Speck Desktop →</a></article>`;
     document.getElementById("content")!.append(el);
-    const cfg = await api("/ai/settings");
-    if (!el.isConnected) return;
-    el.innerHTML = `<article class="panel"><span class="eyebrow">AI ASSISTANT</span><h2>OpenAI</h2><p>${cfg.configured ? "Connected" : "Not connected"}. Keys stay encrypted on the server.</p><label>Model<input id="ai-model" value="${esc(cfg.model)}"></label><label>API key<input id="ai-key" type="password" autocomplete="new-password" placeholder="${cfg.configured ? "Leave blank to keep the current key" : "OpenAI API key"}"></label>${button("save-ai", "Save AI settings", true)}</article><article class="panel"><span class="eyebrow">REMOTE ACCESS</span><h2>Remote workspace</h2><label>Open remote sessions with<select id="remote-client"><option value="browser">Browser workspace</option><option value="desktop">Speck Desktop, with browser fallback</option></select></label><p>Speck Desktop adds shared clipboard and native key shortcuts.</p><a class="text-link" href="#downloads">Download Speck Desktop →</a></article>`;
-    document.getElementById("content")!.append(el);
-    (el.querySelector("#remote-client") as HTMLSelectElement).value =
-      localStorage.getItem("speck-remote-client") || "browser";
-    el.querySelector("#remote-client")!.addEventListener("change", () =>
-      localStorage.setItem("speck-remote-client", value("remote-client")),
-    );
-    on("save-ai", async () => {
-      await api("/ai/settings", "PUT", {
-        model: value("ai-model"),
-        key: value("ai-key"),
-      });
-      (document.getElementById("ai-key") as HTMLInputElement).value = "";
-      notify("AI settings saved");
-    });
+    const preference = el.querySelector<HTMLSelectElement>("#remote-client")!;
+    preference.value = localStorage.getItem("speck-remote-client") || "browser";
+    preference.onchange = () => localStorage.setItem("speck-remote-client", preference.value);
+    const panel = el.querySelector<HTMLElement>("[data-ai-settings-body]")!;
+    const loadAI = async () => {
+      panel.innerHTML = loadingState("Loading AI settings…");
+      try {
+        const cfg = await api("/ai/settings");
+        if (!panel.isConnected) return;
+        panel.innerHTML = `<p>${cfg.configured ? "Connected" : "Not connected"}. Keys stay encrypted on the server.</p><label>Model<input id="ai-model" required value="${esc(cfg.model || "")}"></label><label>API key<input id="ai-key" type="password" autocomplete="new-password" placeholder="${cfg.configured ? "Leave blank to keep the current key" : "OpenAI API key"}"></label>${button("save-ai", "Save AI settings", true)}${ui.role() !== "admin" ? '<p class="resource-note">Administrator access is required to change AI settings.</p>' : ""}<p data-ai-settings-error role="alert"></p>`;
+        panel.querySelector<HTMLButtonElement>("#save-ai")!.disabled = ui.role() !== "admin";
+        on("save-ai", async () => {
+          if (ui.role() !== "admin") return;
+          const save = panel.querySelector<HTMLButtonElement>("#save-ai")!;
+          const model = panel.querySelector<HTMLInputElement>("#ai-model")!;
+          model.value = model.value.trim();
+          if (!model.reportValidity()) return;
+          save.disabled = true;
+          const error = panel.querySelector("[data-ai-settings-error]")!;
+          error.textContent = "";
+          try {
+            await api("/ai/settings", "PUT", { model: model.value, key: panel.querySelector<HTMLInputElement>("#ai-key")!.value });
+            if (!panel.isConnected) return;
+            panel.querySelector<HTMLInputElement>("#ai-key")!.value = "";
+            notify("AI settings saved");
+          } catch (err) { if (panel.isConnected) error.textContent = (err as Error).message; }
+          finally { save.disabled = ui.role() !== "admin"; }
+        });
+      } catch (error) {
+        if (!panel.isConnected) return;
+        panel.innerHTML = `<p class="resource-notice" role="status">AI settings unavailable. ${esc((error as Error).message)}</p><button class="secondary" data-retry-ai-settings>Retry AI settings</button>`;
+        panel.querySelector<HTMLButtonElement>("[data-retry-ai-settings]")!.onclick = () => void loadAI();
+      }
+    };
+    await loadAI();
   }
   return {
     renderPatches,
@@ -583,5 +659,6 @@ export function createOperations(ui: Item) {
     previewPanel,
     settingsPanel,
     showBatch,
+    reset: () => { assistantDraft = { platform: "windows", task: "" }; },
   };
 }

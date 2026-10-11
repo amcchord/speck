@@ -79,9 +79,13 @@ model is `gpt-5.4-mini`, configurable through Settings or `SPECK_AI_MODEL`.
 The key never reaches the browser. Stored settings and template scripts are
 encrypted with the server's existing encryption key.
 
-Ask for scripts or help diagnosing an issue. Health context is selectable and limited
-to OS, utilization, disks, collection timestamps and service names/status. Review a draft, then copy it into
-the terminal or a template. AI has no job-execution tool.
+Ask for scripts or help diagnosing an issue. The selected endpoint supplies its
+identity and platform. Health is selectable; an existing terminal script is
+separate, visible opt-in context. Health is limited to OS, utilization, disks, collection
+timestamps and service names/status. Missing or stale observations are not
+proof of health. Review a draft, then copy it into the terminal or a template.
+AI has no job-execution tool. Failed requests and terminal handoffs retain the
+task and draft so an operator can retry or copy it.
 
 On **Alerts**, select **AI diagnose** or **AI fix** for assistance tied to the
 selected condition and machine. Review the proposed script and verification, then
@@ -93,12 +97,26 @@ The remote workspace's **Screen assistant** sends the displayed screen and your
 request to OpenAI when invoked. It can explain the screen or propose a small
 computer-use step. Review and explicitly apply every step. Coordinates, keys and
 action counts are bounded; unsupported or sensitive steps require manual control.
-A changed screenshot invalidates a proposed step. The initial screenshot-only
+A changed screenshot, closed/disconnected session or proposal older than two
+minutes invalidates a step. A step can be applied once; a failed activity receipt
+does not make sent input replayable. The next request retains the original task
+and up to five applied navigation summaries for this remote client, omitting
+typed text. Editing the task clears that history. The initial screenshot-only
 computer-tool exchange is fulfilled without input to the machine. No subsequent
 action runs automatically. Screens can contain sensitive information: the UI
 explains what is sent before the request. Responses use `store:false`; provider
 retention policies still apply. Audit entries retain request metadata, not prompts
-or screenshots. Ten requests per minute per operator are allowed.
+or screenshots; computer proposal receipts bind the operator, endpoint and
+ordered action types. Ten requests per minute per operator are allowed.
+
+External agents use scoped REST/MCP access for endpoint commands, job receipts,
+files and infrastructure APIs. Their initialization context describes current
+capabilities and exact endpoint identities. Personal tokens do not open
+interactive browser shells or remote-screen sessions. Authorized REST clients
+can retrieve existing opt-in endpoint previews; MCP binary responses provide
+download metadata rather than image pixels. MCP provides tools and
+reference resources, with no reusable prompt templates. See the deployed
+[external agent guide](https://speckrmm.com/agents.md).
 
 Implementation follows OpenAI's [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
 and [computer-use protocol](https://developers.openai.com/api/docs/guides/tools-computer-use).

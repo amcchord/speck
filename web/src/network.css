@@ -1,4 +1,5 @@
 /* Network, Keys and API pages. Shared control geometry stays in ui.css. */
+.net-retry-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; }
 .net-intro p { margin: 0 0 16px; color: var(--muted); }
 .net-summary { margin-bottom: 8px; }
 .net-note { margin: 0 0 14px; font-size: 13px; max-width: 900px; }

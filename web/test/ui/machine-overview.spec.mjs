@@ -26,6 +26,23 @@ async function frameFits(page) {
   expect(Math.abs(box.width / box.height - 16 / 9)).toBeLessThan(.01);
   expect(await frame.evaluate(el => el.scrollHeight <= el.clientHeight + 1)).toBeTruthy();
 }
+
+test('queued edit-modal and machine dismissal return focus to the machine', async ({page}) => {
+  await signIn(page);
+  await page.locator('#device-edit').click();
+  await expect(page.locator('dialog:modal')).toBeVisible();
+  await page.evaluate(() => new Promise(resolve => {
+    const modal = document.querySelector('dialog:modal');
+    const pane = document.getElementById('machine-details');
+    pane.addEventListener('close', resolve, {once:true});
+    modal.querySelector('.close').focus();
+    modal.close();
+    pane.close();
+  }));
+  await expect(page.locator('.device-drawer')).toHaveCount(0);
+  await expect(page.locator('[data-device="frontdesk"]').first()).toBeFocused();
+});
+
 for (const width of [1440, 834, 760, 390, 320]) {
   test(`machine essentials, actions and preview fit at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 960 });

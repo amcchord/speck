@@ -24,6 +24,50 @@ async function setup(page,{delay=0}={}) {
   });
   return counts;
 }
+
+test('queued resource dismissal preserves a newly focused infrastructure search',async({page})=>{
+  const counts=await setup(page);
+  await page.goto('/#infrastructure');
+  await page.locator('#infra-search').fill('Example cloud');
+  await page.getByRole('button',{name:'Example cloud',exact:true}).click();
+  await expect(page.locator('.resource-flyout')).toContainText('32 GB');
+  await page.evaluate(()=>new Promise(resolve=>{
+    const pane=document.querySelector('.resource-flyout');
+    const query=document.getElementById('infra-search');
+    pane.addEventListener('close',resolve,{once:true});
+    pane.close();
+    query.focus();
+    query.value='';
+  }));
+  await expect(page.locator('#infra-search')).toBeFocused();
+  await expect(page.locator('#infra-search')).toHaveValue('');
+  // Keep the opener connected until the close event has settled; filtering
+  // recreates resource buttons and would otherwise conceal stolen focus.
+  await page.locator('#infra-search').dispatchEvent('input');
+  await expect(page.getByRole('button',{name:'pve-1',exact:true})).toBeVisible();
+  expect(counts.writes).toBe(0);
+});
+
+test('queued review-modal and resource dismissal return focus to the resource',async({page})=>{
+  const counts=await setup(page);
+  await page.goto('/#infrastructure');
+  const open=page.getByRole('button',{name:'Example cloud',exact:true});
+  await open.click();
+  await page.locator('.resource-flyout').getByRole('button',{name:'Reboot',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Reboot',exact:true})).toBeVisible();
+  await page.evaluate(()=>new Promise(resolve=>{
+    const modal=document.querySelector('dialog:modal');
+    const pane=document.querySelector('.resource-flyout');
+    pane.addEventListener('close',resolve,{once:true});
+    modal.querySelector('.close').focus();
+    modal.close();
+    pane.close();
+  }));
+  await expect(page.locator('.resource-flyout')).toHaveCount(0);
+  await expect(open).toBeFocused();
+  expect(counts.writes).toBe(0);
+});
+
 for(const width of [1440,834,390]) test(`cloud, host and Slide details share a readable flyout at ${width}px`,async({page},info)=>{
   await page.setViewportSize({width,height:1000});const counts=await setup(page);
   await page.goto('/#infrastructure');

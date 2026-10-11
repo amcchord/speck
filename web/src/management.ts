@@ -664,7 +664,7 @@ export function createManagement(ui: Item) {
     document
       .getElementById("content")!
       .insertAdjacentHTML(
-        "afterbegin",
+        "beforeend",
         `<div class="settings-grid"><article class="panel"><span class="eyebrow">ACCESS</span><h2>Your account${isAdmin() ? " & operators" : ""}</h2><p>Passwords, two-factor sign-in and active sessions.</p>${button("open-accounts", "Manage access")}</article><article class="panel"><span class="eyebrow">FLEET LIFECYCLE</span><h2>Archived machines</h2><p>Review retired instances or return them to the fleet.</p>${button("open-archives", "View archive")}</article></div>`,
       );
     on("open-accounts", () => {

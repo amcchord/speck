@@ -1,3 +1,6 @@
+.infra-result-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+.infra-scope:focus-visible { outline: 3px solid #3775b6; outline-offset: 2px; }
+.infra-scope-list { scroll-padding: 4px; }
 .infra-intro,
 .infra-card-heading,
 .infra-actions,

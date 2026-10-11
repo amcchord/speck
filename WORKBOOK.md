@@ -1225,3 +1225,160 @@ no required GitHub branch check was bypassed and no PR was merged.
 [PR #27](https://github.com/amcchord/speck/pull/27) is based on the still-open UX
 PR #26 so its review diff contains the entity work. Private manifests, snapshots,
 acceptance logs and live screenshots stay in ignored `output/entity-navigation/`.
+
+## Console UI and UX polish — October 11, 2026
+
+Three agents reviewed Fleet/machine panes, network/infrastructure and operational
+workspaces. This chat was the sole deployment owner. The release preserves main
+`db2f55b` and the newer UX/entity-navigation work through `df79045`; see
+[the change and release record](docs/operations/ui-ux-polish-2026-10-11.md) and
+[the screenshot gallery](docs/screenshots/ui-ux-polish/README.md).
+
+Published web source `c807a0a3734cf9e0fc45c0b70801143bfd3e4064` as
+`20261011T202052Z-ui-ux-polish-c807a0a`. TypeScript/Vite, 60 web units and 441 local
+Chromium/WebKit browser checks passed, with one existing WebKit touch-drag skip.
+The final synthetic sweep covers 21 pages at four widths; the private live sweep
+covers all 21 on desktop/phone. Both have zero page errors or horizontal overflow.
+Read-only live acceptance verifies machine/hypervisor, customer/machine,
+IP/network and physical-port links, Back and reload on Chromium/WebKit. No
+unexpected writes occurred; temporary browser sessions were logged out.
+
+The release fetched main and verified ancestry, held the shared release lock,
+matched the inspected baseline and compared the index immediately before atomic
+publication. All 27 public assets match. Index SHA-256:
+`caf3ace3caa4d0cc738b2be7b5887b920f115a91993c61accf59efc341bad441`.
+Rollback: `/var/lib/speck-rollback/20261011T202052Z-ui-ux-polish-c807a0a/web`.
+PID 151449, backend/dependencies/environment, 12 protected configuration groups
+and endpoint downloads are unchanged; there was no service restart. No new
+Windows/Linux endpoint or native/iOS runtime capability is claimed.
+
+[PR #28](https://github.com/amcchord/speck/pull/28) is stacked on PR #27 to preserve
+deployed work absent from main. GitHub checks were pending at publication; none
+were bypassed and no PR was merged. Private evidence stays in ignored
+`output/ui-ux-polish/`. Final screenshot review identified tablet summary crowding,
+narrow Fleet name wrapping and API explorer error/lifecycle gaps for a follow-up.
+
+
+### Follow-up production acceptance — Console UI and UX polish
+
+Published `32ddc002dbd44f2fb8d9243d462aa868ef67c7ab` as
+`20261011T202614Z-ui-ux-followup-32ddc00`. This follow-up repairs tablet summary
+crowding, 320 px Fleet name wrapping and API explorer
+loading/retry/error/navigation states. Fresh TypeScript/Vite, 60 units and all
+114 relevant browser checks passed; the complete first-batch suite passed 441
+checks with one existing skip. Two new collapsed-group test assertions were
+corrected before the final passing run. The synthetic follow-up sweep again
+covers 21 pages at four widths with zero page errors or overflow. The public
+gallery contains 37 synthetic captures.
+
+Read-only live navigation acceptance passed in Chromium 1440 px and WebKit 390
+px, with no errors or unexpected writes. The final live sweep covers all 21 pages
+at 1440/834/390/320 px: 84 captures with zero errors, overflow or unexpected
+writes. The review retained 920 screenshot files, with 37 public synthetic
+gallery selections. All 27 public files match the
+release. Final index SHA-256:
+`38f3c3ea0500df18826e8ba68ce6323796fdd155e374b9031b838886db29b4a2`. Rollback:
+`/var/lib/speck-rollback/20261011T202614Z-ui-ux-followup-32ddc00/web`.
+
+Main ancestry, the inspected baseline, shared lock and immediately preceding
+live index were checked again. The original protected
+backend/dependencies/environment, all 12 configuration groups, endpoint
+downloads and PID 151449 remain unchanged. No service restart, endpoint job,
+restore or equipment power action occurred. GitHub backend/unit checks passed
+for both application commits. The `32ddc00` hosted browser run was pending at
+final verification; the final record commit changes documentation only.
+No branch check was bypassed or PR merged.
+
+## AI context, reviewed computer steps and agent APIs — October 11, 2026
+
+Three agents reviewed assistant context, frontend draft/screen workflows and
+external REST/MCP contracts. The parent chat remained the sole deployment owner.
+See the [AI change, validation and release record](docs/operations/ai-workflow-polish-2026-10-11.md)
+and [18-image synthetic gallery](docs/screenshots/ai-workflow-polish/README.md).
+
+Published `50d8fefc192c5aad1bcfb9a3ce266e0d5bc493ed` as
+`20261011T210342Z-ai-polish-50d8fef`. Visible context controls, authoritative
+endpoint/platform evidence, retained drafts and bounded prompts improve script
+review. Computer actions validate the complete batch, current screen/session
+and live Guacamole transport, claim each proposal once and retain redacted
+navigation history. External agents get effective scopes, endpoint details,
+validated arguments and bounded command polling with truthful receipts.
+
+The final local core passed: 399 backend tests, Linux agent/Proxmox race/runtime
+checks, Windows/Linux cross-builds, TypeScript/Vite, 60 units and 499 browser
+tests, with one existing WebKit touch-drag skip. Real-provider synthetic Windows
+and Linux drafts and a computer target proposal passed. The Linux draft also
+passed syntax and execution in a disposable, read-only Linux container; the
+Windows draft and computer proposal were reviewed without applying them to
+physical machines. Native/iOS qualification is unchanged.
+
+Read-only live AI acceptance passed on desktop and phone, including one
+synthetic task-only provider draft. All 21 pages were captured at four widths:
+84 private screenshots with zero page errors, overflow or unexpected writes.
+The complete UI/AI review retained 1,067 private screenshot files and 55 public
+synthetic gallery selections. Temporary browser sessions were logged out.
+
+Origin/main was fetched and ancestry verified before the build and publication;
+newer deployed UX/entity work and prior UI releases were preserved. Publication
+held the shared lock, matched the reconciled baseline and compared the live
+index immediately before replacement. Periodic settings checkpoints
+`management_tick` and `slide_restore_sync` were excluded after explaining their
+baseline drift; saved settings were preserved without writing configuration.
+The restart gate found no active jobs, recovery, provider/connector requests or
+remote transports. Full rollback and consistent database backups are at
+`/var/lib/speck-rollback/20261011T210342Z-ai-polish-50d8fef`.
+
+All 27 public files match. Final index SHA-256:
+`cc2d0ce2594b4ca640170e00764c4359fc976c2ded6b3cf808a61446a82b5cbe`.
+Backend source matches the release manifest; dependencies, environment, all
+14 protected configuration/identity groups and agent downloads are preserved.
+The service is active and healthy after a brief restart, PID 398942. No new
+endpoint binary, endpoint command, physical input, restore or power operation
+was used for this review.
+
+Source and records are pushed on [PR #28](https://github.com/amcchord/speck/pull/28),
+stacked on PR #27. Both hosted backend/unit checks for the release passed. Its
+hosted browser run subsequently failed one Home search/filter assertion after
+498 passes and one existing skip: a queued drawer Close handler could steal
+focus after search clearing began. Earlier AI source passed all hosted checks.
+Local validation was the release gate; no branch check was
+bypassed and no PR was merged. Private evidence remains in ignored
+`output/ai-polish/` and `output/ui-ux-polish/`.
+
+
+### Web focus acceptance follow-up — AI and console review
+
+Published `9dd65720a064de8872bc837e04c3cb53dfe968f8` as `20261011T213141Z-drawer-focus-9dd6572`. Queued machine/resource dismissal preserves newly selected search fields and nested-modal dismissal returns focus to the correct opener. Fresh web build, 60 units and 509 Chromium/WebKit browser checks passed, with one existing touch-drag skip. The intermediate candidate's local/hosted failures were not counted as passes or published. The `source-map-js` development patch resolves the reported audit advisory; a fresh install reports zero vulnerabilities.
+
+Live desktop/phone before/after focus and AI review checks passed. A task-only synthetic provider draft was reviewed without executing it. A fresh 21-page/four-width sweep produced 84 private captures with no page errors, overflow, loading/error states or unexpected writes. Sessions were logged out.
+
+Main ancestry, newer deployed work, the live baseline, shared lock and immediately preceding index were checked. All 27 public files match; index SHA-256 `233fbab20cca8f212a4a0682cbb0e5889b4d45ecfb6b50736e20d87a3314b2b4`. Web rollback: `/var/lib/speck-rollback/20261011T213141Z-drawer-focus-9dd6572/web`. Backend, dependencies/environment, all 14 protected groups, endpoint downloads and healthy PID 398942 are preserved without a restart. All hosted backend, unit and browser checks pass for this source (browser run `38176452826`). No branch check was bypassed or PR merged. See the [complete release and qualification record](docs/operations/ai-workflow-polish-2026-10-11.md).
+
+
+### Remote status and fixture follow-up — AI and console review
+
+Published `6ccb2adc19048ea8c91216ab1a740dfec44f333e` as
+`20261011T214601Z-remote-header-6ccb2ad`. Phone machine title/status is readable, and
+connection/audio/error transitions no longer move remote controls. Tablet/desktop keeps
+normal flex layout; the full error remains in the screen overlay. Synthetic browser
+WebSockets are installed before document load and verify the actual Guacamole
+query-string URL is intercepted.
+
+Fresh production web build, 60 units and 519 Chromium/WebKit browser checks pass, with
+one existing touch-drag skip. Twenty focused remote checks cover five widths and six
+real synthetic protocol/status transitions; twelve focus regressions also pass. The
+gallery now includes 20 synthetic AI/remote images, for 57 public captures total. Final
+read-only live focus/AI review and 84 private page screenshots pass with no page errors,
+overflow, loading/error states or unexpected writes. No real endpoint input or
+additional provider call occurred; existing backend/platform qualification remains
+unchanged.
+
+Main ancestry, previous deployed sources, shared lock, exact baseline and immediately
+preceding index were checked. All 27 public files match; index SHA-256
+`d2c3444a0b383af64b01b792ed6a14c3cfed7247e6265688cc568d5acd8cb7eb`. Web rollback:
+`/var/lib/speck-rollback/20261011T214601Z-remote-header-6ccb2ad/web`. Backend,
+dependencies/environment, all 14 protected groups, endpoint downloads and healthy PID
+398942 remain unchanged without restart. All hosted checks for prior focus source
+`9dd6572` pass. All hosted backend, unit and browser checks pass for deployed source
+`6ccb2ad` (browser run `38177379280`: 519 passes and one existing skip). No branch check was bypassed or PR merged. See the [complete
+validation and release record](docs/operations/ai-workflow-polish-2026-10-11.md).

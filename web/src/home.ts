@@ -36,6 +36,7 @@ export function createHome(ui: Item) {
       const focused = document.activeElement instanceof HTMLElement ? document.activeElement.id : "";
       const input = document.getElementById("home-query") as HTMLInputElement | null;
       if (input) query = input.value;
+      const caret = input && focused === "home-query" ? [input.selectionStart, input.selectionEnd] : null;
       const scroll = window.scrollY;
       const data = (i: number) => results[i]?.status === "fulfilled" ? results[i].value : retained[i] || null;
       const fleet = data(0), alerts = data(1), network = data(2), schedules: Item[] | null = data(3);
@@ -54,11 +55,11 @@ export function createHome(ui: Item) {
     content(`<div class="home-workspace">
       <section class="home-hero" aria-labelledby="home-heading">
         <div class="home-intro"><span class="eyebrow">YOUR WORKSPACE</span><h2 id="home-heading">What needs your attention?</h2><p>Find a system, follow its connections, or turn a task into a plan.</p></div>
-        <form id="home-command" role="search" class="home-command"><div class="home-command-input">${icon("search")}<label class="sr-only" for="home-query">Filter connected machines by name, IP or linked domain</label><input id="home-query" type="search" autocomplete="off" placeholder="Filter connected machines by name, IP or linked domain…" aria-controls="home-results"><button type="submit" class="text-link" id="home-search-all">Search all resources ↵</button></div>${canOperate() ? `<button type="button" id="home-ask" class="primary home-ai-button">${icon("spark")}<span>Plan with AI</span></button>` : '<button type="submit" class="primary">Find</button>'}</form>
+        <form id="home-command" role="search" class="home-command"><div class="home-command-input">${icon("search")}<label class="sr-only" for="home-query">Filter connected machines by name, IP or linked domain</label><input id="home-query" type="search" autocomplete="off" placeholder="Search name, IP or domain…" aria-controls="home-results"><button type="submit" class="text-link" id="home-search-all">Search all resources ↵</button></div>${canOperate() ? `<button type="button" id="home-ask" class="primary home-ai-button">${icon("spark")}<span>Plan with AI</span></button>` : '<button type="submit" class="primary">Find</button>'}</form>
         <div class="home-shortcuts"><span>Jump to</span><a href="#fleet">${icon("fleet")}Fleet</a><a href="#alerts">${icon("alerts")}Alerts</a>${canOperate() ? '<a href="#network">'+icon("globe")+'Network & DNS</a><button id="home-schedule-shortcut">'+icon("calendar")+'Create a schedule</button>' : '<a href="#activity">'+icon("history")+'Activity</a>'}</div>
         ${canOperate() && !ai?.configured ? `<p class="home-ai-status">${ai ? 'Connect OpenAI in Settings to draft plans with AI.' : results[4] ? 'AI availability could not be checked.' : 'Checking AI availability…'} <a href="#assistant">Open AI assistant →</a></p>` : ""}
       </section>
-      ${failures.length ? `<div class="home-notice" role="status">Could not load: ${esc(failures.join(", "))}. Showing last successful evidence where available; its observation times remain below. Use Refresh to retry. ${paths.map((_,i)=>results[i]?.status==="rejected"?`<button class="text-link" data-retry-source="${i}">Retry ${esc(sources[i])}</button>`:"").join(" ")}</div>` : ""}
+      ${failures.length ? `<div class="home-notice" role="status">Could not load: ${esc(failures.join(", "))}. Showing last successful evidence where available; its observation times remain below. Use Refresh to retry.<div class="home-source-actions">${paths.map((_,i)=>results[i]?.status==="rejected"?`<button class="text-link" data-retry-source="${i}">Retry ${esc(sources[i])}</button>`:"").join(" ")}</div></div>` : ""}
       ${staleSources.length || network?.client_error ? `<div class="home-notice" role="status">Some relationships may be out of date. ${esc(staleSources.map((c: Item) => c.name).join(", "))}${network?.client_error ? ' · UniFi client inventory unavailable' : ''}. Open a system to inspect its evidence.</div>` : ""}
       ${pending.length ? `<p class="resource-note" role="status">Loading ${esc(pending.join(" · "))}… Available information appears immediately.</p>` : ""}
       <div class="home-stats" aria-label="Environment summary">
@@ -100,6 +101,10 @@ export function createHome(ui: Item) {
     document.querySelectorAll<HTMLButtonElement>("[data-retry-source]").forEach(b=>b.onclick=()=>void fetchSource(Number(b.dataset.retrySource)));
     document.querySelectorAll<HTMLButtonElement>("[data-home-filter]").forEach(b => b.onclick = () => setFilter(b.dataset.homeFilter!));
       if (focused.startsWith("home-")) document.getElementById(focused)?.focus({preventScroll:true});
+      if (caret) {
+        const refreshed = document.getElementById("home-query") as HTMLInputElement | null;
+        if (refreshed && caret[0] !== null && caret[1] !== null) { try { refreshed.setSelectionRange(caret[0], caret[1]); } catch {} }
+      }
       window.scrollTo({top:scroll, behavior:"instant"});
     }
     async function fetchSource(i:number){

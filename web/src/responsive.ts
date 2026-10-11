@@ -141,8 +141,20 @@ function revealActiveTab(tabs: HTMLElement) {
 }
 
 let queued = false;
+const observedHeads = new WeakSet<HTMLElement>();
+function sizePaneHeader(head: HTMLElement) {
+  if (observedHeads.has(head)) return;
+  observedHeads.add(head);
+  const pane = head.closest<HTMLDialogElement>('dialog')!;
+  const update = () => pane.style.setProperty('--pane-head', `${Math.ceil(head.getBoundingClientRect().height)}px`);
+  update();
+  const observer = new ResizeObserver(update);
+  observer.observe(head);
+  pane.addEventListener('close', () => observer.disconnect(), {once:true});
+}
 function enhance() {
   queued = false;
+  document.querySelectorAll<HTMLElement>('dialog.device-drawer[open] > .dialog-head').forEach(sizePaneHeader);
   document.querySelectorAll<HTMLElement>(".infra-tabs, .device-drawer .tabs").forEach(revealActiveTab);
   document.querySelectorAll<HTMLTableElement>("#content table, dialog table").forEach(listTable);
   document.querySelectorAll<HTMLElement>("#content .infra-toolbar, #content .audit-filters").forEach(foldToolbar);

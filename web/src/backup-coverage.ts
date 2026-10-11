@@ -62,6 +62,8 @@ export function mountBackupCoverage(
         );
       listWorkspace(root, "tbody tr", "backup-coverage", {
         size: 25,
+        collapsible: true,
+        label: "protected systems",
         filters: [
           {
             label: "Evidence",
@@ -105,7 +107,7 @@ export function mountBackupCoverage(
                       .join(""),
                   ),
                 )
-                .join(""),
+                .join("") + (days.length ? "" : `<div class="empty"><h3>${data.snapshot.error ? "Snapshot dates unavailable" : "No snapshot dates in returned evidence"}</h3><p>${data.snapshot.error ? "Provider snapshot history could not be loaded. Return to protection coverage or refresh to retry." : "Open a protected system to inspect its paginated history. This bounded overview does not establish a missed backup."}</p></div>`),
             { tone: "protection" },
           );
           pane

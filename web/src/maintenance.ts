@@ -9,13 +9,18 @@ type Item = Record<string, any>;
 export function createMaintenance(ui: Item) {
   async function render() {
     ui.loading("Loading reviewed maintenance…");
-    const [schedules, books, runs] = await Promise.all([
+    const current = ui.checkpoint?.() || (() => {});
+    const results = await Promise.allSettled([
       ui.api("/schedules"),
       ui.api("/maintenance/runbooks"),
       ui.api("/maintenance/runs"),
     ]);
+    current();
+    const sources = ["Current routines", "Saved runbooks", "Runbook progress"];
+    const unavailable = results.flatMap((r, i) => r.status === "rejected" ? [sources[i]] : []);
+    const [schedules, books, runs] = results.map(r => r.status === "fulfilled" ? r.value : []);
     ui.content(
-      `<p>Start from an editable routine. Every schedule previews exact scripts, target coverage and exclusions. Patch installation and credential rotation are never implied by an inventory routine.</p><div class="routine-grid">${[
+      `<div class="maintenance-workspace">${unavailable.length ? `<p class="resource-notice" role="status">Unavailable: ${e(unavailable.join(", "))}. Other routines remain available. Use Refresh to retry.</p>` : ""}<p>Start from an editable routine. Every schedule previews exact scripts, target coverage and exclusions. Patch installation and credential rotation are never implied by an inventory routine.</p><div class="routine-grid">${[
         [
           "inspection.software",
           "Software freshness",
@@ -43,7 +48,7 @@ export function createMaintenance(ui: Item) {
         )
         .join(
           "",
-        )}</div><div class="section-head"><h2>Reusable runbooks</h2><button class="primary" data-new-runbook>Create a reviewed runbook</button></div><p>Gather → reviewed change → verification. Each stage requires a separate confirmation; an unsuccessful or uncertain stage blocks the next one.</p><div data-runbooks>${books.map((b: Item, i: number) => `<article class="panel"><h3>${e(b.name)}</h3><p>${b.spec.stages[0].device_ids.length} targets · ${e(b.spec.stages.map((s: Item) => s.kind).join(" → "))}</p><button class="secondary" data-start-runbook="${i}">Start review</button></article>`).join("") || "<p>No saved runbooks.</p>"}</div>${section("Current routines", schedules.map((s: Item) => `<p><a href="${resourceHref("maintenance", { kind: "schedule", id: s.id })}">${e(s.name)} →</a> · ${s.enabled ? "Next " + e(detailDate(s.next_run)) : "Paused"} · ${e(s.operation.target_policy === "eligible" ? "Eligible targets independently" : "Every target required")}</p>`).join("") || "<p>No schedules yet.</p>")}${section("Runbook progress", runs.map((r: Item, i: number) => `<article class="panel"><h3>${e(r.spec.name)}</h3><p>${e(detailDate(r.created))} · ${r.state.length} / 3 stages submitted</p>${r.state.map((id: string, j: number) => `<p><a href="${resourceHref("maintenance", { kind: "batch", id })}">${["Gather evidence", "Reviewed change", "Verification"][j]} receipts →</a> · ${e(r.receipts[j].map((s: Item) => s.status).join(", "))}</p>`).join("")}${r.state.length < 3 ? `<button class="primary" data-runbook-stage="${i}">Review ${["gathering", "change", "verification"][r.state.length]}</button>` : "<p>All stages submitted. Review verification receipts to establish the actual result; submission alone is not success.</p>"}<p data-runbook-error="${i}" role="alert"></p></article>`).join("") || "<p>No runbook runs.</p>")}`,
+        )}</div><div class="section-head"><h2>Reusable runbooks</h2><button class="primary" data-new-runbook>Create a reviewed runbook</button></div><p>Gather → reviewed change → verification. Each stage requires a separate confirmation; an unsuccessful or uncertain stage blocks the next one.</p><div class="maintenance-runbooks" data-runbooks>${books.map((b: Item, i: number) => `<article class="panel"><h3>${e(b.name)}</h3><p>${b.spec.stages[0].device_ids.length} targets · ${e(b.spec.stages.map((s: Item) => s.kind).join(" → "))}</p><button class="secondary" data-start-runbook="${i}">Start review</button></article>`).join("") || (unavailable.includes("Saved runbooks") ? "<p>Saved runbooks could not be loaded.</p>" : "<p>No saved runbooks. Create one to review and repeat an operation.</p>")}</div>${section("Current routines", schedules.map((s: Item) => `<p><a href="${resourceHref("maintenance", { kind: "schedule", id: s.id })}">${e(s.name)} →</a> · ${s.enabled ? "Next " + e(detailDate(s.next_run)) : "Paused"} · ${e(s.operation.target_policy === "eligible" ? "Eligible targets independently" : "Every target required")}</p>`).join("") || (unavailable.includes("Current routines") ? "<p>Current routines could not be loaded.</p>" : "<p>No schedules yet. Review a daily routine above to create one.</p>"))}${section("Runbook progress", runs.map((r: Item, i: number) => `<article class="panel"><h3>${e(r.spec.name)}</h3><p>${e(detailDate(r.created))} · ${r.state.length} / 3 stages submitted</p>${r.state.map((id: string, j: number) => `<p><a href="${resourceHref("maintenance", { kind: "batch", id })}">${["Gather evidence", "Reviewed change", "Verification"][j]} receipts →</a> · ${e(r.receipts[j].map((s: Item) => s.status).join(", "))}</p>`).join("")}${r.state.length < 3 ? `<button class="primary" data-runbook-stage="${i}">Review ${["gathering", "change", "verification"][r.state.length]}</button>` : "<p>All stages submitted. Review verification receipts to establish the actual result; submission alone is not success.</p>"}<p data-runbook-error="${i}" role="alert"></p></article>`).join("") || (unavailable.includes("Runbook progress") ? "<p>Runbook progress could not be loaded.</p>" : "<p>No runbook runs. Start a saved runbook to review its first stage.</p>"))}</div>`,
     );
     document
       .querySelectorAll<HTMLButtonElement>("[data-routine]")
@@ -68,7 +73,13 @@ export function createMaintenance(ui: Item) {
       );
     document
       .querySelector("[data-new-runbook]")!
-      .addEventListener("click", () => void create());
+      .addEventListener("click", async (event) => {
+        const button = event.currentTarget as HTMLButtonElement;
+        button.disabled = true;
+        try { await create(); }
+        catch (error) { ui.notify((error as Error).message, true); }
+        finally { button.disabled = false; }
+      });
     document
       .querySelectorAll<HTMLButtonElement>("[data-start-runbook]")
       .forEach(
@@ -138,13 +149,15 @@ export function createMaintenance(ui: Item) {
       );
   }
   async function create() {
+    const current = ui.checkpoint?.() || (() => {});
     const [templates, devices] = await Promise.all([
       ui.api("/templates"),
       ui.api("/devices"),
     ]);
+    current();
     const pane: HTMLDialogElement = ui.dialog(
       "Create reviewed runbook",
-      `<label>Name<input data-runbook-name maxlength="100" placeholder="Application maintenance"></label><label>Gather and verify<select data-runbook-collect><option value="inspection.software">Software inventory</option><option value="inspection.processes">Process inventory</option><option value="inspection.disks">Disk inventory</option><option value="patch.scan">Patch scan</option></select></label><label>Change template<select data-runbook-template>${templates.map((t: Item) => `<option value="${e(t.id)}">${e(t.name)} · ${e(t.platform)} · revision ${t.revision}</option>`).join("")}</select></label><p>Templates with required inputs must first be customized into a parameter-free reviewed template in Software & scripts.</p><div data-runbook-targets>${devices.map((d: Item) => `<label class="check"><input type="checkbox" data-runbook-target="${e(d.id)}" ${d.approved && d.online && !d.revoked && !d.archived ? "" : "disabled"}>${e(d.label)} · ${e(d.platform)}${!d.online ? " · Offline" : ""}${!d.approved ? " · Approval required" : ""}</label>`).join("")}</div><p data-runbook-error role="alert"></p><button class="primary" data-runbook-save>Review exact runbook</button>`,
+      `<label>Name<input data-runbook-name required maxlength="100" placeholder="Application maintenance"></label><label>Gather and verify<select data-runbook-collect><option value="inspection.software">Software inventory</option><option value="inspection.processes">Process inventory</option><option value="inspection.disks">Disk inventory</option><option value="patch.scan">Patch scan</option></select></label><label>Change template<select data-runbook-template>${templates.map((t: Item) => `<option value="${e(t.id)}">${e(t.name)} · ${e(t.platform)} · revision ${t.revision}</option>`).join("") || '<option value="">No templates available</option>'}</select></label><p>Templates with required inputs must first be customized into a parameter-free reviewed template in Software & scripts.</p><p data-runbook-selection role="status"></p><div class="runbook-targets" data-runbook-targets>${devices.map((d: Item) => `<label class="check"><input type="checkbox" data-runbook-target="${e(d.id)}" data-platform="${e(d.platform)}" data-eligible="${!!(d.approved && d.online && !d.revoked && !d.archived)}" ${d.approved && d.online && !d.revoked && !d.archived ? "" : "disabled"}>${e(d.label)} · ${e(d.platform)}${!d.online ? " · Offline" : ""}${!d.approved ? " · Approval required" : ""}${d.revoked ? " · Access revoked" : ""}${d.archived ? " · Archived" : ""}</label>`).join("")}</div><p data-runbook-error role="alert"></p><button class="primary" data-runbook-save ${templates.length && devices.length ? "" : "disabled"}>Review exact runbook</button>${!templates.length ? '<p>Add a template in <a href="#software">Software &amp; scripts</a> before creating a runbook.</p>' : ""}${!devices.length ? '<p>Add an approved Windows or Linux endpoint in <a href="#fleet">Fleet</a> before creating a runbook.</p>' : ""}`,
       { className: "wide" },
     );
     listWorkspace(
@@ -152,8 +165,28 @@ export function createMaintenance(ui: Item) {
       "label",
       "runbook targets",
     );
+    const syncTargets = () => {
+      const template = templates.find((t: Item) => t.id === pane.querySelector<HTMLSelectElement>("[data-runbook-template]")!.value);
+      let eligible = 0;
+      pane.querySelectorAll<HTMLInputElement>("[data-runbook-target]").forEach(box => {
+        box.disabled = box.dataset.eligible !== "true" || !template || box.dataset.platform !== template.platform;
+        if (box.disabled) box.checked = false;
+        else eligible++;
+      });
+      const count = pane.querySelectorAll("[data-runbook-target]:checked").length;
+      pane.querySelector("[data-runbook-selection]")!.textContent = template ? `${count} selected · ${eligible} eligible ${template.platform} targets. Every stage uses these exact machines.` : "Choose a saved change template to select targets.";
+    };
+    pane.querySelector<HTMLSelectElement>("[data-runbook-template]")!.onchange = syncTargets;
+    pane.querySelectorAll<HTMLInputElement>("[data-runbook-target]").forEach(box => box.onchange = syncTargets);
+    syncTargets();
     pane.querySelector<HTMLButtonElement>("[data-runbook-save]")!.onclick =
-      async () => {
+      async (event) => {
+        const button = event.currentTarget as HTMLButtonElement;
+        const nameInput = pane.querySelector<HTMLInputElement>("[data-runbook-name]")!;
+        nameInput.value = nameInput.value.trim();
+        if (!nameInput.reportValidity()) return;
+        button.disabled = true;
+        pane.querySelector("[data-runbook-error]")!.textContent = "";
         try {
           const template = templates.find(
             (t: Item) =>
@@ -161,7 +194,8 @@ export function createMaintenance(ui: Item) {
               pane.querySelector<HTMLSelectElement>("[data-runbook-template]")!
                 .value,
           );
-          if (template.parameters.some((p: Item) => p.required && !p.default))
+          if (!template) throw new Error("Choose an available change template first.");
+          if ((template.parameters || []).some((p: Item) => p.required && [undefined, null, ""].includes(p.default)))
             throw new Error(
               "Customize this template with reviewed inputs first.",
             );
@@ -176,6 +210,7 @@ export function createMaintenance(ui: Item) {
             kind = pane.querySelector<HTMLSelectElement>(
               "[data-runbook-collect]",
             )!.value;
+          if (!ids.length) throw new Error("Select at least one eligible machine for this runbook.");
           const stages = [
             { kind },
             {
@@ -221,6 +256,8 @@ export function createMaintenance(ui: Item) {
           pane.querySelector("[data-runbook-error]")!.textContent = (
             error as Error
           ).message;
+        } finally {
+          button.disabled = false;
         }
       };
   }

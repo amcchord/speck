@@ -1,3 +1,4 @@
+import { machinePresence } from './presence';
 type Item = Record<string, any>;
 export const columns: Record<string, {label: string; width: number; className?: string}> = {
   name: {label: 'Machine', width: 230, className: 'machine-cell'},
@@ -24,6 +25,9 @@ export const kindLabel = (d: Item) => ({qemu:'VM', lxc:'Container', node:'Host',
 export const cpu = (d: Item) => d.telemetry?.cpu_percent ?? d.cpu_percent;
 export const memory = (d: Item) => d.telemetry?.memory?.usedPercent ?? d.memory_percent;
 export function sortMachines(rows: Item[], key: string, direction: string, address: (d: Item) => string) {
-  const val = (d: Item): string | number | null => ({name:d.label,status:machineState(d),client:d.client_name || 'Unassigned',agent:Number(hasAgent(d)),location:d.location || d.site || '',app:d.telemetry?.active_app?.title || d.telemetry?.last_active_app?.title || '',cpu:cpu(d),memory:memory(d),address:address(d),provider:d.provider || 'Speck',kind:kindLabel(d),site:d.site || '',seen:d.last_seen,preview:Number(!!d.preview?.available)}[key] ?? null);
+  const val = (d: Item): string | number | null => {
+    const app = machinePresence(d).app;
+    return {name:d.label,status:machineState(d),client:d.client_name || 'Unassigned',agent:Number(hasAgent(d)),location:d.location || d.site || '',app:app?.title?.trim() || app?.process || '',cpu:cpu(d),memory:memory(d),address:address(d),provider:d.provider || 'Speck',kind:kindLabel(d),site:d.site || '',seen:d.last_seen,preview:Number(!!d.preview?.available)}[key] ?? null;
+  };
   return rows.sort((a,b) => { const av=val(a),bv=val(b); if(av==null || bv==null) return av==null ? bv==null ? a.label.localeCompare(b.label) : 1 : -1; const n=typeof av==='number' && typeof bv==='number' ? av-bv : String(av).localeCompare(String(bv),undefined,{numeric:true,sensitivity:'base'}); return n*(direction==='desc' ? -1 : 1) || a.label.localeCompare(b.label); });
 }

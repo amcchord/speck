@@ -22,6 +22,7 @@
 .api-delete { color: var(--danger); }
 .api-summary { color: var(--muted); }
 .api-response { max-height: 60vh; }
+.api-request-error { grid-column: 1 / -1; margin: 2px 0; color: var(--danger); }
 @media (max-width: 1000px) { .api-start { grid-template-columns: 1fr; } }
 @media (max-width: 760px) {
   .api-endpoint { grid-template-columns: 56px minmax(0, 1fr); }

@@ -278,4 +278,16 @@ th[aria-sort="ascending"] .header-sort, th[aria-sort="descending"] .header-sort 
   .fleet-agent-only > span:first-of-type { flex: 1; }
 }
 /* Audit: placeholders recede so real values stand out. */
-.fleet-table .placeholder, .agent-indicator:not(.installed) { color: #8a9a8d; }
+.fleet-table .placeholder, .agent-indicator:not(.installed) { color: var(--muted); }
+
+/* Keep recovery-copy identity readable beside its management shortcuts. */
+@media (max-width: 760px) {
+  .fleet-workspace .machine-name { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 4px 8px; text-align: left; }
+  .fleet-workspace .machine-name .platform-icon { grid-column: 1; grid-row: 1; align-self: start; margin-top: 2px; }
+  .fleet-workspace .machine-name b { grid-column: 2; white-space: normal; overflow-wrap: anywhere; }
+  .fleet-workspace .machine-name .copy-badge { grid-column: 2; justify-self: start; margin: 0; }
+  .fleet-workspace .fleet-pagination { align-items: start; gap: 10px; }
+  .fleet-workspace .fleet-pagination > span { min-width: 0; line-height: 1.6; }
+  .fleet-workspace .fleet-pagination > div { display: flex; flex-shrink: 0; gap: 6px; }
+  .fleet-workspace .fleet-pagination button { white-space: nowrap; }
+}

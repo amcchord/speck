@@ -1,0 +1,190 @@
+{
+  "provenance": "Unretouched actual frontend and screen-assistant controller, synthetic records, mocked provider and computer-input adapters only. Remote workspace captures use Guacamole with an intercepted loopback WebSocket and synthetic protocol frames. No endpoint sessions, real inputs or production/private captures. Typed placeholder values and audio statistics are synthetic.",
+  "captured_at_utc": "2026-10-11T20:52:35.267283+00:00",
+  "captures": [
+    {
+      "file": "assistant-linux-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 93061,
+      "sha256": "76c966945654ca3910dadf5ab965d65afcf0000c245370a85b4d1a4328b0ae34",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-assistant-linux-desktop.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "script-context-1440.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 209800,
+      "sha256": "8602fd738b4b99d89b9218b2846757600be5cdc823724ea93fa61690404d350b",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-script-context-1440.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "script-context-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 73482,
+      "sha256": "897a3ecf04c440a76efa8a2a26d4e8d07e8a0dd16d5e346853a97347350cba17",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-script-context-390.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "script-review-1440.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 197594,
+      "sha256": "ae055cad4cafc1c433a4c8e07af56412a5c079b2c121de8a73ca10ac03222742",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-script-review-1440.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "script-review-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 66286,
+      "sha256": "4f0ddb591e85d01faf95c9660e080745cda4ac6d931a27b56861a0567b718637",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-script-review-390.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "script-provider-error-phone.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 73034,
+      "sha256": "cf1a283b3aa53263f7ccf016f34d0c318ebd972a46025d7656de6b6495d5027b",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-script-provider-error-phone.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "script-target-unavailable-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 207035,
+      "sha256": "45f6647bce736a2b8ed3cd9762fafe5a466991f235cba44aaecd5b4d490a4a4a",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-script-target-unavailable-desktop.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-task-1440.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 214222,
+      "sha256": "1b2735a20e3b101c9dda759c34d03e5674f1e7ac32ffa2e69e30e547f71ff2a2",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-task-1440.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-task-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 74237,
+      "sha256": "8a139feb76eca6af6257d0994f5740ee57f15ec8560a40cfa2ee19a291569790",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-task-390.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-step-review-1440.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 197714,
+      "sha256": "99d70a15a8f6b2c24c1530b7c3af09a2014433bedc4e5982abae3b1e1b347d81",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-step-review-1440.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-step-review-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 55196,
+      "sha256": "71f7380213cf8688e7e7e4299ad1920474b58eecc1ab238472b3cc81b0141d13",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-step-review-390.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-step-review-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 50073,
+      "sha256": "9c5c55f91f3c4107f00dd87197359fc458c7aa14873a4b03c06e74fb60d1bb6f",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-step-review-320.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-history-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 73532,
+      "sha256": "89a713251026c666c01fa4a6f925a534c61e3a534d495542ffc80e5655856ef5",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-history-390.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-changed-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 226270,
+      "sha256": "76998ccc2cb6ae71d5beb9b1624db82d896cbd9fc2afd3a9de46ebaf038d36fd",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-changed-desktop.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-receipt-error-phone.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 62344,
+      "sha256": "ad170b8f883a20ef27d6065848a6bcb9730c4f03f8d598310e7995440583145b",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-receipt-error-phone.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-manual-observation-desktop.png",
+      "width": 1440,
+      "height": 960,
+      "bytes": 215348,
+      "sha256": "b12956d2eeef04d512db549f8799db75cf2788e9ed2275f708ec1a8079b0736c",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-manual-observation-desktop.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-settings-error-phone.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 70755,
+      "sha256": "1231a52ab983f5e17f70085cc3772864be16679ddc6e949a416f5f8c9fefe4ab",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-settings-error-phone.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "screen-explanation-phone.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 61781,
+      "sha256": "c65cd4f59bee875fea37f5804a3db89cc49f4b0c6f163b6b556dc0253c8eb65b",
+      "source": "output/ui-ux-polish/workspaces/ai/chromium-screen-explanation-phone.png",
+      "engine": "Chromium"
+    },
+    {
+      "file": "remote-connected-320.png",
+      "width": 320,
+      "height": 960,
+      "bytes": 34482,
+      "sha256": "6469cff89be4c0be45f7a0e70c322ac7ad2bd7e02a0e41afd378cbad2bde66c5",
+      "source": "output/ai-polish/drawer-followup/remote-screenshots/chromium/320/remote-connected.png",
+      "engine": "Chromium",
+      "captured_at_utc": "2026-10-11T21:39:57.100589+00:00",
+      "provenance": "Actual frontend source served by isolated loopback Vite; synthetic preview account and remote-session response, intercepted Guacamole 1.5 WebSocket, synthetic drawing/error protocol and audio statistics. No real session or input."
+    },
+    {
+      "file": "remote-disconnected-320.png",
+      "width": 320,
+      "height": 960,
+      "bytes": 54297,
+      "sha256": "7b590dd3eb1114ecf8ed1da2b909f619e04d9e3c0aab2e145a9670c7c5653468",
+      "source": "output/ai-polish/drawer-followup/remote-screenshots/chromium/320/remote-disconnected.png",
+      "engine": "Chromium",
+      "captured_at_utc": "2026-10-11T21:39:57.185164+00:00",
+      "provenance": "Actual frontend source served by isolated loopback Vite; synthetic preview account and remote-session response, intercepted Guacamole 1.5 WebSocket, synthetic drawing/error protocol and audio statistics. No real session or input."
+    }
+  ]
+}

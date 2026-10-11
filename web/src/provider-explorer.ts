@@ -23,6 +23,7 @@ const labels: Item = {
 export function mountProviderExplorer(ui: Item, r: Item, root: HTMLElement) {
   const base = `/infrastructure/connections/${encodeURIComponent(r.connection_id)}/resources/${r.kind}/${encodeURIComponent(r.id)}`;
   let generation = 0;
+  const queries = new Map<string,string>();
   const isSlide = r.provider === "slide";
   const entry = (key: string, row: Item) => {
     if (isSlide)
@@ -228,17 +229,22 @@ export function mountProviderExplorer(ui: Item, r: Item, root: HTMLElement) {
         }
         let rows = value.data?.rows || value.data?.data || [],
           cursor = value.data?.next_offset;
+        target.innerHTML = `<label class="provider-section-search">Search ${e(labels[key].toLowerCase())}<input type="search" data-provider-search value="${e(queries.get(key) || '')}" placeholder="Search loaded records"></label><p class="resource-note" data-provider-count role="status"></p><div data-provider-rows></div>`;
+        const rowRoot = target.querySelector<HTMLElement>('[data-provider-rows]')!;
         const draw = () => {
-          target.innerHTML =
-            `<div class="resource-related">${rows
+          const query=(queries.get(key) || '').trim().toLowerCase();
+          const visible=rows.filter((row:Item)=>!query || JSON.stringify(row).toLowerCase().includes(query));
+          target.querySelector('[data-provider-count]')!.textContent=visible.length+' of '+rows.length+' loaded records'+(cursor!=null?' · More history is available':'');
+          rowRoot.innerHTML =
+            `<div class="resource-related">${visible
               .map((row: Item, i: number) => {
                 const x = entry(key, row);
                 return `<button data-provider-row="${i}"><span><b>${e(x.title)}</b><small>${e(x.sub)}</small></span>${status(x.state)}<span>→</span></button>`;
               })
               .join("")}</div>` +
-            (rows.length
+            (visible.length
               ? ""
-              : note("No " + labels[key].toLowerCase() + " returned.")) +
+              : rows.length ? note('No loaded records match your search.') : note("No " + labels[key].toLowerCase() + " returned.")) +
             (isSlide
               ? note(
                   "Provider-reported history. Snapshot availability and verification do not establish application recovery.",
@@ -257,14 +263,14 @@ export function mountProviderExplorer(ui: Item, r: Item, root: HTMLElement) {
                 e(labels[key].toLowerCase()) +
                 "</button>"
               : "");
-          target
+          rowRoot
             .querySelectorAll<HTMLElement>("[data-provider-row]")
             .forEach(
               (b) =>
                 (b.onclick = () =>
-                  inspect(key, rows[Number(b.dataset.providerRow)], rows, all)),
+                  inspect(key, visible[Number(b.dataset.providerRow)], rows, all)),
             );
-          target
+          rowRoot
             .querySelector<HTMLButtonElement>("[data-history-more]")
             ?.addEventListener("click", async (ev) => {
               const button = ev.currentTarget as HTMLButtonElement;
@@ -287,6 +293,9 @@ export function mountProviderExplorer(ui: Item, r: Item, root: HTMLElement) {
                 }
               }
             });
+        };
+        target.querySelector<HTMLInputElement>('[data-provider-search]')!.oninput=event=>{
+          queries.set(key,(event.target as HTMLInputElement).value);draw();
         };
         draw();
       }
